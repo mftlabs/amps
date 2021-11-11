@@ -1,0 +1,170 @@
+# This file is responsible for configuring your umbrella
+# and **all applications** and their dependencies with the
+# help of the Config module.
+#
+# Note that all applications in your umbrella share the
+# same configuration and dependencies, which is why they
+# all use the same configuration file. If you want different
+# configurations or dependencies per app, it is best to
+# move said applications out of the umbrella.
+import Config
+
+# Configures the mailer
+#
+# By default it uses the "Local" adapter which stores the emails
+# locally. You can see the emails in your browser, at "/dev/mailbox".
+#
+# For production it's recommended to configure a different adapter
+# at the `config/runtime.exs`.
+
+config :amps,
+  db: "mongo"
+
+config :amps, Amps.Mailer, adapter: Swoosh.Adapters.Local
+
+# Swoosh API client is needed for adapters other than SMTP.
+config :swoosh, :api_client, false
+
+config :amps_web,
+  generators: [context_app: :amps]
+
+# Configures the endpoint
+config :amps_web, AmpsWeb.Endpoint,
+  url: [host: "localhost"],
+  render_errors: [view: AmpsWeb.ErrorView, accepts: ~w(html json), layout: false],
+  pubsub_server: Amps.PubSub,
+  live_view: [signing_salt: "kl+/cr/G"],
+  url: [host: System.get_env("AMPS_HOST_URL", "localhost")],
+  http: [
+    port: System.get_env("AMPS_HOST_PORT", "4000"),
+    protocol_options: [idle_timeout: 5_000_000]
+  ],
+  # https: [
+  #   port: 443,
+  #   # cipher_suite: :strong,
+  #   # otp_app: :amps,
+  #   keyfile: "/etc/letsencrypt/live/amps.hub4edi.dev/privkey.pem",
+  #   cacertfile: "/etc/letsencrypt/live/amps.hub4edi.dev/chain.pem",
+  #   certfile: "/etc/letsencrypt/live/amps.hub4edi.dev/cert.pem"
+  # ],
+  authmethod: System.get_env("AMPS_AUTH_METHOD") || "db",
+  db: "mongo",
+  vault_addr: System.get_env("AMPS_VAULT_ADDR", "http://localhost:8200"),
+  mongo_addr: System.get_env("AMPS_MONGO_ADDR", "mongodb://localhost:27017/amps"),
+  minio_addr:
+    System.get_env("AMPS_S3_SCHEME", "http://") <>
+      System.get_env("AMPS_S3_HOST", "localhost") <>
+      ":" <> System.get_env("AMPS_S3_PORT", "9001"),
+  pg_addr: System.get_env("AMPS_POSTGRES_ADDR"),
+  elastic_prefix: System.get_env("AMPS_ELASTIC_INDEX", "amf")
+
+config :amps, :pow,
+  user: AmpsDashboard.Users.User,
+  users_context: AmpsDashboard.Users,
+  extensions: [PowResetPassword],
+  controller_callbacks: Pow.Extension.Phoenix.ControllerCallbacks,
+  mailer_backend: AmpsWeb.PowMailer
+
+config :amps, :pow_assent,
+  user: AmpsDashboard.Users.User,
+  users_context: AmpsDashboard.Users,
+  providers: [
+    google: [
+      client_id: "63199210559-hmhqeu7hmlkv3epournsu7j8sn9likqv.apps.googleusercontent.com",
+      client_secret: "bdvfUN3jk1wkrH7TXmY1yx3c",
+      strategy: Assent.Strategy.Google
+    ]
+  ]
+
+config :ex_aws,
+  dl_max_conncurrency: 8,
+  dl_chunk_size: 1_000_000,
+  dl_timeout_multiplier: 10,
+  # fetch from db
+  # access_key_id: [{:system, "minioadmin"}, :instance_role],
+  # secret_access_key: [{:system, "minioadmin"}, :instance_role],
+  # access_key_id: "minioadmin",
+  # secret_access_key:  "minioadmin",
+  # region: "us-east-2",
+  json_codec: Jason
+
+config :ex_aws, :retries,
+  max_attempts: 2,
+  base_backoff_in_ms: 10,
+  max_backoff_in_ms: 10_000
+
+config :ex_aws, :hackney_opts, recv_timeout: 240_000
+
+config :ex_aws, :s3,
+  access_key_id: "minioadmin",
+  secret_access_key: "minioadmin",
+  region: "us-east-1",
+  scheme: System.get_env("AMPS_S3_SCHEME") || "http://",
+  host: System.get_env("AMPS_S3_HOST") || "localhost",
+  port: System.get_env("AMPS_S3_PORT") || "9000"
+
+config :amps,
+  sched_interval: 10000,
+  retry_delay: 60000,
+  storage_root: "c://tools/amps/data",
+  storage_temp: "c://tools/amps/temp",
+  storage_logs: "c://tools/amps/logs",
+  python_path: "c://tools/amps/python",
+  registration_queue: "registerq"
+
+config :amps, :streams,
+  "amps.events": "EVENTS",
+  "amps.svcs": "SERVICES",
+  "amps.actions": "ACTIONS",
+  "amps.delivery": "DELIVERY",
+  "amps.mailbox": "MAILBOX"
+
+config :amps, :services,
+  subscriber: Amps.EventConsumer,
+  history: Amps.HistoryConsumer,
+  sftpd: Amps.SftpServer,
+  httpd: Amps.MailboxApi
+
+config :amps, :actions,
+  strrepl: StringReplaceAction,
+  mailbox: MailboxAction,
+  sftpput: SftpAction
+
+# config :amps, :httpapi,
+#  options: [
+#    port: 8090,
+#    protocol_options: [
+#      idle_timeout: 120_000,
+#      request_timeout: 120_000,
+#      max_keepalive: 5_000_000
+#    ]
+#  ]
+
+config :amps, :pyworker,
+  config: [
+    {:name, {:local, :worker}},
+    {:worker_module, Amps.PyService},
+    {:size, 5},
+    {:max_overflow, 2}
+  ]
+
+# Configure esbuild (the version is required)
+config :esbuild,
+  version: "0.12.18",
+  default: [
+    args: ~w(js/app.js --bundle --target=es2016 --outdir=../priv/static/assets),
+    cd: Path.expand("../apps/amps_web/assets", __DIR__),
+    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
+  ]
+
+# Configures Elixir's Logger
+config :logger, :console,
+  format: "$time $metadata[$level] $message\n",
+  metadata: [:request_id]
+
+# Use Jason for JSON parsing in Phoenix
+config :phoenix, :json_library, Jason
+
+# Import environment specific config. This must remain at the bottom
+# of this file so it overrides the configuration defined above.
+import_config "#{config_env()}.exs"

@@ -1,0 +1,266 @@
+/* This file is for your main application CSS */
+@import "./phoenix.css";
+
+/* Alerts and form errors used by phx.new */
+.alert {
+  padding: 15px;
+  margin-bottom: 20px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+}
+.alert-info {
+  color: #31708f;
+  background-color: #d9edf7;
+  border-color: #bce8f1;
+}
+.alert-warning {
+  color: #8a6d3b;
+  background-color: #fcf8e3;
+  border-color: #faebcc;
+}
+.alert-danger {
+  color: #a94442;
+  background-color: #f2dede;
+  border-color: #ebccd1;
+}
+.alert p {
+  margin-bottom: 0;
+}
+.alert:empty {
+  display: none;
+}
+.invalid-feedback {
+  color: #a94442;
+  display: block;
+  margin: -1rem 0 2rem;
+}
+
+/* LiveView specific classes for your customization */
+.phx-no-feedback.invalid-feedback,
+.phx-no-feedback .invalid-feedback {
+  display: none;
+}
+
+.phx-click-loading {
+  opacity: 0.5;
+  transition: opacity 1s ease-out;
+}
+
+.phx-disconnected{
+  cursor: wait;
+}
+.phx-disconnected *{
+  pointer-events: none;
+}
+
+.phx-modal {
+  opacity: 1!important;
+  position: fixed;
+  z-index: 1;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgb(0,0,0);
+  background-color: rgba(0,0,0,0.4);
+}
+
+.phx-modal-content {
+  background-color: #fefefe;
+  margin: 15vh auto;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 80%;
+}
+
+.phx-modal-close {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.phx-modal-close:hover,
+.phx-modal-close:focus {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.rtb {
+  background-color: #32404e;
+}
+
+.headerblk {
+  font-size: 30px;
+  text-align: center;
+  padding-top: 20px;
+  padding-bottom: 20px;
+  background-color: midnightblue !important;
+  color: white;
+}
+.footerblk {
+  padding-top: "10px";
+}
+
+.x-toolbar-footer {
+  background-color: #fff !important;
+}
+
+.button_class {
+  background-color: #5897ce !important;
+  border: #5897ce !important;
+}
+@font-face {
+  font-family: "Roboto";
+  src: url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap');
+}
+/* * {
+  font-family: "Roboto", sans-serif;
+} */
+.headerclass {
+  color: #fff !important;
+  font-size: 15px !important;
+}
+.headerclass2 {
+  color: #fff !important;
+  font-weight: bold;
+  font-size: 25px !important;
+}
+.x-btn-icon-el-default-toolbar-small {
+  height: auto !important;
+}
+
+.menu_toggle .x-treelist-nav .x-treelist-item-selected > .x-treelist-row {
+  background-color: #0a0080 !important;
+}
+
+.menu_toggle .x-treelist-item-text {
+  font-size: 15px !important;
+  color: #fff;
+  margin-left: 66px !important;
+}
+
+.menu_toggle .x-treelist-nav .x-treelist-item-text {
+  margin-left: 66px !important;
+}
+.x-toolbar-footer {
+  background-color: #fff !important;
+}
+
+.enabled-icon {
+  color: green !important;
+}
+.disabled-icon {
+  color: red !important;
+}
+
+.rtb .x-btn-default-small {
+  border-color: #e4e4e4 !important;
+  background-color: #f6f6f6 !important;
+  margin-left: 4px;
+  margin-top: 5px;
+  height: 42px;
+}
+.rtb .x-btn-icon-el-default-small {
+  font-size: 17px;
+  height: auto;
+  color: #919191;
+  line-height: 24px;
+}
+
+.rtb .x-btn-icon-left > .x-btn-icon-el-default-small,
+.rtb .x-btn-icon-right > .x-btn-icon-el-default-small {
+  width: 26px;
+}
+
+input[type="email"],
+input[type="number"],
+input[type="password"],
+input[type="search"],
+input[type="tel"],
+input[type="text"],
+input[type="url"],
+textarea,
+select {
+  appearance: none;
+  background-color: transparent;
+  border: none;
+  border-radius: 0.4rem;
+  box-shadow: none;
+  box-sizing: inherit;
+  height: auto;
+  padding: 3px;
+  width: 98%;
+}
+
+label.x-form-required-field > span:after {
+  color: #b12029;
+  content: " *";
+  font-weight: bold;
+}
+
+.x-grid-td {
+  padding: 4px !important;
+}
+.x-grid-item-container .x-grid-item {
+  margin-bottom: 0px !important;
+}
+
+/*.x-autocontainer-innerCt {
+    background-color:white!important;
+    border:1px static sliver;
+}*/
+.pageslayout {
+  background-color: lightgray !important;
+  color: black !important;
+  padding: 10px !important;
+  font-size: 14px !important;
+  font-weight: bold !important;
+  position: fixed !important;
+  left: 0 !important;
+  bottom: 0 !important;
+}
+
+.pageslayout input {
+  background-color: white !important;
+  border: 1px solid silver !important;
+  color: black !important;
+  font-weight: normal !important;
+}
+
+.pagebtn {
+  background-color: navy !important;
+  color: white !important;
+  font-size: 14px !important;
+}
+
+.pagebtn2 {
+  background-color: #5897f6 !important;
+  color: white !important;
+  font-size: 14px !important;
+  margin-right: 20px !important;
+}
+
+
+.led {
+  margin: 0 auto;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+}
+
+.led.green {
+  background-color: lightgreen;
+  box-shadow: #fff 0 -1px 7px 1px, inset green 0 -1px 9px, #7D0 0 2px 5px;
+}
+
+.led.red {
+  background-color: orange;
+  box-shadow: #fff 0 -1px 7px 1px, inset red 0 -1px 9px, #F00 0 2px 5px;
+}
+
+.greenIcon {
+  color: green;
+}

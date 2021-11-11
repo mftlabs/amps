@@ -1,0 +1,157 @@
+version: "3.9"
+
+x-minio-common: &minio-common
+  image: minio/minio:RELEASE.2021-10-23T03-28-24Z
+  command: server --console-address ":9001" http://minio{1...4}/data{1...2}
+  expose:
+    - "9000"
+    - "9001"
+  depends_on:
+    - nats
+  environment:
+    MINIO_NOTIFY_NATS_ENABLE_AMPS: "on"
+    MINIO_ROOT_USER: minioadmin
+    MINIO_ROOT_PASSWORD: minioadmin
+    MINIO_NOTIFY_NATS_ADDRESS_AMPS: "nats:4222"
+    MINIO_NOTIFY_NATS_SUBJECT_AMPS: "AMPS.Events.S3"
+    MINIO_NOTIFY_NATS_QUEUE_DIR_AMPS: "/var/queue"
+    MINIO_NOTIFY_NATS_QUEUE_LIMIT_AMPS: "10000"
+    # MINIO_NOTIFY_NATS_STREAMING_AMPS: "on"
+
+  healthcheck:
+    test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+    interval: 30s
+    timeout: 20s
+    retries: 3
+
+services:
+  mongo:
+    image: mongo
+    ports:
+      - "27017:27017"
+    restart: always
+  vault:
+    image: vault
+    ports:
+      - "8200:8200"
+    volumes:
+      - ./volumes/logs:/vault/logs
+      - ./volumes/file:/vault/file
+      - ./vault/config:/vault/config
+    cap_add:
+      - IPC_LOCK
+    entrypoint: vault server -config=/vault/config/vault.json
+  # minio1:
+  #   <<: *minio-common
+  #   hostname: minio1
+  #   volumes:
+  #     - ./volumes/data1-1:/data1
+  #     - ./volumes/data1-2:/data2
+
+  # minio2:
+  #   <<: *minio-common
+  #   hostname: minio2
+  #   volumes:
+  #     - ./volumes/data2-1:/data1
+  #     - ./volumes/data2-2:/data2
+
+  # minio3:
+  #   <<: *minio-common
+  #   hostname: minio3
+  #   volumes:
+  #     - ./volumes/data3-1:/data1
+  #     - ./volumes/data3-2:/data2
+
+  # minio4:
+  #   <<: *minio-common
+  #   hostname: minio4
+  #   volumes:
+  #     - ./volumes/data4-1:/data1
+  #     - ./volumes/data4-2:/data2
+  nats:
+    image: nats
+    command: "--cluster nats://0.0.0.0:6222 --name=nats --cluster_name=amps  --routes=nats://nats1:6222,nats://nats2:6222 -js"
+
+    ports:
+      - "8222:8222"
+      - "4222:4222"
+  nats1:
+    image: nats
+    command: "--cluster nats://0.0.0.0:6222 --name=nats1 --cluster_name=amps  --routes=nats://nats:6222,nats://nats2:6222 -js"
+    depends_on: ["nats"]
+  nats2:
+    image: nats
+    command: "--cluster nats://0.0.0.0:6222 --name=nats2 --cluster_name=amps --routes=nats://nats:6222,nats://nats1:6222 -js"
+    depends_on: ["nats"]
+
+  # es01:
+  #   image: docker.elastic.co/elasticsearch/elasticsearch:7.15.0
+  #   environment:
+  #     - node.name=es01
+  #     - cluster.name=es-docker-cluster
+  #     - discovery.seed_hosts=es02,es03
+  #     - cluster.initial_master_nodes=es01,es02,es03
+  #     - bootstrap.memory_lock=true
+  #     - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+  #     - http.cors.enabled=true
+  #     - http.cors.allow-origin=https://app.elasticvue.com
+  #     - logger.level=WARN
+  #   ulimits:
+  #     memlock:
+  #       soft: -1
+  #       hard: -1
+  #   volumes:
+  #     - ./volumes/elastic/data01:/usr/share/elasticsearch/data
+  #   ports:
+  #     - 9200:9200
+  # es02:
+  #   image: docker.elastic.co/elasticsearch/elasticsearch:7.15.0
+  #   environment:
+  #     - node.name=es02
+  #     - cluster.name=es-docker-cluster
+  #     - discovery.seed_hosts=es01,es03
+  #     - cluster.initial_master_nodes=es01,es02,es03
+  #     - bootstrap.memory_lock=true
+  #     - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+  #   ulimits:
+  #     memlock:
+  #       soft: -1
+  #       hard: -1
+  #   volumes:
+  #     - ./volumes/elastic/data02:/usr/share/elasticsearch/data
+  # es03:
+  #   image: docker.elastic.co/elasticsearch/elasticsearch:7.15.0
+  #   environment:
+  #     - node.name=es03
+  #     - cluster.name=es-docker-cluster
+  #     - discovery.seed_hosts=es01,es02
+  #     - cluster.initial_master_nodes=es01,es02,es03
+  #     - bootstrap.memory_lock=true
+  #     - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+  #   ulimits:
+  #     memlock:
+  #       soft: -1
+  #       hard: -1
+  #   volumes:
+  #     - ./volumes/elastic/data03:/usr/share/elasticsearch/data
+  # kib01:
+  # image: docker.elastic.co/kibana/kibana:7.15.0
+  # container_name: kib01
+  # ports:
+  #   - 5601:5601
+  # environment:
+  #   ELASTICSEARCH_URL: http://es01:9200
+  #   ELASTICSEARCH_HOSTS: '["http://es01:9200","http://es02:9200","http://es03:9200"]'
+  # nginx:
+  #   image: nginx:1.19.2-alpine
+  #   hostname: nginx
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
+  #   ports:
+  #     - "9000:9000"
+  #     - "9001:9001"
+  #   depends_on:
+  #     - minio1
+  #     - minio2
+  #     - minio3
+  #     - minio4
