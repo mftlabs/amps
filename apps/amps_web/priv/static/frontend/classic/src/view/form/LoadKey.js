@@ -8,6 +8,7 @@ Ext.define("AmpsDasboard.view.form.LoadKey", {
   },
   constructor(args) {
     this.callParent(args);
+    this.itemId = args["itemId"];
     var name = args["name"];
     var fieldLabel = args["fieldLabel"];
     var items = [
@@ -19,11 +20,14 @@ Ext.define("AmpsDasboard.view.form.LoadKey", {
         allowBlank: false,
         value: args["value"],
         readOnly: true,
+        hidden: args["hidden"],
+        disabled: args["disabled"],
       },
       {
-        itemId: "cert",
         xtype: "combobox",
         flex: 1,
+        hidden: args["hidden"],
+        disabled: args["disabled"],
         displayField: "name",
         valueField: "_id",
         listeners: {

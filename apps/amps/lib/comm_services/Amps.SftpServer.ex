@@ -64,7 +64,7 @@ defmodule Amps.SftpServer do
       shell: &dummy_shell/2,
       subsystems: [
         Amps.SftpChannel.subsystem_spec(
-          file_handler: {Amps.SftpHandler, []},
+          file_handler: {Amps.SftpHandler, [options: options]},
           cwd: '/'
         )
       ]
@@ -81,7 +81,7 @@ defmodule Amps.SftpServer do
         profile = map[:profile]
         ref = Process.monitor(profile)
 
-        {:ok, profile, ref, options}
+        {:ok, d_ref, ref, options}
 
       # old code not compiling
       #      {:ok, pid} ->
@@ -177,7 +177,9 @@ defmodule Amps.SftpServer do
     end
   end
 
-  def terminate(_reason, state) do
+  def terminate(reason, state) do
+    IO.inspect(reason)
+
     state.daemons
     |> Enum.each(fn d ->
       :ssh.stop_daemon(d.pid)
@@ -307,14 +309,21 @@ defmodule Amps.SftpHandler do
         "fname" => state[:fname],
         "dirname" => state[:dirname],
         "temp" => true,
-        "ftime" => DateTime.to_iso8601(DateTime.utc_now())
+        "ftime" => DateTime.to_iso8601(DateTime.utc_now()),
+        "user" => user
       }
 
+      IO.inspect(state)
+
       opt = state[:options]
-      service = opt[:name]
+      IO.inspect(opt)
+      service = opt["name"]
       user = state[:user]
-      topic = "amps.svc.#{service}.#{user}"
-      Amps.EventPublisher.send(topic, Poison.encode!(msg))
+      topic = "amps.svcs.#{service}.#{user}"
+      IO.inspect(state)
+      # state = List.keydelete(state, :options, 0)
+      AmpsEvents.send(msg, %{"output" => topic}, %{})
+      {{:ok, '/'}, state}
     end
   end
 

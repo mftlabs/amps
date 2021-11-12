@@ -880,6 +880,8 @@ Ext.define("AmpsDasboard.util.Utilities", {
         items: [
           {
             xtype: "form",
+            scrollable: true,
+
             id: "card-0",
             items: [
               {
@@ -888,6 +890,7 @@ Ext.define("AmpsDasboard.util.Utilities", {
               },
               {
                 xtype: "fieldcontainer",
+
                 listeners: {
                   beforerender: function (scope) {
                     scope.insert(0, amfutil.grids["actions"].fields);
@@ -909,6 +912,8 @@ Ext.define("AmpsDasboard.util.Utilities", {
             xtype: "form",
 
             id: "card-1",
+            scrollable: true,
+
             items: [
               {
                 html: `           <h1>AMPS Wizard</h1>
@@ -916,6 +921,7 @@ Ext.define("AmpsDasboard.util.Utilities", {
               },
               {
                 xtype: "fieldcontainer",
+
                 listeners: {
                   beforerender: function (scope) {
                     scope.insert(0, amfutil.grids["topics"].fields);
@@ -942,6 +948,8 @@ Ext.define("AmpsDasboard.util.Utilities", {
             xtype: "form",
 
             id: "card-2",
+            scrollable: true,
+
             items: [
               {
                 html: `         <h1>AMPS Wizard</h1>
@@ -949,6 +957,7 @@ Ext.define("AmpsDasboard.util.Utilities", {
               },
               {
                 xtype: "fieldcontainer",
+
                 listeners: {
                   beforerender: function (scope) {
                     var services = amfutil.grids["services"];
@@ -3524,7 +3533,7 @@ Ext.define("AmpsDasboard.util.Utilities", {
       ],
       types: [
         {
-          type: "http",
+          type: "httpd",
           name: "HTTP Server",
           iconCls: "x-fa fa-feed",
           fields: [
@@ -3579,16 +3588,17 @@ Ext.define("AmpsDasboard.util.Utilities", {
               fieldLabel: "TLS",
               listeners: {
                 afterrender: function (scope) {
-                  // var val = scope.getValue();
-                  // var fields = ["cert", "key"];
-                  // var form = scope.up("form");
-                  // console.log(val);
-                  // fields.forEach((field) => {
-                  //   var f = form.down("#" + field);
-                  //   console.log(f);
-                  //   f.setHidden(!val);
-                  //   f.setDisabled(!val);
-                  // });
+                  var val = scope.getValue();
+                  var fields = ["cert", "key"];
+                  var form = scope.up("form");
+                  console.log(form.getForm().getFields());
+                  console.log(val);
+                  fields.forEach((field) => {
+                    var f = form.down("#" + field);
+                    console.log(f);
+                    f.setHidden(!val);
+                    f.setDisabled(!val);
+                  });
                 },
                 change: function (scope, val) {
                   var fields = ["cert", "key"];
@@ -3609,6 +3619,8 @@ Ext.define("AmpsDasboard.util.Utilities", {
               xtype: "loadkey",
               name: "data",
               fieldLabel: "Server Cert",
+              // hidden: true,
+              // disabled: true,
             },
             {
               itemId: "key",
@@ -3616,6 +3628,8 @@ Ext.define("AmpsDasboard.util.Utilities", {
               xtype: "loadkey",
               name: "data",
               fieldLabel: "Server Key",
+              // hidden: true,
+              // disabled: true,
             },
             // {
             //   itemId: "key",

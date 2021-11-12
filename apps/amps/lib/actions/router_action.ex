@@ -4,7 +4,20 @@ defmodule RouterAction do
   @doc """
 
   """
+
+  def run(msg, parms, state) do
+    Logger.info("input #{inspect(msg)}")
+    Logger.info("state #{inspect(state)}")
+    rule = evaluate(parms, msg)
+    Logger.info("rule #{inspect(rule)}")
+
+    AmpsEvents.send(msg, %{"output" => rule["topic"]}, state)
+  end
+
   def run(subject, body) do
+    IO.inspect(subject)
+    IO.inspect(body)
+
     try do
       data = Poison.decode!(body)
       msg = data[:msg]
@@ -36,21 +49,13 @@ defmodule RouterAction do
     end
   end
 
-  defp evaluate(subject, msg) do
-    case AmpsDatabase.get_rules(subject) do
-      nil ->
+  defp evaluate(parms, msg) do
+    case find_rule(parms["rules"], msg) do
+      false ->
         nil
 
-      result ->
-        rules = result["rules"]
-
-        case find_rule(rules, msg) do
-          false ->
-            nil
-
-          {:ok, rule} ->
-            rule
-        end
+      {:ok, rule} ->
+        rule
     end
   end
 

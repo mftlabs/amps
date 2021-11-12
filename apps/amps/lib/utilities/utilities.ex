@@ -295,10 +295,10 @@ defmodule AmpsUtil do
 
       {is, os, {ostream, nil}}
     else
-      #      msgid = AmpsUtil.get_id()
-      #      tfile = AmpsUtil.tempdir() <> "/" <> msgid <> ".out"
+      msgid = AmpsUtil.get_id()
+      tfile = AmpsUtil.tempdir() <> "/" <> msgid <> ".out"
 
-      {nil, nil, nil}
+      {File.stream!(msg["fpath"]), File.stream!(tfile), {nil, tfile}}
     end
   end
 

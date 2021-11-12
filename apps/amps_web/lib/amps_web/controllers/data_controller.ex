@@ -88,12 +88,12 @@ defmodule AmpsWeb.DataController do
     IO.inspect(Jetstream.API.Consumer.list(gnat, "ACTIONS"))
     k = Jetstream.API.Consumer.info(gnat, "ACTIONS", "amps_actions_mailbox_TEST")
     IO.inspect(k)
-    # processes = Supervisor.which_children(Amps.SvcSupervisor)
-    # IO.inspect(processes)
+    processes = Supervisor.which_children(Amps.SvcSupervisor)
+    IO.inspect(processes)
 
-    # Enum.each(processes, fn {_, pid, type, modules} ->
-    #   IO.inspect(Process.info(pid))
-    # end)
+    Enum.each(processes, fn {_, pid, type, modules} ->
+      IO.inspect(Process.info(pid))
+    end)
 
     # IO.inspect(Process.whereis(:"mailbox TEST0012"))
 
@@ -1279,7 +1279,7 @@ defmodule VaultData do
   def insert(collection, body) do
     case get_vault() do
       {:ok, vault} ->
-        case Vault.write(vault, "kv/amps/" <> collection <> "/" <> UUID.uuid4(), body) do
+        case Vault.write(vault, "kv/amps/" <> collection <> "/" <> AmpsUtil.get_id(), body) do
           {:ok, resp} ->
             {:ok, resp}
 

@@ -985,7 +985,7 @@ Ext.define("AmpsDasboard.view.main.MainController", {
 
       items: [
         {
-          id: "card-0",
+          itemId: "card-0",
           xtype: "container",
           layout: {
             type: "vbox",
@@ -995,7 +995,7 @@ Ext.define("AmpsDasboard.view.main.MainController", {
           items: [],
         },
         {
-          id: "card-1",
+          itemId: "card-1",
           xtype: "form",
           items: [
             {

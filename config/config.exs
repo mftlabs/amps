@@ -128,7 +128,8 @@ config :amps, :services,
 config :amps, :actions,
   strrepl: StringReplaceAction,
   mailbox: MailboxAction,
-  sftpput: SftpAction
+  sftpput: SftpAction,
+  router: RouterAction
 
 # config :amps, :httpapi,
 #  options: [
