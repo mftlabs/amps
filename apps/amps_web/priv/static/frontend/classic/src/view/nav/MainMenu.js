@@ -1,11 +1,11 @@
-Ext.define("AmpsDasboard.view.nav.MainMenu", {
+Ext.define("Amps.view.nav.MainMenu", {
   extend: "Ext.container.Container",
   xtype: "mainmenu",
   requires: [
-    "AmpsDasboard.controller.MenuController",
-    "AmpsDasboard.view.nav.MainMenuModel",
-    "AmpsDasboard.view.main.MainModel",
-    //  'AmpsDasboard.view.nav.TreeNav'
+    "Amps.controller.MenuController",
+    "Amps.view.nav.MainMenuModel",
+    "Amps.view.main.MainModel",
+    //  'Amps.view.nav.TreeNav'
   ],
   controller: "menu",
   viewModel: "mainmenu",
@@ -21,7 +21,16 @@ Ext.define("AmpsDasboard.view.nav.MainMenu", {
     },
     {
       region: "center",
-      xtype: "treenav",
+      xtype: "container",
+      scrollable: true,
+      style: {
+        background: "#32404e",
+      },
+      items: [
+        {
+          xtype: "treenav",
+        },
+      ],
     },
     {
       height: 50,

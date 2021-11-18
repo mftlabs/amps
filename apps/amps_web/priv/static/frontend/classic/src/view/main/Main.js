@@ -7,7 +7,7 @@
  * Written by TEAM <code@hub4edi.com>, November 2018
  *
  ****************************************************************************/
-Ext.define("AmpsDasboard.view.main.Main", {
+Ext.define("Amps.view.main.Main", {
   extend: "Ext.container.Viewport",
   xtype: "app-main",
   itemId: "main-viewport",
@@ -16,12 +16,12 @@ Ext.define("AmpsDasboard.view.main.Main", {
     "Ext.plugin.Viewport",
     "Ext.window.MessageBox",
 
-    "AmpsDasboard.view.main.MainController",
-    "AmpsDasboard.view.main.MainModel",
-    "AmpsDasboard.view.main.List",
-    "AmpsDasboard.view.nav.MainMenu",
-    "AmpsDasboard.view.nav.Header",
-    "AmpsDasboard.view.Footer",
+    "Amps.view.main.MainController",
+    "Amps.view.main.MainModel",
+    "Amps.view.main.List",
+    "Amps.view.nav.MainMenu",
+    "Amps.view.nav.Header",
+    "Amps.view.Footer",
   ],
   layout: "border",
   fullscreen: true,

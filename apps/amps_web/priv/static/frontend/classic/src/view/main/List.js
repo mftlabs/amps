@@ -1,7 +1,7 @@
 /**
  * This view is an example list of people.
  */
-Ext.define("AmpsDasboard.view.main.List", {
+Ext.define("Amps.view.main.List", {
   extend: "Ext.grid.Panel",
   xtype: "mainlist",
   alias: "page.grid",

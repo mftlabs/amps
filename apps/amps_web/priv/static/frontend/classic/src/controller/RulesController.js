@@ -1,8 +1,8 @@
-Ext.define("AmpsDasboard.controller.RulesController", {
+Ext.define("Amps.controller.RulesController", {
   extend: "Ext.app.ViewController",
   alias: "controller.rules",
   // requires: [
-  //   "AmpsDasboard.view.messages.MessageDetails",
+  //   "Amps.view.messages.MessageDetails",
   //   // "MftDashboard.view.trackntrace.SessionLogs",
   // ],
 
@@ -167,7 +167,7 @@ Ext.define("AmpsDasboard.controller.RulesController", {
 
                 formpanel.insert(
                   formpanel.items.length - 1,
-                  Ext.create("AmpsDasboard.form.Matchpattern")
+                  Ext.create("Amps.form.Matchpattern")
                 );
               },
             },
@@ -192,7 +192,7 @@ Ext.define("AmpsDasboard.controller.RulesController", {
 
                 formpanel.insert(
                   formpanel.items.length - 1,
-                  Ext.create("AmpsDasboard.form.Defaults")
+                  Ext.create("Amps.form.Defaults")
                 );
               },
             },

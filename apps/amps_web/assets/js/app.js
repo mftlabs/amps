@@ -36,7 +36,6 @@ let liveSocket = new LiveSocket("/live", Socket, {
 let userSocket = new Socket("/socket", {
   params: { _csrf_token: csrfToken },
 });
-
 // Show progress bar on live navigation and form submits
 topbar.config({ barColors: { 0: "#29d" }, shadowColor: "rgba(0, 0, 0, .3)" });
 window.addEventListener("phx:page-loading-start", (info) => topbar.show());

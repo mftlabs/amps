@@ -78,24 +78,51 @@ defmodule AmpsWeb.DataController do
     :ok =
       Gnat.pub(
         gnat,
-        "amps.actions.strrepl.noel",
+        "amps.actions.mailbox.abhay",
         Jason.encode!(%{
-          msg: %{data: "noel NOEL, noel NOEL, noel NOEL"},
+          msg: %{data: "I wanna go for mexican dinner"},
           state: %{}
         })
       )
 
-    IO.inspect(Jetstream.API.Consumer.list(gnat, "ACTIONS"))
-    k = Jetstream.API.Consumer.info(gnat, "ACTIONS", "amps_actions_mailbox_TEST")
-    IO.inspect(k)
-    processes = Supervisor.which_children(Amps.SvcSupervisor)
+    # IO.inspect(Jetstream.API.Consumer.list(gnat, "ACTIONS"))
+    # k = Jetstream.API.Consumer.info(gnat, "ACTIONS", "amps_actions_mailbox_TEST")
+    # IO.inspect(k)
+    processes = Supervisor.which_children(Amps.Supervisor)
     IO.inspect(processes)
 
     Enum.each(processes, fn {_, pid, type, modules} ->
       IO.inspect(Process.info(pid))
     end)
 
-    # IO.inspect(Process.whereis(:"mailbox TEST0012"))
+    # {_, pid, _, _} = Enum.at(processes, 0)
+    # IO.inspect(pid)
+
+    # username = "user01"
+
+    # password = "password1"
+
+    # {:ok, user} = LDAPEx.Client.get_object(pid, "cn=#{username},ou=users,dc=example,dc=org")
+
+    # %{
+    #   attributes: %{
+    #     "userPassword" => passes
+    #   }
+    # } = user
+
+    # IO.inspect(user)
+
+    # authenticate =
+    #   Enum.reduce_while(passes, false, fn pass, acc ->
+    #     if password === pass do
+    #       {:halt, true}
+    #     else
+    #       {:continue, acc}
+    #     end
+    #   end)
+
+    # IO.inspect(authenticate)
+    # IO.inspect(Supervisor.which_children(Amps.Supervisor))
 
     # IO.inspect(SvcManager.service_active?("sftp3"))
     # IO.inspect(
@@ -132,6 +159,35 @@ defmodule AmpsWeb.DataController do
     json(conn, :ok)
   end
 
+  def get_user_link(conn, %{"id" => id}) do
+    IO.inspect(conn)
+    obj = DB.find_one("users", %{"_id" => id})
+    IO.inspect(id)
+
+    edited = Map.put(conn, :host, "localhost")
+    IO.puts("edit")
+    IO.inspect(edited)
+
+    {:ok, map, conn} =
+      PowResetPassword.Plug.create_reset_token(edited, %{"email" => obj["email"]})
+
+    token = map.token
+
+    resp =
+      conn
+      |> PowResetPassword.Plug.load_user_by_token(token)
+
+    IO.inspect(resp)
+
+    IO.inspect(token)
+    [host: host] = Application.get_env(:amps_web, AmpsWeb.Endpoint)[:url]
+    IO.inspect(host)
+
+    [:inet6, port: port] = Application.get_env(:master_proxy, :http)
+    IO.inspect(port)
+    json(conn, "#{host}:#{port}/?token=#{token}#setpassword")
+  end
+
   def get_url(conn, %{
         "fname" => fname,
         "bucket" => bucket,
@@ -145,6 +201,9 @@ defmodule AmpsWeb.DataController do
     # IO.inspect(file)
     # IO.inspect(File.stat!(file.path))
     json(conn, presigned_url)
+  end
+
+  def upload(conn, _params) do
   end
 
   def index(conn, %{"collection" => collection}) do
@@ -233,6 +292,18 @@ defmodule AmpsWeb.DataController do
     end
 
     json(conn, updated)
+  end
+
+  def get_in_field(conn, %{
+        "collection" => collection,
+        "id" => id,
+        "field" => field,
+        "idx" => idx
+      }) do
+    Logger.debug("Getting Field")
+    body = conn.body_params()
+    result = DB.get_in_field(collection, id, field, idx)
+    json(conn, result)
   end
 
   def update_in_field(conn, %{
@@ -342,14 +413,20 @@ defmodule AmpsWeb.DataController do
   def create(conn, %{"collection" => collection}) do
     body =
       case collection do
-        "accounts" ->
+        "users" ->
           IO.inspect(conn.body_params())
 
           body = conn.body_params()
-          pass = :crypto.strong_rand_bytes(32) |> Base.encode64() |> binary_part(0, 32)
-          body = Map.put(body, "password", pass)
+          token = Phoenix.Token.sign(AmpsPortal.Endpoint, "user", body["username"])
 
-          DB.insert("mailbox_auth", %{mailbox: body["username"], password: body["password"]})
+          body = Map.put(body, "password", nil)
+          body = Map.put(body, "token", token)
+
+          DB.insert("mailbox_auth", %{
+            mailbox: body["username"],
+            password: body["password"],
+            active: true
+          })
 
           # account = S3.Minio.create_account(conn.body_params())
           # S3.create_schedule(account)
@@ -410,12 +487,12 @@ defmodule AmpsWeb.DataController do
 
     object =
       case collection do
-        "accounts" ->
-          Map.put(
-            object,
-            "aws_secret_access_key",
-            Encryption.decrypt(object["aws_secret_access_key"])
-          )
+        # "users" ->
+        #   Map.put(
+        #     object,
+        #     "password",
+        #     Encryption.decrypt(object["password"])
+        # )
 
         _ ->
           object
@@ -471,17 +548,23 @@ defmodule AmpsWeb.DataController do
         S3.update_schedule(id)
 
       "services" ->
-        if body["type"] == "subscriber" do
+        service = DB.find_one("services", %{"_id" => id})
+        IO.inspect(service)
+
+        if service["type"] == "subscriber" do
           {stream, consumer} = AmpsUtil.get_names(body)
           AmpsUtil.delete_consumer(stream, consumer)
-          AmpsUtil.create_consumer(stream, consumer, body["topic"])
+          AmpsUtil.create_consumer(stream, consumer, service["topic"])
         end
 
         types = SvcManager.service_types()
 
-        if Map.has_key?(types, String.to_atom(body["type"])) do
-          ServiceController.stop_service(body["name"])
-          ServiceController.start_service(body["name"])
+        if Map.has_key?(types, String.to_atom(service["type"])) do
+          ServiceController.stop_service(service["name"])
+
+          if service["active"] do
+            ServiceController.start_service(service["name"])
+          end
         end
 
       _ ->

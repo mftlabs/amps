@@ -1,114 +1,129 @@
-Ext.define('AmpsDasboard.view.main.PageNumbers',{
-    extend: 'Ext.container.Container',
-    xtype:'pages',
-    layout: 'hbox',
-    items: [
+Ext.define("Amps.view.main.PageNumbers", {
+  extend: "Ext.container.Container",
+  xtype: "pages",
+  layout: "hbox",
+  items: [
+    {
+      xtype: "container",
+      width: "15vw",
+      html: "Page Size:",
+    },
+    {
+      xtype: "container",
+      width: "20vw",
+      html: '<input type="text" id="pageSize" size="15" value="20"/>',
+    },
+    {
+      xtype: "button",
+      text: "Go",
+      cls: "pagebtn2",
+    },
+    {
+      xtype: "container",
+      width: "60px",
+      minWidth: "60px",
+      html: "",
+    },
+    {
+      xtype: "container",
+      width: "60vw",
+      layout: "hbox",
+      items: [
         {
-            xtype:'container',
-            width:'15vw',
-            html:'Page Size:'
-        },{
-            xtype:'container',
-            width:'20vw',
-            html: '<input type="text" id="pageSize" size="15" value="20"/>'
-        },{
-            xtype:'button',
-            text:'Go',
-            cls:'pagebtn2'
-        },{
-            xtype:'container',
-            width:'60px',
-            minWidth:'60px',
-            html:''
-        },{
-            xtype:'container',
-            width:'60vw',
-            layout:'hbox',
-            items:[
-                {
-                    xtype:'button',
-                    flex:1,
-                    cls:'pagebtn',
-                    text:'<< First'
-                },
-                {
-                    xtype:'button',
-                    flex:1,
-                    cls:'pagebtn',
-                    text:'< Prev'
-                },
-                {
-                    xtype:'button',
-                    width:'30',
-                    height:'30',
-                    cls:'pagebtn',
-                    text:'1'
-                },{
-                    xtype:'button',
-                    width:'30',
-                    height:'30',
-                    cls:'pagebtn',
-                    text:'2'
-                },{
-                    xtype:'button',
-                    width:'30',
-                    height:'30',
-                    cls:'pagebtn',
-                    text:'3'
-                },{
-                    xtype:'button',
-                    width:'30',
-                    height:'30',
-                    cls:'pagebtn',
-                    text:'4'
-                },{
-                    xtype:'button',
-                    width:'30',
-                    height:'30',
-                    cls:'pagebtn',
-                    text:'5'
-                },{
-                    xtype:'button',
-                    width:'30',
-                    height:'30',
-                    cls:'pagebtn',
-                    text:'6'
-                },{
-                    xtype:'button',
-                    width:'30',
-                    height:'30',
-                    cls:'pagebtn',
-                    text:'7'
-                },{
-                    xtype:'button',
-                    width:'30',
-                    height:'30',
-                    cls:'pagebtn',
-                    text:'8'
-                },{
-                    xtype:'button',
-                    width:'50',
-                    height:'50',
-                    cls:'pagebtn',
-                    text:'9'
-                },{
-                    xtype:'button',
-                    width:'30',
-                    height:'30',
-                    cls:'pagebtn',
-                    text:'10'
-                },{
-                    xtype:'button',
-                    flex:1,
-                    text:'Next >',
-                    cls:'pagebtn'
-                },{
-                    xtype:'button',
-                    flex:1,
-                    text:'Last >>',
-                    cls:'pagebtn'
-                },
-            ]
-        }
-    ]
-})
+          xtype: "button",
+          flex: 1,
+          cls: "pagebtn",
+          text: "<< First",
+        },
+        {
+          xtype: "button",
+          flex: 1,
+          cls: "pagebtn",
+          text: "< Prev",
+        },
+        {
+          xtype: "button",
+          width: "30",
+          height: "30",
+          cls: "pagebtn",
+          text: "1",
+        },
+        {
+          xtype: "button",
+          width: "30",
+          height: "30",
+          cls: "pagebtn",
+          text: "2",
+        },
+        {
+          xtype: "button",
+          width: "30",
+          height: "30",
+          cls: "pagebtn",
+          text: "3",
+        },
+        {
+          xtype: "button",
+          width: "30",
+          height: "30",
+          cls: "pagebtn",
+          text: "4",
+        },
+        {
+          xtype: "button",
+          width: "30",
+          height: "30",
+          cls: "pagebtn",
+          text: "5",
+        },
+        {
+          xtype: "button",
+          width: "30",
+          height: "30",
+          cls: "pagebtn",
+          text: "6",
+        },
+        {
+          xtype: "button",
+          width: "30",
+          height: "30",
+          cls: "pagebtn",
+          text: "7",
+        },
+        {
+          xtype: "button",
+          width: "30",
+          height: "30",
+          cls: "pagebtn",
+          text: "8",
+        },
+        {
+          xtype: "button",
+          width: "50",
+          height: "50",
+          cls: "pagebtn",
+          text: "9",
+        },
+        {
+          xtype: "button",
+          width: "30",
+          height: "30",
+          cls: "pagebtn",
+          text: "10",
+        },
+        {
+          xtype: "button",
+          flex: 1,
+          text: "Next >",
+          cls: "pagebtn",
+        },
+        {
+          xtype: "button",
+          flex: 1,
+          text: "Last >>",
+          cls: "pagebtn",
+        },
+      ],
+    },
+  ],
+});

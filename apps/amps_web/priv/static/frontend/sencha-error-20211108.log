@@ -24,8 +24,8 @@ Diagnostic information:
                           app.compressor : null                                              
                           app.config.dir : /Users/abhayram/bin/Sencha/Cmd/6.6.0.13/ant/build/app
                 app.cordova.cache.enable : false                                             
-                   app.cordova.config.id : com.domain.AmpsDasboard                           
-                 app.cordova.config.name : AmpsDasboard                                      
+                   app.cordova.config.id : com.domain.Amps                           
+                 app.cordova.config.name : Amps                                      
                  app.cordova.config.path : /Users/abhayram/Documents/NewAmps/amps_umbrella/apps/amps_web/priv/static/frontend/cordova
                app.cordova.config.target :                                                   
               app.cordova.config.verbose : false                                             
@@ -49,10 +49,10 @@ Diagnostic information:
                    app.loader.cacheParam : _dc                                               
                     app.modern.js.0.path : /Users/abhayram/Documents/NewAmps/amps_umbrella/apps/amps_web/priv/static/frontend/ext/build/ext-modern-all-debug.js
                     app.modern.js.length : 1                                                 
-                                app.name : AmpsDasboard                                      
-                           app.namespace : AmpsDasboard                                      
+                                app.name : Amps                                      
+                           app.namespace : Amps                                      
               app.output.appCache.enable : false                                             
-                         app.output.base : /Users/abhayram/Documents/NewAmps/amps_umbrella/apps/amps_web/priv/static/frontend/build/${build.environment}/AmpsDasboard
+                         app.output.base : /Users/abhayram/Documents/NewAmps/amps_umbrella/apps/amps_web/priv/static/frontend/build/${build.environment}/Amps
                            app.output.js : ${build.id}/app.js                                
                      app.output.manifest : ${build.id}.json                                  
            app.output.microloader.enable : true                                              
@@ -64,8 +64,8 @@ Diagnostic information:
                          app.overrides.1 : ${toolkit.name}/overrides                         
                     app.overrides.length : 2                                                 
                app.phonegap.cache.enable : false                                             
-                  app.phonegap.config.id : com.domain.AmpsDasboard                           
-                app.phonegap.config.name : AmpsDasboard                                      
+                  app.phonegap.config.id : com.domain.Amps                           
+                app.phonegap.config.name : Amps                                      
                 app.phonegap.config.path : /Users/abhayram/Documents/NewAmps/amps_umbrella/apps/amps_web/priv/static/frontend/phonegap
               app.phonegap.config.remote : false                                             
              app.phonegap.config.verbose : false                                             
@@ -89,7 +89,7 @@ Diagnostic information:
                           app.sass.etc.1 : ${toolkit.name}/sass/etc/all.scss                 
                      app.sass.etc.length : 2                                                 
                         app.sass.fashion : true                                              
-                      app.sass.namespace : AmpsDasboard                                      
+                      app.sass.namespace : Amps                                      
                             app.sass.src : sass/src,${toolkit.name}/sass/src                 
                           app.sass.src.0 : sass/src                                          
                           app.sass.src.1 : ${toolkit.name}/sass/src                          

@@ -49,7 +49,8 @@ defmodule Amps.MixProject do
       {:sftp_client, "~> 1.4"},
       {:snap, "~>0.5"},
       {:jetstream, path: "./jetstream"},
-      {:gnat, "~> 1.2"}
+      {:gnat, "~> 1.2"},
+      {:ldap_ex, "~> 0.2.2"}
     ]
   end
 

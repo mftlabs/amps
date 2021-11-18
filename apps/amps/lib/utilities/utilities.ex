@@ -378,8 +378,8 @@ defmodule AmpsUtil do
       })
 
     case Jetstream.API.Consumer.delete(gnat, stream, name) do
-      {:ok, res} ->
-        IO.inspect(res)
+      :ok ->
+        :ok
 
       {:error, error} ->
         IO.inspect(error)

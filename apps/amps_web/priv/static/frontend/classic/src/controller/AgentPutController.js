@@ -1,9 +1,9 @@
-Ext.define("AmpsDasboard.controller.AgentPutController", {
+Ext.define("Amps.controller.AgentPutController", {
   extend: "Ext.app.ViewController",
 
   alias: "controller.agentputcontroller",
 
-  require: ["AmpsDasboard.view.main.Main"],
+  require: ["Amps.view.main.Main"],
   init: function () {},
 
   onDefaultChange: function () {

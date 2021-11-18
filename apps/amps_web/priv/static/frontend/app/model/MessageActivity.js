@@ -1,7 +1,13 @@
-Ext.define('AmpsDasboard.model.MessageActivity', {
-    extend: 'AmpsDasboard.model.Base',
+Ext.define("Amps.model.MessageActivity", {
+  extend: "Amps.model.Base",
 
-    fields: [
-        'sender', 'receiver', 'msg_type','fname','fsize','ftype','create_time'
-    ]
+  fields: [
+    "sender",
+    "receiver",
+    "msg_type",
+    "fname",
+    "fsize",
+    "ftype",
+    "create_time",
+  ],
 });

@@ -1,9 +1,9 @@
-Ext.define("AmpsDasboard.controller.MatchPatternController", {
+Ext.define("Amps.controller.MatchPatternController", {
   extend: "Ext.app.ViewController",
 
   alias: "controller.matchpattern",
 
-  require: ["AmpsDasboard.view.main.Main"],
+  require: ["Amps.view.main.Main"],
   init: function () {},
 
   onRegexChange: function (scope, val, old, opts) {

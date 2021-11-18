@@ -1,4 +1,4 @@
-Ext.define("AmpsDasboard.view.nav.Header", {
+Ext.define("Amps.view.nav.Header", {
   extend: "Ext.container.Container",
   xtype: "appheader",
   layout: "hbox",

@@ -5,8 +5,6 @@ defmodule AmpsWeb.Router do
   use Pow.Extension.Phoenix.Router,
     extensions: [PowResetPassword]
 
-  use AmpsWeb, :router
-
   pipeline :browser do
     plug(:accepts, ["html"])
     plug(:fetch_session)
@@ -20,10 +18,20 @@ defmodule AmpsWeb.Router do
     plug(AmpsWeb.APIAuthPlug, otp_app: :amps)
   end
 
+  pipeline :api_portal do
+    plug(:accepts, ["json"])
+    plug(AmpsPortal.APIAuthPlug, otp_app: :amps_portal)
+  end
+
   pipeline :api_protected do
     plug(:fetch_session)
     plug(:fetch_live_flash)
     plug(Pow.Plug.RequireAuthenticated, error_handler: AmpsWeb.APIAuthErrorHandler)
+  end
+
+  scope "/api", AmpsWeb do
+    pipe_through(:api_portal)
+    get("/users/link/:id", DataController, :get_user_link)
   end
 
   scope "/api", AmpsWeb do
@@ -57,6 +65,8 @@ defmodule AmpsWeb.Router do
     resources("/:collection/", DataController, except: [:new, :edit])
     get("/:collection/:id/:field", DataController, :get_field)
     post("/:collection/:id/:field", DataController, :add_to_field)
+    get("/:collection/:id/:field/:idx", DataController, :get_in_field)
+
     put("/:collection/:id/:field/:idx", DataController, :update_in_field)
     delete("/:collection/:id/:field/:idx", DataController, :delete_from_field)
     # Your protected API endpoints here

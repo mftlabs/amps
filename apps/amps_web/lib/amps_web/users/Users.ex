@@ -64,7 +64,7 @@ defmodule AmpsDashboard.Users do
         end
       end)
 
-    convert_to_user_struct(AmpsWeb.DB.find_one("users", filter))
+    convert_to_user_struct(AmpsWeb.DB.find_one("admin", filter))
   end
 
   def convert_to_user_struct(user) do
@@ -80,7 +80,7 @@ defmodule AmpsDashboard.Users do
     userinfo = params["userinfo"]
     IO.inspect(userinfo)
     uid = params["uid"]
-    user = AmpsWeb.DB.find_one("users", %{google_id: uid})
+    user = AmpsWeb.DB.find_one("admin", %{google_id: uid})
 
     if user do
       convert_to_user_struct(user)
@@ -95,7 +95,7 @@ defmodule AmpsDashboard.Users do
         |> Map.put("provider", "google")
         |> Map.merge(%{"approved" => false, "role" => "Guest"})
 
-      id = AmpsWeb.DB.insert("users", user)
+      id = AmpsWeb.DB.insert("admin", user)
 
       user = Map.put(user, :id, id)
       struct(AmpsDashboard.Users.User, user)
@@ -133,7 +133,7 @@ defmodule AmpsDashboard.Users.Vault do
 
     case login do
       {:ok, _token, _ttl} ->
-        user = AmpsWeb.DB.find_one("users", %{username: body["username"]})
+        user = AmpsWeb.DB.find_one("admin", %{username: body["username"]})
         IO.inspect(user)
 
         if user["approved"] do
@@ -178,7 +178,7 @@ defmodule AmpsDashboard.Users.Vault do
       Map.merge(user, %{"approved" => false, "role" => "Guest", "provider" => "vault"})
       |> Map.new(fn {k, v} -> {String.to_atom(k), v} end)
 
-    id = AmpsWeb.DB.insert("users", user)
+    id = AmpsWeb.DB.insert("admin", user)
 
     user = Map.put(user, :id, id)
     IO.inspect(result)
@@ -206,7 +206,7 @@ defmodule AmpsDashboard.Users.DB do
   import Argon2
 
   def authenticate(body) do
-    user = AmpsWeb.DB.find_one("users", %{"username" => body["username"]})
+    user = AmpsWeb.DB.find_one("admin", %{"username" => body["username"]})
     IO.inspect(user)
     IO.inspect(body["password"])
 
@@ -243,7 +243,7 @@ defmodule AmpsDashboard.Users.DB do
       |> Map.put("password", hashed)
       |> Map.merge(%{"approved" => false, "role" => "Guest", "provider" => "amps"})
 
-    id = AmpsWeb.DB.insert("users", user)
+    id = AmpsWeb.DB.insert("admin", user)
 
     user = Map.put(user, "id", id) |> Map.new(fn {k, v} -> {String.to_atom(k), v} end)
 

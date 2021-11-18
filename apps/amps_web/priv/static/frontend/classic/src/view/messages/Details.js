@@ -1,4 +1,4 @@
-Ext.define("AmpsDasboard.view.messages.MessageActivity", {
+Ext.define("Amps.view.messages.MessageActivity", {
   extend: "Ext.panel.Panel",
   xtype: "messageactivitycontainer",
   controller: "messages",
@@ -106,7 +106,7 @@ Ext.define("AmpsDasboard.view.messages.MessageActivity", {
   ],
 });
 
-Ext.define("AmpsDasboard.view.messages.SessionDetails", {
+Ext.define("Amps.view.messages.SessionDetails", {
   extend: "Ext.grid.Panel",
   xtype: "sessiondetails",
   requires: [],
@@ -177,7 +177,7 @@ Ext.define("AmpsDasboard.view.messages.SessionDetails", {
     },
   },
 });
-Ext.define("AmpsDasboard.view.messages.SessionFiles", {
+Ext.define("Amps.view.messages.SessionFiles", {
   extend: "Ext.grid.Panel",
   xtype: "sessionfilespanel",
 
@@ -270,7 +270,7 @@ Ext.define("AmpsDasboard.view.messages.SessionFiles", {
   },
 });
 
-Ext.define("AmpsDasboard.view.messages.SessionLogs", {
+Ext.define("Amps.view.messages.SessionLogs", {
   extend: "Ext.grid.Panel",
   xtype: "sessionlogpanel",
 
@@ -455,7 +455,7 @@ Ext.define("AmpsDasboard.view.messages.SessionLogs", {
   },
 });
 
-Ext.define("AmpsDasboard.view.messages.SessionEvents", {
+Ext.define("Amps.view.messages.SessionEvents", {
   extend: "Ext.grid.Panel",
   xtype: "sessioneventpanel",
 
@@ -616,7 +616,7 @@ Ext.define("AmpsDasboard.view.messages.SessionEvents", {
   },
 });
 
-Ext.define("AmpsDasboard.view.messages.SessionList", {
+Ext.define("Amps.view.messages.SessionList", {
   extend: "Ext.grid.Panel",
   xtype: "sessionlist",
   width: "100%",
@@ -667,7 +667,7 @@ Ext.define("AmpsDasboard.view.messages.SessionList", {
   },
 });
 
-Ext.define("AmpsDasboard.view.messages.MessageDetails", {
+Ext.define("Amps.view.messages.MessageDetails", {
   extend: "Ext.form.Panel",
   xtype: "messagedetails",
   title: "Message Details",
@@ -690,7 +690,7 @@ Ext.define("AmpsDasboard.view.messages.MessageDetails", {
     var entries = Object.entries(record);
     console.log(entries);
     var fields = {};
-    amfutil.grids[route].columns.forEach((col) => {
+    ampsgrids.grids[route].columns.forEach((col) => {
       fields[col.dataIndex] = { label: col.text };
     });
     fields["_id"] = { label: "ID" };
@@ -730,7 +730,7 @@ Ext.define("AmpsDasboard.view.messages.MessageDetails", {
   items: [],
 });
 
-Ext.define("AmpsDasboard.view.messages.MessageStatus", {
+Ext.define("Amps.view.messages.MessageStatus", {
   extend: "Ext.container.Container",
   xtype: "messagestatus",
   layout: "fit",

@@ -3,16 +3,16 @@
  * and launch() the Application class.
  */
 Ext.application({
-  extend: "AmpsDasboard.Application",
+  extend: "Amps.Application",
 
-  name: "AmpsDasboard",
+  name: "Amps",
 
   requires: [
-    // This will automatically load all classes in the AmpsDasboard namespace
+    // This will automatically load all classes in the Amps namespace
     // so that application classes do not need to require each other.
-    "AmpsDasboard.*",
+    "Amps.*",
   ],
 
   // The name of the initial view to create.
-  //mainView: 'AmpsDasboard.view.main.Main'
+  //mainView: 'Amps.view.main.Main'
 });

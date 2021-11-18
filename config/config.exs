@@ -9,6 +9,32 @@
 # move said applications out of the umbrella.
 import Config
 
+config :amps_portal,
+  generators: [context_app: false]
+
+# Configures the endpoint
+config :amps_portal, AmpsPortal.Endpoint,
+  url: [host: "localhost"],
+  render_errors: [view: AmpsPortal.ErrorView, accepts: ~w(html json), layout: false],
+  pubsub_server: AmpsPortal.PubSub,
+  live_view: [signing_salt: "IzQCGrqZ"]
+
+# server: false
+
+# Configure esbuild (the version is required)
+config :esbuild,
+  version: "0.12.18",
+  amps_portal: [
+    args: ~w(js/app.js --bundle --target=es2016 --outdir=../priv/static/assets),
+    cd: Path.expand("../apps/amps_portal/assets", __DIR__),
+    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
+  ],
+  amps_web: [
+    args: ~w(js/app.js --bundle --target=es2016 --outdir=../priv/static/assets),
+    cd: Path.expand("../apps/amps_web/assets", __DIR__),
+    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
+  ]
+
 # Configures the mailer
 #
 # By default it uses the "Local" adapter which stores the emails
@@ -16,6 +42,21 @@ import Config
 #
 # For production it's recommended to configure a different adapter
 # at the `config/runtime.exs`.
+
+config :master_proxy,
+  # any Cowboy options are allowed
+  http: [:inet6, port: 4080],
+  # https: [:inet6, port: 4443],
+  backends: [
+    %{
+      host: ~r/^admin.#{System.get_env("AMPS_HOST_URL", "localhost")}$/,
+      phoenix_endpoint: AmpsWeb.Endpoint
+    },
+    %{
+      host: ~r/^#{System.get_env("AMPS_HOST_URL", "localhost")}$/,
+      phoenix_endpoint: AmpsPortal.Endpoint
+    }
+  ]
 
 config :amps,
   db: "mongo"
@@ -39,6 +80,7 @@ config :amps_web, AmpsWeb.Endpoint,
     port: System.get_env("AMPS_HOST_PORT", "4000"),
     protocol_options: [idle_timeout: 5_000_000]
   ],
+  # server: false,s
   # https: [
   #   port: 443,
   #   # cipher_suite: :strong,
@@ -56,7 +98,15 @@ config :amps_web, AmpsWeb.Endpoint,
       System.get_env("AMPS_S3_HOST", "localhost") <>
       ":" <> System.get_env("AMPS_S3_PORT", "9001"),
   pg_addr: System.get_env("AMPS_POSTGRES_ADDR"),
-  elastic_prefix: System.get_env("AMPS_ELASTIC_INDEX", "amf")
+  elastic_prefix: System.get_env("AMPS_ELASTIC_INDEX", "")
+
+# Configures the mailer
+#
+# By default it uses the "Local" adapter which stores the emails
+# locally. You can see the emails in your browser, at "/dev/mailbox".
+#
+# For production it's recommended to configure a different adapter
+# at the `config/runtime.exs`.
 
 config :amps, :pow,
   user: AmpsDashboard.Users.User,
@@ -68,6 +118,24 @@ config :amps, :pow,
 config :amps, :pow_assent,
   user: AmpsDashboard.Users.User,
   users_context: AmpsDashboard.Users,
+  providers: [
+    google: [
+      client_id: "63199210559-hmhqeu7hmlkv3epournsu7j8sn9likqv.apps.googleusercontent.com",
+      client_secret: "bdvfUN3jk1wkrH7TXmY1yx3c",
+      strategy: Assent.Strategy.Google
+    ]
+  ]
+
+config :amps_portal, :pow,
+  user: AmpsPortal.Users.User,
+  users_context: AmpsPortal.Users,
+  extensions: [PowResetPassword],
+  controller_callbacks: Pow.Extension.Phoenix.ControllerCallbacks,
+  mailer_backend: AmpsWeb.PowMailer
+
+config :amps_portal, :pow_assent,
+  user: AmpsPortal.Users.User,
+  users_context: AmpsPortal.Users,
   providers: [
     google: [
       client_id: "63199210559-hmhqeu7hmlkv3epournsu7j8sn9likqv.apps.googleusercontent.com",
@@ -150,13 +218,8 @@ config :amps, :pyworker,
   ]
 
 # Configure esbuild (the version is required)
-config :esbuild,
-  version: "0.12.18",
-  default: [
-    args: ~w(js/app.js --bundle --target=es2016 --outdir=../priv/static/assets),
-    cd: Path.expand("../apps/amps_web/assets", __DIR__),
-    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
-  ]
+# config :esbuild,
+#   version: "0.12.18",
 
 # Configures Elixir's Logger
 config :logger, :console,

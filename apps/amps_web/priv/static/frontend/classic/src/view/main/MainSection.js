@@ -6,101 +6,106 @@
  * TODO - Replace this content of this view to suite the needs of your application.
  */
 
+Ext.define("Amps.view.main.MainSection", {
+  extend: "Ext.tab.Panel",
+  xtype: "app-main2",
 
+  requires: [
+    "Ext.plugin.Viewport",
+    "Ext.window.MessageBox",
 
-Ext.define('AmpsDasboard.view.main.MainSection', {
-    extend: 'Ext.tab.Panel',
-    xtype: 'app-main2',
+    "Amps.view.main.MainController",
+    "Amps.view.main.MainModel",
+    "Amps.view.main.List",
+  ],
 
-    requires: [
-        'Ext.plugin.Viewport',
-        'Ext.window.MessageBox',
+  controller: "main",
+  viewModel: "main",
 
-        'AmpsDasboard.view.main.MainController',
-        'AmpsDasboard.view.main.MainModel',
-        'AmpsDasboard.view.main.List'
-    ],
+  ui: "navigation",
 
-    controller: 'main',
-    viewModel: 'main',
+  tabBarHeaderPosition: 1,
+  titleRotation: 0,
+  tabRotation: 0,
 
-    ui: 'navigation',
-
-    tabBarHeaderPosition: 1,
-    titleRotation: 0,
-    tabRotation: 0,
-
-    header: {
-        layout: {
-            align: 'stretchmax'
-        },
-        title: {
-            bind: {
-                text: '{name}'
-            },
-            flex: 0
-        },
-        iconCls: 'fa-th-list'
+  header: {
+    layout: {
+      align: "stretchmax",
     },
-
-    tabBar: {
-        flex: 1,
-        layout: {
-            align: 'stretch',
-            overflowHandler: 'none'
-        }
+    title: {
+      bind: {
+        text: "{name}",
+      },
+      flex: 0,
     },
+    iconCls: "fa-th-list",
+  },
 
-    responsiveConfig: {
-        tall: {
-            headerPosition: 'top'
-        },
+  tabBar: {
+    flex: 1,
+    layout: {
+      align: "stretch",
+      overflowHandler: "none",
+    },
+  },
+
+  responsiveConfig: {
+    tall: {
+      headerPosition: "top",
+    },
+    wide: {
+      headerPosition: "left",
+    },
+  },
+
+  defaults: {
+    bodyPadding: 20,
+    tabConfig: {
+      responsiveConfig: {
         wide: {
-            headerPosition: 'left'
-        }
+          iconAlign: "left",
+          textAlign: "left",
+        },
+        tall: {
+          iconAlign: "top",
+          textAlign: "center",
+          width: 120,
+        },
+      },
     },
+  },
 
-    defaults: {
-        bodyPadding: 20,
-        tabConfig: {
-            responsiveConfig: {
-                wide: {
-                    iconAlign: 'left',
-                    textAlign: 'left'
-                },
-                tall: {
-                    iconAlign: 'top',
-                    textAlign: 'center',
-                    width: 120
-                }
-            }
-        }
+  items: [
+    {
+      title: "Home",
+      iconCls: "fa-home",
+      // The following grid shares a store with the classic version's grid as well!
+      items: [
+        {
+          xtype: "mainlist",
+        },
+      ],
     },
-
-    items: [{
-        title: 'Home',
-        iconCls: 'fa-home',
-        // The following grid shares a store with the classic version's grid as well!
-        items: [{
-            xtype: 'mainlist'
-        }]
-    }, {
-        title: 'Users',
-        iconCls: 'fa-user',
-        bind: {
-            html: '{loremIpsum}'
-        }
-    }, {
-        title: 'Groups',
-        iconCls: 'fa-users',
-        bind: {
-            html: '{loremIpsum}'
-        }
-    }, {
-        title: 'Settings',
-        iconCls: 'fa-cog',
-        bind: {
-            html: '{loremIpsum}'
-        }
-    }]
+    {
+      title: "Users",
+      iconCls: "fa-user",
+      bind: {
+        html: "{loremIpsum}",
+      },
+    },
+    {
+      title: "Groups",
+      iconCls: "fa-users",
+      bind: {
+        html: "{loremIpsum}",
+      },
+    },
+    {
+      title: "Settings",
+      iconCls: "fa-cog",
+      bind: {
+        html: "{loremIpsum}",
+      },
+    },
+  ],
 });

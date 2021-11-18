@@ -1,11 +1,11 @@
-Ext.define("AmpsDasboard.view.form.LoadKey", {
+Ext.define("Amps.view.form.LoadKey", {
   extend: "Ext.form.FieldContainer",
   xtype: "loadkey",
   layout: "hbox",
   flex: 1,
-  defaults: {
-    margin: 5,
-  },
+  // defaults: {
+  //   margin: 5,
+  // },
   constructor(args) {
     this.callParent(args);
     this.itemId = args["itemId"];
@@ -22,17 +22,21 @@ Ext.define("AmpsDasboard.view.form.LoadKey", {
         readOnly: true,
         hidden: args["hidden"],
         disabled: args["disabled"],
+        style: {
+          marginRight: 5,
+        },
       },
       {
         xtype: "combobox",
         flex: 1,
         hidden: args["hidden"],
         disabled: args["disabled"],
+        hidden: args["readOnly"],
         displayField: "name",
         valueField: "_id",
         listeners: {
           beforerender: function (scope) {
-            scope.setStore(Ext.create("AmpsDasboard.store.Key"));
+            scope.setStore(Ext.create("Amps.store.Key"));
           },
           change: async function (scope, val) {
             var resp = await amfutil.ajaxRequest({

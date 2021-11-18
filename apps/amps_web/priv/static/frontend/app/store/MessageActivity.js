@@ -1,20 +1,20 @@
-Ext.define('AmpsDasboard.store.MessageActivity', {
-    extend: 'Ext.data.Store',
+Ext.define("Amps.store.MessageActivity", {
+  extend: "Ext.data.Store",
 
-    alias: 'store.messages',
+  alias: "store.messages",
 
-    model: 'AmpsDasboard.model.MessageActivity',
+  model: "Amps.model.MessageActivity",
 
-    proxy:{
-        url:'/api/messages',
-        type:'rest',
-        reader:{
-            type:'json',
-            rootProperty:'data',
-            totalProperty:'length'
-        },
-        pageParam:'pageNumber',
-        limitParam:'pageSize'
+  proxy: {
+    url: "/api/messages",
+    type: "rest",
+    reader: {
+      type: "json",
+      rootProperty: "data",
+      totalProperty: "length",
     },
-    autoLoad: false
+    pageParam: "pageNumber",
+    limitParam: "pageSize",
+  },
+  autoLoad: false,
 });

@@ -1,0 +1,90 @@
+Ext.define("Amps.Authorized.NavBar", {
+  extend: "Ext.container.Container",
+  xtype: "navbar",
+  controller: "menu",
+
+  layout: "vbox",
+  items: [
+    {
+      xtype: "button",
+      ui: "action",
+      iconCls: "x-fa fa-bars",
+      handler: "toggleNavType",
+      style: "box-shadow: none; background: #fafafa;",
+      // cls: "button_class",
+    },
+    {
+      flex: 1,
+      xtype: "container",
+      scrollable: true,
+      layout: "fit",
+      // style: {
+      //   background: "#32404e",
+      // },
+      items: [
+        {
+          xtype: "treenav",
+        },
+      ],
+    },
+    {
+      height: 50,
+      xtype: "container",
+      layout: "center",
+      style: {
+        background: "#fafafa",
+      },
+      defaults: {
+        margin: "5",
+      },
+      layout: "fit",
+      items: [
+        {
+          xtype: "button",
+          ui: "action",
+          itemId: "usermenu",
+          iconCls: "x-fa fa-user",
+          text: (function () {
+            var user = JSON.parse(localStorage.getItem("user"));
+            if (user) {
+              return user.firstname + " " + user.lastname;
+            }
+            return;
+          })(),
+          menuAlign: "bl-tl",
+          menu: {
+            items: []
+              .concat(
+                localStorage.getItem("user") &&
+                  (JSON.parse(localStorage.getItem("user")).provider ==
+                    "vault" ||
+                    JSON.parse(localStorage.getItem("user")).provider == "db")
+                  ? [
+                      {
+                        text: "Change Password",
+                        iconCls: "x-fa fa-user-circle-o",
+                        handler: "onResetPassword",
+                      },
+                    ]
+                  : []
+              )
+              .concat([
+                {
+                  text: "Uploads",
+
+                  iconCls: "x-fa fa-upload",
+                  handler: "showUploads",
+                },
+                {
+                  text: "Logout",
+
+                  iconCls: "x-fa fa-sign-out",
+                  handler: "onLogout",
+                },
+              ]),
+          },
+        },
+      ],
+    },
+  ],
+});

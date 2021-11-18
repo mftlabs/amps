@@ -36,7 +36,7 @@
 //   },
 // };
 
-Ext.define("AmpsDasboard.controller.PageController", {
+Ext.define("Amps.controller.PageController", {
   extend: "Ext.app.ViewController",
 
   alias: "controller.page",
@@ -98,7 +98,7 @@ Ext.define("AmpsDasboard.controller.PageController", {
   onRoute: function () {
     var route = Ext.util.History.currentToken;
     var tokens = route.split("/");
-    const grids = amfutil.grids;
+    const grids = ampsgrids.grids;
     var routes = Object.keys(grids).concat(Object.keys(pages));
     var treenav = Ext.ComponentQuery.query("#treenavigation")[0];
     newSelection = treenav.getStore().findRecord("rowCls", tokens[0]);
@@ -117,28 +117,28 @@ Ext.define("AmpsDasboard.controller.PageController", {
     if (tokens.length == 1) {
       console.log(tokens);
 
-      var grids = amfutil.grids;
-      var pages = Object.keys(amfutil.pages);
+      var grids = ampsgrids.grids;
+      var pages = Object.keys(ampsgrids.pages);
       if (pages.indexOf(route) >= 0) {
         amfutil.getElementByID("page-handler").setActiveItem(1);
         var mp = amfutil.getElementByID("main-page");
         console.log(mp);
         mp.removeAll();
-        mp.insert(0, amfutil.pages[route].view);
+        mp.insert(0, ampsgrids.pages[route].view);
       } else {
         amfutil.getElementByID("page-handler").setActiveItem(0);
 
         var grid = this.getView().down("#main-grid");
         var options = ["delete"];
-        console.log(amfutil.grids[route]);
+        console.log(ampsgrids.grids[route]);
 
         var column = {
           xtype: "actioncolumn",
           text: "Actions",
           dataIndex: "actions",
           width: 175,
-          items: amfutil.grids[route].options
-            ? amfutil.grids[route].options.map(
+          items: ampsgrids.grids[route].options
+            ? ampsgrids.grids[route].options.map(
                 (option) => amfutil.gridactions[option]
               )
             : [],
@@ -155,15 +155,15 @@ Ext.define("AmpsDasboard.controller.PageController", {
           grid.reconfigure(
             amfutil.uploads,
             grids[route].columns.concat(
-              amfutil.grids[route].options ? [column] : null
+              ampsgrids.grids[route].options ? [column] : null
             )
           );
           mask.hide();
         } else {
           grid.reconfigure(
-            amfutil.createCollectionStore(Ext.util.History.getToken()),
+            amfutil.createCollectionStore(Ext.util.History.getToken(), {}),
             grids[route].columns.concat(
-              amfutil.grids[route].options ? [column] : null
+              ampsgrids.grids[route].options ? [column] : null
             )
           );
         }
@@ -466,14 +466,23 @@ Ext.define("AmpsDasboard.controller.PageController", {
     }
   },
 
-  copyPassword: async function (grid, rowIndex, colIndex, e) {
+  getLink: async function (grid, rowIndex, colIndex, e) {
     var record = grid.getStore().getAt(rowIndex);
     console.log(record);
-    var account = await amfutil.getById("accounts", record.data._id);
+    var url = window.location.protocol + "//";
+    var subdomain = window.location.host.split(".")[0];
+    var host = window.location.host.replace(subdomain + ".", "");
+    url += host + "/api/users/link/" + record.data._id;
 
-    var text = account["aws_secret_access_key"];
+    var resp = await amfutil.ajaxRequest({
+      method: "GET",
+      url: url,
+    });
 
-    navigator.clipboard.writeText(text).then(
+    var link = Ext.decode(resp.responseText);
+    console.log(link);
+
+    navigator.clipboard.writeText(link).then(
       function () {
         console.log("Async: Copying to clipboard was successful!");
         Ext.toast("Copied to clipboard");
@@ -668,7 +677,7 @@ Ext.define("AmpsDasboard.controller.PageController", {
     console.log("Upload");
     var rec = grid.getStore().getAt(rowIndex);
     var uploadWindow = new Ext.window.Window({
-      title: "Upload File to " + rec.data.name,
+      title: "Upload File to Topic: " + rec.data.desc,
       modal: true,
       width: 500,
       scrollable: true,
@@ -685,24 +694,6 @@ Ext.define("AmpsDasboard.controller.PageController", {
           scrollable: true,
           items: [
             {
-              xtype: "textfield",
-              itemId: "prefix",
-              name: "prefix",
-              fieldLabel: "Prefix",
-              allowBlank: false,
-              validator: function (val) {
-                if (val == "") {
-                  return true;
-                } else {
-                  if (val[0] == "/") {
-                    return "Prefix cannot begin with /";
-                  } else {
-                    return true;
-                  }
-                }
-              },
-            },
-            {
               xtype: "filefield",
               name: "file",
               fieldLabel: "Files",
@@ -710,9 +701,9 @@ Ext.define("AmpsDasboard.controller.PageController", {
               allowBlank: false,
               buttonText: "Select Files...",
               listeners: {
-                render: function (scope) {
-                  scope.fileInputEl.dom.setAttribute("multiple", true);
-                },
+                // render: function (scope) {
+                //   scope.fileInputEl.dom.setAttribute("multiple", true);
+                // },
               },
             },
             {
@@ -734,7 +725,7 @@ Ext.define("AmpsDasboard.controller.PageController", {
 
                     formpanel.insert(
                       formpanel.items.length - 1,
-                      Ext.create("AmpsDasboard.form.Defaults")
+                      Ext.create("Amps.form.Defaults")
                     );
                   },
                 },
@@ -819,7 +810,7 @@ Ext.define("AmpsDasboard.controller.PageController", {
   },
 });
 
-Ext.define("AmpsDasboard.window.Uploads", {
+Ext.define("Amps.window.Uploads", {
   extend: "Ext.window.Window",
   singleton: true,
   width: 700,

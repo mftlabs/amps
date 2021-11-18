@@ -14,7 +14,7 @@ Ext.define("Override.route.Route", {
   },
 });
 
-// Ext.define("AmpsDasboard.form.field.Number", {
+// Ext.define("Amps.form.field.Number", {
 //   override: "Ext.form.field.Number",
 
 //   parseValue: function (val) {
@@ -40,7 +40,7 @@ Ext.override(Ext.data.Store, {
   },
 });
 
-Ext.define("AmpsDasboard.override.form.field.VTypes", {
+Ext.define("Amps.override.form.field.VTypes", {
   override: "Ext.form.field.VTypes",
 
   alphnumlowercaseVtype: function (value) {
@@ -233,7 +233,7 @@ Ext.define("AmpsDasboard.override.form.field.VTypes", {
   },
 });
 
-Ext.define("AmpsDasboard.overrides.form.field.Base", {
+Ext.define("Amps.overrides.form.field.Base", {
   override: "Ext.form.field.Base",
 
   getLabelableRenderData: function () {

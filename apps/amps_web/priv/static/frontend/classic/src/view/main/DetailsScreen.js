@@ -1,10 +1,10 @@
-Ext.define("AmpsDasboard.view.main.DetailsScreen", {
+Ext.define("Amps.view.main.DetailsScreen", {
   extend: "Ext.panel.Panel",
   xtype: "detailsscreen",
   layout: "fit",
   height: "100%",
   width: "100%",
-  requires: ["AmpsDasboard.controller.PageController"],
+  requires: ["Amps.controller.PageController"],
   controller: "page",
   tbar: [
     {

@@ -1,4 +1,4 @@
-Ext.define("AmpsDasboard.view.nav.TreeNav", {
+Ext.define("Amps.view.nav.TreeNav", {
   extend: "Ext.list.Tree",
   xtype: "treenav",
   reference: "treelist",
@@ -18,25 +18,32 @@ Ext.define("AmpsDasboard.view.nav.TreeNav", {
           cls: "messages",
         },
         {
-          iconCls: "x-fa fa-id-card-o",
-          leaf: true,
-          rowCls: "accounts",
-          text: "Accounts",
-          tooltip: "Accounts",
-          cls: "accounts",
-        },
-        {
-          iconCls: "x-fa fa-users",
-          leaf: true,
-          rowCls: "users",
-          text: "Users",
-        },
-
-        {
           iconCls: "x-fa fa-television",
           leaf: true,
           rowCls: "monitoring",
-          text: "Monitoring",
+          text: "Service Monitoring",
+        },
+        {
+          iconCls: "x-fa fa-sign-in",
+          rowCls: "onboarding",
+          text: "Onboarding",
+          expanded: true,
+          children: [
+            {
+              iconCls: "x-fa fa-id-card-o",
+              leaf: true,
+              rowCls: "customers",
+              text: "Customers",
+              tooltip: "Customers",
+            },
+            {
+              iconCls: "x-fa fa-users",
+              leaf: true,
+              rowCls: "users",
+              text: "Users",
+              tooltip: "Users",
+            },
+          ],
         },
 
         {
@@ -92,6 +99,12 @@ Ext.define("AmpsDasboard.view.nav.TreeNav", {
               text: "Defaults",
             },
           ],
+        },
+        {
+          iconCls: "x-fa fa-user-secret",
+          leaf: true,
+          rowCls: "admin",
+          text: "Admin Users",
         },
       ],
       expanded: true,

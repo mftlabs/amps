@@ -1,1 +1,1 @@
-Ext.define("AmpsDasboard.view.filter.Date", {});
+Ext.define("Amps.view.filter.Date", {});

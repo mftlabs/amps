@@ -1,4 +1,4 @@
-# AmpsDasboard
+# Amps
 
 This folder is primarily a container for the top-level pieces of the application.
 While you can remove some files and folders that this application does not use,
@@ -83,7 +83,7 @@ The contents of "overrides" folders are automatically required and included in
 builds. These should not be explicitly mentioned in "requires" or "uses" in code.
 This area is intended for overrides like these:
 
-    Ext.define('AmpsDasboard.overrides.foo.Bar', {
+    Ext.define('Amps.overrides.foo.Bar', {
         override: 'Ext.foo.Bar',
         ...
     });

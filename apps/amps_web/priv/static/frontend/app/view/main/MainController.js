@@ -1,5 +1,5 @@
 Ext.define(
-  "AmpsDasboard.form.Rules",
+  "Amps.form.Rules",
   (function () {
     var self; // This is a variable to store "this"
 
@@ -10,24 +10,43 @@ Ext.define(
       collapsible: true,
       constructor: function (args) {
         self = this;
+        console.log(args);
         this.callParent(args);
         this.ruleNames = [];
+        this.loadRules(args["value"], args["readOnly"]);
+        this.setReadOnly(args["readOnly"]);
       },
-      addRule: function (rule) {
+      loadRules: function (rules, readOnly) {
+        var scope = this;
+        if (rules) {
+          rules.forEach((rule) => {
+            scope.addRule(rule, readOnly);
+          });
+        }
+      },
+      setReadOnly: function (readOnly) {
+        this.query("#rulebutton").forEach((button) => {
+          button.setHidden(readOnly);
+        });
+      },
+
+      addRule: function (rule, readOnly) {
         var scope = this;
         console.log(this);
         console.log(rule);
         scope.insert(
           scope.items.length - 1,
-          Ext.create("AmpsDasboard.form.Rule", {
+          Ext.create("Amps.form.Rule", {
             register: scope.register,
             deregister: scope.deregister,
             topic: rule.topic,
             patterns: rule.patterns,
+            readOnly: readOnly,
           })
         );
       },
       register: function (name) {
+        console.log(self);
         self.ruleNames.push(name);
         console.log(self.ruleNames);
       },
@@ -42,13 +61,14 @@ Ext.define(
       items: [
         {
           xtype: "button",
+          itemId: "rulebutton",
           text: "Add",
           handler: function (button, event) {
             var formpanel = button.up();
 
             formpanel.insert(
               formpanel.items.length - 1,
-              Ext.create("AmpsDasboard.form.Rule", {
+              Ext.create("Amps.form.Rule", {
                 register: formpanel.register,
                 deregister: formpanel.deregister,
               })
@@ -60,11 +80,12 @@ Ext.define(
   })()
 );
 
-Ext.define("AmpsDasboard.form.Rule", {
+Ext.define("Amps.form.Rule", {
   extend: "Ext.form.FieldSet",
   xtype: "rulefield",
   collapsible: true,
   constructor: function (args) {
+    console.log(args);
     this.callParent(args);
     var name = "rule-" + amfutil.makeRandom();
 
@@ -73,64 +94,220 @@ Ext.define("AmpsDasboard.form.Rule", {
       args.deregister(name);
     };
     console.log(id);
-    this.insert({
-      xtype: "combobox",
-      name: name + "-topic",
-      value: args["topic"],
-      fieldLabel: "Topic",
-      listeners: {
-        beforerender: async function (scope) {
-          scope.setStore(amfutil.createCollectionStore("topics"));
+    var items = [
+      {
+        xtype: "combobox",
+        name: name + "-topic",
+        value: args["topic"],
+        readOnly: args["readOnly"],
+        fieldLabel: "Topic",
+        listeners: {
+          beforerender: async function (scope) {
+            scope.setStore(amfutil.createCollectionStore("topics"));
+          },
+        },
+        displayField: "topic",
+        valueField: "topic",
+        allowBlank: false,
+        forceSelection: true,
+      },
+      {
+        xtype: "matchpatterns",
+        readOnly: args["readOnly"],
+
+        name: name + "-patterns",
+        patterns: args["patterns"],
+      },
+      {
+        xtype: "button",
+        itemId: "rulebutton",
+        iconCls: "x-fa fa-trash",
+        flex: 1,
+        handler: function (button, event) {
+          console.log(button);
+          button.up("fieldset").deregister();
+
+          button.up("fieldset").up("fieldset").remove(button.up("fieldset"));
         },
       },
-      displayField: "topic",
-      valueField: "topic",
-      allowBlank: false,
-      forceSelection: true,
-    });
-    this.insert({
-      xtype: "matchpatterns",
-      name: name + "-patterns",
-      patterns: args["patterns"],
-    });
-    this.insert({
-      xtype: "button",
-      iconCls: "x-fa fa-trash",
-      handler: function (button, event) {
-        console.log(button);
-        button.up("fieldset").deregister();
-
-        button.up("fieldset").up("fieldset").remove(button.up("fieldset"));
-      },
-    });
+    ];
+    this.insert(0, items);
   },
+
   title: "Rule",
 });
 
-Ext.define("AmpsDasboard.form.MatchPatterns", {
+Ext.define("Amps.form.Parms", {
+  // Fieldset in Column 1 - collapsible via toggle button
+  extend: "Ext.form.FieldSet",
+  xtype: "parmfield",
+  itemId: "parms",
+  collapsible: true,
+
+  constructor: function (args) {
+    this.callParent(args);
+
+    console.log(args);
+    var scope = this;
+    this.name = args["name"];
+    if (args["title"]) {
+      this.setTitle(args["title"]);
+    }
+    if (args["types"]) {
+      var types = args["types"];
+      if (types.length > 1) {
+        args["types"].forEach((type) => {
+          scope.down("#addMenu").insert(scope.types[type]);
+        });
+      } else {
+        this.removeAll();
+        args["types"].forEach((type) => {
+          var button = Object.assign({}, scope.types[type]);
+          button.text = "Add";
+          scope.insert(button);
+        });
+      }
+    }
+    this.loadParms(args["value"], args["readOnly"]);
+    this.setReadOnly(args["readOnly"]);
+  },
+
+  types: {
+    bool: {
+      text: "Boolean",
+      xtype: "button",
+      itemId: "parmbutton",
+
+      handler: function (button, event) {
+        var formpanel = button.up("fieldset");
+
+        formpanel.insert(
+          formpanel.items.length - 1,
+          Ext.create("Amps.form.Parm.Bool", {
+            name: formpanel.name,
+            title: formpanel.title,
+          })
+        );
+      },
+    },
+    string: {
+      text: "String",
+      xtype: "button",
+      itemId: "parmbutton",
+
+      handler: function (button, event) {
+        var formpanel = button.up("fieldset");
+
+        formpanel.insert(
+          formpanel.items.length - 1,
+          Ext.create("Amps.form.Parm.String", {
+            name: formpanel.name,
+            title: formpanel.title,
+          })
+        );
+      },
+    },
+  },
+
+  setReadOnly: function (readOnly) {
+    console.log(readOnly);
+    var buttons = Ext.ComponentQuery.query("#parmbutton");
+    // var fi = Ext.ComponentQuery.query("fields");
+
+    console.log(buttons);
+    if (readOnly) {
+      buttons.forEach((b) => {
+        console.log(b);
+        b.setHidden(true);
+      });
+    }
+  },
+
+  loadParms: function (data, readOnly) {
+    var scope = this;
+    if (data) {
+      var parms = Object.entries(data).map((entry) => {
+        return { field: entry[0], value: entry[1] };
+      });
+
+      console.log(parms);
+
+      parms.forEach(function (p) {
+        var length = scope.items.length;
+        var d;
+        if (typeof p.value === "boolean") {
+          d = Ext.create("Amps.form.Parm.Bool", {
+            name: scope.name,
+          });
+
+          scope.insert(length - 1, d);
+        } else {
+          d = Ext.create("Amps.form.Parm.String", {
+            name: scope.name,
+          });
+        }
+        var f = d.down("#field");
+        var v = d.down("#value");
+        f.setValue(p.field);
+        v.setValue(p.value);
+        f.setReadOnly(readOnly);
+        v.setReadOnly(readOnly);
+        scope.insert(length - 1, d);
+      });
+    }
+  },
+  items: [
+    {
+      xtype: "button",
+      text: "Add",
+      itemId: "parmbutton",
+      menu: {
+        itemId: "addMenu",
+        items: [],
+      },
+    },
+  ],
+});
+
+Ext.define("Amps.form.MatchPatterns", {
   xtype: "matchpatterns",
   extend: "Ext.form.FieldSet",
   title: "Match Patterns",
   collapsible: true,
   constructor: function (args) {
     this.callParent(args);
+    this.name = args["name"];
     var scope = this;
     console.log(args);
     if (args["patterns"]) {
-      Object.entries(args["patterns"]).forEach((pattern) => {
-        scope.insert(
-          scope.items.length - 1,
-          Ext.create("AmpsDasboard.form.Matchpattern", {
-            name: args["name"],
-            field: pattern[0],
-            regex: pattern[1].regex,
-            pattern: pattern[1].value,
-          })
-        );
-      });
+      this.loadPatterns(args["patterns"], args["readOnly"]);
     }
 
-    this.name = args["name"];
+    this.setReadOnly(args["readOnly"]);
+  },
+
+  loadPatterns: function (data, readOnly) {
+    var scope = this;
+    Object.entries(data).forEach((pattern) => {
+      scope.insert(
+        scope.items.length - 1,
+        Ext.create("Amps.form.Matchpattern", {
+          name: scope.name,
+          field: pattern[0],
+          regex: pattern[1].regex,
+          pattern: pattern[1].value,
+          readOnly: readOnly,
+        })
+      );
+    });
+  },
+
+  setReadOnly: function (readOnly) {
+    var buttons = this.query("#patternbutton");
+    buttons.forEach((button) => {
+      console.log(button);
+      button.setHidden(readOnly);
+    });
   },
 
   onAdd: function (component, position) {
@@ -142,13 +319,14 @@ Ext.define("AmpsDasboard.form.MatchPatterns", {
     {
       xtype: "button",
       text: "Add",
+      itemId: "patternbutton",
       handler: function (button, event) {
         var formpanel = button.up();
         console.log(formpanel.name);
 
         formpanel.insert(
           formpanel.items.length - 1,
-          Ext.create("AmpsDasboard.form.Matchpattern", {
+          Ext.create("Amps.form.Matchpattern", {
             name: formpanel.name,
           })
         );
@@ -157,7 +335,7 @@ Ext.define("AmpsDasboard.form.MatchPatterns", {
   ],
 });
 
-Ext.define("AmpsDasboard.form.Matchpattern", {
+Ext.define("Amps.form.Matchpattern", {
   extend: "Ext.form.FieldSet",
 
   xtype: "matchpattern",
@@ -174,9 +352,16 @@ Ext.define("AmpsDasboard.form.Matchpattern", {
       itemId: "patternvalue",
     });
     // console.log(args);
-    this.down("#field").setValue(args["field"]);
-    this.down("#pattern").setValue(args["pattern"]);
-    this.down("#regex").setValue(args["regex"]);
+    var f = this.down("#field");
+    var p = this.down("#pattern");
+    var r = this.down("#regex");
+    f.setValue(args["field"]);
+    p.setValue(args["pattern"]);
+    r.setValue(args["regex"]);
+    f.setReadOnly(args["readOnly"]);
+    p.setReadOnly(args["readOnly"]);
+
+    r.setReadOnly(args["readOnly"]);
   },
   layout: "anchor",
   listeners: {
@@ -291,6 +476,7 @@ Ext.define("AmpsDasboard.form.Matchpattern", {
     },
     {
       xtype: "button",
+      itemId: "patternbutton",
       iconCls: "x-fa fa-trash",
       handler: function (button, event) {
         console.log(button);
@@ -300,7 +486,7 @@ Ext.define("AmpsDasboard.form.Matchpattern", {
   ],
 });
 
-Ext.define("AmpsDasboard.form.Defaults", {
+Ext.define("Amps.form.Defaults", {
   extend: "Ext.form.FieldSet",
   xtype: "defaults",
   title: "Default Metadata",
@@ -343,6 +529,8 @@ Ext.define("AmpsDasboard.form.Defaults", {
     {
       xtype: "button",
       iconCls: "x-fa fa-trash",
+      itemId: "parmbutton",
+
       handler: function (button, event) {
         console.log(button);
         button.up("fieldset").up("fieldset").remove(button.up("fieldset"));
@@ -356,7 +544,7 @@ Ext.define("AmpsDasboard.form.Defaults", {
   ],
 });
 
-Ext.define("AmpsDasboard.form.Keys", {
+Ext.define("Amps.form.Keys", {
   extend: "Ext.container.Container",
   constructor: function (config) {
     var data = {};
@@ -422,7 +610,7 @@ Ext.define("AmpsDasboard.form.Keys", {
   ],
 });
 
-Ext.define("AmpsDasboard.form.Parm.Bool", {
+Ext.define("Amps.form.Parm.Bool", {
   extend: "Ext.form.FieldSet",
   xtype: "formbool",
   title: "Parameter",
@@ -431,6 +619,20 @@ Ext.define("AmpsDasboard.form.Parm.Bool", {
   controller: "matchpattern",
   defaults: { anchor: "100%" },
   layout: "anchor",
+  constructor: function (args) {
+    this.callParent(args);
+    var name;
+    if (args) {
+      name = args["name"] ? args["name"] : "parms";
+    } else {
+      name = "parms";
+    }
+    this.insert({
+      xtype: "hidden",
+      name: name,
+      itemId: "defaultvalue",
+    });
+  },
   items: [
     {
       xtype: "fieldcontainer",
@@ -479,21 +681,17 @@ Ext.define("AmpsDasboard.form.Parm.Bool", {
     },
     {
       xtype: "button",
+      itemId: "parmbutton",
       iconCls: "x-fa fa-trash",
       handler: function (button, event) {
         console.log(button);
         button.up("fieldset").up("fieldset").remove(button.up("fieldset"));
       },
     },
-    {
-      xtype: "hidden",
-      name: "parms",
-      itemId: "defaultvalue",
-    },
   ],
 });
 
-Ext.define("AmpsDasboard.form.Parm.String", {
+Ext.define("Amps.form.Parm.String", {
   extend: "Ext.form.FieldSet",
   constructor: function (args) {
     this.callParent(args);
@@ -553,6 +751,7 @@ Ext.define("AmpsDasboard.form.Parm.String", {
     {
       xtype: "button",
       iconCls: "x-fa fa-trash",
+      itemId: "parmbutton",
       handler: function (button, event) {
         console.log(button);
         button.up("fieldset").up("fieldset").remove(button.up("fieldset"));
@@ -561,7 +760,7 @@ Ext.define("AmpsDasboard.form.Parm.String", {
   ],
 });
 
-Ext.define("AmpsDasboard.form.FileMetaData", {
+Ext.define("Amps.form.FileMetaData", {
   extend: "Ext.form.FieldSet",
   xtype: "filemetadata",
   title: "File Metadata",
@@ -579,7 +778,6 @@ Ext.define("AmpsDasboard.form.FileMetaData", {
           xtype: "textfield",
           flex: 1,
           fieldLabel: "Key",
-          labelWidth: 33,
           name: "field",
           listeners: {
             change: "onDefaultChange",
@@ -594,7 +792,6 @@ Ext.define("AmpsDasboard.form.FileMetaData", {
           xtype: "textfield",
           fieldLabel: "Value",
           flex: 1,
-          labelWidth: 33,
           name: "value",
           listeners: {
             change: "onDefaultChange",
@@ -619,12 +816,12 @@ Ext.define("AmpsDasboard.form.FileMetaData", {
   ],
 });
 
-Ext.define("AmpsDasboard.form.add", {
+Ext.define("Amps.form.add", {
   extend: "Ext.window.Window",
-
   modal: true,
-  width: 550,
-  height: 600,
+  minWidth: 500,
+  maxWidth: 700,
+  maxHeight: 600,
   scrollable: true,
   resizable: false,
   layout: "fit",
@@ -634,6 +831,7 @@ Ext.define("AmpsDasboard.form.add", {
     this.process = process;
 
     fields.forEach((field) => {
+      // field.flex = 1;
       this.down("form").insert(field);
     });
   },
@@ -646,6 +844,11 @@ Ext.define("AmpsDasboard.form.add", {
         padding: 5,
         labelWidth: 100,
       },
+      layout: {
+        type: "vbox",
+        vertical: true,
+        align: "stretch",
+      },
       scrollable: true,
       buttons: [
         {
@@ -655,6 +858,7 @@ Ext.define("AmpsDasboard.form.add", {
           formBind: true,
           listeners: {
             click: function (btn) {
+              var grid = amfutil.getElementByID("main-grid");
               var form = btn.up("form").getForm();
               var values = form.getValues();
               values = this.up("window").process(values, btn.up("form"));
@@ -681,7 +885,15 @@ Ext.define("AmpsDasboard.form.add", {
                   amfutil.broadcastEvent("update", {
                     page: Ext.util.History.getToken(),
                   });
-                  amfutil.getElementByID("main-grid").getStore().reload();
+                  var tokens = Ext.util.History.getToken().split("/");
+                  if (tokens.length > 1) {
+                    amfutil
+                      .getElementByID(`${tokens[0]}-${tokens[2]}`)
+                      .getStore()
+                      .reload();
+                  } else {
+                    amfutil.getElementByID("main-grid").getStore().reload();
+                  }
                   btn.up("window").close();
                 },
                 failure: function (response) {
@@ -708,11 +920,11 @@ Ext.define("AmpsDasboard.form.add", {
   ],
 });
 
-Ext.define("AmpsDasboard.view.main.MainController", {
+Ext.define("Amps.view.main.MainController", {
   extend: "Ext.app.ViewController",
 
   alias: "controller.main",
-  requires: ["AmpsDasboard.view.main.SearchWindow"],
+  requires: ["Amps.view.main.SearchWindow"],
 
   listen: {
     controller: {
@@ -772,21 +984,34 @@ Ext.define("AmpsDasboard.view.main.MainController", {
         console.log("Render accounts form");
         this.addAccounts(btn);
         break;
-      case "users":
+      case "admin":
         this.addUser(btn);
         break;
       case "topics":
-        this.addTopic(btn);
+        this.createForm(btn, route);
         break;
       case "services":
         this.addService(btn);
         break;
-      case "actions":
-        this.addAction(btn);
-        break;
       default:
-        amfutil.grids[route].create();
+        this.createForm(btn, route);
     }
+  },
+
+  createForm: function (btn, route) {
+    var grid = amfutil.getElementByID("main-grid");
+    // scope = btn.lookupController();
+
+    var config = ampsgrids.grids[route];
+
+    var win = Ext.create("Amps.form.add", config.window);
+    win.loadForm(config.object, config.fields, (values, form) => {
+      if (config.add && config.add.process) {
+        values = config.add.process(values, form);
+      }
+      return values;
+    });
+    win.show();
   },
 
   addBucket: function (btn) {
@@ -928,14 +1153,14 @@ Ext.define("AmpsDasboard.view.main.MainController", {
   addAction: function (btn) {
     grid = amfutil.getElementByID("main-grid");
     // scope = btn.lookupController();
-    var actions = amfutil.grids["actions"];
-    var win = Ext.create("AmpsDasboard.form.add", {
+    var actions = ampsgrids.grids["actions"];
+    var win = Ext.create("Amps.form.add", {
       width: 650,
       defaults: {
         labelWidth: 200,
       },
     });
-    win.loadForm("Action", actions.fields, actions.addProcess);
+    win.loadForm("Action", actions.fields, actions.add.process);
     win.show();
   },
 
@@ -943,8 +1168,8 @@ Ext.define("AmpsDasboard.view.main.MainController", {
     grid = amfutil.getElementByID("main-grid");
     // scope = btn.lookupController();
 
-    var win = Ext.create("AmpsDasboard.form.add");
-    win.loadForm("Topic", amfutil.grids["topics"].fields, (values) => {
+    var win = Ext.create("Amps.form.add");
+    win.loadForm("Topic", ampsgrids.grids["topics"].fields, (values) => {
       return values;
     });
     win.show();
@@ -952,7 +1177,7 @@ Ext.define("AmpsDasboard.view.main.MainController", {
 
   addService: function (btn) {
     grid = amfutil.getElementByID("main-grid");
-    var services = amfutil.grids["services"].types;
+    var services = ampsgrids.grids["services"].types;
 
     var win = new Ext.window.Window({
       title: "Add Service",
@@ -1127,7 +1352,7 @@ Ext.define("AmpsDasboard.view.main.MainController", {
 
         var items = [];
         var fields = [];
-        fields = fields.concat(amfutil.grids["services"].commonFields);
+        fields = fields.concat(ampsgrids.grids["services"].fields);
         fields = fields.concat(service.fields);
         console.log(fields);
 
@@ -1172,7 +1397,7 @@ Ext.define("AmpsDasboard.view.main.MainController", {
 
     var store = grid.getStore();
 
-    services.forEach((service, idx) => {
+    Object.values(services).forEach((service, idx) => {
       items.push({
         xtype: "button",
         text: service.name,
@@ -2109,7 +2334,7 @@ Ext.define("AmpsDasboard.view.main.MainController", {
 
                 formpanel.insert(
                   formpanel.items.length - 1,
-                  Ext.create("AmpsDasboard.form.FileMetaData")
+                  Ext.create("Amps.form.FileMetaData")
                 );
               },
             },

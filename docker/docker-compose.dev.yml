@@ -41,6 +41,18 @@ services:
     cap_add:
       - IPC_LOCK
     entrypoint: vault server -config=/vault/config/vault.json
+  openldap:
+    image: bitnami/openldap:2
+    ports:
+      - "1389:1389"
+      - "1636:1636"
+    environment:
+      - LDAP_ADMIN_USERNAME=admin
+      - LDAP_ADMIN_PASSWORD=adminpassword
+      - LDAP_USERS=user01,user02
+      - LDAP_PASSWORDS=password1,password2
+    volumes:
+      - "./volumes/openldap_data:/bitnami/openldap"
   # minio1:
   #   <<: *minio-common
   #   hostname: minio1

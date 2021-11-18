@@ -1,4 +1,4 @@
-Ext.define("AmpsDasboard.controller.MenuController", {
+Ext.define("Amps.controller.MenuController", {
   extend: "Ext.app.ViewController",
 
   alias: "controller.menu",

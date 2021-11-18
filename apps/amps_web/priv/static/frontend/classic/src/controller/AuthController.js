@@ -1,9 +1,9 @@
-Ext.define("AmpsDasboard.controller.AuthController", {
+Ext.define("Amps.controller.AuthController", {
   extend: "Ext.app.ViewController",
 
   alias: "controller.auth",
 
-  require: ["AmpsDasboard.view.main.Main"],
+  require: ["Amps.view.main.Main"],
   routes: {
     "*": "onRoute",
   },

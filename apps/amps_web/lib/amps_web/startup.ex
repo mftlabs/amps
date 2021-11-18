@@ -116,7 +116,7 @@ defmodule AmpsWeb.Startup do
   end
 
   def create_root() do
-    root = AmpsWeb.DB.find_one("users", %{"systemdefault" => true})
+    root = AmpsWeb.DB.find_one("admin", %{"systemdefault" => true})
     host = Application.fetch_env!(:amps_web, AmpsWeb.Endpoint)[:vault_addr]
 
     username = System.get_env("AMPS_ROOT_USER", "root")
@@ -161,7 +161,7 @@ defmodule AmpsWeb.Startup do
         IO.inspect(result)
       end
 
-      AmpsWeb.DB.insert("users", root)
+      AmpsWeb.DB.insert("admin", root)
     else
       IO.puts("Root User Already Exists")
     end

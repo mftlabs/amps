@@ -5,12 +5,12 @@
  */
 var allow_enterkey = true;
 
-Ext.define("AmpsDasboard.Application", {
+Ext.define("Amps.Application", {
   extend: "Ext.app.Application",
 
-  name: "AmpsDasboard",
+  name: "Amps",
   style: "background-color: #32404e;",
-  require: ["AmpsDasboard.view.login.Login", "AmpsDasboard.view.main.Main"],
+  require: ["Amps.view.login.Login", "Amps.view.main.Main"],
 
   quickTips: false,
   platformConfig: {
@@ -21,8 +21,9 @@ Ext.define("AmpsDasboard.Application", {
   launch: function () {
     var route = Ext.util.History.getToken();
     console.log(route);
-    amfutil = AmpsDasboard.util.Utilities;
-    amfuploads = AmpsDasboard.window.Uploads;
+    amfutil = Amps.util.Utilities;
+    amfuploads = Amps.window.Uploads;
+
     window.onbeforeunload = function () {
       if (amfuploads.uploads.length) {
         return "Your files have not finished uploadeding...";
@@ -30,9 +31,8 @@ Ext.define("AmpsDasboard.Application", {
     };
 
     amfutil.check_redirect(this);
-    updateformutil = AmpsDasboard.util.UpdateRecordController;
-    var routes = Object.keys(amfutil.grids).concat(Object.keys(amfutil.pages));
-    console.log(routes);
+    updateformutil = Amps.util.UpdateRecordController;
+
     var isInFrame = window.location != window.parent.location ? true : false;
     if (isInFrame) {
       window.location.href = "/invalid-request";
@@ -47,6 +47,7 @@ Ext.define("AmpsDasboard.Application", {
 
     var query = window.location.search.substring(1);
     var params = Ext.Object.fromQueryString(query);
+    var tokens = route.split("/");
 
     if (params.provider) {
       console.log("redirecting");
@@ -59,46 +60,48 @@ Ext.define("AmpsDasboard.Application", {
           xtype: "auth",
         });
       } else {
+        ampsgrids = Amps.util.Grids;
+        ampsgrids.getGrids();
+        ampsgrids.getPages();
+        var routes = Object.keys(ampsgrids.grids).concat(
+          Object.keys(ampsgrids.pages)
+        );
+        console.log(route);
+        console.log(routes);
+        if (routes.indexOf(tokens[0]) >= 0) {
+          console.log("Valid Route");
+          if (tokens.length > 2) {
+            this.redirectTo(tokens[0] + "/" + tokens[1]);
+          } else {
+          }
+        } else {
+          this.redirectTo("messages");
+        }
         Ext.create({
           xtype: "app-main",
         });
       }
     }
-    console.log(
-      JSON.stringify(
-        Object.entries({
-          app: "amps",
-          name: "SYSTEM",
-          node_id: "001",
-          site_id: "AA",
-          sched_interval: 10000,
-          retry_delay: 60000,
-          storage_root: "c://tools/amps/data",
-          storage_temp: "c://tools/amps/temp",
-          storage_logs: "c://tools/amps/logs",
-          python_path: "/Tools",
-          registration_queue: "registerq",
-        }).map((entry) => ({
-          field: entry[0],
-          value: entry[1],
-        }))
-      )
-    );
-
-    var tokens = route.split("/");
-
-    if (routes.indexOf(tokens[0]) >= 0) {
-      console.log("Valid Route");
-      if (tokens.length > 2) {
-        this.redirectTo(tokens[0] + "/" + tokens[1]);
-      } else {
-      }
-    } else {
-      this.redirectTo("messages");
-    }
-
-    console.log(route);
-    console.log(routes);
+    // console.log(
+    //   JSON.stringify(
+    //     Object.entries({
+    //       app: "amps",
+    //       name: "SYSTEM",
+    //       node_id: "001",
+    //       site_id: "AA",
+    //       sched_interval: 10000,
+    //       retry_delay: 60000,
+    //       storage_root: "c://tools/amps/data",
+    //       storage_temp: "c://tools/amps/temp",
+    //       storage_logs: "c://tools/amps/logs",
+    //       python_path: "/Tools",
+    //       registration_queue: "registerq",
+    //     }).map((entry) => ({
+    //       field: entry[0],
+    //       value: entry[1],
+    //     }))
+    //   )
+    // );
   },
   // defaultToken: "home",
   onAppUpdate: function () {

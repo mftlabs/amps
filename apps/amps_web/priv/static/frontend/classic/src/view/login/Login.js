@@ -1,10 +1,10 @@
-Ext.define("AmpsDasboard.view.login.Login", {
+Ext.define("Amps.view.login.Login", {
   extend: "Ext.panel.Panel",
   xtype: "login",
 
   requires: [
-    //'AmpsDasboard.view.login.LoginController',
-    "AmpsDasboard.controller.AuthController",
+    //'Amps.view.login.LoginController',
+    "Amps.controller.AuthController",
     "Ext.form.Panel",
   ],
   controller: "auth",

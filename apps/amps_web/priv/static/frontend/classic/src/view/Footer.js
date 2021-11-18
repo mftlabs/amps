@@ -1,4 +1,4 @@
-Ext.define("AmpsDasboard.view.Footer", {
+Ext.define("Amps.view.Footer", {
   extend: "Ext.container.Container",
   xtype: "appfooter",
   layout: "hbox",

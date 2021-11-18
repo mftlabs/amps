@@ -160,6 +160,19 @@ defmodule AmpsWeb.DB do
     end
   end
 
+  def get_in_field(collection, id, field, idx) do
+    case db() do
+      "pg" ->
+        Postgres.update_in_field(collection, id, field, idx)
+
+      "mongo" ->
+        MongoDB.get_in_field(collection, id, field, idx)
+
+      "es" ->
+        Elastic.update_in_field(collection, id, field, idx)
+    end
+  end
+
   def update_in_field(collection, body, id, field, idx) do
     case db() do
       "pg" ->
@@ -206,6 +219,17 @@ defmodule AmpsWeb.DB do
         %{"_id" => AmpsWeb.DataController.objectid(id)},
         projection: %{field => true}
       )
+    end
+
+    def get_in_field(collection, id, field, idx) do
+      result =
+        Mongo.find_one(
+          :mongo,
+          collection,
+          %{"_id" => AmpsWeb.DataController.objectid(id)}
+        )
+
+      Enum.at(result[field], String.to_integer(idx))
     end
 
     def update_in_field(collection, body, id, field, idx) do

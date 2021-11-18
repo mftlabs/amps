@@ -1,10 +1,10 @@
-Ext.define("AmpsDasboard.view.main.Page", {
+Ext.define("Amps.view.main.Page", {
   xtype: "page-panel",
   extend: "Ext.panel.Panel",
   requires: [
-    "AmpsDasboard.view.main.List",
-    "AmpsDasboard.view.main.PageNumbers",
-    "AmpsDasboard.controller.PageController",
+    "Amps.view.main.List",
+    "Amps.view.main.PageNumbers",
+    "Amps.controller.PageController",
   ],
   controller: "page",
   layout: "card",

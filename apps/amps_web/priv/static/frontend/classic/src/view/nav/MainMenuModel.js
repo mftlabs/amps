@@ -1,4 +1,4 @@
-Ext.define('AmpsDasboard.view.nav.MainMenuModel', {
-    extend: 'Ext.app.ViewModel',
-    alias: 'viewmodel.mainmenu',
+Ext.define("Amps.view.nav.MainMenuModel", {
+  extend: "Ext.app.ViewModel",
+  alias: "viewmodel.mainmenu",
 });

@@ -1,4 +1,4 @@
-Ext.define("AmpsDasboard.store.Key", {
+Ext.define("Amps.store.Key", {
   extend: "Ext.data.Store",
 
   alias: "store.key",

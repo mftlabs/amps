@@ -1,4 +1,4 @@
-Ext.define("AmpsDasboard.view.main.SearchWindow", {
+Ext.define("Amps.view.main.SearchWindow", {
   extend: "Ext.window.Window",
   xtype: "searchwindow",
   itemId: "searchwindow",
@@ -17,7 +17,7 @@ Ext.define("AmpsDasboard.view.main.SearchWindow", {
   shadow: true,
   style: "border-top:1px solid gray",
   listeners: {
-    "hide": {
+    hide: {
       fn: function (panel, eOpts) {
         var btns = Ext.ComponentQuery.query("#searchpanelbtn");
         btns.forEach((btn) => {

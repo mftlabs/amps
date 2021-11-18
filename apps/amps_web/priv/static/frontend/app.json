@@ -1,6 +1,6 @@
 {
-  "name": "AmpsDasboard",
-  "namespace": "AmpsDasboard",
+  "name": "Amps",
+  "namespace": "Amps",
   "version": "1.0.0.0",
   "framework": "ext",
 
@@ -56,13 +56,13 @@
   "sass": {
     /**
      * The root namespace to use when mapping *.scss files to classes in the
-     * sass/src and sass/var directories. For example, "AmpsDasboard.view.Foo" would
-     * map to "sass/src/view/Foo.scss". If we changed this to "AmpsDasboard.view" then
+     * sass/src and sass/var directories. For example, "Amps.view.Foo" would
+     * map to "sass/src/view/Foo.scss". If we changed this to "Amps.view" then
      * it would map to "sass/src/Foo.scss". To style classes outside the app's
      * root namespace, change this to "". Doing so would change the mapping of
-     * "AmpsDasboard.view.Foo" to "sass/src/AmpsDasboard/view/Foo.scss".
+     * "Amps.view.Foo" to "sass/src/Amps/view/Foo.scss".
      */
-    "namespace": "AmpsDasboard",
+    "namespace": "Amps",
 
     /**
      * Generated sass source settings

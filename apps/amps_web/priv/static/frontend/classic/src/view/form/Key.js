@@ -1,4 +1,4 @@
-Ext.define("AmpsDasboard.view.form.Key", {
+Ext.define("Amps.view.form.Key", {
   extend: "Ext.form.FieldContainer",
   xtype: "keyfield",
   layout: "hbox",

@@ -1,8 +1,8 @@
-Ext.define("AmpsDasboard.controller.MessagesController", {
+Ext.define("Amps.controller.MessagesController", {
   extend: "Ext.app.ViewController",
   alias: "controller.messages",
   requires: [
-    "AmpsDasboard.view.messages.MessageDetails",
+    "Amps.view.messages.MessageDetails",
     // "MftDashboard.view.trackntrace.SessionLogs",
   ],
 

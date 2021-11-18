@@ -1,4 +1,4 @@
-Ext.define("AmpsDasboard.view.auth.Auth", {
+Ext.define("Amps.view.auth.Auth", {
   extend: "Ext.container.Viewport",
   xtype: "auth",
   itemId: "auth-viewport",
