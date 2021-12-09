@@ -18,7 +18,7 @@ defmodule AmpsWeb.Startup do
   def create_history() do
     case AmpsWeb.DB.find_one("services", %{"name" => "history_updater"}) do
       nil ->
-        IO.puts("Creating History Update")
+        IO.puts("Creating History Updater")
 
         history = %{
           name: "history updater",
@@ -32,7 +32,7 @@ defmodule AmpsWeb.Startup do
 
         AmpsWeb.ServiceController.start_service(history["name"])
 
-      object ->
+      _object ->
         IO.puts("SYSTEM Defaults Already Exist")
     end
   end
