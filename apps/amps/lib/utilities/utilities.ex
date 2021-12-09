@@ -305,34 +305,46 @@ defmodule AmpsUtil do
   def get_istream(msg) do
     if Map.has_key?(msg, "data") do
       {:ok, stream} = msg["data"] |> StringIO.open()
-      stream |> IO.binstream(4096)
+      stream |> IO.binstream(:line)
+    else
+      File.stream!(msg["fpath"])
     end
   end
 
-  def get_output_msg(msg, {ostream, tfile}) do
+  def get_output_msg(msg, {ostream, tfile}, parms \\ %{}) do
     parent = msg["msgid"]
     msgid = AmpsUtil.get_id()
 
-    if ostream != nil do
-      {_in, out} = StringIO.contents(ostream)
-      StringIO.close(ostream)
-      Map.merge(msg, %{"msgid" => msgid, "data" => out, parent: parent})
+    msg =
+      if ostream != nil do
+        {_in, out} = StringIO.contents(ostream)
+        StringIO.close(ostream)
+        Map.merge(msg, %{"msgid" => msgid, "data" => out, "parent" => parent})
+      else
+        Map.merge(msg, %{"msgid" => msgid, "fpath" => tfile, "temp" => true, "parent" => parent})
+      end
+
+    if not blank?(parms["format"]) do
+      fname = format(parms["format"], msg)
+      Map.merge(msg, %{"fname" => fname})
     else
-      Map.merge(msg, %{"msgid" => msgid, "fpath" => tfile, "temp" => true, parent: parent})
+      msg
     end
   end
 
+  def blank?(str_or_nil),
+    do: "" == str_or_nil |> to_string() |> String.trim()
+
   def get_names(parms) do
     topic = parms["topic"]
-    safe = String.replace(topic, ".", "_")
-    consumer = String.replace(safe, "*", "_")
+    consumer = parms["name"] |> String.replace(" ", "_") |> String.downcase()
 
     [base, part, _other] = String.split(topic, ".", parts: 3)
     stream = AmpsUtil.get_env_parm(:streams, String.to_atom(base <> "." <> part))
     {stream, consumer}
   end
 
-  def create_consumer(stream, name, filter) do
+  def create_consumer(stream, name, filter, opts \\ %{}) do
     {:ok, gnat} =
       Gnat.start_link(%{
         # (required) the registered named you want to give the Gnat connection
@@ -352,11 +364,18 @@ defmodule AmpsUtil do
         IO.inspect(error)
         IO.puts("Creating Consumer")
 
-        case Jetstream.API.Consumer.create(gnat, %Jetstream.API.Consumer{
-               name: name,
-               stream_name: stream,
-               filter_subject: filter
-             }) do
+        case Jetstream.API.Consumer.create(
+               gnat,
+               Map.merge(
+                 %Jetstream.API.Consumer{
+                   name: name,
+                   stream_name: stream,
+                   filter_subject: filter,
+                   deliver_policy: :new
+                 },
+                 opts
+               )
+             ) do
           {:ok, res} ->
             IO.inspect(res)
 
@@ -383,6 +402,50 @@ defmodule AmpsUtil do
 
       {:error, error} ->
         IO.inspect(error)
+    end
+  end
+
+  def get_kafka_auth(args) do
+    cacertfile = Path.join(AmpsUtil.tempdir(args["name"]), "cacert")
+    File.write(cacertfile, args["cacert"])
+    certfile = Path.join(AmpsUtil.tempdir(args["name"]), "cert")
+    File.write(certfile, args["cert"])
+    keyfile = Path.join(AmpsUtil.tempdir(args["name"]), "key")
+    File.write(keyfile, args["key"])
+
+    case args["auth"] do
+      "SASL_PLAINTEXT" ->
+        [
+          # ssl: true,
+          sasl: {String.to_existing_atom(args["mechanism"]), args["username"], args["password"]}
+        ]
+
+      "SASL_SSL" ->
+        [
+          ssl: [
+            cacertfile: cacertfile,
+            certfile: certfile,
+            keyfile: keyfile
+            # verify: :verify_peer
+          ],
+          sasl: {String.to_existing_atom(args["mechanism"]), args["username"], args["password"]}
+        ]
+
+      "SSL" ->
+        [
+          ssl: [
+            cacertfile: cacertfile,
+            certfile: certfile,
+            keyfile: keyfile
+            # verify: :verify_peer
+          ]
+        ]
+
+      "NONE" ->
+        []
+
+      nil ->
+        []
     end
   end
 end

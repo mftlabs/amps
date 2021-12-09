@@ -7,6 +7,7 @@ defmodule AmpsStorage do
     fpath = Enum.join([root, rpath, msg["msgid"]], "/")
     # move file from staging to message store
     tfile = msg["fpath"]
+    IO.inspect(root)
 
     case :file.rename(tfile, fpath) do
       :ok ->

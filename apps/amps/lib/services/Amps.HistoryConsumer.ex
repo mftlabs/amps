@@ -49,7 +49,9 @@ defmodule Amps.HistoryConsumer do
 
     IO.puts("pid #{inspect(pid)}")
 
-    {stream, consumer} = get_names(opts)
+    {stream, consumer} = AmpsUtil.get_names(opts)
+    AmpsUtil.create_consumer(stream, consumer, opts["topic"], %{deliver_policy: :all})
+
     Logger.info("got stream #{stream} #{consumer}")
     opts = Map.put(opts, "id", name)
 
@@ -105,6 +107,7 @@ defmodule Amps.HistoryPullConsumer do
   end
 
   def handle_info({:msg, message}, state) do
+    IO.inspect(message)
     parms = state[:parms]
     name = parms["name"]
     Logger.info("got history message #{name}: #{message.topic} / #{message.body}")

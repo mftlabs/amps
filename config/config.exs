@@ -24,11 +24,11 @@ config :amps_portal, AmpsPortal.Endpoint,
 # Configure esbuild (the version is required)
 config :esbuild,
   version: "0.12.18",
-  amps_portal: [
-    args: ~w(js/app.js --bundle --target=es2016 --outdir=../priv/static/assets),
-    cd: Path.expand("../apps/amps_portal/assets", __DIR__),
-    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
-  ],
+  # amps_portal: [
+  #   args: ~w(js/app.js --bundle --target=es2016 --outdir=../priv/static/assets),
+  #   cd: Path.expand("../apps/amps_portal/assets", __DIR__),
+  #   env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
+  # ],
   amps_web: [
     args: ~w(js/app.js --bundle --target=es2016 --outdir=../priv/static/assets),
     cd: Path.expand("../apps/amps_web/assets", __DIR__),
@@ -46,6 +46,7 @@ config :esbuild,
 config :master_proxy,
   # any Cowboy options are allowed
   http: [:inet6, port: 4080],
+  log_requests: false,
   # https: [:inet6, port: 4443],
   backends: [
     %{
@@ -187,17 +188,26 @@ config :amps, :streams,
   "amps.delivery": "DELIVERY",
   "amps.mailbox": "MAILBOX"
 
+config :amps, :elsa,
+  endpoints: [localhost: 29092],
+  name: :amps_elsa
+
 config :amps, :services,
   subscriber: Amps.EventConsumer,
   history: Amps.HistoryConsumer,
   sftpd: Amps.SftpServer,
-  httpd: Amps.MailboxApi
+  httpd: Amps.MailboxApi,
+  kafka: Amps.KafkaConsumer
 
 config :amps, :actions,
   strrepl: StringReplaceAction,
   mailbox: MailboxAction,
   sftpput: SftpAction,
-  router: RouterAction
+  router: RouterAction,
+  unzip: UnzipAction,
+  zip: ZipAction,
+  http: HttpAction,
+  kafkaput: KafkaPut
 
 # config :amps, :httpapi,
 #  options: [
@@ -216,6 +226,9 @@ config :amps, :pyworker,
     {:size, 5},
     {:max_overflow, 2}
   ]
+
+config :kafka_ex,
+  disable_default_worker: true
 
 # Configure esbuild (the version is required)
 # config :esbuild,

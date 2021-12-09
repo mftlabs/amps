@@ -41,6 +41,7 @@ Ext.define(
             deregister: scope.deregister,
             topic: rule.topic,
             patterns: rule.patterns,
+            id: rule.id,
             readOnly: readOnly,
           })
         );
@@ -80,6 +81,318 @@ Ext.define(
   })()
 );
 
+Ext.define("Amps.form.ArrayField", {
+  extend: "Ext.form.FieldSet",
+  mixins: {
+    field: "Ext.form.field.Field",
+  },
+  xtype: "arrayfield",
+  collapsible: true,
+  fields: [],
+  arrayfields: [],
+  fieldTitle: "Field",
+
+  constructor: function (args) {
+    this.callParent(args);
+    console.log(args);
+
+    this.fields = [];
+
+    this.arrayfields = args["arrayfields"];
+    this.fieldTitle = args["fieldTitle"];
+
+    if (args["title"]) {
+      this.setTitle(args["title"]);
+    } else {
+      this.setTitle("ArrayField");
+    }
+
+    console.log(this);
+
+    this.name = args["name"];
+
+    // this.buildField();
+    // this.callParent();
+
+    this.initField();
+    var scope = this;
+
+    if (args["value"]) {
+      var value = args["value"];
+      value.forEach((val) => {
+        if (args.arrayfields.length == 1) {
+          scope.insert(
+            scope.items.length - 1,
+            Ext.create("Amps.form.ArrayField.Field", {
+              readOnly: args["readOnly"],
+              register: scope.register.bind(scope),
+              deregister: scope.deregister.bind(scope),
+              fields: args.arrayfields.map((field) => {
+                var f = Object.assign({ value: val }, field);
+                return f;
+              }),
+              title: args.fieldTitle,
+            })
+          );
+        } else {
+          scope.insert(
+            scope.items.length - 1,
+            Ext.create("Amps.form.ArrayField.Field", {
+              readOnly: args["readOnly"],
+              register: scope.register.bind(scope),
+              deregister: scope.deregister.bind(scope),
+              fields: args.arrayfields.map((field) => {
+                var f = Object.assign({ value: val[field.name] }, field);
+                return f;
+              }),
+              title: args.fieldTitle,
+            })
+          );
+        }
+      });
+    }
+
+    this.setReadOnly(args["readOnly"]);
+  },
+
+  getValue: function () {
+    console.log(this);
+    var val = [];
+    this.fields.forEach((field) => {
+      var f = amfutil.getElementByID(field);
+      console.log(f);
+      console.log(f.getValue());
+      val.push(f.getValue());
+    });
+    console.log(JSON.stringify(val));
+    return JSON.stringify(val);
+  },
+
+  register: function (name) {
+    console.log(this);
+    this.fields.push(name);
+    console.log(this.fields);
+  },
+  deregister: function (name) {
+    var index = this.fields.indexOf(name);
+    if (index > -1) {
+      this.fields.splice(index, 1);
+    }
+    console.log(this.fields);
+  },
+
+  setReadOnly: function (readOnly) {
+    console.log(readOnly);
+    var buttons = Ext.ComponentQuery.query("#arraybutton");
+    // var fi = Ext.ComponentQuery.query("fields");
+
+    console.log(buttons);
+    if (readOnly) {
+      buttons.forEach((b) => {
+        console.log(b);
+        b.setHidden(true);
+      });
+    }
+  },
+
+  loadParms: function (data, readOnly) {
+    var scope = this;
+    if (data) {
+      var parms = Object.entries(data).map((entry) => {
+        return { field: entry[0], value: entry[1] };
+      });
+
+      console.log(parms);
+
+      parms.forEach(function (p) {
+        var length = scope.items.length;
+        var d;
+        if (typeof p.value === "boolean") {
+          d = Ext.create("Amps.form.Parm.Bool", {
+            name: scope.name,
+          });
+
+          scope.insert(length - 1, d);
+        } else {
+          d = Ext.create("Amps.form.Parm.String", {
+            name: scope.name,
+          });
+        }
+        var f = d.down("#field");
+        var v = d.down("#value");
+        f.setValue(p.field);
+        v.setValue(p.value);
+        f.setReadOnly(readOnly);
+        v.setReadOnly(readOnly);
+        scope.insert(length - 1, d);
+      });
+    }
+  },
+  items: [
+    {
+      xtype: "button",
+      itemId: "arraybutton",
+      text: "Add",
+      handler: function (button, event) {
+        var formpanel = button.up("fieldset");
+
+        formpanel.insert(
+          formpanel.items.length - 1,
+          Ext.create("Amps.form.ArrayField.Field", {
+            register: formpanel.register.bind(formpanel),
+            deregister: formpanel.deregister.bind(formpanel),
+            fields: formpanel.arrayfields,
+            title: formpanel.fieldTitle,
+          })
+        );
+      },
+    },
+  ],
+});
+
+Ext.define("Amps.form.ArrayField.Field", {
+  extend: "Ext.form.FieldSet",
+  collapsible: true,
+  layout: {
+    type: "vbox",
+    align: "stretch",
+  },
+
+  constructor: function (args) {
+    this.callParent(args);
+    var name = "field-" + amfutil.makeRandom();
+    this.itemId = name;
+    this.name = name;
+    if (args["title"]) {
+      this.setTitle(args["title"]);
+    } else {
+      this.setTitle("Field");
+    }
+    args.register(name);
+    this.deregister = function () {
+      args.deregister(name);
+    };
+    console.log(args);
+    this.fields = args["fields"];
+    this.insertFields(args["fields"]);
+    // console.log(scope.down("#addMenu"));
+    // this.loadParms(args["value"], args["readOnly"]);
+    this.setReadOnly(args["readOnly"]);
+  },
+
+  getValue: function () {
+    var scope = this;
+    console.log(scope);
+    var data = {};
+    console.log(this.fields);
+    this.fields.forEach((field) => {
+      var cmp = amfutil.getElementByID(scope.name + "-" + field.name);
+      data[cmp.name] = cmp.getValue();
+      console.log(cmp);
+    });
+    return data;
+  },
+
+  convert: function (v) {
+    console.log(v);
+    return v;
+  },
+
+  insertFields: function (fields) {
+    var items = [];
+
+    var hbox = {
+      xtype: "container",
+      layout: {
+        type: "hbox",
+        align: "stretch",
+      },
+      defaults: {
+        margin: 5,
+        flex: 1,
+      },
+    };
+
+    for (var i = 0; i < fields.length; i++) {
+      var ref = this.name + "-" + fields[i].name;
+      console.log(ref);
+      var field = Object.assign({ id: ref, isFormField: false }, fields[i]);
+      items.push(field);
+      if (items.length == 2) {
+        hbox.items = items;
+        this.insert(0, hbox);
+        items = [];
+      } else if (i == fields.length - 1) {
+        hbox.items = items;
+        this.insert(0, hbox);
+        items = [];
+      }
+    }
+  },
+
+  setReadOnly: function (readOnly) {
+    console.log(readOnly);
+    var buttons = Ext.ComponentQuery.query("#fieldbutton");
+    // var fi = Ext.ComponentQuery.query("fields");
+
+    console.log(buttons);
+    if (readOnly) {
+      buttons.forEach((b) => {
+        console.log(b);
+        b.setHidden(true);
+      });
+    }
+  },
+
+  loadParms: function (data, readOnly) {
+    var scope = this;
+    if (data) {
+      var parms = Object.entries(data).map((entry) => {
+        return { field: entry[0], value: entry[1] };
+      });
+
+      console.log(parms);
+
+      parms.forEach(function (p) {
+        var length = scope.items.length;
+        var d;
+        if (typeof p.value === "boolean") {
+          d = Ext.create("Amps.form.Parm.Bool", {
+            name: scope.name,
+          });
+
+          scope.insert(length - 1, d);
+        } else {
+          d = Ext.create("Amps.form.Parm.String", {
+            name: scope.name,
+          });
+        }
+        var f = d.down("#field");
+        var v = d.down("#value");
+        f.setValue(p.field);
+        v.setValue(p.value);
+        f.setReadOnly(readOnly);
+        v.setReadOnly(readOnly);
+        scope.insert(length - 1, d);
+      });
+    }
+  },
+  items: [
+    {
+      xtype: "button",
+      itemId: "fieldbutton",
+      iconCls: "x-fa fa-trash",
+      flex: 1,
+      handler: function (button, event) {
+        console.log(button);
+        button.up("fieldset").deregister();
+
+        button.up("fieldset").up("fieldset").remove(button.up("fieldset"));
+      },
+    },
+  ],
+});
+
 Ext.define("Amps.form.Rule", {
   extend: "Ext.form.FieldSet",
   xtype: "rulefield",
@@ -87,7 +400,15 @@ Ext.define("Amps.form.Rule", {
   constructor: function (args) {
     console.log(args);
     this.callParent(args);
-    var name = "rule-" + amfutil.makeRandom();
+    var id;
+
+    if (args["id"]) {
+      id = args["id"];
+    } else {
+      id = amfutil.uuid();
+    }
+    var name = "rule-" + id;
+    console.log(name);
 
     args.register(name);
     this.deregister = function () {
@@ -117,6 +438,11 @@ Ext.define("Amps.form.Rule", {
 
         name: name + "-patterns",
         patterns: args["patterns"],
+      },
+      {
+        xtype: "hidden",
+        name: name + "_id",
+        value: id,
       },
       {
         xtype: "button",
@@ -162,12 +488,21 @@ Ext.define("Amps.form.Parms", {
       } else {
         this.removeAll();
         args["types"].forEach((type) => {
-          var button = Object.assign({}, scope.types[type]);
+          var button = Object.assign(
+            { itemId: "parmbutton" },
+            scope.types[type]
+          );
           button.text = "Add";
           scope.insert(button);
         });
       }
+    } else {
+      Object.entries(this.types).forEach((type) => {
+        console.log(type);
+        scope.down("#addMenu").insert(type[1]);
+      });
     }
+    console.log(scope.down("#addMenu"));
     this.loadParms(args["value"], args["readOnly"]);
     this.setReadOnly(args["readOnly"]);
   },
@@ -176,7 +511,7 @@ Ext.define("Amps.form.Parms", {
     bool: {
       text: "Boolean",
       xtype: "button",
-      itemId: "parmbutton",
+      // itemId: "parmbutton",
 
       handler: function (button, event) {
         var formpanel = button.up("fieldset");
@@ -193,7 +528,7 @@ Ext.define("Amps.form.Parms", {
     string: {
       text: "String",
       xtype: "button",
-      itemId: "parmbutton",
+      // itemId: "parmbutton",
 
       handler: function (button, event) {
         var formpanel = button.up("fieldset");
@@ -201,6 +536,23 @@ Ext.define("Amps.form.Parms", {
         formpanel.insert(
           formpanel.items.length - 1,
           Ext.create("Amps.form.Parm.String", {
+            name: formpanel.name,
+            title: formpanel.title,
+          })
+        );
+      },
+    },
+    number: {
+      text: "Number",
+      xtype: "button",
+      // itemId: "parmbutton",
+
+      handler: function (button, event) {
+        var formpanel = button.up("fieldset");
+
+        formpanel.insert(
+          formpanel.items.length - 1,
+          Ext.create("Amps.form.Parm.Number", {
             name: formpanel.name,
             title: formpanel.title,
           })
@@ -760,6 +1112,75 @@ Ext.define("Amps.form.Parm.String", {
   ],
 });
 
+Ext.define("Amps.form.Parm.Number", {
+  extend: "Ext.form.FieldSet",
+  constructor: function (args) {
+    this.callParent(args);
+    var name;
+    if (args) {
+      name = args["name"] ? args["name"] : "parms";
+    } else {
+      name = "parms";
+    }
+    this.insert(0, {
+      xtype: "fieldcontainer",
+      layout: "hbox",
+      items: [
+        {
+          xtype: "textfield",
+          flex: 1,
+          fieldLabel: "Field",
+          name: "field",
+          listeners: {
+            change: "onDefaultChange",
+          },
+          itemId: "field",
+          allowBlank: false,
+        },
+        {
+          xtype: "splitter",
+          tabIndex: -1,
+        },
+
+        {
+          xtype: "numberfield",
+          fieldLabel: "Value",
+          flex: 1,
+          name: "value",
+          listeners: {
+            change: "onDefaultChange",
+          },
+          itemId: "value",
+          allowBlank: false,
+        },
+      ],
+    });
+    this.insert({
+      xtype: "hidden",
+      name: name,
+      itemId: "defaultvalue",
+    });
+  },
+  xtype: "formnumber",
+  title: "Parameter",
+  collapsible: true,
+  defaultType: "textfield",
+  controller: "matchpattern",
+  defaults: { anchor: "100%" },
+  layout: "anchor",
+  items: [
+    {
+      xtype: "button",
+      iconCls: "x-fa fa-trash",
+      itemId: "parmbutton",
+      handler: function (button, event) {
+        console.log(button);
+        button.up("fieldset").up("fieldset").remove(button.up("fieldset"));
+      },
+    },
+  ],
+});
+
 Ext.define("Amps.form.FileMetaData", {
   extend: "Ext.form.FieldSet",
   xtype: "filemetadata",
@@ -825,7 +1246,7 @@ Ext.define("Amps.form.add", {
   scrollable: true,
   resizable: false,
   layout: "fit",
-  loadForm: function (item, fields, process = (val) => val) {
+  loadForm: function (item, fields, process = (form, val) => val) {
     this.item = item;
     this.title = "Add " + item;
     this.process = process;
@@ -861,7 +1282,13 @@ Ext.define("Amps.form.add", {
               var grid = amfutil.getElementByID("main-grid");
               var form = btn.up("form").getForm();
               var values = form.getValues();
-              values = this.up("window").process(values, btn.up("form"));
+              console.log(values);
+
+              values = this.up("window").process(btn.up("form"), values);
+              console.log(values);
+              values = amfutil.convertNumbers(form, values);
+              console.log(values);
+
               btn.setDisabled(true);
               var mask = new Ext.LoadMask({
                 msg: "Please wait...",
@@ -921,6 +1348,7 @@ Ext.define("Amps.form.add", {
 });
 
 Ext.define("Amps.view.main.MainController", {
+  itemId: "maincontroller",
   extend: "Ext.app.ViewController",
 
   alias: "controller.main",
@@ -1005,9 +1433,9 @@ Ext.define("Amps.view.main.MainController", {
     var config = ampsgrids.grids[route];
 
     var win = Ext.create("Amps.form.add", config.window);
-    win.loadForm(config.object, config.fields, (values, form) => {
+    win.loadForm(config.object, config.fields, (form, values) => {
       if (config.add && config.add.process) {
-        values = config.add.process(values, form);
+        values = config.add.process(form, values);
       }
       return values;
     });
@@ -1359,6 +1787,14 @@ Ext.define("Amps.view.main.MainController", {
         for (var i = 0; i < fields.length; i++) {
           var field = fields[i];
           if (field.row) {
+            if (items.length) {
+              var row = hbox;
+              items.push({ flex: 1 });
+              row.items = items;
+
+              form.insert(row);
+              items = [];
+            }
             form.insert(field);
           } else {
             items.push(field);
@@ -1398,6 +1834,7 @@ Ext.define("Amps.view.main.MainController", {
     var store = grid.getStore();
 
     Object.values(services).forEach((service, idx) => {
+      console.log(idx);
       items.push({
         xtype: "button",
         text: service.name,
@@ -1427,7 +1864,7 @@ Ext.define("Amps.view.main.MainController", {
         row.items = items;
         win.down("#card-0").insert(row);
         items = [];
-      } else if (idx == services.length - 1) {
+      } else if (idx == Object.values(services).length - 1) {
         var num = 3 - items.length;
         for (var i = 0; i < num; i++) {
           console.log("adding");

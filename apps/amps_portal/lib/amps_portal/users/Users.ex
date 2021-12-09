@@ -75,10 +75,10 @@ defmodule AmpsPortal.Users do
   end
 
   def convert_to_user_struct(user) do
-    IO.puts("Convert")
+    IO.inspect(user)
 
     user =
-      Map.put(user, "id", user["_id"])
+      Map.put(user, "id", BSON.ObjectId.encode!(user["_id"]))
       |> Map.new(fn {k, v} -> {String.to_atom(k), v} end)
 
     IO.inspect(user)

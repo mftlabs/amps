@@ -3,6 +3,8 @@ defmodule MailboxAction do
 
   def run(msg, parms, _state) do
     recipient = parms["recipient"] || "unknown"
+    IO.inspect("MSG")
+    IO.inspect(msg)
 
     case AmpsAuth.mailbox_info(recipient) do
       nil ->

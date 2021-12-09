@@ -39,7 +39,8 @@ defmodule AmpsPortal.Router do
     pipe_through([:api, :api_protected])
     get("/msg/:msgid", DataController, :get_message)
     get("/inbox", DataController, :get_messages)
-    get("/user", UserController, :get_user)
+    get("/user", UserController, :get)
+    put("/user", UserController, :update)
   end
 
   # Other scopes may use custom stacks.

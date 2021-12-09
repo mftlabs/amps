@@ -117,10 +117,11 @@ Ext.define("Amps.form.update", {
                 target: amfutil.getElementByID("edit_container"),
               });
               mask.show();
+              console.log(values);
+              values = btn.up("form").process(btn.up("form"), values);
 
               values = amfutil.convertNumbers(form, values);
-
-              values = btn.up("form").process(values, btn.up("form"));
+              console.log(values);
 
               amfutil.ajaxRequest({
                 headers: {
@@ -253,12 +254,13 @@ Ext.define("Amps.util.UpdateRecordController", {
     amfutil.getElementByID("edit_container").removeAll();
     // amfutil.getElementByID("actionbar").hide();
     const updateFunctions = {
-      messages: this.viewMessages,
+      message_events: this.viewMessages,
       bucket: this.updateBucket,
       accounts: this.viewAccounts,
       admin: this.updateUser,
       agentget: this.updateAgentGet,
       agentput: this.updateAgentPut,
+      topics: this.updateTopic,
       // actions: this.updateAction,
       // services: this.updateService,
     };
@@ -313,7 +315,7 @@ Ext.define("Amps.util.UpdateRecordController", {
     var details = Ext.create("Amps.view.messages.MessageActivity");
     console.log(details);
     delete record.id;
-    amfutil.showItemButtons(route);
+    // amfutil.showItemButtons(route);
     details.loadMessageActivity(record);
 
     return details;
@@ -873,8 +875,8 @@ Ext.define("Amps.util.UpdateRecordController", {
         console.log(values);
         if (ampsgrids.grids.actions.types[values.type].process) {
           values = ampsgrids.grids.actions.types[values.type].process(
-            values,
-            form
+            form,
+            values
           );
         }
         values = amfutil.convertNumbers(form.getForm(), values);
@@ -889,36 +891,43 @@ Ext.define("Amps.util.UpdateRecordController", {
     var grid = Ext.ComponentQuery.query("#main-grid")[0];
     console.log("record is ", record);
     var myForm = Ext.create("Amps.form.update");
-    myForm.loadForm("Topic", [
+    myForm.loadForm(
       {
-        xtype: "textfield",
-        name: "topic",
-        fieldLabel: "Topic Subject",
-        allowBlank: false,
-        value: record.topic,
-        // listeners: {
-        //   afterrender: function (cmp) {
-        //     cmp.inputEl.set({
-        //       autocomplete: "nope",
-        //     });
-        //   },
-        //   change: amfutil.uniqueBucket,
-        //   blur: function (item) {
-        //     //  amfutil.removeSpaces(item.itemId);
-        //   },
-        // },
-        width: 400,
-      },
-      {
-        xtype: "textfield",
-        name: "desc",
-        fieldLabel: "Topic Description",
-        value: record.desc,
-        allowBlank: false,
+        object: "Topic",
+        fields: [
+          {
+            xtype: "textfield",
+            name: "topic",
+            fieldLabel: "Topic Subject",
+            allowBlank: false,
+            value: record.topic,
+            // listeners: {
+            //   afterrender: function (cmp) {
+            //     cmp.inputEl.set({
+            //       autocomplete: "nope",
+            //     });
+            //   },
+            //   change: amfutil.uniqueBucket,
+            //   blur: function (item) {
+            //     //  amfutil.removeSpaces(item.itemId);
+            //   },
+            // },
+            width: 400,
+          },
+          {
+            xtype: "textfield",
+            name: "desc",
+            fieldLabel: "Topic Description",
+            value: record.desc,
+            allowBlank: false,
 
-        width: 400,
+            width: 400,
+          },
+        ],
       },
-    ]);
+      record,
+      "Topic"
+    );
     return myForm;
   },
 

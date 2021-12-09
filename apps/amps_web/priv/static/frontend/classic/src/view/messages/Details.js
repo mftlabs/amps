@@ -739,37 +739,37 @@ Ext.define("Amps.view.messages.MessageStatus", {
     var filters = { msgid: record.msgid };
 
     var scope = this;
-    var store = await amfutil.createCollectionStore("message_status", filters);
-    store.on(
-      "load",
-      function (storeScope, records, successful, operation, eOpts) {
-        var statuses = store.getData().items.map((item) => item.data);
-        // get unfiltered collection (will be null if the store has never been filtered)
-        console.log(statuses);
-        statuses.sort((a, b) => (a.stime > b.stime ? 1 : -1));
-        statuses.reverse();
+    var store = await amfutil.createHistoryStore(record["msgid"]);
+    // store.on(
+    //   "load",
+    //   function (storeScope, records, successful, operation, eOpts) {
+    //     var statuses = store.getData().items.map((item) => item.data);
+    //     // get unfiltered collection (will be null if the store has never been filtered)
+    //     console.log(statuses);
+    //     statuses.sort((a, b) => (a.stime > b.stime ? 1 : -1));
+    //     statuses.reverse();
 
-        var status = statuses[0].status;
-        var reason = statuses[0].reason;
-        console.log(status);
-        scope.down("#current-status").setHtml(status);
-        scope
-          .down("#current-reason-title")
-          .setHtml(`${status == "mailboxed" ? "Recipient" : "Reason"}: `);
-        scope.down("#current-reason").setHtml(reason);
-        var rbutton = amfutil.getElementByID("reprocessbtn");
-        if (statuses[0].status == "reprocessing" || !record["location"]) {
-          console.log("Reprocessing");
-          rbutton.disable();
-        } else {
-          rbutton.enable();
-        }
+    //     var status = statuses[0].status;
+    //     var reason = statuses[0].reason;
+    //     console.log(status);
+    //     scope.down("#current-status").setHtml(status);
+    //     scope
+    //       .down("#current-reason-title")
+    //       .setHtml(`${status == "mailboxed" ? "Recipient" : "Reason"}: `);
+    //     scope.down("#current-reason").setHtml(reason);
+    //     var rbutton = amfutil.getElementByID("reprocessbtn");
+    //     if (statuses[0].status == "reprocessing" || !record["location"]) {
+    //       console.log("Reprocessing");
+    //       rbutton.disable();
+    //     } else {
+    //       rbutton.enable();
+    //     }
 
-        console.log(statuses);
-      }
-    );
+    //     console.log(statuses);
+    //   }
+    // );
 
-    store.sort("stime", "DESC");
+    store.sort("etime", "DESC");
 
     this.down("grid").setStore(store);
   },
@@ -881,9 +881,102 @@ Ext.define("Amps.view.messages.MessageStatus", {
               flex: 1,
             },
             {
-              dataIndex: "stime",
-              text: "Status Time",
+              dataIndex: "etime",
+              text: "Event Time",
               flex: 1,
+            },
+            {
+              xtype: "actioncolumn",
+              text: "Actions",
+              items: [
+                {
+                  iconCls: "x-fa fa-download",
+                  handler: async function (
+                    view,
+                    rowIndex,
+                    colIndex,
+                    item,
+                    e,
+                    rec
+                  ) {
+                    var filename;
+                    var msgbox = Ext.MessageBox.show({
+                      title: "Please wait",
+                      msg: "Downloading...",
+                      progressText: "Downloading...",
+                      width: 300,
+                      progress: true,
+                      closable: false,
+                    });
+                    await amfutil.renew_session();
+                    await fetch(
+                      "/api/message_events/download/" + rec.data.msgid,
+                      {
+                        headers: {
+                          Authorization: localStorage.getItem("access_token"),
+                        },
+                      }
+                    )
+                      .then(async (response) => {
+                        if (response.ok) {
+                          var progress = 0;
+                          var size;
+                          for (let entry of response.headers.entries()) {
+                            if (entry[0] == "content-length") {
+                              size = entry[1];
+                            }
+                            if (entry[0] == "content-disposition") {
+                              filename = entry[1].match(/filename="(.+)"/)[1];
+                            }
+                          }
+                          console.log(size);
+
+                          console.log(response);
+                          const reader = response.body.getReader();
+                          return new ReadableStream({
+                            start(controller) {
+                              return pump();
+                              function pump() {
+                                return reader.read().then(({ done, value }) => {
+                                  // When no more data needs to be consumed, close the stream
+                                  if (done) {
+                                    controller.close();
+                                    return;
+                                  }
+                                  // Enqueue the next data chunk into our target stream
+                                  progress += value.length;
+                                  msgbox.updateProgress(progress / size);
+                                  controller.enqueue(value);
+                                  return pump();
+                                });
+                              }
+                            },
+                          });
+                        } else {
+                          msgbox.close();
+                          Ext.MessageBox.alert(
+                            "Error",
+                            "Failed to Download UFA Agent"
+                          );
+                          throw new Error("Something went wrong");
+                        }
+                      })
+                      .then((stream) => new Response(stream))
+                      .then((response) => response.blob())
+                      .then((blob) => {
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement("a");
+                        link.href = url;
+                        link.setAttribute("download", filename);
+                        document.body.appendChild(link);
+                        msgbox.close();
+                        link.click();
+                        link.remove();
+                      })
+                      .catch((err) => console.error(err));
+                  },
+                },
+              ],
             },
           ],
         },

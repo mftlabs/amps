@@ -74,7 +74,7 @@ defmodule AmpsWeb.Vault do
                 "name" => "vault",
                 "keys" => AmpsWeb.Encryption.encrypt(Jason.encode!(keys))
               },
-              body["_id"]
+              BSON.ObjectId.encode!(body["_id"])
             )
         end
 

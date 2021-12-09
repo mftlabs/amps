@@ -30,41 +30,6 @@ defmodule AmpsWeb.DataController do
   plug(AmpsWeb.EnsureRolePlug, [:Guest, :Admin] when action in [:get_rows])
 
   def test(conn, _params) do
-    # IO.inspect(conn)
-
-    # IO.inspect(Plug.BasicAuth.encode_basic_auth("hello", "world"))
-
-    # headers = [{"authorization", Plug.BasicAuth.encode_basic_auth("hello", "world")}]
-
-    # response = HTTPoison.get("localhost:12346/mailbox/hello", headers)
-
-    # IO.inspect(response)
-    # consumer = %{
-    #   stream_name: "AMPS-Svc",
-    #   name: "AmpsSvc2",
-    #   deliver_subject: nil,
-    #   deliver_policy: :all,
-    #   filter_subject: "AMPS.Svc.*",
-    #   durable: true,
-    #   ack_policy: :explicit,
-    #   # 30sec
-    #   ack_wait: 30_000_000_000,
-    #   max_deliver: -1,
-    #   replay_policy: :instant,
-    #   opt_start_time: nil,
-    #   opt_start_seq: nil
-    # }
-
-    # case AmpsWeb.DB.find_one("services", %{"name" => "vault"}) do
-    #   nil ->
-    #     raise("Missing vault config")
-
-    #   config ->
-    #     keys = Jason.decode!(AmpsWeb.Encryption.decrypt(config["keys"]))
-    #     IO.inspect(keys)
-    #     {:ok, keys}
-    # end
-
     {:ok, gnat} =
       Gnat.start_link(%{
         # (required) the registered named you want to give the Gnat connection
@@ -78,22 +43,48 @@ defmodule AmpsWeb.DataController do
     :ok =
       Gnat.pub(
         gnat,
-        "amps.actions.mailbox.abhay",
-        Jason.encode!(%{
-          msg: %{data: "I wanna go for mexican dinner"},
+        "amps.actions.kafkaput.abhay",
+        Poison.encode!(%{
+          msg: %{
+            data: "abhay kafka abhay kafka abhay kafka",
+            fname: "kafka.txt",
+            ftime: DateTime.to_iso8601(DateTime.utc_now())
+          },
           state: %{}
         })
       )
 
-    # IO.inspect(Jetstream.API.Consumer.list(gnat, "ACTIONS"))
-    # k = Jetstream.API.Consumer.info(gnat, "ACTIONS", "amps_actions_mailbox_TEST")
-    # IO.inspect(k)
-    processes = Supervisor.which_children(Amps.Supervisor)
-    IO.inspect(processes)
+    # case AmpsWeb.DB.find_one("services", %{"name" => "vault"}) do
+    #   nil ->
+    #     raise("Missing vault config")
 
-    Enum.each(processes, fn {_, pid, type, modules} ->
-      IO.inspect(Process.info(pid))
-    end)
+    #   config ->
+    #     keys = Jason.decode!(AmpsWeb.Encryption.decrypt(config["keys"]))
+    #     IO.inspect(keys)
+    #     {:ok, keys}
+    # end
+
+    IO.inspect(Jetstream.API.Consumer.list(gnat, "ACTIONS"))
+    # k = Jetstream.API.Consumer.info(gnat, "SERVICES", "ampskafka")
+    # IO.inspect(k)
+    # l = Jetstream.API.Stream.info(gnat, "SERVICES")
+    # IO.inspect(l)
+
+    # j =
+    #   Jetstream.API.Consumer.create(gnat, %Jetstream.API.Consumer{
+    #     name: "ampskafka",
+    #     stream_name: "SERVICES",
+    #     filter_subject: "amps.svcs.kafka_amps.>",
+    #     deliver_policy: :new
+    #   })
+
+    # IO.inspect(j)
+    # processes = Supervisor.which_children(Amps.Supervisor)
+    # IO.inspect(processes)
+
+    # Enum.each(processes, fn {_, pid, type, modules} ->
+    #   IO.inspect(Process.info(pid))
+    # end)
 
     # {_, pid, _, _} = Enum.at(processes, 0)
     # IO.inspect(pid)
@@ -151,6 +142,153 @@ defmodule AmpsWeb.DataController do
     # IO.inspect(Amps.SvcManager.stop())
 
     json(conn, :ok)
+  end
+
+  def download(conn, %{"msgid" => msgid}) do
+    case DB.find_one("message_events", %{"msgid" => msgid}) do
+      nil ->
+        send_resp(conn, 404, "Not found")
+
+      msg ->
+        if msg["data"] do
+          send_download(conn, {:binary, msg["data"]},
+            disposition: :attachment,
+            filename: msg["fname"]
+          )
+        else
+          if msg["temp"] do
+            send_download(conn, {:file, msg["fpath"]},
+              disposition: :attachment,
+              filename: msg["fname"]
+            )
+          else
+            root = AmpsUtil.get_env(:storage_root)
+
+            send_download(conn, {:file, Path.join(root, msg["fpath"])},
+              disposition: :attachment,
+              filename: msg["fname"]
+            )
+          end
+        end
+    end
+  end
+
+  def history(conn, %{"msgid" => msgid}) do
+    json(conn, get_history(msgid))
+  end
+
+  def get_history(msgid) do
+    case DB.find("message_events", %{"msgid" => msgid}) do
+      nil ->
+        Logger.info("Message not found for id #{msgid}")
+        []
+
+      msgs ->
+        msg = Enum.find(msgs, fn msg -> msg["status"] == "started" end)
+        get_parents(msg, []) ++ msgs ++ get_children(msg, [])
+    end
+  end
+
+  def get_parents(msg, parents) do
+    if Map.has_key?(msg, "parent") do
+      case DB.find("message_events", %{
+             "msgid" => msg["parent"]
+           }) do
+        [] ->
+          parents
+
+        msgs ->
+          msg = Enum.find(msgs, fn msg -> msg["status"] == "started" end)
+          get_parents(msg, msgs ++ parents)
+      end
+    else
+      parents
+    end
+  end
+
+  def get_children(msg, children) do
+    case DB.find("message_events", %{
+           "parent" => msg["msgid"]
+         }) do
+      [] ->
+        children
+
+      msgs ->
+        msg = Enum.find(msgs, fn msg -> msg["status"] == "started" end)
+        get_children(msg, children ++ msgs)
+    end
+  end
+
+  def workflow(conn, %{"topic" => topic, "meta" => meta}) do
+    json(conn, %{"steps" => find_topics(topic, meta), "topic" => topic})
+  end
+
+  defp find_topics(topic, meta) do
+    subs =
+      DB.find("services", %{
+        type: "subscriber"
+      })
+
+    Enum.reduce(subs, [], fn sub, acc ->
+      if match_topic(sub["topic"], topic) do
+        action = DB.find_one("actions", %{"_id" => sub["handler"]})
+        step = %{"action" => action, "sub" => sub}
+
+        step =
+          if action["type"] == "router" do
+            rule = RouterAction.evaluate(action, meta)
+
+            # rule["topic"]
+
+            step
+            |> Map.put(
+              "ruleid",
+              rule["id"]
+            )
+            |> Map.put(
+              "steps",
+              find_topics(rule["topic"], Map.merge(meta, %{}))
+            )
+            |> Map.put(
+              "topic",
+              rule["topic"]
+            )
+          else
+            if action["output"] do
+              step
+              |> Map.put(
+                "steps",
+                find_topics(action["output"], Map.merge(meta, %{}))
+              )
+              |> Map.put(
+                "topic",
+                action["output"]
+              )
+            else
+              step
+            end
+          end
+
+        [step | acc]
+      else
+        acc
+      end
+    end)
+  end
+
+  defp match_topic(stopic, wtopic) do
+    spieces = String.split(stopic, ".")
+    wpieces = String.split(wtopic, ".")
+
+    wpieces
+    |> Enum.with_index(fn element, index -> {index, element} end)
+    |> Enum.reduce(true, fn {idx, piece}, match ->
+      spiece = Enum.at(spieces, idx)
+
+      match &&
+        (spiece == piece || spiece == "*" ||
+           spiece == ">")
+    end)
   end
 
   def reprocess(conn, _params) do
@@ -222,7 +360,7 @@ defmodule AmpsWeb.DataController do
       }) do
     if vault_collection(collection) do
       data = VaultData.get_rows("amps/" <> collection)
-      IO.inspect(data)
+      # IO.inspect(data)
 
       json(
         conn,
@@ -278,6 +416,15 @@ defmodule AmpsWeb.DataController do
     updated = DB.add_to_field(collection, body, id, field)
 
     case collection do
+      "services" ->
+        case field do
+          "defaults" ->
+            Application.put_env(:amps, String.to_atom(body["field"]), body["value"])
+
+          _ ->
+            nil
+        end
+
       "accounts" ->
         case field do
           "rules" ->
@@ -317,6 +464,15 @@ defmodule AmpsWeb.DataController do
     result = DB.update_in_field(collection, body, id, field, idx)
 
     case collection do
+      "services" ->
+        case field do
+          "defaults" ->
+            Application.put_env(:amps, String.to_atom(body["field"]), body["value"])
+
+          _ ->
+            nil
+        end
+
       "accounts" ->
         case field do
           "rules" ->
@@ -351,9 +507,19 @@ defmodule AmpsWeb.DataController do
       }) do
     Logger.debug("Deleting Field")
     body = conn.body_params()
+    item = DB.get_in_field(collection, id, field, idx)
     result = DB.delete_from_field(collection, body, id, field, idx)
 
     case collection do
+      "services" ->
+        case field do
+          "defaults" ->
+            Application.delete_env(:amps, String.to_atom(item["field"]))
+
+          _ ->
+            nil
+        end
+
       "accounts" ->
         case field do
           "rules" ->
@@ -417,10 +583,8 @@ defmodule AmpsWeb.DataController do
           IO.inspect(conn.body_params())
 
           body = conn.body_params()
-          token = Phoenix.Token.sign(AmpsPortal.Endpoint, "user", body["username"])
 
           body = Map.put(body, "password", nil)
-          body = Map.put(body, "token", token)
 
           DB.insert("mailbox_auth", %{
             mailbox: body["username"],
@@ -586,6 +750,11 @@ defmodule AmpsWeb.DataController do
       # "accounts" ->
       #   S3.Minio.delete_account(object)
 
+      "users" ->
+        DB.delete("mailbox_auth", %{
+          "mailbox" => object["username"]
+        })
+
       "rules" ->
         S3.Minio.delete_bucket(object)
 
@@ -619,8 +788,7 @@ defmodule AmpsWeb.DataController do
   end
 
   def objectid(id) do
-    {_, idbin} = Base.decode16(id, case: :mixed)
-    %BSON.ObjectId{value: idbin}
+    BSON.ObjectId.decode!(id)
   end
 end
 

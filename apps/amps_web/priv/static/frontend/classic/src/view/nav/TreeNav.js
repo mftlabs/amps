@@ -12,7 +12,7 @@ Ext.define("Amps.view.nav.TreeNav", {
         {
           iconCls: "x-fa fa-envelope",
           leaf: true,
-          rowCls: "messages",
+          rowCls: "message_events",
           text: "Message Activity",
           tooltip: "Message Activity",
           cls: "messages",
@@ -52,6 +52,13 @@ Ext.define("Amps.view.nav.TreeNav", {
           text: "Configuration",
           expanded: true,
           children: [
+            {
+              iconCls: "x-fa fa-chevron-circle-right",
+              leaf: true,
+              rowCls: "workflows",
+              text: "Workflows",
+              tooltip: "Workflows",
+            },
             {
               iconCls: "x-fa fa-columns",
               leaf: true,

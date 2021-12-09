@@ -45,6 +45,7 @@ Ext.define("Amps.Authorized.Update", {
   },
 
   update: async function () {
+    console.log("Update");
     var data = await ampsutil.getCurrentItem();
     console.log(data);
     this.record = data;
@@ -97,6 +98,7 @@ Ext.define("Amps.Authorized.Update", {
           handler: function (btn) {
             var form = btn.up("formpanel");
             var values = form.getValues();
+            console.log(values);
             var scope = this;
             var mask = new Ext.LoadMask({
               msg: "Please wait...",
@@ -122,14 +124,11 @@ Ext.define("Amps.Authorized.Update", {
                 var item = btn.up("formpanel").item;
                 mask.hide();
                 Ext.toast(`${item} updated`);
-                ampsutil.broadcastEvent("update", {
-                  page: Ext.util.History.getToken().split("/")[0],
-                });
+                // ampsutil.broadcastEvent("update", {
+                //   page: Ext.util.History.getToken().split("/")[0],
+                // });
                 //   ampsutil.getElementByID("pagelist").show();
                 // ampsutil.showActionIcons(route);
-
-                ampsutil.getElementByID("main-grid").getStore().reload();
-                var form = btn.up("formpanel");
                 // if (!form.subgrid) {
                 //   form.back();
                 // }

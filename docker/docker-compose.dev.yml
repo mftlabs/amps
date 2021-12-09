@@ -41,18 +41,35 @@ services:
     cap_add:
       - IPC_LOCK
     entrypoint: vault server -config=/vault/config/vault.json
-  openldap:
-    image: bitnami/openldap:2
-    ports:
-      - "1389:1389"
-      - "1636:1636"
-    environment:
-      - LDAP_ADMIN_USERNAME=admin
-      - LDAP_ADMIN_PASSWORD=adminpassword
-      - LDAP_USERS=user01,user02
-      - LDAP_PASSWORDS=password1,password2
-    volumes:
-      - "./volumes/openldap_data:/bitnami/openldap"
+  # zookeeper:
+  #   image: 'bitnami/zookeeper:latest'
+  #   ports:
+  #     - '2181:2181'
+  #   environment:
+  #     - ALLOW_ANONYMOUS_LOGIN=yes
+  # kafka:
+  #   image: 'bitnami/kafka:latest'
+  #   ports:
+  #     - '9092:9092'
+  #   volumes: 
+  #     - ./kafka/secrets:/bitnami/kafka/config/certs
+  #   environment:
+  #     - KAFKA_BROKER_ID=1
+  #     - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+  #     - ALLOW_PLAINTEXT_LISTENER=yes
+  #     - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=INTERNAL:PLAINTEXT,CLIENT:PLAINTEXT
+  #     - KAFKA_CFG_LISTENERS=INTERNAL://:9093,CLIENT://:9092
+  #     - KAFKA_CFG_ADVERTISED_LISTENERS=INTERNAL://kafka:9093,CLIENT://127.0.0.1:9092
+  #     - KAFKA_INTER_BROKER_LISTENER_NAME=INTERNAL
+  #     # - KAFKA_CLIENT_USER=user
+  #     # - KAFKA_CLIENT_PASSWORD=password
+  #     # - KAFKA_CERTIFICATE_PASSWORD=test12
+  #     # - KAFKA_CFG_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM=""
+  #     # - KAFKA_TLS_CLIENT_AUTH=required
+  #     # - KAFKA_OPTS=-Djavax.net.debug=all
+  #   depends_on:
+  #     - zookeeper
+
   # minio1:
   #   <<: *minio-common
   #   hostname: minio1

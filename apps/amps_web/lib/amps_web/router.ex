@@ -36,6 +36,9 @@ defmodule AmpsWeb.Router do
 
   scope "/api", AmpsWeb do
     post("/test", DataController, :test)
+    get("/message_events/history/:msgid", DataController, :history)
+    get("/message_events/download/:msgid", DataController, :download)
+    post("/workflow", DataController, :workflow)
     post("/duplicate", DataController, :duplicate)
     get("/port/:port", DataController, :in_use)
     post("/service/:name", ServiceController, :handle_service)

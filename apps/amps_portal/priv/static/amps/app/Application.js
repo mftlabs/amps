@@ -29,6 +29,7 @@ Ext.define("Amps.Application", {
   // },
   launch: async function () {
     ampsutil = Amps.Utilities;
+
     console.log(ampsutil);
     console.log("launch");
     var route = Ext.util.History.getToken();
@@ -84,6 +85,7 @@ Ext.define("Amps.Application", {
         // } else {
         //   this.redirectTo("messages");
         // }
+        ampsuploads = Amps.Authorized.Uploads;
         Ext.Viewport.add({
           xtype: "authorized",
         });

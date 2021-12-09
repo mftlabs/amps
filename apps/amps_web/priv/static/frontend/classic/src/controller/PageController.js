@@ -98,14 +98,18 @@ Ext.define("Amps.controller.PageController", {
   onRoute: function () {
     var route = Ext.util.History.currentToken;
     var tokens = route.split("/");
-    const grids = ampsgrids.grids;
+    var grids = ampsgrids.grids;
+    var pages = ampsgrids.pages;
+
+    console.log(route);
     var routes = Object.keys(grids).concat(Object.keys(pages));
     var treenav = Ext.ComponentQuery.query("#treenavigation")[0];
     newSelection = treenav.getStore().findRecord("rowCls", tokens[0]);
+    console.log(newSelection);
     if (routes.indexOf(tokens[0]) >= 0) {
       treenav.setSelection(newSelection);
     } else {
-      this.redirectTo("messages");
+      this.redirectTo("message_events");
     }
   },
 
@@ -151,6 +155,7 @@ Ext.define("Amps.controller.PageController", {
           target: grid,
         });
         mask.show();
+
         if (route == "uploads") {
           grid.reconfigure(
             amfutil.uploads,
@@ -161,7 +166,10 @@ Ext.define("Amps.controller.PageController", {
           mask.hide();
         } else {
           grid.reconfigure(
-            amfutil.createCollectionStore(Ext.util.History.getToken(), {}),
+            amfutil.createCollectionStore(
+              Ext.util.History.getToken(),
+              grids[route].filter ? grids[route].filter : {}
+            ),
             grids[route].columns.concat(
               ampsgrids.grids[route].options ? [column] : null
             )
@@ -186,8 +194,8 @@ Ext.define("Amps.controller.PageController", {
           }
         );
 
-        if (route == "messages") {
-          store.sort("stime", "DESC");
+        if (route == "message_events") {
+          store.sort("etime", "DESC");
         }
 
         grid.setListeners({

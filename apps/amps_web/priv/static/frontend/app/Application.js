@@ -75,7 +75,7 @@ Ext.define("Amps.Application", {
           } else {
           }
         } else {
-          this.redirectTo("messages");
+          this.redirectTo("message_events");
         }
         Ext.create({
           xtype: "app-main",

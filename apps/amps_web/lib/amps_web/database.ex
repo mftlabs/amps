@@ -93,7 +93,7 @@ defmodule AmpsWeb.DB do
         Postgres.find_one_and_update(collection, clauses, body)
 
       "mongo" ->
-        Mongo.find_one_and_update(:mongo, collection, clauses, %{
+        Mongo.find_one_and_update(:mongo, collection, convert_id(clauses), %{
           "$set": body
         })
 
@@ -103,14 +103,23 @@ defmodule AmpsWeb.DB do
   end
 
   def convert_id(clauses) do
-    if Map.has_key?(clauses, "_id") do
-      Map.put(
-        clauses,
-        "_id",
-        AmpsWeb.DataController.objectid(Map.get(clauses, "_id"))
-      )
-    else
-      clauses
+    cond do
+      Map.has_key?(clauses, "_id") ->
+        Map.put(
+          clauses,
+          "_id",
+          AmpsWeb.DataController.objectid(Map.get(clauses, "_id"))
+        )
+
+      Map.has_key?(clauses, :_id) ->
+        Map.put(
+          clauses,
+          :_id,
+          AmpsWeb.DataController.objectid(Map.get(clauses, :_id))
+        )
+
+      true ->
+        clauses
     end
   end
 

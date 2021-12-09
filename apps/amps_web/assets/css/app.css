@@ -264,3 +264,87 @@ label.x-form-required-field > span:after {
 .greenIcon {
   color: green;
 }
+.kafka-icon {
+  background-image: url("../../priv/static/images/icons/kafka.svg")
+}
+
+.workflow-step {
+  position: relative;
+}
+
+.workflow-step.up:after {
+  content: '';
+  width: 0; 
+  height: 0; 
+  border-left: 60px solid transparent;
+  border-right: 60px solid transparent;
+  border-bottom: 60px solid #5fa2dd;
+  position: absolute;
+  top: -10;  /* position the top  edge of the element at the middle of the parent */
+  left: 50%; /* position the left edge of the element at the middle of the parent */
+  transform: translate(-50%, 0);
+}
+
+.workflow-step.down:after {
+  content: '';
+  width: 0; 
+  height: 0; 
+  border-left: 60px solid transparent;
+  border-right: 60px solid transparent;
+  
+  border-top: 60px solid #32404e;
+  position: absolute;
+  bottom: 0;  /* position the top  edge of the element at the middle of the parent */
+  left: 50%; /* position the left edge of the element at the middle of the parent */
+  transform: translate(-50%, 0);
+}
+
+.workflow-step.right:after {
+  content: '';
+  width: 0; 
+  height: 0; 
+  border-top: 60px solid transparent;
+  border-bottom: 60px solid transparent;
+  
+  border-left: 60px solid #32404e;
+  position: absolute;
+  top: 50%;  /* position the top  edge of the element at the middle of the parent */
+  /* left: 0; position the left edge of the element at the middle of the parent */
+  transform: translate(0, -50%);
+}
+
+.workflow-step.left:after {
+  content: '';
+  width: 0; 
+  height: 0; 
+  border-top: 60px solid transparent;
+  border-bottom: 60px solid transparent;
+  
+  border-right: 60px solid #32404e;
+  position: absolute;
+  top: 50%;  /* position the top  edge of the element at the middle of the parent */
+  /* right: 0; position the left edge of the element at the middle of the parent */
+  transform: translate(0, -50%);
+}
+
+.workflow-arrow{
+  background: #ccc;
+  position: relative;
+  width: 300px;
+  height: 100px;
+}
+.workflow-arrow.down:before {
+  width: 0;
+  height: 0;
+  border-left: 150px solid transparent;
+  border-right: 150px solid transparent;
+  border-top: 30px solid #ccc;
+  top: 100%;
+}
+.workflow-arrow{
+  margin-top: 100px;
+}
+.workflow-arrow:before{
+  content: '';
+  position: absolute;
+}

@@ -75,18 +75,18 @@ defmodule Amps.SftpServer do
     daemon_opts = Keyword.put(daemon_opts, :pwdfun, authenticate({AmpsAuth, :check_cred}))
 
     case :ssh.daemon(options["port"], daemon_opts) do
-      {:ok, d_ref} ->
-        {:ok, info} = :ssh.daemon_info(d_ref)
-        map = Enum.into(info, %{})
-        profile = map[:profile]
-        ref = Process.monitor(profile)
+      # {:ok, d_ref} ->
+      #   {:ok, info} = :ssh.daemon_info(d_ref)
+      #   map = Enum.into(info, %{})
+      #   profile = map[:profile]
+      #   ref = Process.monitor(profile)
 
-        {:ok, d_ref, ref, options}
+      #   {:ok, d_ref, ref, options}
 
       # old code not compiling
-      #      {:ok, pid} ->
-      #        ref = Process.monitor(pid)
-      #        {:ok, pid, ref, options}
+      {:ok, pid} ->
+        ref = Process.monitor(pid)
+        {:ok, pid, ref, options}
 
       any ->
         IO.puts("process monitor not started #{inspect(any)}")
@@ -429,7 +429,7 @@ defmodule Amps.SftpHandler do
         if msg["fname"] == bname do
           get_file(msg, flags, state)
         else
-          case AmpsMailbox.get_message(mailbox, bname) do
+          case AmpsMailbox.stat_fname(mailbox, bname) do
             nil ->
               IO.puts("not found")
               {{:error, :enoent}, state}

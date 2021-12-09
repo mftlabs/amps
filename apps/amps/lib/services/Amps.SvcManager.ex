@@ -79,46 +79,124 @@ defmodule Amps.SvcManager do
     types = service_types()
     IO.inspect(args)
 
-    case String.to_atom(args["type"]) do
-      #      :sftpd ->
-      #        {types[:sftpd], name: name, parms: args}
+    try do
+      case String.to_atom(args["type"]) do
+        #      :sftpd ->
+        #        {types[:sftpd], name: name, parms: args}
 
-      :httpd ->
-        IO.inspect(args)
+        :httpd ->
+          IO.inspect(args)
 
-        protocol_options = [
-          idle_timeout: args["idle_timeout"],
-          request_timeout: args["request_timeout"],
-          max_keepalive: args["max_keepalive"]
-        ]
+          protocol_options = [
+            idle_timeout: args["idle_timeout"],
+            request_timeout: args["request_timeout"],
+            max_keepalive: args["max_keepalive"]
+          ]
 
-        if args["tls"] do
-          cert = X509.Certificate.from_pem!(args["server_cert"]) |> X509.Certificate.to_der()
-          key = X509.PrivateKey.from_pem!(args["key"])
-          keytype = Kernel.elem(key, 0)
-          key = X509.PrivateKey.to_der(key)
+          if args["tls"] do
+            cert = X509.Certificate.from_pem!(args["cert"]) |> X509.Certificate.to_der()
+            key = X509.PrivateKey.from_pem!(args["key"])
+            keytype = Kernel.elem(key, 0)
+            key = X509.PrivateKey.to_der(key)
 
-          {Plug.Cowboy,
-           scheme: :https,
-           plug: types[:httpd],
-           options: [
-             ref: name,
-             port: args["port"],
-             cipher_suite: :strong,
-             cert: cert,
-             key: {keytype, key},
-             otp_app: :amps,
-             protocol_options: protocol_options
-           ]}
-        else
-          {Plug.Cowboy,
-           scheme: :http,
-           plug: types[:httpd],
-           options: [ref: name, port: args["port"], protocol_options: protocol_options]}
-        end
+            {Plug.Cowboy,
+             scheme: :https,
+             plug: types[:httpd],
+             options: [
+               ref: name,
+               port: args["port"],
+               cipher_suite: :strong,
+               cert: cert,
+               key: {keytype, key},
+               otp_app: :amps,
+               protocol_options: protocol_options
+             ]}
+          else
+            {Plug.Cowboy,
+             scheme: :http,
+             plug: types[:httpd],
+             options: [ref: name, port: args["port"], protocol_options: protocol_options]}
+          end
 
-      type ->
-        {types[type], name: name, parms: args}
+        :kafka ->
+          init_opts = [
+            group: args["name"],
+            topics: args["topics"],
+            # assignment_received_handler: assignment_received_handler(),
+            # assignments_revoked_handler: assignments_revoked_handler(),
+            handler: types[:kafka],
+            handler_init_args: args
+            # config: consumer_config()
+          ]
+
+          cacertfile = Path.join(AmpsUtil.tempdir(args["name"]), "cacert")
+          File.write(cacertfile, args["cacert"])
+          certfile = Path.join(AmpsUtil.tempdir(args["name"]), "cert")
+          File.write(certfile, args["cert"])
+          keyfile = Path.join(AmpsUtil.tempdir(args["name"]), "key")
+          File.write(keyfile, args["key"])
+
+          config =
+            case args["auth"] do
+              "SASL_PLAINTEXT" ->
+                [
+                  # ssl: true,
+                  sasl:
+                    {String.to_existing_atom(args["mechanism"]), args["username"],
+                     args["password"]}
+                ]
+
+              "SASL_SSL" ->
+                [
+                  ssl: [
+                    cacertfile: cacertfile,
+                    certfile: certfile,
+                    keyfile: keyfile
+                    # verify: :verify_peer
+                  ],
+                  sasl:
+                    {String.to_existing_atom(args["mechanism"]), args["username"],
+                     args["password"]}
+                ]
+
+              "SSL" ->
+                [
+                  ssl: [
+                    cacertfile: cacertfile,
+                    certfile: certfile,
+                    keyfile: keyfile
+                    # verify: :verify_peer
+                  ]
+                ]
+
+              "NONE" ->
+                []
+            end
+
+          {
+            Elsa.Supervisor,
+            config: config,
+            endpoints:
+              Enum.map(
+                args["uris"],
+                fn %{"host" => host, "port" => port} ->
+                  {host, port}
+                end
+              ),
+            connection: String.to_atom("elsa_" <> args["name"]),
+            group_consumer: init_opts,
+            producer: [
+              topic: "amps.events"
+            ]
+          }
+
+        type ->
+          {types[type], name: name, parms: args}
+      end
+    rescue
+      e ->
+        Logger.error(Exception.format(:error, e, __STACKTRACE__))
+        {:error, "Invalid Service Opts"}
     end
   end
 
@@ -156,7 +234,14 @@ defmodule Amps.SvcManager do
 
         Enum.each(1..count, fn x ->
           name = String.to_atom(svcname <> Integer.to_string(x))
-          Amps.SvcSupervisor.start_child(name, get_spec(name, opts))
+
+          case get_spec(name, opts) do
+            {:error, error} ->
+              Logger.warn("Service #{name} could not be started. Error: #{error}")
+
+            spec ->
+              Amps.SvcSupervisor.start_child(name, spec)
+          end
         end)
     end
   end

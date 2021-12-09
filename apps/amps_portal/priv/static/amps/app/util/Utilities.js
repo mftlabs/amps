@@ -44,6 +44,29 @@ Ext.define("Amps.Utilities", {
     });
     return Ext.decode(resp.responseText);
   },
+
+  getCurrentItem: async function (route) {
+    if (!route) {
+      route = Ext.util.History.getToken();
+    }
+    let response = await ampsutil.ajaxRequest({
+      url: "/api/" + route,
+      headers: {
+        Authorization: localStorage.getItem("access_token"),
+      },
+      method: "GET",
+      timeout: 30000,
+      params: {},
+      success: function (response) {},
+      failure: function (response) {
+        console.log(response);
+      },
+    });
+    var obj = Ext.decode(response.responseText);
+    console.log(response);
+
+    return obj;
+  },
   convertNumbers: function (form, data) {
     console.log(form);
     Object.entries(form.getFields()).forEach((field) => {

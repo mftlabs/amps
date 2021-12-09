@@ -10,6 +10,8 @@ defmodule RouterAction do
     Logger.info("state #{inspect(state)}")
     rule = evaluate(parms, msg)
     Logger.info("rule #{inspect(rule)}")
+    msgid = AmpsUtil.get_id()
+    msg = Map.merge(msg, %{"msgid" => msgid, "parent" => msg["msgid"]})
 
     AmpsEvents.send(msg, %{"output" => rule["topic"]}, state)
   end
@@ -49,7 +51,7 @@ defmodule RouterAction do
     end
   end
 
-  defp evaluate(parms, msg) do
+  def evaluate(parms, msg) do
     case find_rule(parms["rules"], msg) do
       false ->
         nil

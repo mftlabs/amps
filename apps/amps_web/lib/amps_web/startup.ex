@@ -12,6 +12,29 @@ defmodule AmpsWeb.Startup do
     create_defaults_rules()
     create_root()
     setup_jetstream()
+    create_history()
+  end
+
+  def create_history() do
+    case AmpsWeb.DB.find_one("services", %{"name" => "history_updater"}) do
+      nil ->
+        IO.puts("Creating History Update")
+
+        history = %{
+          name: "history updater",
+          type: "history",
+          subs_count: 1,
+          active: true,
+          topic: "amps.events.*"
+        }
+
+        AmpsWeb.DB.insert("services", history)
+
+        AmpsWeb.ServiceController.start_service(history["name"])
+
+      object ->
+        IO.puts("SYSTEM Defaults Already Exist")
+    end
   end
 
   def setup_jetstream() do
@@ -64,23 +87,27 @@ defmodule AmpsWeb.Startup do
   end
 
   def create_default_account() do
-    system_account = %{
-      "fields" => [
-        %{"description" => "File Name", "field" => "fname"},
-        %{"description" => "File Size", "field" => "fsize"},
-        %{"description" => "File Upload Time", "field" => "ftime"}
+    system_defaults = %{
+      "defaults" => [
+        %{"field" => "sched_interval", "value" => 10000},
+        %{"field" => "retry_interval", "value" => 60000},
+        %{"field" => "storage_root", "value" => ""},
+        %{"field" => "storage_temp", "value" => ""},
+        %{"field" => "storage_logs", "value" => ""},
+        %{"field" => "python_path", "value" => ""},
+        %{"field" => "python_path", "value" => ""},
+        %{"field" => "registration_queue", "value" => "reqisterq"}
       ],
-      "systemdefault" => true,
-      "username" => "SYSTEM"
+      "name" => "SYSTEM"
     }
 
-    case AmpsWeb.DB.find_one("accounts", %{"username" => "SYSTEM"}) do
+    case AmpsWeb.DB.find_one("services", %{"name" => "SYSTEM"}) do
       nil ->
         IO.puts("Creating SYSTEM Default Account")
-        AmpsWeb.DB.insert("accounts", system_account)
+        AmpsWeb.DB.insert("services", system_defaults)
 
       object ->
-        IO.puts("SYSTEM Default Account Already Exists")
+        IO.puts("SYSTEM Defaults Already Exist")
     end
   end
 

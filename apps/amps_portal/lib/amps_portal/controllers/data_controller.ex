@@ -21,12 +21,17 @@ defmodule AmpsPortal.DataController do
         )
 
       user ->
-        data = DB.find("mailbox", %{"recipient" => user.username})
-        count = Enum.count(data)
+        qp = conn.query_params
+
+        qp = Map.put(qp, "filter", %{"recipient" => user.username})
+        IO.inspect(qp)
+        conn = Map.put(conn, :query_params, qp)
+
+        data = DB.get_rows(conn, %{"collection" => "mailbox"})
 
         json(
           conn,
-          %{success: true, count: count, rows: data}
+          data
         )
     end
   end
@@ -38,11 +43,26 @@ defmodule AmpsPortal.DataController do
 
       user ->
         case DB.find_one("mailbox", %{"recipient" => user.username, "msgid" => msgid}) do
-          msg ->
-            send_download(conn, {:file, msg["fpath"]}, disposition: :attachment)
-
           nil ->
             send_resp(conn, 404, "Not found")
+
+          msg ->
+            if msg["data"] do
+              send_download(conn, {:binary, msg["data"]},
+                disposition: :attachment,
+                filename: msg["fname"]
+              )
+            else
+              if msg["temp"] do
+                send_download(conn, {:file, msg["fpath"]}, disposition: :attachment)
+              else
+                root = AmpsUtil.get_env(:storage_root)
+
+                send_download(conn, {:file, Path.join(root, msg["fpath"])},
+                  disposition: :attachment
+                )
+              end
+            end
         end
     end
   end

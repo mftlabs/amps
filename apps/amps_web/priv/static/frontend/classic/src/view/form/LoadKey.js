@@ -29,6 +29,7 @@ Ext.define("Amps.view.form.LoadKey", {
       {
         xtype: "combobox",
         flex: 1,
+        isFormField: false,
         hidden: args["hidden"],
         disabled: args["disabled"],
         hidden: args["readOnly"],

@@ -44,13 +44,16 @@ Ext.define("Amps.Authorized.NavBar", {
           ui: "action",
           itemId: "usermenu",
           iconCls: "x-fa fa-user",
-          text: (function () {
-            var user = JSON.parse(localStorage.getItem("user"));
-            if (user) {
-              return user.firstname + " " + user.lastname;
-            }
-            return;
-          })(),
+          text: "User",
+          listeners: {
+            initialize: async function (btn) {
+              var user = await ampsutil.userInfo();
+              console.log(user);
+              if (user) {
+                btn.setText(user.firstname + " " + user.lastname);
+              }
+            },
+          },
           menuAlign: "bl-tl",
           menu: {
             items: []
@@ -73,7 +76,10 @@ Ext.define("Amps.Authorized.NavBar", {
                   text: "Uploads",
 
                   iconCls: "x-fa fa-upload",
-                  handler: "showUploads",
+                  handler: function () {
+                    console.log(ampsuploads);
+                    ampsuploads.show();
+                  },
                 },
                 {
                   text: "Logout",

@@ -14,12 +14,12 @@ Ext.define("Amps.Authorized.TreeNav", {
           leaf: true,
           iconCls: "x-fa fa-inbox",
         },
-        {
-          text: "Profiles",
-          rowCls: "profiles",
-          leaf: true,
-          iconCls: "x-fa fa-id-card",
-        },
+        // {
+        //   text: "Profiles",
+        //   rowCls: "profiles",
+        //   leaf: true,
+        //   iconCls: "x-fa fa-id-card",
+        // },
         {
           text: "Account",
           rowCls: "user",

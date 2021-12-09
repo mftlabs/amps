@@ -1,3 +1,4 @@
+var allow_enterkey = true;
 Ext.define("Amps.Unauthorized.Login", {
   extend: "Ext.Panel",
   xtype: "login",

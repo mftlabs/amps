@@ -1,3 +1,1209 @@
+Ext.define("Amps.container.Workflow.Step", {
+  xtype: "workflowstep",
+  extend: "Ext.form.Panel",
+  padding: 30,
+  flex: 1,
+  step: null,
+
+  listeners: {
+    beforerender: function (scope) {
+      // console.log(scope);
+    },
+  },
+
+  defaults: {
+    "font-size": "2rem",
+    color: "white",
+  },
+
+  constructor: function (args) {
+    this.callParent(args);
+    this.setTitle(args["title"]);
+    if (args["services"]) {
+      this.down("container").insert({
+        xtype: "combobox",
+        fieldStyle: {
+          "font-size": "2rem",
+        },
+        labelStyle: `font-size: 2rem;`,
+        listeners: {
+          change: function (scope, val) {},
+        },
+        fieldLabel: "Service",
+        name: "service",
+        store: amfutil.createCollectionStore("services", {
+          communication: true,
+        }),
+        displayField: "name",
+        valueField: "name",
+      });
+    } else {
+      this.down("container").insert({
+        xtype: "textfield",
+        value: args["step"].action,
+      });
+    }
+  },
+  // height: 300,
+
+  items: [
+    {
+      xtype: "container",
+      style: {
+        // "background-color": "#5fa2dd",
+        fontSize: "36px",
+        border: "1rem solid #5fa2dd",
+        color: "white",
+      },
+      padding: 10,
+      layout: "center",
+      height: 200,
+    },
+  ],
+});
+
+Ext.define("Amps.container.Workflow", {
+  extend: "Ext.container.Container",
+  xtype: "workflow",
+  layout: { type: "hbox", align: "stretch" },
+
+  row: {
+    xtype: "container",
+    layout: { type: "hbox", align: "stretch" },
+  },
+  constructor: function (args) {
+    this.callParent(args);
+  },
+  items: [
+    {
+      xtype: "container",
+      padding: 10,
+      flex: 1,
+      layout: { type: "vbox", align: "stretch" },
+      // style: {
+      //   "border-left": "2px dashed #5fa2dd",
+      // },
+      items: [
+        {
+          xtype: "component",
+          autoEl: "h2",
+          html: "Input",
+          style: {
+            "text-align": "center",
+            "margin-bottom": "1rem",
+          },
+        },
+        {
+          xtype: "component",
+          autoEl: "hr",
+          style: {
+            margin: ".5rem",
+            "border-color": "#404040",
+          },
+        },
+        {
+          xtype: "form",
+          flex: 1,
+          padding: 10,
+          itemId: "workflow",
+
+          style: {
+            // border: "5px solid #5fa2dd",
+          },
+          layout: "border",
+          items: [
+            {
+              region: "north",
+
+              xtype: "container",
+              items: [
+                {
+                  xtype: "combobox",
+                  fieldStyle: {
+                    "font-size": "2rem",
+                  },
+                  itemId: "service",
+                  allowBlank: false,
+
+                  labelStyle: `font-size: 2rem;`,
+                  fieldLabel: "Service",
+                  name: "service",
+                  listeners: {
+                    beforerender: function (scope) {
+                      scope.setStore(
+                        amfutil.createCollectionStore("services", {
+                          communication: true,
+                        })
+                      );
+                      // var searchParams = new URLSearchParams(
+                      //   window.location.search
+                      // );
+                      // scope.setValue(searchParams.get("service"));
+                    },
+                    change: function (scope) {
+                      var service = scope.getSelectedRecord().data;
+                      var topicparm = amfutil.getElementByID("topicparms");
+                      console.log(scope.up("form"));
+                      scope.up("container").remove(topicparm);
+                      scope
+                        .up("container")
+                        .insert(
+                          ampsgrids.grids.services.types[service.type].combo(
+                            topicparm,
+                            service
+                          )
+                        );
+                      // var searchParams = new URLSearchParams(
+                      //   window.location.search
+                      // );
+                      // amfutil
+                      //   .getElementByID("topicparms")
+                      //   .setValue(searchParams.get("topicparms"));
+                    },
+                  },
+
+                  displayField: "name",
+                  valueField: "name",
+                },
+              ],
+              // cls: "button_class",
+            },
+            {
+              region: "center",
+              xtype: "fieldcontainer",
+              scrollable: true,
+              items: [
+                {
+                  xtype: "arrayfield",
+                  name: "meta",
+                  title: "Additional Metadata",
+                  arrayfield: "Metadata",
+                  arrayfields: [
+                    {
+                      xtype: "textfield",
+                      name: "field",
+                      fieldLabel: "Field",
+                      labelWidth: 35,
+                    },
+                    {
+                      xtype: "textfield",
+
+                      name: "value",
+                      fieldLabel: "Value",
+                      labelWidth: 35,
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              height: 50,
+              region: "south",
+              formBind: true,
+              xtype: "button",
+              scale: "large",
+              text: "Map Workflow",
+              handler: async function (btn) {
+                var form = btn.up("form");
+                amfutil.getElementByID("steps").loadWorkflow(form);
+                // console.log(data);
+              },
+            },
+          ],
+        },
+      ],
+    },
+
+    {
+      xtype: "container",
+      padding: 10,
+      flex: 1,
+      layout: { type: "vbox", align: "stretch" },
+      // style: {
+      //   "border-left": "2px dashed #5fa2dd",
+      // },
+      items: [
+        {
+          xtype: "component",
+          autoEl: "h2",
+          html: "Workflow",
+          style: {
+            "text-align": "center",
+            "margin-bottom": "1rem",
+          },
+        },
+        {
+          xtype: "component",
+          autoEl: "hr",
+          style: {
+            margin: ".5rem",
+            "border-color": "#404040",
+          },
+        },
+        {
+          xtype: "container",
+          padding: 10,
+          flex: 1,
+          itemId: "steps",
+          layout: { type: "vbox", align: "stretch" },
+          scrollable: true,
+          loadWorkflow: async function (form) {
+            var fields = form.getForm().getFields();
+            var service = fields.items[0].getSelectedRecord().data;
+
+            var final = form.getForm().findField("topicparms").getValue();
+
+            console.log(fields.items);
+
+            if (ampsgrids.grids.services.types[service.type].format) {
+              final =
+                ampsgrids.grids.services.types[service.type].format(final);
+            }
+            console.log(final);
+            var topic = "amps.svcs." + service.name + "." + final;
+
+            var meta = JSON.parse(
+              form.getForm().findField("meta").getValue()
+            ).reduce((obj, field) => {
+              console.log(obj);
+              obj[field.field] = field.value;
+              return obj;
+            }, {});
+
+            console.log(meta);
+
+            var resp = await amfutil.ajaxRequest({
+              url: "api/workflow",
+              jsonData: { topic: topic, meta: meta },
+              method: "POST",
+            });
+
+            var workflow = Ext.decode(resp.responseText);
+            console.log(workflow);
+            var steps = amfutil.getElementByID("steps");
+            steps.removeAll();
+            function loadStep(step) {
+              console.log(step);
+              if (step.step) {
+                var currStep = step.step;
+                console.log(currStep.sub.topic);
+                steps.insert({
+                  xtype: "fieldset",
+                  title: currStep.sub.topic,
+                  items: [
+                    {
+                      xtype: "container",
+                      autoEl: {
+                        tag: "a",
+                        href: `#actions/${currStep.action._id}`,
+                      },
+                      items: [
+                        {
+                          xtype: "component",
+                          autoEl: "h4",
+                          html: "Action: " + currStep.action.name,
+                        },
+                      ],
+                    },
+                    {
+                      xtype: "container",
+                      autoEl: {
+                        tag: "a",
+                        href: `#services/${currStep.sub._id}`,
+                      },
+                      items: [
+                        {
+                          xtype: "component",
+                          autoEl: "h4",
+                          html: "Subscriber: " + currStep.sub.name,
+                        },
+                      ],
+                    },
+                  ],
+                });
+                if (currStep.steps) {
+                  steps.insert({
+                    xtype: "button",
+                    iconCls: "x-fa fa-plus",
+                    handler: function () {
+                      console.log("Input Topic: " + currStep.sub.topic);
+                      console.log("Output Topic: " + currStep.topic.sub.topic);
+                      console.log(currStep);
+
+                      var win = new Ext.window.Window({
+                        title: "Add Step",
+                        modal: true,
+                        width: 600,
+                        height: 500,
+                        // resizable: false,
+                        layout: "fit",
+                        items: [
+                          {
+                            xtype: "panel",
+                            layout: "card",
+                            bodyStyle: "padding:15px",
+                            scrollable: true,
+                            itemId: "wizard",
+                            defaultListenerScope: true,
+                            //   tbar: [
+                            //     {
+                            //       xtype: "container",
+                            //       items: [
+                            //         {
+                            //           html: `<ul class="stepNav threeWide"><li id="user_step1" class="selected"><a href="#">User Details</a></li><li id="user_step2" class=""><a href="#">Provider Details</a></li><li id="user_step3" class=""><a href="#">Review</a></li></ul>`,
+                            //         },
+                            //       ],
+                            //     },
+                            //   ],
+
+                            items: [
+                              {
+                                xtype: "form",
+                                scrollable: true,
+
+                                itemId: "card-0",
+                                items: [
+                                  {
+                                    html: `           <h1>AMPS Wizard</h1>
+                                      <hr style="height:1px;border:none;color:lightgray;background-color:lightgray;"><h4>Step 1 of 3: Define an action below.</h4>`,
+                                  },
+                                  {
+                                    xtype: "fieldcontainer",
+
+                                    listeners: {
+                                      beforerender: function (scope) {
+                                        scope.insert(
+                                          0,
+                                          ampsgrids.grids["actions"].fields.map(
+                                            (field) => {
+                                              field = Object.assign({}, field);
+                                              if (field.name == "type") {
+                                                console.log(field);
+                                                var types;
+                                                field = Ext.apply(field, {
+                                                  listeners: {
+                                                    beforerender: function (
+                                                      scope
+                                                    ) {
+                                                      var actionTypes =
+                                                        Object.assign(
+                                                          {},
+                                                          ampsgrids.grids
+                                                            .actions.types
+                                                        );
+                                                      console.log(actionTypes);
+                                                      types = store =
+                                                        Object.entries(
+                                                          actionTypes
+                                                        ).reduce(function (
+                                                          filtered,
+                                                          type
+                                                        ) {
+                                                          type = Object.assign(
+                                                            {},
+                                                            type[1]
+                                                          );
+                                                          var output =
+                                                            type.fields.find(
+                                                              (field) =>
+                                                                field.name ==
+                                                                "output"
+                                                            );
+                                                          if (output) {
+                                                            filtered.push(type);
+                                                            return filtered;
+                                                          } else {
+                                                            return filtered;
+                                                          }
+                                                        },
+                                                        []);
+                                                      console.log(types);
+                                                      scope.setStore(types);
+                                                    },
+                                                    change: function (
+                                                      scope,
+                                                      value
+                                                    ) {
+                                                      var form =
+                                                        scope.up("form");
+                                                      var actionparms =
+                                                        form.down("#typeparms");
+
+                                                      actionparms.removeAll();
+                                                      console.log(types);
+                                                      actionparms.insert(
+                                                        0,
+                                                        types.find(
+                                                          (type) =>
+                                                            type.field == value
+                                                        ).fields
+                                                      );
+                                                      var output = form
+                                                        .getForm()
+                                                        .findField("output");
+                                                      output.setValue(
+                                                        currStep.topic.sub.topic
+                                                      );
+                                                      output.setReadOnly(true);
+                                                    },
+                                                  },
+                                                });
+                                              }
+                                              return field;
+                                            }
+                                          )
+                                        );
+                                      },
+                                    },
+                                  },
+                                ],
+                                bbar: [
+                                  "->",
+                                  {
+                                    itemId: "card-next",
+                                    text: "Next &raquo;",
+                                    handler: "showNext",
+                                    formBind: true,
+                                  },
+                                ],
+                              },
+                              {
+                                xtype: "form",
+
+                                itemId: "card-1",
+                                scrollable: true,
+
+                                items: [
+                                  {
+                                    html: `           <h1>AMPS Wizard</h1>
+                                      <hr style="height:1px;border:none;color:lightgray;background-color:lightgray;"><h4>Step 2 of 3: Define a corresponding topic.</h4>`,
+                                  },
+                                  {
+                                    xtype: "fieldcontainer",
+
+                                    listeners: {
+                                      beforerender: function (scope) {
+                                        scope.insert(
+                                          0,
+                                          ampsgrids.grids["topics"].fields
+                                        );
+                                      },
+                                    },
+                                  },
+                                ],
+                                bbar: [
+                                  "->",
+                                  {
+                                    itemId: "card-prev",
+                                    text: "&laquo; Previous",
+                                    handler: "showPrevious",
+                                  },
+                                  {
+                                    itemId: "card-next",
+                                    text: "Next &raquo;",
+                                    handler: "showNext",
+                                    formBind: true,
+                                  },
+                                ],
+                              },
+                              {
+                                xtype: "form",
+
+                                itemId: "card-2",
+                                scrollable: true,
+
+                                items: [
+                                  {
+                                    html: `         <h1>AMPS Wizard</h1>
+                                      <hr style="height:1px;border:none;color:lightgray;background-color:lightgray;"><h4>Step 3 of 3: Define a subscriber that subscribes to your topic and performs your action.</h4>`,
+                                  },
+                                  {
+                                    xtype: "fieldcontainer",
+
+                                    listeners: {
+                                      beforerender: function (scope) {
+                                        var services =
+                                          ampsgrids.grids["services"];
+                                        var fields = services.fields.concat(
+                                          services.types["subscriber"].fields
+                                        );
+
+                                        // console.log(action);
+                                        // console.log(topic);
+                                        scope.insert(
+                                          0,
+                                          fields.map((field) => {
+                                            if (
+                                              field.name == "action" ||
+                                              field.name == "topic"
+                                            ) {
+                                              field.readOnly = true;
+                                              field.forceSelection = false;
+                                            }
+                                            return field;
+                                          })
+                                        );
+                                      },
+                                    },
+                                  },
+                                ],
+                                bbar: [
+                                  "->",
+                                  {
+                                    itemId: "card-prev",
+                                    text: "&laquo; Previous",
+                                    handler: "showPrevious",
+                                    // disabled: true,
+                                  },
+                                  {
+                                    itemId: "card-next",
+                                    formBind: true,
+                                    text: "Finish",
+                                    handler: async function (scope) {
+                                      console.log("Finish");
+                                      var actionform = scope
+                                        .up("#wizard")
+                                        .down("#card-0");
+                                      var topicform = scope
+                                        .up("#wizard")
+                                        .down("#card-1");
+
+                                      var subscriberform = scope.up("form");
+
+                                      var action = actionform
+                                        .getForm()
+                                        .getValues();
+                                      action = ampsgrids.grids[
+                                        "actions"
+                                      ].add.process(actionform, action);
+
+                                      var topic = topicform
+                                        .getForm()
+                                        .getValues();
+                                      topic = amfutil.convertNumbers(
+                                        topicform.getForm(),
+                                        topic
+                                      );
+
+                                      var subscriber = subscriberform
+                                        .getForm()
+                                        .getValues();
+                                      subscriber = amfutil.convertNumbers(
+                                        subscriberform.getForm(),
+                                        subscriber
+                                      );
+
+                                      subscriber.type = "subscriber";
+                                      subscriber.active = true;
+
+                                      var wizard = scope.up("#wizard");
+                                      if (currStep.ruleid) {
+                                        console.log("Updating Router Rule");
+                                        var idx =
+                                          currStep.action.rules.findIndex(
+                                            (rule) => rule.id == currStep.ruleid
+                                          );
+                                        currStep.action.rules[idx].topic =
+                                          topic.topic;
+                                        console.log(currStep.action.rules[idx]);
+                                      } else {
+                                        currStep.action.output = topic.topic;
+                                      }
+
+                                      amfutil.updateInCollection(
+                                        "actions",
+                                        currStep.action,
+                                        currStep.action._id
+                                      );
+
+                                      var actionid =
+                                        await amfutil.addToCollection(
+                                          "actions",
+                                          action
+                                        );
+                                      console.log(actionid);
+                                      var topicid =
+                                        await amfutil.addToCollection(
+                                          "topics",
+                                          topic
+                                        );
+                                      console.log(topicid);
+                                      subscriber.handler = actionid;
+
+                                      var subscriberid =
+                                        await amfutil.addToCollection(
+                                          "services",
+                                          subscriber
+                                        );
+                                      wizard.showNext();
+                                      var confirmation = scope
+                                        .up("#wizard")
+                                        .down("#card-3");
+                                      confirmation.loadConfirmation(
+                                        { id: actionid, name: action.name },
+                                        { id: topicid, name: topic.topic },
+                                        {
+                                          id: subscriberid,
+                                          name: subscriber.name,
+                                        }
+                                      );
+                                      console.log(subscriberid);
+                                    },
+                                  },
+                                ],
+                                listeners: {
+                                  beforeactivate(scope) {
+                                    var action = scope.down(
+                                      "combobox[name=handler]"
+                                    );
+                                    console.log(action);
+                                    var topic = scope.down(
+                                      "combobox[name=topic]"
+                                    );
+                                    console.log(topic);
+                                    var actionform = scope
+                                      .up("panel")
+                                      .down("#card-0");
+                                    console.log(actionform);
+                                    var topicform = scope
+                                      .up("panel")
+                                      .down("#card-1");
+                                    console.log(topicform);
+                                    action.setValue(
+                                      actionform
+                                        .down("textfield[name=name]")
+                                        .getValue()
+                                    );
+                                    topic.setValue(
+                                      topicform
+                                        .down("textfield[name=topic]")
+                                        .getValue()
+                                    );
+                                  },
+                                },
+                              },
+                              {
+                                xtype: "form",
+
+                                itemId: "card-3",
+                                loadConfirmation: function (
+                                  action,
+                                  topic,
+                                  subscriber
+                                ) {
+                                  var html = `
+                                    <h1>AMPS Wizard</h1>
+                                    <hr style="height:1px;border:none;color:lightgray;background-color:lightgray;">
+                                    <h2>Complete! You defined:</h4>
+                                    <h3>Action: <a href="#actions/${action.id}">${action.name}</a><h5>
+                                    <h3>Topic: <a href="#topics/${topic.id}">${topic.name}</a><h5>
+                                    <h3>Subscriber: <a href="#services/${subscriber.id}">${subscriber.name}</a> that listens on ${topic.name} and performs ${action.name}<h5>
+                                    `;
+                                  this.down("#confirm").setHtml(html);
+                                },
+                                items: [
+                                  {
+                                    itemId: "confirm",
+                                    html: "",
+                                  },
+                                ],
+                                bbar: [
+                                  "->",
+                                  {
+                                    // formBind: true,
+                                    text: "Close",
+                                    handler: async function (scope) {
+                                      amfutil
+                                        .getElementByID("steps")
+                                        .loadWorkflow(
+                                          amfutil.getElementByID("workflow")
+                                        );
+                                      win.close();
+                                    },
+                                  },
+                                ],
+                              },
+                            ],
+
+                            showNext: function () {
+                              console.log("Next");
+                              this.doCardNavigation(1);
+                            },
+
+                            showPrevious: function (btn) {
+                              this.doCardNavigation(-1);
+                            },
+
+                            doCardNavigation: function (incr) {
+                              var me = this;
+                              var l = me.getLayout();
+                              var i = l.activeItem.itemId.split("card-")[1];
+                              var next = parseInt(i, 10) + incr;
+                              l.setActiveItem(next);
+
+                              // me.down("#card-prev").setDisabled(next === 0);
+                              // me.down("#card-next").setDisabled(next === 2);
+                            },
+                          },
+                        ],
+                      });
+                      win.show();
+                    },
+                  });
+                }
+                loadStep(currStep);
+              } else {
+                if (step.steps) {
+                  if (step.steps.length == 1) {
+                    step.step = step.steps[0];
+                    loadStep(step);
+                  } else if (step.steps.length > 1) {
+                    if (step.steps) {
+                    } else {
+                      console.log("choose");
+                    }
+                  } else {
+                    steps.insert({
+                      xtype: "fieldset",
+                      title: step.topic,
+                      layout: { type: "vbox", align: "stretch" },
+                      items: [
+                        {
+                          xtype: "button",
+                          margin: 5,
+                          text: "Configure",
+                          handler: function () {
+                            var win = new Ext.window.Window({
+                              title: "Configure Subscriber For: " + step.topic,
+                              modal: true,
+                              width: 600,
+                              height: 500,
+                              padding: 10,
+                              // resizable: false,
+                              layout: "fit",
+                              items: [
+                                {
+                                  xtype: "form",
+                                  // topic: step.topic,
+                                  // title: null,
+                                  // close: function () {
+                                  //   amfutil
+                                  //     .getElementByID("steps")
+                                  //     .loadWorkflow(
+                                  //       amfutil.getElementByID("workflow")
+                                  //     );
+                                  //   win.close();
+                                  // },
+                                  listeners: {
+                                    beforerender: function (scope) {
+                                      var services =
+                                        ampsgrids.grids["services"];
+                                      var fields = services.fields.concat(
+                                        services.types["subscriber"].fields
+                                      );
+
+                                      // console.log(action);
+                                      // console.log(topic);
+                                      scope.insert(
+                                        0,
+                                        fields.map((field) => {
+                                          console.log(step.topic);
+                                          if (field.name == "topic") {
+                                            field = {
+                                              xtype: "fieldcontainer",
+                                              items: [
+                                                {
+                                                  xtype: "checkbox",
+                                                  inputValue: true,
+                                                  uncheckedValue: false,
+                                                  fieldLabel: "Wildcard",
+                                                  isFormField: false,
+                                                  value: false,
+                                                  listeners: {
+                                                    change: function (
+                                                      scope,
+                                                      val
+                                                    ) {
+                                                      var topic = this.up(
+                                                        "form"
+                                                      )
+                                                        .getForm()
+                                                        .findField("topic");
+                                                      var tp;
+                                                      if (val) {
+                                                        var pieces =
+                                                          step.topic.split(".");
+                                                        pieces.pop();
+                                                        pieces.push("*");
+                                                        tp = pieces.join(".");
+                                                      } else {
+                                                        tp = step.topic;
+                                                      }
+                                                      topic.setValue(tp);
+                                                    },
+                                                  },
+                                                },
+
+                                                {
+                                                  xtype: "displayfield",
+                                                  name: "topic",
+                                                  fieldLabel: "Topic",
+                                                  value: step.topic,
+                                                  submitValue: true,
+                                                },
+                                                {
+                                                  xtype: "textfield",
+                                                  name: "topicdesc",
+                                                  fieldLabel:
+                                                    "Topic Description",
+                                                },
+                                              ],
+                                            };
+                                          }
+                                          console.log(field);
+                                          return field;
+                                        })
+                                      );
+                                    },
+                                  },
+                                  buttons: [
+                                    {
+                                      text: "Create",
+                                      formBind: true,
+                                      handler: async function (btn) {
+                                        var form = btn.up("form");
+                                        var mask = new Ext.LoadMask({
+                                          msg: "Please wait...",
+                                          target: form,
+                                        });
+
+                                        mask.show();
+                                        var topic = {};
+                                        var subscriber = amfutil.convertNumbers(
+                                          form.getForm(),
+                                          form.getForm().getValues()
+                                        );
+
+                                        subscriber.active = true;
+                                        subscriber.type = "subscriber";
+                                        topic.topic = step.topic;
+                                        topic.desc = subscriber.topicdesc;
+                                        delete subscriber.topicdesc;
+
+                                        await amfutil.addToCollection(
+                                          "services",
+                                          subscriber
+                                        );
+                                        await amfutil.addToCollection(
+                                          "topics",
+                                          topic
+                                        );
+
+                                        amfutil
+                                          .getElementByID("steps")
+                                          .loadWorkflow(
+                                            amfutil.getElementByID("workflow")
+                                          );
+                                        win.close();
+                                      },
+                                    },
+                                    {
+                                      text: "Close",
+                                    },
+                                  ],
+                                },
+                              ],
+                            });
+                            win.show();
+                          },
+                        },
+                      ],
+                    });
+                    console.log("Add New?");
+                  }
+                } else {
+                  console.log("done");
+                }
+              }
+            }
+
+            loadStep(workflow);
+          },
+          // style: {
+          //   // background: "#5fa2dd",
+          //   "border-left": "5px solid #5fa2dd",
+          // },
+
+          items: [],
+        },
+      ],
+    },
+  ],
+});
+
+Ext.define("Amps.panel.Wizard", {
+  xtype: "wizard",
+  extend: "Ext.panel.Panel",
+  title: "AMPS Wizard",
+  layout: "card",
+  bodyStyle: "padding:15px",
+  scrollable: true,
+  itemId: "wizard",
+  defaultListenerScope: true,
+  constructor(args) {
+    this.callParent(args);
+    if (args["topic"]) {
+      this.on("afterrender", function () {
+        console.log(this.down("#card-1"));
+        var topic = this.down("#card-1").getForm().findField("topic");
+        console.log(topic);
+        topic.setValue(args["topic"]);
+        topic.setReadOnly(true);
+      });
+    }
+  },
+  //   tbar: [
+  //     {
+  //       xtype: "container",
+  //       items: [
+  //         {
+  //           html: `<ul class="stepNav threeWide"><li id="user_step1" class="selected"><a href="#">User Details</a></li><li id="user_step2" class=""><a href="#">Provider Details</a></li><li id="user_step3" class=""><a href="#">Review</a></li></ul>`,
+  //         },
+  //       ],
+  //     },
+  //   ],
+
+  items: [
+    {
+      xtype: "form",
+      scrollable: true,
+
+      itemId: "card-0",
+      items: [
+        {
+          html: `           <h1>AMPS Wizard</h1>
+              <hr style="height:1px;border:none;color:lightgray;background-color:lightgray;"><h4>Step 1 of 3: Define an action below.</h4>`,
+        },
+        {
+          xtype: "fieldcontainer",
+
+          listeners: {
+            beforerender: function (scope) {
+              scope.insert(0, ampsgrids.grids["actions"].fields);
+            },
+          },
+        },
+      ],
+      bbar: [
+        "->",
+        {
+          itemId: "card-next",
+          text: "Next &raquo;",
+          handler: "showNext",
+          formBind: true,
+        },
+      ],
+    },
+    {
+      xtype: "form",
+
+      itemId: "card-1",
+      scrollable: true,
+
+      items: [
+        {
+          html: `           <h1>AMPS Wizard</h1>
+              <hr style="height:1px;border:none;color:lightgray;background-color:lightgray;"><h4>Step 2 of 3: Define a corresponding topic.</h4>`,
+        },
+        {
+          xtype: "fieldcontainer",
+
+          listeners: {
+            beforerender: function (scope) {
+              scope.insert(0, ampsgrids.grids["topics"].fields);
+            },
+          },
+        },
+      ],
+      bbar: [
+        "->",
+        {
+          itemId: "card-prev",
+          text: "&laquo; Previous",
+          handler: "showPrevious",
+        },
+        {
+          itemId: "card-next",
+          text: "Next &raquo;",
+          handler: "showNext",
+          formBind: true,
+        },
+      ],
+    },
+    {
+      xtype: "form",
+
+      itemId: "card-2",
+      scrollable: true,
+
+      items: [
+        {
+          html: `         <h1>AMPS Wizard</h1>
+              <hr style="height:1px;border:none;color:lightgray;background-color:lightgray;"><h4>Step 3 of 3: Define a subscriber that subscribes to your topic and performs your action.</h4>`,
+        },
+        {
+          xtype: "fieldcontainer",
+
+          listeners: {
+            beforerender: function (scope) {
+              var services = ampsgrids.grids["services"];
+              var fields = services.fields.concat(
+                services.types["subscriber"].fields
+              );
+
+              // console.log(action);
+              // console.log(topic);
+              scope.insert(
+                0,
+                fields.map((field) => {
+                  if (field.name == "action" || field.name == "topic") {
+                    field.readOnly = true;
+                    field.forceSelection = false;
+                  }
+                  return field;
+                })
+              );
+            },
+          },
+        },
+      ],
+      bbar: [
+        "->",
+        {
+          itemId: "card-prev",
+          text: "&laquo; Previous",
+          handler: "showPrevious",
+          // disabled: true,
+        },
+        {
+          itemId: "card-next",
+          formBind: true,
+          text: "Finish",
+          handler: async function (scope) {
+            console.log("Finish");
+            var actionform = scope.up("#wizard").down("#card-0");
+            var topicform = scope.up("#wizard").down("#card-1");
+
+            var subscriberform = scope.up("form");
+
+            var action = actionform.getForm().getValues();
+            action = ampsgrids.grids["actions"].add.process(actionform, action);
+
+            var topic = topicform.getForm().getValues();
+            topic = amfutil.convertNumbers(topicform.getForm(), topic);
+
+            var subscriber = subscriberform.getForm().getValues();
+            subscriber = amfutil.convertNumbers(
+              subscriberform.getForm(),
+              subscriber
+            );
+
+            subscriber.type = "subscriber";
+            subscriber.active = true;
+
+            var wizard = scope.up("#wizard");
+
+            var actionid = await amfutil.addToCollection("actions", action);
+            console.log(actionid);
+            var topicid = await amfutil.addToCollection("topics", topic);
+            console.log(topicid);
+            subscriber.handler = actionid;
+
+            var subscriberid = await amfutil.addToCollection(
+              "services",
+              subscriber
+            );
+            wizard.showNext();
+            var confirmation = scope.up("#wizard").down("#card-3");
+            confirmation.loadConfirmation(
+              { id: actionid, name: action.name },
+              { id: topicid, name: topic.topic },
+              { id: subscriberid, name: subscriber.name }
+            );
+            console.log(subscriberid);
+          },
+        },
+      ],
+      listeners: {
+        beforeactivate(scope) {
+          var action = scope.down("combobox[name=handler]");
+          console.log(action);
+          var topic = scope.down("combobox[name=topic]");
+          console.log(topic);
+          var actionform = scope.up("panel").down("#card-0");
+          console.log(actionform);
+          var topicform = scope.up("panel").down("#card-1");
+          console.log(topicform);
+          action.setValue(actionform.down("textfield[name=name]").getValue());
+          topic.setValue(topicform.down("textfield[name=topic]").getValue());
+        },
+      },
+    },
+    {
+      xtype: "form",
+
+      itemId: "card-3",
+      loadConfirmation: function (action, topic, subscriber) {
+        var html = `
+            <h1>AMPS Wizard</h1>
+            <hr style="height:1px;border:none;color:lightgray;background-color:lightgray;">
+            <h2>Complete! You defined:</h4>
+            <h3>Action: <a href="#actions/${action.id}">${action.name}</a><h5>
+            <h3>Topic: <a href="#topics/${topic.id}">${topic.name}</a><h5>
+            <h3>Subscriber: <a href="#services/${subscriber.id}">${subscriber.name}</a> that listens on ${topic.name} and performs ${action.name}<h5>
+            `;
+        this.down("#confirm").setHtml(html);
+      },
+      items: [
+        {
+          itemId: "confirm",
+          html: "",
+        },
+      ],
+      bbar: [
+        "->",
+        {
+          // formBind: true,
+          text: "Restart",
+          handler: async function (scope) {
+            window.location.reload();
+          },
+        },
+      ],
+    },
+  ],
+
+  showNext: function () {
+    console.log("Next");
+    this.doCardNavigation(1);
+  },
+
+  showPrevious: function (btn) {
+    this.doCardNavigation(-1);
+  },
+
+  doCardNavigation: function (incr) {
+    var me = this;
+    var l = me.getLayout();
+    var i = l.activeItem.itemId.split("card-")[1];
+    var next = parseInt(i, 10) + incr;
+    l.setActiveItem(next);
+
+    // me.down("#card-prev").setDisabled(next === 0);
+    // me.down("#card-next").setDisabled(next === 2);
+  },
+});
+
 Ext.define("Amps.util.Grids", {
   singleton: true,
   grids: {},
@@ -5,21 +1211,22 @@ Ext.define("Amps.util.Grids", {
 
   getGrids: function () {
     this.grids = {
-      messages: {
+      message_events: {
         title: "Message Activity",
+        // filter: { parent: { $exists: false } },
         actionIcons: ["searchpanelbtn", "clearfilter", "refreshbtn"],
         columns: [
           { text: "Message ID", dataIndex: "msgid", flex: 1, type: "text" },
           {
-            text: "Account",
-            dataIndex: "account",
+            text: "Action",
+            dataIndex: "action",
             flex: 1,
             value: "true",
             type: "text",
           },
           {
-            text: "Bucket",
-            dataIndex: "bucket",
+            text: "Parent",
+            dataIndex: "parent",
             flex: 1,
             value: "true",
             type: "text",
@@ -37,7 +1244,7 @@ Ext.define("Amps.util.Grids", {
             flex: 1,
             type: "fileSize",
           },
-          { text: "Status Time", dataIndex: "stime", flex: 1, type: "date" },
+          { text: "Event Time", dataIndex: "etime", flex: 1, type: "date" },
           {
             text: "Status",
             dataIndex: "status",
@@ -140,7 +1347,7 @@ Ext.define("Amps.util.Grids", {
           amfutil.checkbox("Approved", "approved"),
         ],
         add: {
-          process: function (values, form) {
+          process: function (form, values) {
             values.profiles = [];
             values.rules = [];
             return values;
@@ -684,7 +1891,7 @@ Ext.define("Amps.util.Grids", {
                 },*/
             ],
             add: {
-              process: function (values, form) {
+              process: function (form, values) {
                 console.log(values);
                 var rule = {};
                 if (values.type == "upload") {
@@ -723,7 +1930,7 @@ Ext.define("Amps.util.Grids", {
               },
             },
             update: {
-              process: function (values, form) {
+              process: function (form, values) {
                 console.log(values);
                 var rule = {};
                 if (values.type == "upload") {
@@ -832,7 +2039,7 @@ Ext.define("Amps.util.Grids", {
               //     }
               //   });
             },
-            process: function (values) {
+            process: function (form, values) {
               console.log(values);
               values.parms = amfutil.formatArrayField(values.parms);
               delete values.field;
@@ -858,7 +2065,7 @@ Ext.define("Amps.util.Grids", {
                 xtype: "combobox",
                 name: "output",
                 fieldLabel: "Output Topic",
-                displayField: "desc",
+                displayField: "topic",
                 valueField: "topic",
                 store: amfutil.createCollectionStore(
                   "topics",
@@ -905,6 +2112,13 @@ Ext.define("Amps.util.Grids", {
 
                 // Arrange radio buttons into two columns, distributed vertically
               },
+              amfutil.combo(
+                "Output Topic",
+                "output",
+                amfutil.createCollectionStore("topics"),
+                "topic",
+                "topic"
+              ),
             ],
           },
           zip: {
@@ -914,11 +2128,22 @@ Ext.define("Amps.util.Grids", {
               {
                 xtype: "textfield",
                 fieldLabel: "File Name Format",
-                name: "file_format",
+                name: "format",
                 allowBlank: false,
+                value: ".zip",
+                validator: function (val) {
+                  return val.endsWith(".zip") || "Filename must end in .zip";
+                },
 
                 // Arrange radio buttons into two columns, distributed vertically
               },
+              amfutil.combo(
+                "Output Topic",
+                "output",
+                amfutil.createCollectionStore("topics"),
+                "topic",
+                "topic"
+              ),
             ],
           },
           router: {
@@ -938,7 +2163,8 @@ Ext.define("Amps.util.Grids", {
                 name: "rules",
               },
             ],
-            process: function (values, form) {
+            process: function (form, values) {
+              console.log(form);
               console.log(values);
               var rulecomp = form.down("formrules");
               var names = rulecomp.ruleNames;
@@ -947,14 +2173,17 @@ Ext.define("Amps.util.Grids", {
               names.forEach((name) => {
                 var topicname = name + "-topic";
                 var patternname = name + "-patterns";
+                var id = name + "_id";
                 console.log(values[patternname]);
                 console.log(amfutil.formatMatchPatterns(values[patternname]));
                 rules.push({
                   topic: values[topicname],
+                  id: values[id],
                   patterns: amfutil.formatMatchPatterns(values[patternname]),
                 });
                 delete values[topicname];
                 delete values[patternname];
+                delete values[id];
               });
               values.rules = rules;
               delete values.field;
@@ -1079,8 +2308,8 @@ Ext.define("Amps.util.Grids", {
               },
             ],
           },
-          http_api: {
-            field: "http_api",
+          http: {
+            field: "http",
             label: "HTTP API",
             fields: [
               {
@@ -1195,10 +2424,11 @@ Ext.define("Amps.util.Grids", {
             load: function (form, record) {
               amfutil.loadParms(form, record, "headers");
             },
-            process: function (values) {
+            process: function (form, values) {
               values.headers = amfutil.formatArrayField(values.headers);
               delete values.field;
               delete values.value;
+
               return values;
             },
           },
@@ -1216,11 +2446,11 @@ Ext.define("Amps.util.Grids", {
                 name: "port",
                 fieldLabel: "Port",
               },
-              {
-                xtype: "textfield",
-                name: "folder",
-                fieldLabel: "Folder",
-              },
+              // {
+              //   xtype: "textfield",
+              //   name: "folder",
+              //   fieldLabel: "Folder",
+              // },
               {
                 xtype: "textfield",
                 name: "format",
@@ -1236,18 +2466,18 @@ Ext.define("Amps.util.Grids", {
                 name: "password",
                 fieldLabel: "Password",
               },
-              {
-                xtype: "combobox",
-                name: "account",
-                fieldLabel: "Account",
-                displayField: "username",
-                valueField: "username",
-                store: amfutil.createCollectionStore(
-                  "accounts",
-                  {},
-                  { autoLoad: true }
-                ),
-              },
+              // {
+              //   xtype: "combobox",
+              //   name: "account",
+              //   fieldLabel: "Account",
+              //   displayField: "username",
+              //   valueField: "username",
+              //   store: amfutil.createCollectionStore(
+              //     "accounts",
+              //     {},
+              //     { autoLoad: true }
+              //   ),
+              // },
             ],
           },
           sftpget: {
@@ -1348,8 +2578,8 @@ Ext.define("Amps.util.Grids", {
               },
             ],
           },
-          kafka_put: {
-            field: "kafka_put",
+          kafkaput: {
+            field: "kafkaput",
             label: "Kafka PUT",
             fields: [
               {
@@ -1368,9 +2598,132 @@ Ext.define("Amps.util.Grids", {
                 name: "topic",
               },
               {
-                xtype: "textfield",
+                xtype: "numberfield",
                 fieldLabel: "Partition",
                 name: "partition",
+              },
+              {
+                xtype: "radiogroup",
+                fieldLabel: "Authentication",
+                name: "auth",
+                allowBlank: false,
+                columns: 2,
+                vertical: true,
+                items: [
+                  { boxLabel: "None", name: "auth", inputValue: "NONE" },
+                  {
+                    boxLabel: "SASL_PLAINTEXT",
+                    name: "auth",
+                    inputValue: "SASL_PLAINTEXT",
+                  },
+                  {
+                    boxLabel: "SASL_SSL",
+                    name: "auth",
+                    inputValue: "SASL_SSL",
+                  },
+                  {
+                    boxLabel: "SSL",
+                    name: "auth",
+                    inputValue: "SSL",
+                  },
+                ],
+                listeners: {
+                  beforerender: function (scope) {
+                    var val = scope.getValue();
+
+                    if (typeof val === "object" && val !== null) {
+                      val = val.auth;
+                    }
+                    var sasl = ["sasl-mech", "sasl-username", "sasl-password"];
+                    var ssl = ["ssl-cacert", "ssl-cert", "ssl-key"];
+                    for (var i = 0; i < sasl.length; i++) {
+                      var n = sasl[i];
+                      var comp = amfutil.getElementByID(n);
+                      console.log(comp);
+                      console.log(val.includes("SASL"));
+                      comp.setHidden(!val.includes("SASL"));
+                      comp.setDisabled(!val.includes("SASL"));
+                    }
+
+                    for (var i = 0; i < ssl.length; i++) {
+                      var n = ssl[i];
+                      var comp = amfutil.getElementByID(n);
+                      console.log(comp);
+                      console.log(val.includes("SSL"));
+
+                      comp.setHidden(!val.includes("SSL"));
+                      comp.setDisabled(!val.includes("SSL"));
+                    }
+                  },
+                  change: function (scope, val) {
+                    if (typeof val === "object" && val !== null) {
+                      val = val.auth;
+                    }
+                    var sasl = ["sasl-mech", "sasl-username", "sasl-password"];
+                    var ssl = ["ssl-cacert", "ssl-cert", "ssl-key"];
+                    for (var i = 0; i < sasl.length; i++) {
+                      var n = sasl[i];
+                      var comp = amfutil.getElementByID(n);
+                      console.log(comp);
+                      console.log(val.includes("SASL"));
+                      comp.setHidden(!val.includes("SASL"));
+                      comp.setDisabled(!val.includes("SASL"));
+                    }
+
+                    for (var i = 0; i < ssl.length; i++) {
+                      var n = ssl[i];
+                      var comp = amfutil.getElementByID(n);
+                      console.log(comp);
+                      console.log(val.includes("SSL"));
+
+                      comp.setHidden(!val.includes("SSL"));
+                      comp.setDisabled(!val.includes("SSL"));
+                    }
+                  },
+                },
+              },
+              {
+                itemId: "sasl-mech",
+                xtype: "combobox",
+                name: "mechanism",
+                fieldLabel: "SASL Mechanism",
+                store: [
+                  { field: "plain", value: "plain" },
+                  { field: "scram_sha_256", value: "SCRAM SHA 256" },
+                  { field: "scram_sha_512", value: "SCRAM SHA 512" },
+                ],
+                displayField: "field",
+                valueField: "value",
+              },
+              {
+                itemId: "sasl-username",
+                xtype: "textfield",
+                name: "username",
+                fieldLabel: "Username",
+              },
+              {
+                itemId: "sasl-password",
+                xtype: "textfield",
+                name: "password",
+                fieldLabel: "Password",
+              },
+              {
+                itemId: "ssl-cacert",
+                xtype: "loadkey",
+                name: "cacert",
+                fieldLabel: "Certificate Authority Certificate",
+              },
+              {
+                itemId: "ssl-cert",
+                xtype: "loadkey",
+                name: "cert",
+                fieldLabel: "Client Certificate",
+              },
+              {
+                itemId: "ssl-key",
+                xtype: "loadkey",
+                name: "key",
+                fieldLabel: "Client Key",
               },
             ],
           },
@@ -1453,7 +2806,7 @@ Ext.define("Amps.util.Grids", {
             load: function (form, record) {
               amfutil.loadParms(form, record, "parms");
             },
-            process: function (values) {
+            process: function (form, values) {
               values.parms = amfutil.formatArrayField(values.parms);
               delete values.field;
               delete values.value;
@@ -1519,7 +2872,7 @@ Ext.define("Amps.util.Grids", {
               },
               {
                 xtype: "textfield",
-                name: "file_format",
+                name: "format",
                 fieldLabel: "File Format",
               },
               {
@@ -1662,15 +3015,15 @@ Ext.define("Amps.util.Grids", {
           },
         ],
         add: {
-          process: function (values, form) {
+          process: function (form, values) {
+            console.log(form);
+            console.log(values);
             if (ampsgrids.grids.actions.types[values.type].process) {
               values = ampsgrids.grids.actions.types[values.type].process(
-                values,
-                form
+                form,
+                values
               );
             }
-
-            values = amfutil.convertNumbers(form.getForm(), values);
 
             values.active = true;
             return values;
@@ -1680,12 +3033,12 @@ Ext.define("Amps.util.Grids", {
           load: function (form, record) {
             form.down("#type").setValue(record.type);
           },
-          process: (values, form) => {
+          process: (form, values) => {
             console.log(values);
             if (ampsgrids.grids.actions.types[values.type].process) {
               values = ampsgrids.grids.actions.types[values.type].process(
-                values,
-                form
+                form,
+                values
               );
             }
             values = amfutil.convertNumbers(form.getForm(), values);
@@ -1703,34 +3056,6 @@ Ext.define("Amps.util.Grids", {
           "searchpanelbtn",
           "clearfilter",
           "refreshbtn",
-        ],
-        fields: [
-          {
-            xtype: "textfield",
-            name: "topic",
-            fieldLabel: "Topic Subject",
-            allowBlank: false,
-            // listeners: {
-            //   afterrender: function (cmp) {
-            //     cmp.inputEl.set({
-            //       autocomplete: "nope",
-            //     });
-            //   },
-            //   change: amfutil.uniqueBucket,
-            //   blur: function (item) {
-            //     //  amfutil.removeSpaces(item.itemId);
-            //   },
-            // },
-            width: 400,
-          },
-          {
-            xtype: "textfield",
-            name: "desc",
-            fieldLabel: "Topic Description",
-            allowBlank: false,
-
-            width: 400,
-          },
         ],
         options: ["upload", "delete"],
         columns: [
@@ -1756,11 +3081,231 @@ Ext.define("Amps.util.Grids", {
         ],
         fields: [
           {
-            xtype: "textfield",
+            xtype: "radiogroup",
+            isFormField: false,
+            xtype: "radiogroup",
+            fieldLabel: "Topic Type",
+            name: "type",
+            allowBlank: false,
+            blankText: "Select One",
+            columns: 3,
+            vertical: true,
+            items: [
+              {
+                boxLabel: "Action",
+                isFormField: false,
+                name: "type",
+                inputValue: "actions",
+              },
+              {
+                boxLabel: "Service",
+                isFormField: false,
+                name: "type",
+                inputValue: "svcs",
+              },
+              {
+                boxLabel: "Other",
+                isFormField: false,
+                name: "type",
+                inputValue: "data",
+              },
+            ],
+            listeners: {
+              change: function (scope, val) {
+                console.log(val);
+                var combo;
+                var parm;
+                if (val.type == "actions") {
+                  combo = {
+                    xtype: "combobox",
+                    isFormField: false,
+                    fieldLabel: "Actions",
+                    displayField: "label",
+                    valueField: "field",
+                    allowBlank: false,
+                    listeners: {
+                      beforerender: function (cmp) {
+                        cmp.setStore(
+                          Object.values(ampsgrids.grids["actions"].types)
+                        );
+                      },
+                      change: function (scope, val) {
+                        scope
+                          .up("form")
+                          .getForm()
+                          .findField("topic")
+                          .updateTopic(val, 2);
+                      },
+                    },
+                  };
+
+                  parm = {
+                    xtype: "textfield",
+                    fieldLabel: "Parm",
+                    allowBlank: false,
+                    listeners: {
+                      change: function (scope, val) {
+                        scope
+                          .up("form")
+                          .getForm()
+                          .findField("topic")
+                          .updateTopic(val, 3);
+                      },
+                    },
+                  };
+                } else if (val.type == "svcs") {
+                  combo = {
+                    xtype: "combobox",
+                    isFormField: false,
+                    fieldLabel: "Services",
+                    allowBlank: false,
+                    displayField: "name",
+                    valueField: "type",
+
+                    listeners: {
+                      beforerender: function (cmp) {
+                        cmp.setStore(
+                          amfutil.createCollectionStore("services", {
+                            communication: true,
+                          })
+                        );
+                      },
+                      change: function (cmp, val) {
+                        var service = cmp.getSelectedRecord().data;
+
+                        this.up("fieldcontainer").remove(
+                          amfutil.getElementByID("serviceparms")
+                        );
+                        this.up("fieldcontainer").insert({
+                          xtype: "fieldcontainer",
+                          items: [
+                            {
+                              xtype: "checkbox",
+                              itemId: "serviceparms",
+                              isFormField: false,
+                              inputValue: true,
+                              fieldLabel: "Wildcard",
+                              uncheckedValue: false,
+                              listeners: {
+                                change: function (scope, val) {
+                                  var c = scope
+                                    .up("fieldcontainer")
+                                    .down("combobox");
+                                  if (val) {
+                                    c.setValue("");
+                                    c.setDisabled(true);
+                                    scope
+                                      .up("form")
+                                      .getForm()
+                                      .findField("topic")
+                                      .updateTopic("*", 3);
+                                  } else {
+                                    c.setDisabled(false);
+                                    scope
+                                      .up("form")
+                                      .getForm()
+                                      .findField("topic")
+                                      .updateTopic("", 3);
+                                  }
+                                },
+                              },
+                            },
+                            Ext.apply(
+                              ampsgrids.grids.services.types[val].combo(
+                                {},
+                                service
+                              ),
+                              {
+                                fieldStyle: null,
+                                labelStyle: null,
+                                listeners: {
+                                  change: function (scope, v) {
+                                    scope
+                                      .up("form")
+                                      .getForm()
+                                      .findField("topic")
+                                      .updateTopic(v, 3);
+                                  },
+                                },
+                              }
+                            ),
+                          ],
+                        });
+                        var name = service.name;
+
+                        if (ampsgrids.grids.services.types[val].format) {
+                          name = ampsgrids.grids.services.types[val].format(
+                            service.name
+                          );
+                        }
+                        scope
+                          .up("form")
+                          .getForm()
+                          .findField("topic")
+                          .updateTopic(name, 2);
+                      },
+                    },
+                  };
+                } else {
+                  parm = {
+                    xtype: "textfield",
+                    isFormField: false,
+                    fieldLabel: "Parm",
+                    allowBlank: false,
+                    listeners: {
+                      change: function (scope, val) {
+                        scope
+                          .up("form")
+                          .getForm()
+                          .findField("topic")
+                          .updateTopic(val, 2);
+                      },
+                    },
+                  };
+                }
+
+                var tp = this.up("form").down("#topicparms");
+                tp.removeAll();
+                tp.insert(combo);
+                tp.insert(parm);
+                console.log(parm);
+                var topic = scope.up("form").getForm().findField("topic");
+                topic.resetTopic();
+                if (val.type == "data") {
+                  topic.pieces.pop();
+                }
+                topic.updateTopic(val.type, 1);
+              },
+            },
+          },
+          {
+            xtype: "fieldcontainer",
+            itemId: "topicparms",
+          },
+
+          {
+            xtype: "displayfield",
+            submitValue: true,
             name: "topic",
             fieldLabel: "Topic",
+            pieces: [],
             allowBlank: false,
+            resetTopic: function () {
+              this.pieces[1] = " ";
+              this.pieces[2] = " ";
+              this.pieces[3] = " ";
+            },
+            updateTopic: function (val, idx) {
+              this.pieces[idx] = val;
+
+              this.setValue(this.pieces.join("."));
+            },
             listeners: {
+              beforerender: function (scope) {
+                var val = scope.getValue();
+                scope.pieces = ["amps", " ", " ", " "];
+                scope.setValue(scope.pieces.join("."));
+              },
               change: async function (cmp, value, oldValue, eOpts) {
                 var duplicate = await amfutil.checkDuplicate({
                   topics: { subject: value },
@@ -1888,19 +3433,225 @@ Ext.define("Amps.util.Grids", {
               ],
             },
           ],
+          process: function (form, values) {
+            console.log(form);
+            if (ampsgrids.grids["services"].types[values.type].process) {
+              values =
+                ampsgrids.grids["services"].types[values.type].process(form);
+            }
+
+            return values;
+          },
         },
         types: {
+          kafka: {
+            type: "kafka",
+            name: "Kafka",
+            iconCls: "kafka-icon",
+            combo: function (combo, service) {
+              return {
+                xtype: "combobox",
+                fieldStyle: {
+                  "font-size": "2rem",
+                },
+                name: "topicparms",
+                itemId: "topicparms",
+                fieldLabel: "Topics",
+                labelStyle: `font-size: 2rem;`,
+                allowBlank: false,
+                store: service.topics,
+              };
+            },
+            format: function (topic) {
+              var reg = /[.>* -]/;
+              return topic.replace(reg, "_");
+            },
+            fields: [
+              {
+                row: true,
+                xtype: "arrayfield",
+                name: "uris",
+                title: "Brokers",
+                arrayfield: "Broker",
+                arrayfields: [
+                  {
+                    xtype: "textfield",
+                    name: "host",
+                    fieldLabel: "Host",
+                  },
+                  {
+                    xtype: "numberfield",
+                    name: "port",
+                    fieldLabel: "Port",
+                  },
+                ],
+              },
+              {
+                row: true,
+                xtype: "arrayfield",
+                name: "topics",
+                title: "Topics",
+                fieldTitle: "Topic",
+                arrayfields: [
+                  {
+                    xtype: "textfield",
+                    name: "topic",
+                  },
+                ],
+              },
+              {
+                xtype: "radiogroup",
+                fieldLabel: "Authentication",
+                name: "auth",
+                allowBlank: false,
+                columns: 2,
+                vertical: true,
+                items: [
+                  { boxLabel: "None", name: "auth", inputValue: "NONE" },
+                  {
+                    boxLabel: "SASL_PLAINTEXT",
+                    name: "auth",
+                    inputValue: "SASL_PLAINTEXT",
+                  },
+                  {
+                    boxLabel: "SASL_SSL",
+                    name: "auth",
+                    inputValue: "SASL_SSL",
+                  },
+                  {
+                    boxLabel: "SSL",
+                    name: "auth",
+                    inputValue: "SSL",
+                  },
+                ],
+                listeners: {
+                  beforerender: function (scope) {
+                    var val = scope.getValue();
+
+                    if (typeof val === "object" && val !== null) {
+                      val = val.auth;
+                    }
+
+                    if (!val) {
+                      val = "NONE";
+                    }
+
+                    var sasl = ["sasl-mech", "sasl-username", "sasl-password"];
+                    var ssl = ["ssl-cacert", "ssl-cert", "ssl-key"];
+
+                    for (var i = 0; i < sasl.length; i++) {
+                      var n = sasl[i];
+                      var comp = amfutil.getElementByID(n);
+                      console.log(comp);
+                      console.log(val.includes("SASL"));
+                      comp.setHidden(!val.includes("SASL"));
+                      comp.setDisabled(!val.includes("SASL"));
+                    }
+
+                    for (var i = 0; i < ssl.length; i++) {
+                      var n = ssl[i];
+                      var comp = amfutil.getElementByID(n);
+                      console.log(comp);
+                      console.log(val.includes("SSL"));
+
+                      comp.setHidden(!val.includes("SSL"));
+                      comp.setDisabled(!val.includes("SSL"));
+                    }
+                  },
+                  change: function (scope, val) {
+                    if (typeof val === "object" && val !== null) {
+                      val = val.auth;
+                    }
+                    var sasl = ["sasl-mech", "sasl-username", "sasl-password"];
+                    var ssl = ["ssl-cacert", "ssl-cert", "ssl-key"];
+                    for (var i = 0; i < sasl.length; i++) {
+                      var n = sasl[i];
+                      var comp = amfutil.getElementByID(n);
+                      console.log(comp);
+                      console.log(val.includes("SASL"));
+                      comp.setHidden(!val.includes("SASL"));
+                      comp.setDisabled(!val.includes("SASL"));
+                    }
+
+                    for (var i = 0; i < ssl.length; i++) {
+                      var n = ssl[i];
+                      var comp = amfutil.getElementByID(n);
+                      console.log(comp);
+                      console.log(val.includes("SSL"));
+
+                      comp.setHidden(!val.includes("SSL"));
+                      comp.setDisabled(!val.includes("SSL"));
+                    }
+                  },
+                },
+              },
+              {
+                itemId: "sasl-mech",
+                xtype: "combobox",
+                name: "mechanism",
+                fieldLabel: "SASL Mechanism",
+                store: [
+                  { field: "plain", value: "plain" },
+                  { field: "scram_sha_256", value: "SCRAM SHA 256" },
+                  { field: "scram_sha_512", value: "SCRAM SHA 512" },
+                ],
+                displayField: "field",
+                valueField: "value",
+              },
+              {
+                itemId: "sasl-username",
+                xtype: "textfield",
+                name: "username",
+                fieldLabel: "Username",
+              },
+              {
+                itemId: "sasl-password",
+                xtype: "textfield",
+                name: "password",
+                fieldLabel: "Password",
+              },
+              {
+                itemId: "ssl-cacert",
+                xtype: "loadkey",
+                name: "cacert",
+                fieldLabel: "Certificate Authority Certificate",
+              },
+              {
+                itemId: "ssl-cert",
+                xtype: "loadkey",
+                name: "cert",
+                fieldLabel: "Client Certificate",
+              },
+              {
+                itemId: "ssl-key",
+                xtype: "loadkey",
+                name: "key",
+                fieldLabel: "Client Key",
+              },
+              {
+                xtype: "checkbox",
+                inputValue: true,
+                checked: true,
+                hidden: true,
+                name: "communication",
+              },
+            ],
+            process: function (form) {
+              var values = form.getValues();
+              console.log(values);
+              values.uris = JSON.parse(values.uris);
+              values.topics = JSON.parse(values.topics).map(
+                (topic) => topic.topic
+              );
+              console.log(values);
+              return values;
+            },
+          },
           httpd: {
             type: "httpd",
             name: "HTTP Server",
             iconCls: "x-fa fa-feed",
             fields: [
-              {
-                xtype: "textfield",
-                name: "app",
-                fieldLabel: "App",
-                allowBlank: false,
-              },
               {
                 xtype: "numberfield",
                 name: "port",
@@ -1975,7 +3726,7 @@ Ext.define("Amps.util.Grids", {
                 itemId: "cert",
                 row: true,
                 xtype: "loadkey",
-                name: "data",
+                name: "cert",
                 fieldLabel: "Server Cert",
                 // hidden: true,
                 // disabled: true,
@@ -1984,10 +3735,17 @@ Ext.define("Amps.util.Grids", {
                 itemId: "key",
                 row: true,
                 xtype: "loadkey",
-                name: "data",
+                name: "key",
                 fieldLabel: "Server Key",
                 // hidden: true,
                 // disabled: true,
+              },
+              {
+                xtype: "checkbox",
+                inputValue: true,
+                checked: true,
+                hidden: true,
+                name: "communication",
               },
             ],
             // load: function (form, record) {
@@ -2007,13 +3765,27 @@ Ext.define("Amps.util.Grids", {
             type: "sftpd",
             name: "SFTP Server",
             iconCls: "x-fa fa-files-o",
-            fields: [
-              {
-                xtype: "textfield",
-                name: "app",
-                fieldLabel: "App",
+            combo: function (combo, service) {
+              return {
+                xtype: "combobox",
+                fieldStyle: {
+                  "font-size": "2rem",
+                },
+                itemId: "topicparms",
+                fieldLabel: "Users",
+                labelStyle: `font-size: 2rem;`,
                 allowBlank: false,
-              },
+                displayField: "username",
+                name: "topicparms",
+                valueField: "username",
+                store: amfutil.createCollectionStore(
+                  "users",
+                  {},
+                  { autoLoad: true }
+                ),
+              };
+            },
+            fields: [
               {
                 xtype: "numberfield",
                 name: "port",
@@ -2051,13 +3823,13 @@ Ext.define("Amps.util.Grids", {
                 fieldLabel: "Server Key",
                 name: "server_key",
               },
+
               {
                 xtype: "checkbox",
                 inputValue: true,
-                uncheckedValue: false,
-                name: "sync_register",
-                fieldLabel: "Sync Register",
-                allowBlank: false,
+                checked: true,
+                hidden: true,
+                name: "communication",
               },
             ],
           },
@@ -2105,7 +3877,6 @@ Ext.define("Amps.util.Grids", {
             process: function (form) {
               var values = form.getValues();
               values.active = true;
-              values.dynamic = true;
 
               return values;
             },
@@ -2289,7 +4060,7 @@ Ext.define("Amps.util.Grids", {
             displayField: "username",
             valueField: "username",
             store: amfutil.createCollectionStore(
-              "accounts",
+              "users",
               {},
               { autoLoad: true }
             ),
@@ -2418,7 +4189,8 @@ Ext.define("Amps.util.Grids", {
                           });
                         }
                         prev = payload;
-                        scope.down("#status").setHtml(
+                        var status = scope.down("#status");
+                        status.setHtml(
                           `<div>
                                 <div class="led 
                                 ${payload ? "green" : "red"}
@@ -2537,266 +4309,7 @@ Ext.define("Amps.util.Grids", {
       },
       wizard: {
         view: {
-          xtype: "panel",
-          title: "AMPS Wizard",
-          layout: "card",
-          bodyStyle: "padding:15px",
-          scrollable: true,
-          itemId: "wizard",
-          defaultListenerScope: true,
-          //   tbar: [
-          //     {
-          //       xtype: "container",
-          //       items: [
-          //         {
-          //           html: `<ul class="stepNav threeWide"><li id="user_step1" class="selected"><a href="#">User Details</a></li><li id="user_step2" class=""><a href="#">Provider Details</a></li><li id="user_step3" class=""><a href="#">Review</a></li></ul>`,
-          //         },
-          //       ],
-          //     },
-          //   ],
-
-          items: [
-            {
-              xtype: "form",
-              scrollable: true,
-
-              itemId: "card-0",
-              items: [
-                {
-                  html: `           <h1>AMPS Wizard</h1>
-                    <hr style="height:1px;border:none;color:lightgray;background-color:lightgray;"><h4>Step 1 of 3: Define an action below.</h4>`,
-                },
-                {
-                  xtype: "fieldcontainer",
-
-                  listeners: {
-                    beforerender: function (scope) {
-                      scope.insert(0, ampsgrids.grids["actions"].fields);
-                    },
-                  },
-                },
-              ],
-              bbar: [
-                "->",
-                {
-                  itemId: "card-next",
-                  text: "Next &raquo;",
-                  handler: "showNext",
-                  formBind: true,
-                },
-              ],
-            },
-            {
-              xtype: "form",
-
-              itemId: "card-1",
-              scrollable: true,
-
-              items: [
-                {
-                  html: `           <h1>AMPS Wizard</h1>
-                    <hr style="height:1px;border:none;color:lightgray;background-color:lightgray;"><h4>Step 2 of 3: Define a corresponding topic.</h4>`,
-                },
-                {
-                  xtype: "fieldcontainer",
-
-                  listeners: {
-                    beforerender: function (scope) {
-                      scope.insert(0, ampsgrids.grids["topics"].fields);
-                    },
-                  },
-                },
-              ],
-              bbar: [
-                "->",
-                {
-                  itemId: "card-prev",
-                  text: "&laquo; Previous",
-                  handler: "showPrevious",
-                },
-                {
-                  itemId: "card-next",
-                  text: "Next &raquo;",
-                  handler: "showNext",
-                  formBind: true,
-                },
-              ],
-            },
-            {
-              xtype: "form",
-
-              itemId: "card-2",
-              scrollable: true,
-
-              items: [
-                {
-                  html: `         <h1>AMPS Wizard</h1>
-                    <hr style="height:1px;border:none;color:lightgray;background-color:lightgray;"><h4>Step 3 of 3: Define a subscriber that subscribes to your topic and performs your action.</h4>`,
-                },
-                {
-                  xtype: "fieldcontainer",
-
-                  listeners: {
-                    beforerender: function (scope) {
-                      var services = ampsgrids.grids["services"];
-                      var fields = services.fields.concat(
-                        services.types["subscriber"].fields
-                      );
-
-                      // console.log(action);
-                      // console.log(topic);
-                      scope.insert(
-                        0,
-                        fields.map((field) => {
-                          if (field.name == "action" || field.name == "topic") {
-                            field.readOnly = true;
-                            field.forceSelection = false;
-                          }
-                          return field;
-                        })
-                      );
-                    },
-                  },
-                },
-              ],
-              bbar: [
-                "->",
-                {
-                  itemId: "card-prev",
-                  text: "&laquo; Previous",
-                  handler: "showPrevious",
-                  // disabled: true,
-                },
-                {
-                  itemId: "card-next",
-                  formBind: true,
-                  text: "Finish",
-                  handler: async function (scope) {
-                    console.log("Finish");
-                    var actionform = scope.up("#wizard").down("#card-0");
-                    var topicform = scope.up("#wizard").down("#card-1");
-
-                    var subscriberform = scope.up("form");
-
-                    var action = actionform.getForm().getValues();
-                    action = ampsgrids.grids["actions"].add.process(
-                      action,
-                      actionform
-                    );
-
-                    var topic = topicform.getForm().getValues();
-                    topic = amfutil.convertNumbers(topicform.getForm(), topic);
-
-                    var subscriber = subscriberform.getForm().getValues();
-                    subscriber = amfutil.convertNumbers(
-                      subscriberform.getForm(),
-                      subscriber
-                    );
-
-                    subscriber.type = "subscriber";
-                    subscriber.active = true;
-
-                    var wizard = scope.up("#wizard");
-
-                    var actionid = await amfutil.addToCollection(
-                      "actions",
-                      action
-                    );
-                    console.log(actionid);
-                    var topicid = await amfutil.addToCollection(
-                      "topics",
-                      topic
-                    );
-                    console.log(topicid);
-                    subscriber.handler = actionid;
-
-                    var subscriberid = await amfutil.addToCollection(
-                      "services",
-                      subscriber
-                    );
-                    wizard.showNext();
-                    var confirmation = scope.up("#wizard").down("#card-3");
-                    confirmation.loadConfirmation(
-                      { id: actionid, name: action.name },
-                      { id: topicid, name: topic.topic },
-                      { id: subscriberid, name: subscriber.name }
-                    );
-                    console.log(subscriberid);
-                  },
-                },
-              ],
-              listeners: {
-                beforeactivate(scope) {
-                  var action = scope.down("combobox[name=handler]");
-                  console.log(action);
-                  var topic = scope.down("combobox[name=topic]");
-                  console.log(topic);
-                  var actionform = scope.up("panel").down("#card-0");
-                  console.log(actionform);
-                  var topicform = scope.up("panel").down("#card-1");
-                  console.log(topicform);
-                  action.setValue(
-                    actionform.down("textfield[name=name]").getValue()
-                  );
-                  topic.setValue(
-                    topicform.down("textfield[name=topic]").getValue()
-                  );
-                },
-              },
-            },
-            {
-              xtype: "form",
-
-              itemId: "card-3",
-              loadConfirmation: function (action, topic, subscriber) {
-                var html = `
-                  <h1>AMPS Wizard</h1>
-                  <hr style="height:1px;border:none;color:lightgray;background-color:lightgray;">
-                  <h2>Complete! You defined:</h4>
-                  <h3>Action: <a href="#actions/${action.id}">${action.name}</a><h5>
-                  <h3>Topic: <a href="#topics/${topic.id}">${topic.name}</a><h5>
-                  <h3>Subscriber: <a href="#services/${subscriber.id}">${subscriber.name}</a> that listens on ${topic.name} and performs ${action.name}<h5>
-                  `;
-                this.down("#confirm").setHtml(html);
-              },
-              items: [
-                {
-                  itemId: "confirm",
-                  html: "",
-                },
-              ],
-              bbar: [
-                "->",
-                {
-                  // formBind: true,
-                  text: "Restart",
-                  handler: async function (scope) {
-                    window.location.reload();
-                  },
-                },
-              ],
-            },
-          ],
-
-          showNext: function () {
-            console.log("Next");
-            this.doCardNavigation(1);
-          },
-
-          showPrevious: function (btn) {
-            this.doCardNavigation(-1);
-          },
-
-          doCardNavigation: function (incr) {
-            var me = this;
-            var l = me.getLayout();
-            var i = l.activeItem.itemId.split("card-")[1];
-            var next = parseInt(i, 10) + incr;
-            l.setActiveItem(next);
-
-            // me.down("#card-prev").setDisabled(next === 0);
-            // me.down("#card-next").setDisabled(next === 2);
-          },
+          xtype: "wizard",
         },
       },
       defaults: {
@@ -3122,6 +4635,18 @@ Ext.define("Amps.util.Grids", {
               },
             },
           },
+        },
+      },
+      workflows: {
+        view: {
+          xtype: "panel",
+          title: "Workflows",
+          layout: "fit",
+          items: [
+            {
+              xtype: "workflow",
+            },
+          ],
         },
       },
       subscribers: {

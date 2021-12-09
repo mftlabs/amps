@@ -1,13 +1,31 @@
 defmodule AmpsPortal.UserController do
   use AmpsPortal, :controller
   import Argon2
+  alias AmpsWeb.DB
 
-  def get_user(conn, _params) do
-    json(conn, Pow.Plug.current_user(conn))
+  def get(conn, _params) do
+    res = AmpsWeb.DB.find_one("users", %{"_id" => Pow.Plug.current_user(conn).id})
+    IO.inspect(res)
+    json(conn, res)
   end
 
-  def update_user(conn, _params) do
-    json(conn, Pow.Plug.current_user(conn))
+  def update(conn, _params) do
+    user = Pow.Plug.current_user(conn)
+    body = conn.body_params()
+    IO.inspect(body)
+    IO.inspect(Map.has_key?(body, "password"))
+
+    body =
+      if Map.has_key?(body, "password") do
+        %{password_hash: hashed} = add_hash(body["password"])
+        IO.inspect(hashed)
+        Map.put(body, "password", hashed)
+      else
+        body
+      end
+
+    {:ok, res} = AmpsWeb.DB.find_one_and_update("users", %{"_id" => user.id}, body)
+    json(conn, res)
   end
 
   def get_user_link(conn, %{"id" => id}) do
@@ -58,10 +76,15 @@ defmodule AmpsPortal.UserController do
     |> PowResetPassword.Plug.load_user_by_token(token)
     |> case do
       {:ok, conn} ->
-        DB.find_one_and_update("mailbox_auth", %{
-          mailbox: user["username"],
-          password: user["password"]
-        })
+        DB.find_one_and_update(
+          "mailbox_auth",
+          %{
+            mailbox: user["username"]
+          },
+          %{
+            password: user["password"]
+          }
+        )
 
         %{password_hash: hashed} = add_hash(user["password"])
 

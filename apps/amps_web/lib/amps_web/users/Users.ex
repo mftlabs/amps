@@ -55,6 +55,8 @@ defmodule AmpsDashboard.Users do
   end
 
   def get_by(clauses) do
+    IO.inspect(clauses)
+
     filter =
       Enum.reduce(clauses, %{}, fn {key, value}, acc ->
         if key == :id do
@@ -69,7 +71,7 @@ defmodule AmpsDashboard.Users do
 
   def convert_to_user_struct(user) do
     user =
-      Map.put(user, "id", user["_id"])
+      Map.put(user, "id", BSON.ObjectId.encode!(user["_id"]))
       |> Map.new(fn {k, v} -> {String.to_atom(k), v} end)
 
     IO.inspect(user)
@@ -207,12 +209,13 @@ defmodule AmpsDashboard.Users.DB do
 
   def authenticate(body) do
     user = AmpsWeb.DB.find_one("admin", %{"username" => body["username"]})
-    IO.inspect(user)
+    # user = Map.put(user, "_id", BSON.ObjectId.encode!(user["_id"]))
     IO.inspect(body["password"])
 
     case check_pass(user, body["password"], hash_key: "password") do
       {:ok, user} ->
         IO.inspect("verified")
+        IO.inspect(user)
 
         if user["approved"] do
           Users.convert_to_user_struct(user)

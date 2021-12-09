@@ -3522,11 +3522,14 @@ Ext.define("Amps.util.Utilities", {
 
   convertNumbers: function (form, data) {
     console.log(form);
+    console.log(data);
+    console.log(form.getFields());
     form.getFields().items.forEach((field) => {
       if (field.xtype == "numberfield") {
         data[field.name] = parseInt(data[field.name]);
       }
     });
+    console.log(data);
     return data;
   },
 
@@ -3843,6 +3846,74 @@ Ext.define("Amps.util.Utilities", {
     });
     var obj = Ext.decode(resp.responseText);
     return obj.rows;
+  },
+  uuid: function () {
+    return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, (c) =>
+      (
+        c ^
+        (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))
+      ).toString(16)
+    );
+  },
+
+  updateQuery(key, value) {
+    if ("URLSearchParams" in window) {
+      var searchParams = new URLSearchParams(window.location.search);
+      searchParams.set(key, value);
+      var newRelativePathQuery =
+        window.location.pathname +
+        "?" +
+        searchParams.toString() +
+        window.location.hash;
+      history.pushState(null, "", newRelativePathQuery);
+    }
+  },
+
+  matchTopic: function (stopic, wtopic) {
+    try {
+      var spieces = stopic.split(".");
+      var wpieces = wtopic.split(".");
+
+      var match = wpieces.reduce((match, piece, idx) => {
+        return (
+          (match && spieces[idx] == piece) ||
+          spieces[idx] == "*" ||
+          spieces[idx] == ">"
+        );
+      }, true);
+      return match;
+    } catch {}
+  },
+
+  createHistoryStore: function (msgid, opts = {}) {
+    return Ext.create(
+      "Ext.data.Store",
+      Object.assign(
+        {
+          proxy: {
+            type: "rest",
+            url: `/api/message_events/history/${msgid}`,
+            headers: {
+              Authorization: localStorage.getItem("access_token"),
+            },
+            // extraParams: { filters: JSON.stringify(filters) },
+            // reader: {
+            //   type: "json",
+            //   rootProperty: "rows",
+            //   totalProperty: "count",
+            // },
+            listeners: {
+              load: function (data) {
+                console.log(data);
+              },
+              exception: amfutil.refresh_on_failure,
+            },
+          },
+          autoLoad: true,
+        },
+        opts
+      )
+    );
   },
 
   createCollectionStore: function (collection, filters = {}, opts = {}) {

@@ -29,8 +29,7 @@ defmodule Amps.EventConsumer do
 
   defp get_names(parms) do
     topic = parms["topic"]
-    safe = String.replace(topic, ".", "_")
-    consumer = String.replace(safe, "*", "_")
+    consumer = parms["name"] |> String.replace(" ", "_") |> String.downcase()
 
     [base, part, _other] = String.split(topic, ".", parts: 3)
     stream = AmpsUtil.get_env_parm(:streams, String.to_atom(base <> "." <> part))
@@ -49,7 +48,7 @@ defmodule Amps.EventConsumer do
 
     IO.puts("pid #{inspect(pid)}")
 
-    {stream, consumer} = get_names(opts)
+    {stream, consumer} = AmpsUtil.get_names(opts)
     Logger.info("got stream #{stream} #{consumer}")
     opts = Map.put(opts, "id", name)
 
@@ -130,6 +129,8 @@ defmodule Amps.PullConsumer do
   end
 
   def get_data(body) do
+    IO.inspect(body)
+
     try do
       Poison.decode!(body)
     rescue
@@ -160,8 +161,8 @@ defmodule Amps.PullConsumer do
           actparms = AmpsDatabase.get_action_parms(action_id)
 
           AmpsEvents.send_history("amps.events.action", "message_events", msg, %{
-            status: "started",
-            action: actparms["name"]
+            "status" => "started",
+            "action" => actparms["name"]
           })
 
           IO.puts("action parms #{inspect(actparms)}")
@@ -174,8 +175,8 @@ defmodule Amps.PullConsumer do
               IO.puts("ack next message")
 
               AmpsEvents.send_history("amps.events.action", "message_events", msg, %{
-                status: "completed",
-                action: actparms["name"]
+                "status" => "completed",
+                "action" => actparms["name"]
               })
           end
         rescue

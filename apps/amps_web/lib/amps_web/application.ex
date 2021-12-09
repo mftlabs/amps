@@ -43,17 +43,17 @@ defmodule AmpsWeb.Application do
       # Start a worker by calling: AmpsDashboard.Worker.start_link(arg)
       # {AmpsDashboard.Worker, arg}
 
-      # Plug.Cowboy.child_spec(
-      #   scheme: :http,
-      #   plug: AmpsDashboard.Webhook,
-      #   options: [
-      #     port: 8090,
-      #     protocol_options: [
-      #       idle_timeout: 5_000_000,
-      #       max_keepalive: 5_000_000
-      #     ]
-      #   ]
-      # ),
+      Plug.Cowboy.child_spec(
+        scheme: :http,
+        plug: AmpsWeb.Webhook,
+        options: [
+          port: 8090,
+          protocol_options: [
+            idle_timeout: 5_000_000,
+            max_keepalive: 5_000_000
+          ]
+        ]
+      ),
       # Supervisor.Spec.worker(Gnat.ConnectionSupervisor, [
       #   gnat_supervisor_settings,
       #   [name: :my_connection_supervisor]
