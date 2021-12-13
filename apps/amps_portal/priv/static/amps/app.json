@@ -20,7 +20,7 @@
   /**
    * The relative path to the application's markup file (html, jsp, asp, etc.).
    */
-  "indexHtmlPath": "index.html",
+  "indexHtmlPath": "index.html.heex",
 
   /**
    * Comma-separated string with the paths of directories or files to search. Any classes

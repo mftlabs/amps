@@ -12,15 +12,7 @@ defmodule Amps.Startup do
   end
 
   def nats() do
-    {:ok, gnat} =
-      Gnat.start_link(%{
-        # (required) the registered named you want to give the Gnat connection
-        # number of milliseconds to wait between consecutive reconnect attempts (default: 2_000)
-        backoff_period: 4_000,
-        connection_settings: [
-          %{host: '0.0.0.0', port: 4222}
-        ]
-      })
+    gnat = Process.whereis(:gnat)
 
     create_streams(gnat)
     create_action_consumers(gnat)

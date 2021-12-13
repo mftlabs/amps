@@ -17,9 +17,8 @@ config :amps_portal, AmpsPortal.Endpoint,
   url: [host: "localhost"],
   render_errors: [view: AmpsPortal.ErrorView, accepts: ~w(html json), layout: false],
   pubsub_server: AmpsPortal.PubSub,
-  live_view: [signing_salt: "IzQCGrqZ"]
-
-# server: false
+  live_view: [signing_salt: "IzQCGrqZ"],
+  server: false
 
 # Configure esbuild (the version is required)
 config :esbuild,
@@ -62,6 +61,10 @@ config :master_proxy,
 config :amps,
   db: "mongo"
 
+config :amps, :gnat,
+  host: String.to_charlist(System.get_env("AMPS_NATS_HOST", "localhost")),
+  port: String.to_integer(System.get_env("AMPS_NATS_PORT", "4222"))
+
 config :amps, Amps.Mailer, adapter: Swoosh.Adapters.Local
 
 # Swoosh API client is needed for adapters other than SMTP.
@@ -81,7 +84,7 @@ config :amps_web, AmpsWeb.Endpoint,
     port: System.get_env("AMPS_HOST_PORT", "4000"),
     protocol_options: [idle_timeout: 5_000_000]
   ],
-  # server: false,s
+  server: false,
   # https: [
   #   port: 443,
   #   # cipher_suite: :strong,

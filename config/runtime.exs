@@ -83,7 +83,7 @@ if config_env() == :prod do
       ip: {0, 0, 0, 0, 0, 0, 0, 0},
       port: String.to_integer(System.get_env("PORT") || "4000")
     ],
-    url: [host: System.get_env("AMPS_HOST_URL", "localhost")],
+    url: [host: "admin." <> System.get_env("AMPS_HOST_URL", "localhost")],
     authmethod: System.get_env("AMPS_AUTH_METHOD") || "db",
     db: "mongo",
     vault_addr: System.get_env("AMPS_VAULT_ADDR", "http://localhost:8200"),
@@ -99,6 +99,10 @@ if config_env() == :prod do
     scheme: System.get_env("AMPS_S3_SCHEME") || "http://",
     host: System.get_env("AMPS_S3_HOST") || "localhost",
     port: System.get_env("AMPS_S3_PORT") || "9000"
+
+  config :amps, :gnat,
+    host: String.to_charlist(System.get_env("AMPS_NATS_HOST", "localhost")),
+    port: String.to_integer(System.get_env("AMPS_NATS_PORT", "4222"))
 
   config :amps, :pow_assent,
     providers: [

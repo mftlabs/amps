@@ -78,18 +78,6 @@ Ext.define("Amps.controller.MenuController", {
     // }
   },
 
-  getLabelableRenderData: function () {
-    var me = this,
-      data = me.callParent(),
-      labelClsExtra = me.labelClsExtra;
-
-    if (!me.allowBlank) {
-      data.labelClsExtra =
-        (labelClsExtra ? labelClsExtra + " " : "") + me.requiredCls;
-    }
-
-    return data;
-  },
   onLogout: function () {
     ampsutil.logout();
   },

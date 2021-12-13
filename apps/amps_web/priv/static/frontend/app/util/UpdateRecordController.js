@@ -1,4 +1,5 @@
 Ext.define("Amps.form.update", {
+  xtype: "updateform",
   extend: "Ext.form.Panel",
   layout: {
     type: "vbox",
@@ -114,7 +115,7 @@ Ext.define("Amps.form.update", {
               var scope = this;
               var mask = new Ext.LoadMask({
                 msg: "Please wait...",
-                target: amfutil.getElementByID("edit_container"),
+                target: btn.up("updateform"),
               });
               mask.show();
               console.log(values);
@@ -256,7 +257,7 @@ Ext.define("Amps.util.UpdateRecordController", {
     const updateFunctions = {
       message_events: this.viewMessages,
       bucket: this.updateBucket,
-      accounts: this.viewAccounts,
+      // accounts: this.viewAccounts,
       admin: this.updateUser,
       agentget: this.updateAgentGet,
       agentput: this.updateAgentPut,
@@ -278,11 +279,12 @@ Ext.define("Amps.util.UpdateRecordController", {
       amfutil.redirect(page);
     };
     console.log("Load Update");
+    var config = ampsgrids.grids[route]();
     var el;
     if (updateFunctions[route]) {
       el = updateFunctions[route](record, route, this, close);
     } else {
-      if (ampsgrids.grids[route].subgrids) {
+      if (config.subgrids) {
         el = this.viewSubGrids(record, route, this, close);
       } else {
         el = this.createForm(record, route, this, close);
@@ -296,7 +298,7 @@ Ext.define("Amps.util.UpdateRecordController", {
   createForm: function (record, route, scope, close, subgrid) {
     var grid = amfutil.getElementByID("main-grid");
     // scope = btn.lookupController();
-    var config = ampsgrids.grids[route];
+    var config = ampsgrids.grids[route]();
     var fields = config.fields;
     if (config.update && config.update.fields) {
       fields.concat(config.update.fields);
@@ -322,13 +324,14 @@ Ext.define("Amps.util.UpdateRecordController", {
   },
 
   viewSubGrids: function (record, route, scope, close) {
-    var object = ampsgrids.grids[route].object;
+    var page = ampsgrids.grids[route]();
+    var object = page.object;
     var tabItems = [
       Ext.apply(scope.createForm(record, route, this, close, true), {
         title: object + " Info",
       }),
     ].concat(
-      Object.entries(ampsgrids.grids[route].subgrids).map((subgrid) => {
+      Object.entries(page.subgrids).map((subgrid) => {
         var field = subgrid[0];
 
         var gridinfo = subgrid[1];
@@ -414,7 +417,7 @@ Ext.define("Amps.util.UpdateRecordController", {
             };
             // amfutil.hideAllButtons();
 
-            var config = ampsgrids.grids[route].subgrids[field];
+            var config = page.subgrids[field];
             console.log(config);
             var fields = config.fields;
             if (config.update && config.update.fields) {

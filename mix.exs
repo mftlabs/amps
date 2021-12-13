@@ -7,7 +7,17 @@ defmodule Amps.Umbrella.MixProject do
       version: "0.1.0",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      aliases: aliases()
+      aliases: aliases(),
+      releases: [
+        amps: [
+          applications: [
+            amps: :permanent,
+            amps_web: :permanent,
+            amps_portal: :permanent,
+            proxy: :permanent
+          ]
+        ]
+      ]
     ]
   end
 

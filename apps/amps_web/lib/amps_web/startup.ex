@@ -8,7 +8,7 @@ defmodule AmpsWeb.Startup do
   end
 
   def startup() do
-    create_default_account()
+    # create_default_account()
     create_defaults_rules()
     create_root()
     setup_jetstream()
@@ -16,7 +16,9 @@ defmodule AmpsWeb.Startup do
   end
 
   def create_history() do
-    case AmpsWeb.DB.find_one("services", %{"name" => "history_updater"}) do
+    IO.inspect(AmpsWeb.DB.find_one("services", %{"name" => "history updater"}))
+
+    case AmpsWeb.DB.find_one("services", %{"name" => "history updater"}) do
       nil ->
         IO.puts("Creating History Updater")
 

@@ -61,8 +61,6 @@ Ext.define("Amps.Application", {
         });
       } else {
         ampsgrids = Amps.util.Grids;
-        ampsgrids.getGrids();
-        ampsgrids.getPages();
         var routes = Object.keys(ampsgrids.grids).concat(
           Object.keys(ampsgrids.pages)
         );

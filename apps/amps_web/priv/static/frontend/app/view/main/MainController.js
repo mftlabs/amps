@@ -1239,6 +1239,7 @@ Ext.define("Amps.form.FileMetaData", {
 
 Ext.define("Amps.form.add", {
   extend: "Ext.window.Window",
+  xtype: "addform",
   modal: true,
   minWidth: 500,
   maxWidth: 700,
@@ -1292,8 +1293,9 @@ Ext.define("Amps.form.add", {
               btn.setDisabled(true);
               var mask = new Ext.LoadMask({
                 msg: "Please wait...",
-                target: grid,
+                target: btn.up("addform"),
               });
+              mask.show();
               amfutil.ajaxRequest({
                 headers: {
                   Authorization: localStorage.getItem("access_token"),
@@ -1430,7 +1432,7 @@ Ext.define("Amps.view.main.MainController", {
     var grid = amfutil.getElementByID("main-grid");
     // scope = btn.lookupController();
 
-    var config = ampsgrids.grids[route];
+    var config = ampsgrids.grids[route]();
 
     var win = Ext.create("Amps.form.add", config.window);
     win.loadForm(config.object, config.fields, (form, values) => {
@@ -1581,7 +1583,7 @@ Ext.define("Amps.view.main.MainController", {
   addAction: function (btn) {
     grid = amfutil.getElementByID("main-grid");
     // scope = btn.lookupController();
-    var actions = ampsgrids.grids["actions"];
+    var actions = ampsgrids.grids["actions"]();
     var win = Ext.create("Amps.form.add", {
       width: 650,
       defaults: {
@@ -1597,7 +1599,7 @@ Ext.define("Amps.view.main.MainController", {
     // scope = btn.lookupController();
 
     var win = Ext.create("Amps.form.add");
-    win.loadForm("Topic", ampsgrids.grids["topics"].fields, (values) => {
+    win.loadForm("Topic", ampsgrids.grids["topics"]().fields, (values) => {
       return values;
     });
     win.show();
@@ -1605,7 +1607,7 @@ Ext.define("Amps.view.main.MainController", {
 
   addService: function (btn) {
     grid = amfutil.getElementByID("main-grid");
-    var services = ampsgrids.grids["services"].types;
+    var services = ampsgrids.grids["services"]().types;
 
     var win = new Ext.window.Window({
       title: "Add Service",
@@ -1780,7 +1782,7 @@ Ext.define("Amps.view.main.MainController", {
 
         var items = [];
         var fields = [];
-        fields = fields.concat(ampsgrids.grids["services"].fields);
+        fields = fields.concat(ampsgrids.grids["services"]().fields);
         fields = fields.concat(service.fields);
         console.log(fields);
 

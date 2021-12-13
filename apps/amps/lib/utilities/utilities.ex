@@ -345,15 +345,7 @@ defmodule AmpsUtil do
   end
 
   def create_consumer(stream, name, filter, opts \\ %{}) do
-    {:ok, gnat} =
-      Gnat.start_link(%{
-        # (required) the registered named you want to give the Gnat connection
-        # number of milliseconds to wait between consecutive reconnect attempts (default: 2_000)
-        backoff_period: 4_000,
-        connection_settings: [
-          %{host: '0.0.0.0', port: 4222}
-        ]
-      })
+    gnat = Process.whereis(:gnat)
 
     case Jetstream.API.Consumer.info(gnat, stream, name) do
       {:ok, res} ->
@@ -386,15 +378,7 @@ defmodule AmpsUtil do
   end
 
   def delete_consumer(stream, name) do
-    {:ok, gnat} =
-      Gnat.start_link(%{
-        # (required) the registered named you want to give the Gnat connection
-        # number of milliseconds to wait between consecutive reconnect attempts (default: 2_000)
-        backoff_period: 4_000,
-        connection_settings: [
-          %{host: '0.0.0.0', port: 4222}
-        ]
-      })
+    gnat = Process.whereis(:gnat)
 
     case Jetstream.API.Consumer.delete(gnat, stream, name) do
       :ok ->

@@ -124,57 +124,45 @@ Ext.define("Amps.controller.PageController", {
       var grids = ampsgrids.grids;
       var pages = Object.keys(ampsgrids.pages);
       if (pages.indexOf(route) >= 0) {
+        var config = ampsgrids.pages[route]();
         amfutil.getElementByID("page-handler").setActiveItem(1);
         var mp = amfutil.getElementByID("main-page");
         console.log(mp);
         mp.removeAll();
-        mp.insert(0, ampsgrids.pages[route].view);
+        mp.insert(0, config.view);
       } else {
         amfutil.getElementByID("page-handler").setActiveItem(0);
 
         var grid = this.getView().down("#main-grid");
         var options = ["delete"];
-        console.log(ampsgrids.grids[route]);
+        var config = ampsgrids.grids[route]();
+        console.log();
 
         var column = {
           xtype: "actioncolumn",
           text: "Actions",
           dataIndex: "actions",
           width: 175,
-          items: ampsgrids.grids[route].options
-            ? ampsgrids.grids[route].options.map(
-                (option) => amfutil.gridactions[option]
-              )
+          items: config.options
+            ? config.options.map((option) => amfutil.gridactions[option])
             : [],
         };
 
         console.log(route);
-        grid.setTitle(grids[route].title);
+        grid.setTitle(config.title);
         var mask = new Ext.LoadMask({
           msg: "Please wait...",
           target: grid,
         });
         mask.show();
 
-        if (route == "uploads") {
-          grid.reconfigure(
-            amfutil.uploads,
-            grids[route].columns.concat(
-              ampsgrids.grids[route].options ? [column] : null
-            )
-          );
-          mask.hide();
-        } else {
-          grid.reconfigure(
-            amfutil.createCollectionStore(
-              Ext.util.History.getToken(),
-              grids[route].filter ? grids[route].filter : {}
-            ),
-            grids[route].columns.concat(
-              ampsgrids.grids[route].options ? [column] : null
-            )
-          );
-        }
+        grid.reconfigure(
+          amfutil.createCollectionStore(
+            Ext.util.History.getToken(),
+            config.filter ? config.filter : {}
+          ),
+          config.columns.concat(config.options ? [column] : null)
+        );
 
         var store = grid.getStore();
         store.on(
@@ -232,6 +220,7 @@ Ext.define("Amps.controller.PageController", {
       if (count > 0) {
         amfutil.getElementByID("edit_container").items.items[0].destroy();
       }
+
       amfutil.showActionIcons(route);
     }
     // amfutil.renew_session();

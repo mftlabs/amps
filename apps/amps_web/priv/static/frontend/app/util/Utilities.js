@@ -4332,16 +4332,17 @@ Ext.define("Amps.util.Utilities", {
 
   showActionIcons: function (providedRoute) {
     var route = providedRoute ? providedRoute : Ext.util.History.getToken();
-    var page = ampsgrids.pages[route];
-    console.log(page);
+    console.log(route);
+    console.log(ampsgrids.pages);
     console.log("show action icons");
     amfutil.hideAllButtons();
-    if (page) {
+    if (Object.keys(ampsgrids.pages).indexOf(route) >= 0) {
+      var page = ampsgrids.pages[route]();
       var pagebar = amfutil.getElementByID("actionbar").down("#page");
       pagebar.insert(0, page.actionIcons);
     } else {
-      console.log(ampsgrids.grids[route].actionIcons);
-      amfutil.showButtons(ampsgrids.grids[route].actionIcons);
+      console.log(ampsgrids.grids[route]().actionIcons);
+      amfutil.showButtons(ampsgrids.grids[route]().actionIcons);
     }
 
     //   amfutil.getElementByID("addnewbtn").componentname = "accounts";
@@ -4351,7 +4352,7 @@ Ext.define("Amps.util.Utilities", {
     console.log("show action icons");
     amfutil.hideAllButtons();
     var fieldMenu = amfutil.getElementByID("actionbar").down("#fieldactions");
-    var items = ampsgrids.grids[collection].subgrids[field].actionIcons;
+    var items = ampsgrids.grids[collection]().subgrids[field].actionIcons;
     fieldMenu.items.items.forEach((item) => {
       console.log(item);
       if (items.indexOf(item.itemId) >= 0) {
@@ -4407,9 +4408,10 @@ Ext.define("Amps.util.Utilities", {
   },
 
   createFieldSearch: function (route, field, grid) {
+    var page = ampsgrids.grids[route]();
     var items =
-      ampsgrids.grids[route].subgrids[field].columns &&
-      ampsgrids.grids[route].subgrids[field].columns.map((field) => {
+      page.subgrids[field].columns &&
+      page.subgrids[field].columns.map((field) => {
         if (field.type) {
           return filterTypes[field.type](field);
         } else {
@@ -4435,7 +4437,7 @@ Ext.define("Amps.util.Utilities", {
             // console.log(dateval);
             var fields = form.getFields();
             var values = form.getValues();
-            var fields = ampsgrids.grids[route].subgrids[field].columns;
+            var fields = ampsgrids.grids[route]().subgrids[field].columns;
             // var fieldKeys = fields.map((field) => field.field);
             console.log(fields);
             console.log(values);
@@ -4497,10 +4499,11 @@ Ext.define("Amps.util.Utilities", {
 
   createFormFilter: function () {
     var route = Ext.util.History.currentToken;
-    console.log(ampsgrids.grids[route]);
+    var page = ampsgrids.grids[route]();
+    console.log(ampsgrids.grids[route]());
     var items =
-      ampsgrids.grids[route].columns &&
-      ampsgrids.grids[route].columns.map((field) => {
+      page.columns &&
+      page.columns.map((field) => {
         if (field.type) {
           return filterTypes[field.type](field);
         } else {
@@ -4526,7 +4529,7 @@ Ext.define("Amps.util.Utilities", {
             // console.log(dateval);
             var fields = form.getFields();
             var values = form.getValues();
-            var fields = ampsgrids.grids[route].columns;
+            var fields = ampsgrids.grids[route]().columns;
             // var fieldKeys = fields.map((field) => field.field);
             console.log(fields);
             console.log(values);

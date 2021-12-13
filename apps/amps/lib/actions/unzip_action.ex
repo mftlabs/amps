@@ -21,7 +21,7 @@ defmodule UnzipAction do
 
               newmsg =
                 Map.merge(msg, %{
-                  "fname" => List.last(String.split(file, "/", [])),
+                  "fname" => Path.basename(file),
                   "msgid" => msgid,
                   "fsize" => info.size,
                   "fpath" => file,

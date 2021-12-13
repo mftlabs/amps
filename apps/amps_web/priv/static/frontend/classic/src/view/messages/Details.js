@@ -690,7 +690,7 @@ Ext.define("Amps.view.messages.MessageDetails", {
     var entries = Object.entries(record);
     console.log(entries);
     var fields = {};
-    ampsgrids.grids[route].columns.forEach((col) => {
+    ampsgrids.grids[route]().columns.forEach((col) => {
       fields[col.dataIndex] = { label: col.text };
     });
     fields["_id"] = { label: "ID" };

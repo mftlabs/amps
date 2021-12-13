@@ -10,7 +10,7 @@ Ext.define("Amps.controller.FieldController", {
     var tokens = Ext.util.History.getToken().split("/");
     var record = amfutil.getElementByID(tokens[0] + "-" + tokens[2]).record;
     console.log(record);
-    var config = ampsgrids.grids[tokens[0]].subgrids[tokens[2]];
+    var config = ampsgrids.grids[tokens[0]]().subgrids[tokens[2]];
 
     var win = Ext.create("Amps.form.add", config.window);
     win.loadForm(config.object, config.fields, (values, form) => {

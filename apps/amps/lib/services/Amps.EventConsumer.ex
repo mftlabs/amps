@@ -44,7 +44,7 @@ defmodule Amps.EventConsumer do
     sub = String.to_atom(name <> "_sup")
     IO.puts("sub: #{inspect(sub)}")
 
-    {:ok, pid} = Gnat.start_link()
+    pid = Process.whereis(:gnat)
 
     IO.puts("pid #{inspect(pid)}")
 
