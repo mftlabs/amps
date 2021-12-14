@@ -396,6 +396,10 @@ Ext.define("Amps.form.ArrayField.Field", {
 Ext.define("Amps.form.Rule", {
   extend: "Ext.form.FieldSet",
   xtype: "rulefield",
+  layout: {
+    type: "vbox",
+    align: "stretch",
+  },
   collapsible: true,
   constructor: function (args) {
     console.log(args);
@@ -421,7 +425,7 @@ Ext.define("Amps.form.Rule", {
         name: name + "-topic",
         value: args["topic"],
         readOnly: args["readOnly"],
-        fieldLabel: "Topic",
+        fieldLabel: "Output Topic",
         listeners: {
           beforerender: async function (scope) {
             scope.setStore(amfutil.createCollectionStore("topics"));
@@ -510,7 +514,7 @@ Ext.define("Amps.form.Parms", {
   types: {
     bool: {
       text: "Boolean",
-      xtype: "button",
+      // xtype: "button",
       // itemId: "parmbutton",
 
       handler: function (button, event) {
@@ -527,7 +531,7 @@ Ext.define("Amps.form.Parms", {
     },
     string: {
       text: "String",
-      xtype: "button",
+      // xtype: "button",
       // itemId: "parmbutton",
 
       handler: function (button, event) {
@@ -544,7 +548,7 @@ Ext.define("Amps.form.Parms", {
     },
     number: {
       text: "Number",
-      xtype: "button",
+      // xtype: "button",
       // itemId: "parmbutton",
 
       handler: function (button, event) {

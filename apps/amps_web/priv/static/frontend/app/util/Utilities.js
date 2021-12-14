@@ -3592,15 +3592,19 @@ Ext.define("Amps.util.Utilities", {
     );
   },
 
-  combo: function (label, name, store, val, disp) {
-    return {
-      xtype: "combobox",
-      name: name,
-      fieldLabel: label,
-      displayField: disp,
-      valueField: val,
-      store: store,
-    };
+  combo: function (label, name, store, val, disp, opts) {
+    return Object.assign(
+      {
+        xtype: "combobox",
+        name: name,
+        fieldLabel: label,
+        displayField: disp,
+        valueField: val,
+        store: store,
+        allowBlank: false,
+      },
+      opts
+    );
   },
 
   channelHandlers: function (channel) {

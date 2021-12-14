@@ -43,6 +43,7 @@ defmodule Amps.MixProject do
       {:sched_ex, "~> 1.0"},
       {:poison, "~> 3.1"},
       {:mongodb_driver, "~> 0.7"},
+      {:export, "~> 0.0.7"},
       {:erlport, "~> 0.10.1"},
       {:poolboy, "~> 1.5"},
       {:glob, "~> 1.0"},

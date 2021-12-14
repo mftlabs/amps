@@ -15,25 +15,20 @@ defmodule UnzipAction do
         Enum.each(files, fn file ->
           file = to_string(file)
 
-          case File.stat(file) do
-            {:ok, info} ->
-              msgid = AmpsUtil.get_id()
+          {:ok, info} = File.stat(file)
+          msgid = AmpsUtil.get_id()
 
-              newmsg =
-                Map.merge(msg, %{
-                  "fname" => Path.basename(file),
-                  "msgid" => msgid,
-                  "fsize" => info.size,
-                  "fpath" => file,
-                  "temp" => true,
-                  "parent" => msg["msgid"]
-                })
+          newmsg =
+            Map.merge(msg, %{
+              "fname" => Path.basename(file),
+              "msgid" => msgid,
+              "fsize" => info.size,
+              "fpath" => file,
+              "temp" => true,
+              "parent" => msg["msgid"]
+            })
 
-              AmpsEvents.send(newmsg, parms, state)
-
-            {:error, error} ->
-              IO.inspect(error)
-          end
+          AmpsEvents.send(newmsg, parms, state)
         end)
     end
   end

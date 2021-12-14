@@ -779,86 +779,105 @@ Ext.define("Amps.view.messages.MessageStatus", {
       xtype: "container",
       layout: "border",
       items: [
-        {
-          xtype: "container",
-          layout: "vbox",
-          width: "100%",
-          region: "north",
-          // hidden: true,
-          style: {
-            backgroundColor: "#5fa2dd",
-            color: "white",
-            padding: "10px",
-            marginBottom: "1rem",
-          },
-          items: [
-            {
-              xtype: "container",
-              layout: "hbox",
-              items: [
-                {
-                  xtype: "box",
-                  html: "Status: ",
-                  style: {
-                    textAlign: "left",
-                    fontSize: "1.5rem",
-                    fontWeight: 700,
-                    padding: "1rem",
-                    boxSizing: "border-box",
-                  },
-                  flex: 1,
-                },
-                {
-                  xtype: "box",
-                  html: "",
-                  itemId: "current-status",
-                  style: {
-                    textAlign: "left",
-                    fontSize: "1.5rem",
-                    fontWeight: 500,
-                    padding: "1rem",
-                    boxSizing: "border-box",
-                  },
-                  value: "",
-                  flex: 4,
-                },
-                {
-                  xtype: "box",
-                  html: "Reason: ",
-                  itemId: "current-reason-title",
-                  style: {
-                    textAlign: "left",
-                    fontSize: "1.5rem",
-                    fontWeight: 700,
-                    padding: "1rem",
-                    boxSizing: "border-box",
-                  },
-                  flex: 1,
-                },
-                {
-                  xtype: "box",
-                  html: "",
-                  itemId: "current-reason",
-                  style: {
-                    textAlign: "left",
-                    fontSize: "1.5rem",
-                    fontWeight: 500,
-                    padding: "1rem",
-                    boxSizing: "border-box",
-                  },
-                  value: "",
-                  flex: 4,
-                },
-              ],
-            },
-          ],
-        },
+        // {
+        //   xtype: "container",
+        //   layout: "vbox",
+        //   width: "100%",
+        //   region: "north",
+        //   // hidden: true,
+        //   style: {
+        //     backgroundColor: "#5fa2dd",
+        //     color: "white",
+        //     padding: "10px",
+        //     marginBottom: "1rem",
+        //   },
+        //   items: [
+        //     {
+        //       xtype: "container",
+        //       layout: "hbox",
+        //       items: [
+        //         {
+        //           xtype: "box",
+        //           html: "Status: ",
+        //           style: {
+        //             textAlign: "left",
+        //             fontSize: "1.5rem",
+        //             fontWeight: 700,
+        //             padding: "1rem",
+        //             boxSizing: "border-box",
+        //           },
+        //           flex: 1,
+        //         },
+        //         {
+        //           xtype: "box",
+        //           html: "",
+        //           itemId: "current-status",
+        //           style: {
+        //             textAlign: "left",
+        //             fontSize: "1.5rem",
+        //             fontWeight: 500,
+        //             padding: "1rem",
+        //             boxSizing: "border-box",
+        //           },
+        //           value: "",
+        //           flex: 4,
+        //         },
+        //         {
+        //           xtype: "box",
+        //           html: "Reason: ",
+        //           itemId: "current-reason-title",
+        //           style: {
+        //             textAlign: "left",
+        //             fontSize: "1.5rem",
+        //             fontWeight: 700,
+        //             padding: "1rem",
+        //             boxSizing: "border-box",
+        //           },
+        //           flex: 1,
+        //         },
+        //         {
+        //           xtype: "box",
+        //           html: "",
+        //           itemId: "current-reason",
+        //           style: {
+        //             textAlign: "left",
+        //             fontSize: "1.5rem",
+        //             fontWeight: 500,
+        //             padding: "1rem",
+        //             boxSizing: "border-box",
+        //           },
+        //           value: "",
+        //           flex: 4,
+        //         },
+        //       ],
+        //     },
+        //   ],
+        // },
         {
           xtype: "grid",
           title: "Message History",
           itemId: "status-grid",
           region: "center",
           width: "100%",
+          viewConfig: {
+            getRowClass: function (record, index, rowParams) {
+              var id = Ext.util.History.getToken().split("/").pop();
+              console.log(record);
+              return record.data._id == id ? "boldrow" : "";
+            },
+          },
+          listeners: {
+            dblclick: {
+              element: "body", //bind to the underlying body property on the panel
+              fn: function (grid, rowIndex, e, obj) {
+                var record = grid.record.data;
+                var scope = this;
+                var route = Ext.util.History.getToken().split("/")[0];
+                amfutil.redirectTo(route + "/" + record._id);
+              },
+            },
+          },
+
           columns: [
             {
               dataIndex: "action",

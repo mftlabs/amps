@@ -210,7 +210,8 @@ config :amps, :actions,
   unzip: UnzipAction,
   zip: ZipAction,
   http: HttpAction,
-  kafkaput: KafkaPut
+  kafkaput: KafkaPut,
+  runscript: RunScriptAction
 
 # config :amps, :httpapi,
 #  options: [

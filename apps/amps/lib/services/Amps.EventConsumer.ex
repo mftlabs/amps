@@ -181,14 +181,24 @@ defmodule Amps.PullConsumer do
           end
         rescue
           error ->
+            msg = data["msg"]
+            mctx = data["state"]
+            action_id = parms["handler"]
+            actparms = AmpsDatabase.get_action_parms(action_id)
             IO.puts("ack next message after action error")
             Logger.warning("action failed #{inspect(error)}")
             Logger.error(Exception.format_stacktrace())
 
-            AmpsEvents.send_history("amps.events.action", "message_events", %{}, %{
-              status: "failed",
-              reason: inspect(error)
-            })
+            AmpsEvents.send_history(
+              "amps.events.action",
+              "message_events",
+              Jason.decode!(message.body)["msg"],
+              %{
+                status: "failed",
+                action: actparms["name"],
+                reason: inspect(error)
+              }
+            )
         end
 
         Jetstream.ack_next(message, state.listening_topic)

@@ -40,12 +40,12 @@ defmodule Amps.Application do
        ]},
       Amps.SvcSupervisor,
       Amps.SvcManager,
-      {Amps.Startup, []},
+      {Amps.Startup, []}
 
       # add this to db config...
 
       # worker pool to run python actions
-      :poolboy.child_spec(:worker, Application.get_env(:amps, :pyworker)[:config])
+      # :poolboy.child_spec(:worker, Application.get_env(:amps, :pyworker)[:config])
     ]
 
     Supervisor.start_link(children, strategy: :one_for_one, name: Amps.Supervisor)
