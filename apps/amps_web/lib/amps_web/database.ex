@@ -123,7 +123,7 @@ defmodule AmpsWeb.DB do
     end
   end
 
-  def find(collection, clauses) do
+  def find(collection, clauses \\ %{}) do
     case db() do
       "pg" ->
         Postgres.find(collection, clauses)

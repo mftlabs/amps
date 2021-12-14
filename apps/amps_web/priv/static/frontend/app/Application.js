@@ -18,7 +18,7 @@ Ext.define("Amps.Application", {
       quickTips: true,
     },
   },
-  launch: function () {
+  launch: async function () {
     var route = Ext.util.History.getToken();
     console.log(route);
     amfutil = Amps.util.Utilities;
@@ -56,8 +56,14 @@ Ext.define("Amps.Application", {
         amfutil.from = Ext.util.History.getToken();
         console.log(amfutil.from);
         this.redirectTo("login", { replace: true });
+        var resp = await Ext.Ajax.request({
+          method: "get",
+          url: "api/startup",
+        });
+        var initialized = Ext.decode(resp.responseText);
         Ext.create({
           xtype: "auth",
+          init: initialized,
         });
       } else {
         ampsgrids = Amps.util.Grids;

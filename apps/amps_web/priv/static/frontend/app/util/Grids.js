@@ -2002,6 +2002,39 @@ Ext.define("Amps.util.Grids", {
       title: "Actions",
       window: { height: 600, width: 600 },
       types: {
+        runscript: {
+          field: "runscript",
+          label: "Run Script",
+          fields: [
+            {
+              xtype: "textfield",
+              name: "module",
+              fieldLabel: "Script Name",
+            },
+            amfutil.combo(
+              "Output Topic",
+              "output",
+              amfutil.createCollectionStore("topics"),
+              "topic",
+              "topic"
+            ),
+            {
+              // Fieldset in Column 1 - collapsible via toggle button
+              xtype: "parmfield",
+              title: "Extra Parameters",
+              name: "parms",
+            },
+          ],
+          process: function (form, values) {
+            console.log(values.parms);
+            var parms = {};
+            values.parms = amfutil.formatArrayField(values.parms);
+            console.log(values.parms);
+            delete values.field;
+            delete values.value;
+            return values;
+          },
+        },
         generic: {
           field: "generic",
           label: "Generic",

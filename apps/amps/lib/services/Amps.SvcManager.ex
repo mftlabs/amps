@@ -280,19 +280,19 @@ defmodule Amps.SvcManager do
     end
   end
 
-  defp load_system_parms() do
+  def load_system_parms() do
     parms =
-      case AmpsDatabase.get_config("SYSTEM")["defaults"] do
+      case AmpsDatabase.get_config("SYSTEM") do
         nil ->
-          []
+          %{}
 
         parms ->
-          parms
+          parms |> Map.drop(["_id", "name"])
       end
 
     IO.inspect(parms)
 
-    Enum.each(parms, fn %{"field" => key, "value" => val} ->
+    Enum.each(parms, fn {key, val} ->
       Application.put_env(:amps, String.to_atom(key), val)
     end)
   end

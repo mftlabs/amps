@@ -10,7 +10,7 @@ defmodule AmpsWeb.Startup do
   def startup() do
     # create_default_account()
     create_defaults_rules()
-    create_root()
+    # create_root()
     setup_jetstream()
     create_history()
   end
@@ -32,10 +32,10 @@ defmodule AmpsWeb.Startup do
 
         AmpsWeb.DB.insert("services", history)
 
-        AmpsWeb.ServiceController.start_service(history["name"])
+        Amps.SvcManager.start_service(history.name)
 
       _object ->
-        IO.puts("SYSTEM Defaults Already Exist")
+        IO.puts("History Already Exist")
     end
   end
 

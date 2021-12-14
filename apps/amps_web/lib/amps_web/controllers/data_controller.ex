@@ -54,94 +54,74 @@ defmodule AmpsWeb.DataController do
         })
       )
 
-    # case AmpsWeb.DB.find_one("services", %{"name" => "vault"}) do
-    #   nil ->
-    #     raise("Missing vault config")
-
-    #   config ->
-    #     keys = Jason.decode!(AmpsWeb.Encryption.decrypt(config["keys"]))
-    #     IO.inspect(keys)
-    #     {:ok, keys}
-    # end
-
     IO.inspect(Jetstream.API.Consumer.list(gnat, "ACTIONS"))
-    # k = Jetstream.API.Consumer.info(gnat, "SERVICES", "ampskafka")
-    # IO.inspect(k)
-    # l = Jetstream.API.Stream.info(gnat, "SERVICES")
-    # IO.inspect(l)
-
-    # j =
-    #   Jetstream.API.Consumer.create(gnat, %Jetstream.API.Consumer{
-    #     name: "ampskafka",
-    #     stream_name: "SERVICES",
-    #     filter_subject: "amps.svcs.kafka_amps.>",
-    #     deliver_policy: :new
-    #   })
-
-    # IO.inspect(j)
-    # processes = Supervisor.which_children(Amps.Supervisor)
-    # IO.inspect(processes)
-
-    # Enum.each(processes, fn {_, pid, type, modules} ->
-    #   IO.inspect(Process.info(pid))
-    # end)
-
-    # {_, pid, _, _} = Enum.at(processes, 0)
-    # IO.inspect(pid)
-
-    # username = "user01"
-
-    # password = "password1"
-
-    # {:ok, user} = LDAPEx.Client.get_object(pid, "cn=#{username},ou=users,dc=example,dc=org")
-
-    # %{
-    #   attributes: %{
-    #     "userPassword" => passes
-    #   }
-    # } = user
-
-    # IO.inspect(user)
-
-    # authenticate =
-    #   Enum.reduce_while(passes, false, fn pass, acc ->
-    #     if password === pass do
-    #       {:halt, true}
-    #     else
-    #       {:continue, acc}
-    #     end
-    #   end)
-
-    # IO.inspect(authenticate)
-    # IO.inspect(Supervisor.which_children(Amps.Supervisor))
-
-    # IO.inspect(SvcManager.service_active?("sftp3"))
-    # IO.inspect(
-    #   Registry.select(:registry, [{{:"$1", :"$2", :"$3"}, [], [{{:"$1", :"$2", :"$3"}}]}])
-    # )
-
-    # {_, pid, _, _} = Enum.at(processes, 3)
-    # IO.inspect(pid)
-    # Process.exit(Process.whereis(Amps.SvcManager), :shit)
-    # IO.inspect(Process.exit(pid, :shit))
-
-    # res = Amps.SvcManager.service_active?("sftp3")
-    # IO.inspect(res)
-
-    # processes = Supervisor.which_children(Amps.SvcSupervisor)
-    # IO.inspect(processes)
-
-    # IO.inspect(
-    #   Registry.select(:registry, [{{:"$1", :"$2", :"$3"}, [], [{{:"$1", :"$2", :"$3"}}]}])
-    # )
-
-    # res = Amps.SvcManager.service_active?("sftp3")
-    # IO.inspect(res)
-    # IO.inspect(res)
-
-    # IO.inspect(Amps.SvcManager.stop())
 
     json(conn, :ok)
+  end
+
+  def initialized(conn, _params) do
+    case AmpsWeb.DB.find_one("admin", %{"systemdefault" => true}) do
+      nil ->
+        json(conn, false)
+
+      _ ->
+        json(conn, true)
+    end
+  end
+
+  def startup(conn, _params) do
+    body = conn.body_params()
+
+    root = AmpsWeb.DB.find_one("admin", %{"systemdefault" => true})
+
+    host = Application.fetch_env!(:amps_web, AmpsWeb.Endpoint)[:vault_addr]
+
+    # username = System.get_env("AMPS_ROOT_USER", "root")
+    # password = System.get_env("AMPS_ROOT_PASS", "ampsadmin")
+
+    if root == nil do
+      IO.puts("Creating Root User")
+
+      root =
+        Map.merge(body["root"], %{"approved" => true, "systemdefault" => true, "role" => "Admin"})
+
+      password = root["password"]
+      %{password_hash: hashed} = add_hash(root["password"])
+      root = Map.put(root, "password", hashed)
+
+      IO.inspect(Application.get_env(:amps_web, AmpsWeb.Endpoint)[:authmethod] == "vault")
+
+      if Application.get_env(:amps_web, AmpsWeb.Endpoint)[:authmethod] == "vault" do
+        token = AmpsWeb.Vault.get_token(:vaulthandler)
+        IO.inspect(token)
+
+        {:ok, vault} =
+          Vault.new(
+            engine: Vault.Engine.KVV1,
+            auth: Vault.Auth.Token,
+            host: host,
+            credentials: %{token: token}
+          )
+          |> Vault.auth()
+
+        result =
+          Vault.request(vault, :post, "auth/userpass/users/" <> root["username"],
+            body: %{"token_policies" => "admin,default", "password" => password}
+          )
+
+        IO.inspect(result)
+      end
+
+      systemdefaults = Map.merge(body["system"], %{"name" => "SYSTEM"})
+      AmpsWeb.DB.insert("services", systemdefaults)
+
+      AmpsWeb.DB.insert("admin", root)
+
+      Amps.SvcManager.load_system_parms()
+      send_resp(conn, 200, "Created")
+    else
+      send_resp(conn, 403, "Application Already Initialized")
+    end
   end
 
   def download(conn, %{"msgid" => msgid}) do
