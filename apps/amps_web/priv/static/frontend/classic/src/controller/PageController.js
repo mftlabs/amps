@@ -129,6 +129,7 @@ Ext.define("Amps.controller.PageController", {
         var mp = amfutil.getElementByID("main-page");
         console.log(mp);
         mp.removeAll();
+        console.log(config.view);
         mp.insert(0, config.view);
       } else {
         amfutil.getElementByID("page-handler").setActiveItem(0);

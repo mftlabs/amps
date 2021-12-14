@@ -703,12 +703,18 @@ defmodule AmpsWeb.DataController do
 
         types = SvcManager.service_types()
 
-        if Map.has_key?(types, String.to_atom(service["type"])) do
-          ServiceController.stop_service(service["name"])
+        if Map.has_key?(service, "type") do
+          if Map.has_key?(types, String.to_atom(service["type"])) do
+            ServiceController.stop_service(service["name"])
 
-          if service["active"] do
-            ServiceController.start_service(service["name"])
+            if service["active"] do
+              ServiceController.start_service(service["name"])
+            end
           end
+        end
+
+        if service["name"] == "SYSTEM" do
+          Amps.SvcManager.load_system_parms()
         end
 
       _ ->

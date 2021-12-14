@@ -4434,324 +4434,231 @@ Ext.define("Amps.util.Grids", {
         title: "Amps Wizard",
       },
     }),
-    defaults: () => ({
-      actionIcons: [
-        {
-          xtype: "button",
-          itemId: "addnewbtn",
-          iconCls: "x-fa fa-plus-circle",
-          tooltip: "Add New",
-          handler: function () {
-            var win = new Ext.window.Window({
-              title: "Add Default",
-              modal: true,
-              resizable: false,
-              layout: "fit",
+    defaults: () => {
+      return {
+        // actionIcons: [
+        //   {
+        //     xtype: "button",
+        //     itemId: "addnewbtn",
+        //     iconCls: "x-fa fa-plus-circle",
+        //     tooltip: "Add New",
+        //     handler: function () {
+        //       var win = new Ext.window.Window({
+        //         title: "Add Default",
+        //         modal: true,
+        //         resizable: false,
+        //         layout: "fit",
+        //         items: [
+        //           {
+        //             xtype: "form",
+        //             defaults: {
+        //               padding: 5,
+        //               labelWidth: 140,
+        //               width: 400,
+        //             },
+        //             items: [
+        //               {
+        //                 xtype: "textfield",
+        //                 name: "field",
+        //                 fieldLabel: "Field",
+        //               },
+        //               {
+        //                 xtype: "textfield",
+        //                 name: "value",
+        //                 fieldLabel: "Value",
+        //               },
+        //             ],
+        //             buttons: [
+        //               {
+        //                 text: "Save",
+        //                 itemId: "addaccount",
+        //                 cls: "button_class",
+        //                 formBind: true,
+        //                 listeners: {
+        //                   click: async function (btn) {
+        //                     var form = btn.up("form").getForm();
+        //                     var values = form.getValues();
+        //                     var g = amfutil.getElementByID("pagegrid");
+        //                     var mask = new Ext.LoadMask({
+        //                       msg: "Please wait...",
+        //                       target: g,
+        //                     });
+        //                     amfutil.ajaxRequest({
+        //                       headers: {
+        //                         Authorization:
+        //                           localStorage.getItem("access_token"),
+        //                       },
+        //                       url: `api/services/` + g.dataId + "/defaults",
+        //                       method: "POST",
+        //                       timeout: 60000,
+        //                       jsonData: values,
+        //                       success: function (response) {
+        //                         mask.hide();
+        //                         btn.setDisabled(false);
+        //                         win.destroy();
+
+        //                         var data = Ext.decode(response.responseText);
+        //                         Ext.toast("Added Default");
+        //                         amfutil.broadcastEvent("update", {
+        //                           page: Ext.util.History.getToken(),
+        //                         });
+        //                         g.getStore().reload();
+        //                       },
+        //                       failure: function (response) {
+        //                         mask.hide();
+        //                         btn.setDisabled(false);
+        //                         msg = response.responseText.replace(/['"]+/g, "");
+        //                         amfutil.onFailure("Failed to Add", response);
+        //                       },
+        //                     });
+        //                   },
+        //                 },
+        //               },
+        //               {
+        //                 text: "Cancel",
+        //                 cls: "button_class",
+        //                 listeners: {
+        //                   click: function (btn) {
+        //                     win.destroy();
+        //                   },
+        //                 },
+        //               },
+        //             ],
+        //           },
+        //         ],
+        //       });
+        //       win.show();
+        //     },
+        //   },
+        //   { xtype: "tbfill" },
+        //   // {
+        //   //   xtype: "button",
+        //   //   itemId: "searchpanelbtn",
+        //   //   iconCls: "x-fa fa-search",
+        //   //   handler: "onSearchPanel",
+        //   //   tooltip: "Filter Records",
+        //   //   style: "font-weight:bold;color:red;",
+        //   // },
+        //   // {
+        //   //   xtype: "button",
+        //   //   itemId: "clearfilter",
+        //   //   html: '<img src="resources/images/clear-filters.png" />',
+        //   //   handler: "onClearFilter",
+        //   //   tooltip: "Clear Filter",
+        //   //   style: "cursor:pointer;",
+        //   // },
+        //   {
+        //     xtype: "button",
+        //     itemId: "refreshbtn",
+        //     iconCls: "x-fa fa-refresh",
+        //     tooltip: "Refresh",
+        //     handler: function (scope) {
+        //       amfutil.getElementByID("pagegrid").getStore().reload();
+        //     },
+        //   },
+        // ],
+        view: {
+          xtype: "form",
+          title: "Default Configuration",
+          bodyPadding: 25,
+          loadConfig: async function (scope) {
+            var fc = this.down("fieldcontainer");
+            fc.removeAll();
+            this.setMasked(true);
+
+            var data = await amfutil.getCollectionData("services", {
+              name: "SYSTEM",
+            });
+            var record = data[0];
+            this._id = record._id;
+
+            Object.entries(record).forEach((d) => {
+              if (d[0] == "_id" || d[0] == "name") {
+              } else {
+                fc.insert({
+                  xtype: "textfield",
+                  fieldLabel: d[0],
+                  name: d[0],
+                  value: d[1],
+                });
+              }
+            });
+            this.setMasked(false);
+          },
+          items: [
+            {
+              xtype: "fieldcontainer",
+              layout: {
+                type: "vbox",
+                align: "stretch",
+              },
               items: [
                 {
-                  xtype: "form",
-                  defaults: {
-                    padding: 5,
-                    labelWidth: 140,
-                    width: 400,
-                  },
-                  items: [
-                    {
-                      xtype: "textfield",
-                      name: "field",
-                      fieldLabel: "Field",
-                    },
-                    {
-                      xtype: "textfield",
-                      name: "value",
-                      fieldLabel: "Value",
-                    },
-                  ],
-                  buttons: [
-                    {
-                      text: "Save",
-                      itemId: "addaccount",
-                      cls: "button_class",
-                      formBind: true,
-                      listeners: {
-                        click: async function (btn) {
-                          var form = btn.up("form").getForm();
-                          var values = form.getValues();
-                          var g = amfutil.getElementByID("pagegrid");
-                          var mask = new Ext.LoadMask({
-                            msg: "Please wait...",
-                            target: g,
-                          });
-                          amfutil.ajaxRequest({
-                            headers: {
-                              Authorization:
-                                localStorage.getItem("access_token"),
-                            },
-                            url: `api/services/` + g.dataId + "/defaults",
-                            method: "POST",
-                            timeout: 60000,
-                            jsonData: values,
-                            success: function (response) {
-                              mask.hide();
-                              btn.setDisabled(false);
-                              win.destroy();
-
-                              var data = Ext.decode(response.responseText);
-                              Ext.toast("Added Default");
-                              amfutil.broadcastEvent("update", {
-                                page: Ext.util.History.getToken(),
-                              });
-                              g.getStore().reload();
-                            },
-                            failure: function (response) {
-                              mask.hide();
-                              btn.setDisabled(false);
-                              msg = response.responseText.replace(/['"]+/g, "");
-                              amfutil.onFailure("Failed to Add", response);
-                            },
-                          });
-                        },
-                      },
-                    },
-                    {
-                      text: "Cancel",
-                      cls: "button_class",
-                      listeners: {
-                        click: function (btn) {
-                          win.destroy();
-                        },
-                      },
-                    },
-                  ],
+                  xtype: "textfield",
+                  name: "storage_root",
+                  fieldLabel: "Permanent Storage Path",
+                },
+                {
+                  xtype: "textfield",
+                  name: "storage_temp",
+                  fieldLabel: "Temp Storage Path",
+                },
+                {
+                  xtype: "textfield",
+                  name: "storage_logs",
+                  fieldLabel: "Log Path",
+                },
+                {
+                  xtype: "textfield",
+                  name: "python_path",
+                  fieldLabel: "Python Path",
                 },
               ],
-            });
-            win.show();
-          },
-        },
-        { xtype: "tbfill" },
-        // {
-        //   xtype: "button",
-        //   itemId: "searchpanelbtn",
-        //   iconCls: "x-fa fa-search",
-        //   handler: "onSearchPanel",
-        //   tooltip: "Filter Records",
-        //   style: "font-weight:bold;color:red;",
-        // },
-        // {
-        //   xtype: "button",
-        //   itemId: "clearfilter",
-        //   html: '<img src="resources/images/clear-filters.png" />',
-        //   handler: "onClearFilter",
-        //   tooltip: "Clear Filter",
-        //   style: "cursor:pointer;",
-        // },
-        {
-          xtype: "button",
-          itemId: "refreshbtn",
-          iconCls: "x-fa fa-refresh",
-          tooltip: "Refresh",
-          handler: function (scope) {
-            amfutil.getElementByID("pagegrid").getStore().reload();
-          },
-        },
-      ],
-      view: {
-        xtype: "mainlist",
-        title: "System Defaults",
-        itemId: "pagegrid",
+            },
+          ],
+          buttons: [
+            {
+              xtype: "button",
+              text: "Update",
+              handler: function (scope) {
+                var form = scope.up("form");
+                var mask = new Ext.LoadMask({
+                  target: form,
+                  msg: "Loading",
+                });
+                mask.show();
+                var values = scope.up("form").getForm().getValues();
+                console.log(values);
+                var id = scope.up("form")._id;
 
-        columns: [
-          {
-            text: "Field",
-            dataIndex: "field",
-            flex: 1,
-          },
-          {
-            text: "Value",
-            dataIndex: "value",
-            flex: 1,
-          },
-          {
-            text: "Actions",
-            xtype: "actioncolumn",
-            items: [
-              {
-                iconCls: "x-fa fa-trash",
-                handler: async function (
-                  grid,
-                  rowIndex,
-                  colIndex,
-                  item,
-                  e,
-                  record,
-                  row
-                ) {
-                  console.log(record);
-                  var mask = new Ext.LoadMask({
-                    msg: "Please wait...",
-                    target: grid,
-                  });
-                  var g = amfutil.getElementByID("pagegrid");
-                  var data = record.data;
-                  Ext.MessageBox.show({
-                    title: "Delete",
-                    cls: "delete_btn",
-                    message: "Are you sure you want to delete this default",
-                    buttons: Ext.MessageBox.YESNO,
-                    defaultFocus: "#no",
-                    prompt: false,
-                    fn: async function (btn) {
-                      if (btn == "yes") {
-                        delete data.id;
-                        await amfutil.ajaxRequest({
-                          headers: {
-                            Authorization: localStorage.getItem("access_token"),
-                          },
-                          url:
-                            `api/services/` +
-                            g.dataId +
-                            "/defaults/" +
-                            rowIndex,
-                          jsonData: data,
-                          method: "DELETE",
-                          success: function () {
-                            g.getStore().reload();
-                          },
-                        });
-                      } else {
-                      }
-                    },
-                  });
-                },
-              },
-            ],
-          },
-        ],
-        createStore: async function () {
-          console.log(this);
-          var scope = this;
-          var data = await amfutil.getCollectionData("services", {
-            name: "SYSTEM",
-          });
-          data = data[0];
-
-          scope.dataId = data._id;
-
-          scope.setStore(
-            amfutil.createFieldStore("services", data._id, "defaults")
-          );
-        },
-        listeners: {
-          beforerender: async function (scope) {
-            await scope.createStore();
-          },
-          dblclick: {
-            element: "body", //bind to the underlying body property on the panel
-            fn: function (grid) {
-              console.log(grid);
-              var record = grid.record.data;
-
-              var win = new Ext.window.Window({
-                title: "Update Default",
-                modal: true,
-                resizable: false,
-                layout: "fit",
-                items: [
-                  {
-                    xtype: "form",
-                    defaults: {
-                      padding: 5,
-                      labelWidth: 140,
-                      width: 400,
-                    },
-                    items: [
-                      {
-                        xtype: "textfield",
-                        name: "field",
-                        fieldLabel: "Field",
-                        value: record.field,
-                      },
-                      {
-                        xtype: "textfield",
-                        name: "value",
-                        fieldLabel: "Value",
-                        value: record.value,
-                      },
-                    ],
-                    buttons: [
-                      {
-                        text: "Save",
-                        itemId: "addaccount",
-                        cls: "button_class",
-                        formBind: true,
-                        listeners: {
-                          click: async function (btn) {
-                            var form = btn.up("form").getForm();
-                            var values = form.getValues();
-                            var g = amfutil.getElementByID("pagegrid");
-                            var mask = new Ext.LoadMask({
-                              msg: "Please wait...",
-                              target: g,
-                            });
-                            amfutil.ajaxRequest({
-                              headers: {
-                                Authorization:
-                                  localStorage.getItem("access_token"),
-                              },
-                              url:
-                                `api/services/` +
-                                g.dataId +
-                                "/defaults/" +
-                                grid.recordIndex,
-                              method: "PUT",
-                              timeout: 60000,
-                              params: {},
-                              jsonData: values,
-                              success: function (response) {
-                                mask.hide();
-                                btn.setDisabled(false);
-                                win.destroy();
-
-                                var data = Ext.decode(response.responseText);
-                                Ext.toast("Updated default");
-                                amfutil.broadcastEvent("update", {
-                                  page: Ext.util.History.getToken(),
-                                });
-                                g.getStore().reload();
-                              },
-                              failure: function (response) {
-                                mask.hide();
-                                btn.setDisabled(false);
-                                msg = response.responseText.replace(
-                                  /['"]+/g,
-                                  ""
-                                );
-                                amfutil.onFailure("Failed to Update", response);
-                              },
-                            });
-                          },
-                        },
-                      },
-                      {
-                        text: "Cancel",
-                        cls: "button_class",
-                        listeners: {
-                          click: function (btn) {
-                            win.destroy();
-                          },
-                        },
-                      },
-                    ],
+                amfutil.ajaxRequest({
+                  headers: {
+                    Authorization: localStorage.getItem("access_token"),
                   },
-                ],
-              });
-              win.show();
+                  url: "/api/services/" + id,
+                  method: "PUT",
+                  timeout: 60000,
+                  params: {},
+                  jsonData: values,
+                  success: function () {
+                    mask.hide();
+                    form.loadConfig();
+                  },
+                  failure: function () {
+                    mask.hide();
+                  },
+                });
+              },
+            },
+          ],
+          listeners: {
+            beforerender: function (scope) {
+              scope.loadConfig(scope);
             },
           },
         },
-      },
-    }),
+      };
+    },
     workflows: () => ({
       view: {
         xtype: "panel",
