@@ -204,6 +204,9 @@ defmodule AmpsWeb.DataController do
   end
 
   defp find_topics(topic, meta) do
+    IO.inspect(topic)
+    IO.inspect(meta)
+
     subs =
       DB.find("services", %{
         type: "subscriber"
@@ -611,6 +614,9 @@ defmodule AmpsWeb.DataController do
           Amps.SvcManager.load_service(body["name"])
         end
 
+      "scheduler" ->
+        Amps.Scheduler.load(body["name"])
+
       _ ->
         nil
     end
@@ -716,6 +722,9 @@ defmodule AmpsWeb.DataController do
         if service["name"] == "SYSTEM" do
           Amps.SvcManager.load_system_parms()
         end
+
+      "scheduler" ->
+        Amps.Scheduler.update(body)
 
       _ ->
         nil

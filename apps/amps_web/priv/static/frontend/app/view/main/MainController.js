@@ -1616,7 +1616,7 @@ Ext.define("Amps.view.main.MainController", {
     var win = new Ext.window.Window({
       title: "Add Service",
       modal: true,
-      width: 600,
+      width: 800,
       height: 500,
       scrollable: true,
       resizable: false,

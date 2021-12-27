@@ -389,47 +389,81 @@ defmodule AmpsUtil do
     end
   end
 
-  def get_kafka_auth(args) do
+  def get_kafka_auth(args, provider) do
     cacertfile = Path.join(AmpsUtil.tempdir(args["name"]), "cacert")
-    File.write(cacertfile, args["cacert"])
+    File.write(cacertfile, provider["cacert"])
     certfile = Path.join(AmpsUtil.tempdir(args["name"]), "cert")
-    File.write(certfile, args["cert"])
+    File.write(certfile, provider["cert"])
     keyfile = Path.join(AmpsUtil.tempdir(args["name"]), "key")
-    File.write(keyfile, args["key"])
+    File.write(keyfile, provider["key"])
 
-    case args["auth"] do
-      "SASL_PLAINTEXT" ->
-        [
-          # ssl: true,
-          sasl: {String.to_existing_atom(args["mechanism"]), args["username"], args["password"]}
-        ]
-
-      "SASL_SSL" ->
-        [
-          ssl: [
-            cacertfile: cacertfile,
-            certfile: certfile,
-            keyfile: keyfile
-            # verify: :verify_peer
-          ],
-          sasl: {String.to_existing_atom(args["mechanism"]), args["username"], args["password"]}
-        ]
-
-      "SSL" ->
-        [
-          ssl: [
-            cacertfile: cacertfile,
-            certfile: certfile,
-            keyfile: keyfile
-            # verify: :verify_peer
+    config =
+      case provider["auth"] do
+        "SASL_PLAINTEXT" ->
+          [
+            # ssl: true,
+            sasl:
+              {String.to_existing_atom(provider["mechanism"]), provider["username"],
+               provider["password"]}
           ]
-        ]
 
-      "NONE" ->
-        []
+        "SASL_SSL" ->
+          [
+            ssl: [
+              cacertfile: cacertfile,
+              certfile: certfile,
+              keyfile: keyfile
+              # verify: :verify_peer
+            ],
+            sasl:
+              {String.to_existing_atom(provider["mechanism"]), provider["username"],
+               provider["password"]}
+          ]
 
-      nil ->
-        []
+        "SSL" ->
+          [
+            ssl: [
+              cacertfile: cacertfile,
+              certfile: certfile,
+              keyfile: keyfile
+              # verify: :verify_peer
+            ]
+          ]
+
+        "NONE" ->
+          []
+      end
+  end
+
+  def match(file, parms) do
+    if parms["regex"] do
+      if regex_match(file, parms["pattern"]) do
+        IO.puts("found match on #{file} and #{parms["pattern"]}")
+        true
+      else
+        IO.puts("didn't match on #{file} and #{parms["pattern"]}")
+        false
+      end
+    else
+      if :glob.matches(file, parms["pattern"]) do
+        IO.puts("found match on #{file} and #{parms["pattern"]}")
+        true
+      else
+        IO.puts("didn't match on #{file} and #{parms["pattern"]}")
+
+        false
+      end
+    end
+  end
+
+  def regex_match(val, pattern) do
+    case Regex.compile(pattern) do
+      {:ok, re} ->
+        Regex.match?(re, val)
+
+      _ ->
+        IO.puts("bad regex, failing")
+        false
     end
   end
 end

@@ -9,6 +9,10 @@ Ext.define("Amps.view.main.List", {
     cls: "ufa-grid",
   },
 
+  selModel: {
+    selType: "checkboxmodel",
+  },
+
   model: "main",
   plugins: ["gridfilters"],
 

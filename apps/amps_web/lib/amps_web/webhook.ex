@@ -21,6 +21,14 @@ defmodule AmpsWeb.Webhook do
     send_resp(conn, 200, "ok")
   end
 
+  post "/upload" do
+    IO.inspect(conn)
+    data = conn.body_params()
+    IO.puts("events called")
+    IO.inspect(data)
+    send_resp(conn, 200, "ok")
+  end
+
   match _ do
     send_resp(conn, 404, "invalid endpoint")
   end

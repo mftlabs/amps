@@ -181,7 +181,15 @@ defmodule Amps.PullConsumer do
           end
         rescue
           error ->
-            msg = data["msg"]
+            msg = Jason.decode!(message.body)["msg"]
+
+            msg =
+              if is_map(msg) do
+                msg
+              else
+                %{}
+              end
+
             mctx = data["state"]
             action_id = parms["handler"]
             actparms = AmpsDatabase.get_action_parms(action_id)
@@ -192,7 +200,7 @@ defmodule Amps.PullConsumer do
             AmpsEvents.send_history(
               "amps.events.action",
               "message_events",
-              Jason.decode!(message.body)["msg"],
+              msg,
               %{
                 status: "failed",
                 action: actparms["name"],

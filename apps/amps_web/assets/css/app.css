@@ -1,5 +1,5 @@
 /* This file is for your main application CSS */
-@import "./phoenix.css";
+
 
 /* Alerts and form errors used by phx.new */
 .alert {
@@ -266,6 +266,10 @@ label.x-form-required-field > span:after {
 }
 .kafka-icon {
   background-image: url("../../priv/static/images/icons/kafka.svg")
+}
+
+.s3-icon {
+  background-image: url("../../priv/static/images/icons/s3.svg")
 }
 
 .workflow-step {

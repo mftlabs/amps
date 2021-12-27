@@ -44,6 +44,8 @@ defmodule Amps.SftpServer do
 
   defp authenticate(handler) do
     fn username, password, peer_address, state ->
+      IO.puts("authenticate")
+
       accepted =
         case handler do
           {module, fun} ->

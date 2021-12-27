@@ -20,23 +20,24 @@ defmodule Amps.Startup do
 
   def create_streams(gnat) do
     streams = Application.get_env(:amps, :streams)
-    IO.puts("streams")
-    IO.inspect(streams)
+    # IO.puts("streams")
+    # IO.inspect(streams)
 
     streams = Enum.into(streams, %{})
-    IO.inspect(streams)
+    # IO.inspect(streams)
 
     Enum.each(streams, fn {subjects, name} ->
       subjects = Atom.to_string(subjects)
 
       case Jetstream.API.Stream.info(gnat, name) do
         {:ok, res} ->
-          IO.puts("Stream Data: ")
-          IO.inspect(res)
+          IO.puts("Stream Exists")
+
+        # IO.inspect(res)
 
         {:error, error} ->
-          IO.inspect(error)
-          IO.puts("Creating Stream")
+          # IO.inspect(error)
+          IO.puts("Creating Stream " <> String.to_atom(name))
           subjects = subjects <> ".>"
 
           case Jetstream.API.Stream.create(gnat, %Jetstream.API.Stream{
@@ -45,10 +46,14 @@ defmodule Amps.Startup do
                  subjects: [subjects]
                }) do
             {:ok, res} ->
-              IO.inspect(res)
+              IO.puts("Created Stream " <> String.to_atom(name))
+
+            # IO.inspect(res)
 
             {:error, error} ->
-              IO.inspect(error)
+              IO.puts("Couldn't Create Stream " <> String.to_atom(name))
+
+              # IO.inspect(error)
           end
       end
     end)
@@ -56,10 +61,10 @@ defmodule Amps.Startup do
 
   def create_action_consumers(gnat) do
     actions = Application.get_env(:amps, :actions)
-    IO.puts("actions")
-    IO.inspect(actions)
+    # IO.puts("actions")
+    # IO.inspect(actions)
     actions = Enum.into(actions, %{})
-    IO.inspect(actions)
+    # IO.inspect(actions)
 
     Enum.each(actions, fn {topic, module} ->
       topic = Atom.to_string(topic)

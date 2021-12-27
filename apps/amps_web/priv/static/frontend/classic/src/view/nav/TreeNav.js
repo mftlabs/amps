@@ -13,8 +13,8 @@ Ext.define("Amps.view.nav.TreeNav", {
           iconCls: "x-fa fa-envelope",
           leaf: true,
           rowCls: "message_events",
-          text: "Message Activity",
-          tooltip: "Message Activity",
+          text: "Message Events",
+          tooltip: "Message Events",
           cls: "messages",
         },
         {
@@ -52,6 +52,20 @@ Ext.define("Amps.view.nav.TreeNav", {
           text: "Configuration",
           expanded: true,
           children: [
+            {
+              iconCls: "x-fa fa-calendar",
+              leaf: true,
+              rowCls: "scheduler",
+              text: "Scheduler",
+              tooltip: "Scheduler",
+            },
+            {
+              iconCls: "x-fa fa-calendar",
+              leaf: true,
+              rowCls: "providers",
+              text: "Providers",
+              tooltip: "Providers",
+            },
             {
               iconCls: "x-fa fa-chevron-circle-right",
               leaf: true,

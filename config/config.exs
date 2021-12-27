@@ -17,8 +17,7 @@ config :amps_portal, AmpsPortal.Endpoint,
   url: [host: "localhost"],
   render_errors: [view: AmpsPortal.ErrorView, accepts: ~w(html json), layout: false],
   pubsub_server: AmpsPortal.PubSub,
-  live_view: [signing_salt: "IzQCGrqZ"],
-  server: false
+  live_view: [signing_salt: "IzQCGrqZ"]
 
 # Configure esbuild (the version is required)
 config :esbuild,
@@ -84,7 +83,6 @@ config :amps_web, AmpsWeb.Endpoint,
     port: System.get_env("AMPS_HOST_PORT", "4000"),
     protocol_options: [idle_timeout: 5_000_000]
   ],
-  server: false,
   # https: [
   #   port: 443,
   #   # cipher_suite: :strong,
@@ -167,13 +165,13 @@ config :ex_aws, :retries,
 
 config :ex_aws, :hackney_opts, recv_timeout: 240_000
 
-config :ex_aws, :s3,
-  access_key_id: "minioadmin",
-  secret_access_key: "minioadmin",
-  region: "us-east-1",
-  scheme: System.get_env("AMPS_S3_SCHEME") || "http://",
-  host: System.get_env("AMPS_S3_HOST") || "localhost",
-  port: System.get_env("AMPS_S3_PORT") || "9000"
+# config :ex_aws, :s3,
+#   access_key_id: "minioadmin",
+#   secret_access_key: "minioadmin",
+#   region: "us-east-1",
+#   scheme: System.get_env("AMPS_S3_SCHEME") || "http://",
+#   host: System.get_env("AMPS_S3_HOST") || "localhost",
+#   port: System.get_env("AMPS_S3_PORT") || "9000"
 
 config :amps,
   sched_interval: 10000,
@@ -200,7 +198,8 @@ config :amps, :services,
   history: Amps.HistoryConsumer,
   sftpd: Amps.SftpServer,
   httpd: Amps.MailboxApi,
-  kafka: Amps.KafkaConsumer
+  kafka: Amps.KafkaConsumer,
+  s3: Amps.S3Consumer
 
 config :amps, :actions,
   strrepl: StringReplaceAction,
@@ -211,7 +210,9 @@ config :amps, :actions,
   zip: ZipAction,
   http: HttpAction,
   kafkaput: KafkaPut,
-  runscript: RunScriptAction
+  runscript: RunScriptAction,
+  s3: S3Action,
+  sharepoint: SharePoint
 
 # config :amps, :httpapi,
 #  options: [

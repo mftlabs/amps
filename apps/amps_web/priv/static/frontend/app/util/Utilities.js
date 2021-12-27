@@ -694,7 +694,7 @@ const filterTypes = {
 Ext.define("Amps.util.Utilities", {
   extend: "Ext.app.ViewController",
   singleton: true,
-
+  renewPromise: null,
   // grids: {
   //   messages: {
   //     title: "Message Activity",
@@ -3985,40 +3985,65 @@ Ext.define("Amps.util.Utilities", {
     );
   },
 
+  renderListeners: function (render) {
+    return {
+      afterrender: function (scope) {
+        var val = scope.getValue();
+        render(scope, val);
+      },
+      change: function (scope, val) {
+        render(scope, val);
+      },
+    };
+  },
+
   renew_session: async function () {
-    return await Ext.Ajax.request({
-      url: "/api/session/renew",
-      headers: {
-        Authorization: localStorage.getItem("renewal_token"),
-      },
-      method: "POST",
-      timeout: 30000,
-      params: {},
-      success: function (response) {
-        //console.log(response);
-        var obj = Ext.decode(response.responseText);
-        console.log(obj);
-        if (obj.data) {
-          localStorage.setItem("access_token", obj.data.access_token);
-          localStorage.setItem("renewal_token", obj.data.renewal_token);
-        } else {
-          Ext.Msg.show({
-            title: "Unauthorized or Expired Session",
-            message:
-              "Your session has expired or is no longer authorized, you will be redirected to Login.",
-          });
-          amfutil.logout();
-        }
-      },
-      failure: function (response) {
-        Ext.Msg.show({
-          title: "Unauthorized or Expired Session",
-          message:
-            "Your session has expired or is no longer authorized, you will be redirected to Login.",
+    if (amfutil.renewPromise) {
+      await amfutil.renewPromise;
+    } else {
+      amfutil.renewPromise = new Promise(function (resolve, reject) {
+        Ext.Ajax.request({
+          url: "/api/session/renew",
+          headers: {
+            Authorization: localStorage.getItem("renewal_token"),
+          },
+          method: "POST",
+          timeout: 30000,
+          params: {},
+          success: function (response) {
+            //console.log(response);
+            var obj = Ext.decode(response.responseText);
+            console.log(obj);
+            if (obj.data) {
+              localStorage.setItem("access_token", obj.data.access_token);
+              localStorage.setItem("renewal_token", obj.data.renewal_token);
+            } else {
+              Ext.Msg.show({
+                title: "Unauthorized or Expired Session",
+                message:
+                  "Your session has expired or is no longer authorized, you will be redirected to Login.",
+              });
+              amfutil.logout();
+            }
+            amfutil.renewPromise = null;
+
+            resolve();
+          },
+          failure: function (response) {
+            Ext.Msg.show({
+              title: "Unauthorized or Expired Session",
+              message:
+                "Your session has expired or is no longer authorized, you will be redirected to Login.",
+            });
+            amfutil.logout();
+            amfutil.renewPromise = null;
+
+            reject();
+          },
         });
-        amfutil.logout();
-      },
-    });
+      });
+      await amfutil.renewPromise;
+    }
   },
 
   redirect: function (token, opts) {
@@ -4042,6 +4067,17 @@ Ext.define("Amps.util.Utilities", {
       cmp.setActiveError();
       cmp.setValidation();
     }
+  },
+
+  processTypes: function (collection, form, values) {
+    var config = ampsgrids.grids[collection]();
+    if (config.types[values.type].process) {
+      values = config.types[values.type].process(form, values);
+    }
+
+    values = amfutil.convertNumbers(form.getForm(), values);
+
+    return values;
   },
 
   portHandler: async function (cmp, value) {

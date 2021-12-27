@@ -52,7 +52,8 @@ config :amps_portal, AmpsPortal.Endpoint,
       ~r"lib/amps_portal/(live|views)/.*(ex)$",
       ~r"lib/amps_portal/templates/.*(eex)$"
     ]
-  ]
+  ],
+  server: true
 
 # For development, we disable any cache and enable
 # debugging and code reloading.
@@ -79,7 +80,8 @@ config :amps_web, AmpsWeb.Endpoint,
     esbuild:
       {Esbuild, :install_and_run,
        [:amps_web, ~w(--sourcemap=inline --watch --external:app.css --loader:.svg=file)]}
-  ]
+  ],
+  server: true
 
 # ## SSL Support
 #

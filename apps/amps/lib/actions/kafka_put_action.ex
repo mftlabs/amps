@@ -4,7 +4,9 @@ defmodule KafkaPut do
   def run(msg, parms, _state) do
     IO.inspect(parms)
 
-    config = AmpsUtil.get_kafka_auth(parms)
+    provider = DB.find_one("providers", %{"_id" => parms["provider"]})
+
+    config = AmpsUtil.get_kafka_auth(parms, provider)
 
     connection = String.to_atom("elsa_" <> parms["name"])
 
@@ -21,7 +23,13 @@ defmodule KafkaPut do
     with {:ok, pid} <-
            Elsa.Supervisor.start_link(
              config: config,
-             endpoints: [{parms["host"], parms["port"]}],
+             endpoints:
+               Enum.map(
+                 provider["brokers"],
+                 fn %{"host" => host, "port" => port} ->
+                   {host, port}
+                 end
+               ),
              connection: connection,
              producer: [
                topic: parms["topic"]

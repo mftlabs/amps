@@ -4,7 +4,7 @@ defmodule AmpsEvents do
 
     topic = parms["output"]
 
-    if topic != "" do
+    if not AmpsUtil.blank?(topic) do
       data = %{msg: msg, state: state}
 
       Gnat.pub(:gnat, topic, Poison.encode!(data))

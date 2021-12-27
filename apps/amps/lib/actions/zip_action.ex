@@ -46,6 +46,8 @@ defmodule ZipAction do
       if not AmpsUtil.blank?(parms["format"]) do
         fname = AmpsUtil.format(parms["format"], msg)
         Map.merge(msg, %{"fname" => fname})
+      else
+        msg
       end
 
     IO.inspect(msg)

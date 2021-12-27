@@ -44,13 +44,19 @@ defmodule AmpsWeb.Vault do
 
         case AmpsWeb.DB.find_one("services", %{"name" => "vault"}) do
           nil ->
-            raise("Missing vault config")
+            {:ok, {:missing, "Missing Vault Config"}}
 
           config ->
-            keys = Jason.decode!(AmpsWeb.Encryption.decrypt(config["keys"]))
-            IO.puts("Fetching Vault Credentials")
-            unseal_vault(vault, keys)
-            {:ok, keys}
+            try do
+              keys = Jason.decode!(AmpsWeb.Encryption.decrypt(config["keys"]))
+              IO.puts("Fetching Vault Credentials")
+
+              unseal_vault(vault, keys)
+              {:ok, keys}
+            rescue
+              _e ->
+                {:ok, {:missing, "Missing Vault Config"}}
+            end
         end
 
       {:ok, keys} ->

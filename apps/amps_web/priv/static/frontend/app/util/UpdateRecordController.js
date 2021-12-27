@@ -30,43 +30,76 @@ Ext.define("Amps.form.update", {
     return fields.map((field) => {
       var f = Object.assign({}, field);
 
-      if (["textfield", "numberfield", "combobox"].indexOf(f.xtype) > -1) {
+      if (["textfield", "numberfield"].indexOf(f.xtype) > -1) {
         f.xtype = "displayfield";
       } else if (f.xtype == "radiogroup") {
         console.log(f);
         f.xtype = "displayfield";
         console.log(f);
-        f.value = f.value[f.name];
+        if (f.value) {
+          f.value = f.value[f.name];
+        }
       } else {
         f.readOnly = true;
+        f.forceSelection = false;
+        console.log(f);
+        if (f.items && f.items.length) {
+          f.items = this.convertFields(f.items);
+          // f.items =
+        }
       }
+
       return f;
     });
   },
 
-  setValues: async function () {
+  setValue: async function (field) {
+    var f = await Object.assign({}, field);
     var config = this.config;
     var record = this.record;
-    this.fields = this.fields.map((field) => {
-      var f = Object.assign({}, field);
-      f.value = record[f.name];
-      if (f.xtype == "radiogroup") {
-        f.value = {};
-        f.value[f.name] = record[f.name];
+    var scope = this;
+    f.value = record[f.name];
+    if (f.xtype == "radiogroup") {
+      f.value = {};
+      f.value[f.name] = record[f.name];
+    } else {
+      console.log(f);
+      if (f.items && f.items.length) {
+        f.items = await Promise.all(
+          f.items.map(async (item) => {
+            return scope.setValue(item);
+          })
+        );
       }
-      return f;
-    });
+    }
+
+    return f;
+  },
+
+  setValues: async function (fields) {
+    var scope = this;
+
+    console.log(fields);
+    fields = await Promise.all(
+      fields.map(async function (field) {
+        return scope.setValue(field);
+      })
+    );
+    return fields;
   },
 
   update: async function () {
     var data = await amfutil.getCurrentItem();
     console.log(data);
+    if (this.config.transform) {
+      data = this.config.transform(data);
+    }
     this.record = data;
     this.edit();
   },
-  edit: function () {
+  edit: async function () {
     console.log("edit");
-    this.setValues();
+    this.fields = await this.setValues(this.fields);
 
     console.log();
     var config = this.config;
@@ -79,18 +112,7 @@ Ext.define("Amps.form.update", {
     console.log(bcont);
     var typefields;
     if (config.types) {
-      typefields = config.types[record.type].fields.map((field) => {
-        var f = Object.assign({}, field);
-        console.log(this.record, f.name);
-        console.log(this.record[f.name]);
-        f.value = this.record[f.name];
-        if (f.xtype == "radiogroup") {
-          f.value = {};
-          f.value[f.name] = record[f.name];
-        }
-        console.log(f);
-        return f;
-      });
+      typefields = await this.setValues(config.types[record.type].fields);
       console.log(this.fields);
       var idx = this.fields.findIndex((el) => el.name == "type");
       if (idx > -1) {
@@ -100,6 +122,7 @@ Ext.define("Amps.form.update", {
       console.log(idx);
     }
     if (this.editing) {
+      console.log(this.fields);
       this.insert(0, this.fields);
 
       bcont.insert(0, [
@@ -189,6 +212,7 @@ Ext.define("Amps.form.update", {
     }
 
     if (typefields) {
+      console.log(typefields);
       this.down("#typeparms").setConfig({ defaults: this.defaults });
       if (this.editing) {
         this.down("#typeparms").insert(0, typefields);
@@ -204,6 +228,9 @@ Ext.define("Amps.form.update", {
   loadForm: function (config, record, title) {
     this.config = config;
     this.record = record;
+    if (config.transform) {
+      this.record = config.transform(record);
+    }
     if (title) {
       this.title = "Update " + config.object;
     }

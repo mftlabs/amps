@@ -20,13 +20,20 @@ defmodule Amps.KafkaConsumer do
     Logger.info(msg)
     msgid = AmpsUtil.get_id()
 
+    fname =
+      if not AmpsUtil.blank?(opts["format"]) do
+        AmpsUtil.format("{YYYY}_{MM}_{DD}_{HH}_{mm}_{SS}", msg)
+      else
+        opts["name"] <> "_" <> AmpsUtil.format("{YYYY}_{MM}_{DD}_{HH}_{mm}_{SS}", msg)
+      end
+
     event = %{
       "service" => opts["name"],
       "msgid" => msgid,
       "topic" => msg.topic,
       "data" => msg.value,
       "ftime" => DateTime.to_iso8601(DateTime.utc_now()),
-      "fname" => opts["name"] <> "_" <> AmpsUtil.format("{YYYY}_{MM}_{DD}_{HH}_{mm}_{SS}", msg)
+      "fname" => fname
     }
 
     IO.inspect(event)

@@ -40,7 +40,8 @@ defmodule Amps.Application do
        ]},
       Amps.SvcSupervisor,
       Amps.SvcManager,
-      {Amps.Startup, []}
+      {Amps.Startup, []},
+      Amps.Scheduler
 
       # add this to db config...
 

@@ -54,7 +54,10 @@ defmodule Amps.MixProject do
       {:ldap_ex, "~> 0.2.2"},
       {:httpoison, "~> 1.8"},
       {:zstream, "~> 0.6.0"},
-      {:elsa, "~> 1.0.0-rc.3"}
+      {:elsa, "~> 1.0.0-rc.3"},
+      {:ex_aws, "~> 2.0"},
+      {:ex_aws_s3, "~> 2.0"},
+      {:quantum, "~> 3.0"}
     ]
   end
 

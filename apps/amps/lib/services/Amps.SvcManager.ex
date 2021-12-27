@@ -1,6 +1,7 @@
 defmodule Amps.SvcManager do
   use GenServer
   require Logger
+  alias AmpsWeb.DB
 
   def start_link(_args) do
     Logger.info("starting service manager")
@@ -129,56 +130,23 @@ defmodule Amps.SvcManager do
             # config: consumer_config()
           ]
 
+          provider = DB.find_one("providers", %{"_id" => args["provider"]})
+
           cacertfile = Path.join(AmpsUtil.tempdir(args["name"]), "cacert")
-          File.write(cacertfile, args["cacert"])
+          File.write(cacertfile, provider["cacert"])
           certfile = Path.join(AmpsUtil.tempdir(args["name"]), "cert")
-          File.write(certfile, args["cert"])
+          File.write(certfile, provider["cert"])
           keyfile = Path.join(AmpsUtil.tempdir(args["name"]), "key")
-          File.write(keyfile, args["key"])
+          File.write(keyfile, provider["key"])
 
-          config =
-            case args["auth"] do
-              "SASL_PLAINTEXT" ->
-                [
-                  # ssl: true,
-                  sasl:
-                    {String.to_existing_atom(args["mechanism"]), args["username"],
-                     args["password"]}
-                ]
-
-              "SASL_SSL" ->
-                [
-                  ssl: [
-                    cacertfile: cacertfile,
-                    certfile: certfile,
-                    keyfile: keyfile
-                    # verify: :verify_peer
-                  ],
-                  sasl:
-                    {String.to_existing_atom(args["mechanism"]), args["username"],
-                     args["password"]}
-                ]
-
-              "SSL" ->
-                [
-                  ssl: [
-                    cacertfile: cacertfile,
-                    certfile: certfile,
-                    keyfile: keyfile
-                    # verify: :verify_peer
-                  ]
-                ]
-
-              "NONE" ->
-                []
-            end
+          config = AmpsUtil.get_kafka_auth(args, provider)
 
           {
             Elsa.Supervisor,
             config: config,
             endpoints:
               Enum.map(
-                args["uris"],
+                provider["brokers"],
                 fn %{"host" => host, "port" => port} ->
                   {host, port}
                 end
