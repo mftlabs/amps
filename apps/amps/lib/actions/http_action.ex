@@ -39,7 +39,7 @@ defmodule HttpAction do
           end
         else
           if msg["data"] do
-            {msg["fname"], msg["data"]}
+            {"file", msg["data"], {"form-data", [name: "file", filename: msg["fname"]]}, []}
           else
             {:file, msg["fpath"]}
           end

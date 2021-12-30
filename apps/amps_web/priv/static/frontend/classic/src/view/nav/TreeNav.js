@@ -60,7 +60,7 @@ Ext.define("Amps.view.nav.TreeNav", {
               tooltip: "Scheduler",
             },
             {
-              iconCls: "x-fa fa-calendar",
+              iconCls: "x-fa fa-cogs",
               leaf: true,
               rowCls: "providers",
               text: "Providers",
