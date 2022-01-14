@@ -9,6 +9,8 @@ Ext.define("Amps.view.form.Key", {
   constructor(args) {
     this.callParent(args);
     var name = args["name"];
+    console.log(args);
+    this.setHeight(args.height);
     var fieldLabel = args["fieldLabel"];
     var items = [
       {
@@ -18,13 +20,14 @@ Ext.define("Amps.view.form.Key", {
         flex: 1,
         allowBlank: false,
         value: args["value"],
+        readOnly: args["readOnly"],
       },
       {
         xtype: "filefield",
         name: name + "_file",
         isFileUpload: false,
-
-        height: 100,
+        disabled: args["readOnly"],
+        // height: 100,
         listeners: {
           change: function (scope, value) {
             var id = scope.getInputId();

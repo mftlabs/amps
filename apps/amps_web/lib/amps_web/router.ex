@@ -35,19 +35,18 @@ defmodule AmpsWeb.Router do
   end
 
   scope "/api", AmpsWeb do
-    post("/test", DataController, :test)
-    get("/startup", DataController, :initialized)
-    post("/startup", DataController, :startup)
-    get("/message_events/history/:msgid", DataController, :history)
+    pipe_through(:api)
+    get("/startup", UtilController, :initialized)
+    post("/startup", UtilController, :startup)
+    get("/message_events/history/:msgid", UtilController, :history)
     get("/message_events/download/:msgid", DataController, :download)
-    post("/workflow", DataController, :workflow)
-    post("/duplicate", DataController, :duplicate)
-    get("/port/:port", DataController, :in_use)
+    post("/workflow", UtilController, :workflow)
+    post("/duplicate", UtilController, :duplicate)
+    get("/port/:port", UtilController, :in_use)
     post("/service/:name", ServiceController, :handle_service)
     get("/service/:name", ServiceController, :ping_service)
     post("/reprocess", DataController, :reprocess)
     post("/upload", DataController, :get_url)
-    pipe_through(:api)
 
     resources("/session", SessionController, singleton: true, only: [:create, :delete])
     post("/session/renew", SessionController, :renew)
@@ -66,7 +65,8 @@ defmodule AmpsWeb.Router do
 
     get("/agent/download/:id", AgentController, :download_agent)
     get("/rules/fields/:id", DataController, :get_match_fields)
-    get("/:collection", DataController, :get_rows)
+    # get("/:collection", DataController, :get_rows)
+    get("/store/:collection", UtilController, :create_store)
     resources("/:collection/", DataController, except: [:new, :edit])
     get("/:collection/:id/:field", DataController, :get_field)
     post("/:collection/:id/:field", DataController, :add_to_field)

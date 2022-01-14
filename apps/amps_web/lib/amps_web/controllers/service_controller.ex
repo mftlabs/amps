@@ -15,14 +15,11 @@ defmodule AmpsWeb.ServiceController do
   )
 
   def ping_service(conn, %{"name" => name}) do
-    IO.inspect(name)
-
     case SvcManager.service_active?(name) do
       nil ->
         json(conn, false)
 
       pid ->
-        IO.inspect(pid)
         json(conn, true)
     end
   end
@@ -40,6 +37,17 @@ defmodule AmpsWeb.ServiceController do
           restart_service(name)
       end
 
+    user = Pow.Plug.current_user(conn)
+
+    AmpsEvents.send_history("amps.events.audit", "ui_audit", %{
+      "user" => user.firstname <> " " <> user.lastname,
+      "entity" => "services",
+      "action" => action,
+      "params" => %{
+        "name" => name
+      }
+    })
+
     json(conn, resp)
   end
 
@@ -48,13 +56,19 @@ defmodule AmpsWeb.ServiceController do
 
   def start_service(svcname) do
     # svc = String.to_atom(svcname)
+    res = SvcManager.start_service(svcname)
 
-    case SvcManager.start_service(svcname) do
+    case res do
       {:ok, res} ->
-        res
+        %{
+          "success" => true
+        }
 
       {:error, reason} ->
-        reason
+        %{
+          "success" => false,
+          "reason" => reason
+        }
     end
   end
 

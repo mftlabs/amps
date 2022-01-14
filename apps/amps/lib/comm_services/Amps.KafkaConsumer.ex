@@ -7,8 +7,6 @@ defmodule Amps.KafkaConsumer do
   end
 
   def handle_messages(messages, state) do
-    IO.inspect(state)
-
     for msg <- messages do
       handle_message(msg, state)
     end
@@ -22,7 +20,7 @@ defmodule Amps.KafkaConsumer do
 
     fname =
       if not AmpsUtil.blank?(opts["format"]) do
-        AmpsUtil.format("{YYYY}_{MM}_{DD}_{HH}_{mm}_{SS}", msg)
+        AmpsUtil.format(opts["format"], msg)
       else
         opts["name"] <> "_" <> AmpsUtil.format("{YYYY}_{MM}_{DD}_{HH}_{mm}_{SS}", msg)
       end
@@ -36,12 +34,11 @@ defmodule Amps.KafkaConsumer do
       "fname" => fname
     }
 
-    IO.inspect(event)
+    Logger.info("Kafka Message Received from service #{opts["name"]}: #{msg.value}")
 
     ktopic = Regex.replace(~r/[.>* -]/, msg.topic, "_")
 
     topic = "amps.svcs.#{opts["name"]}.#{ktopic}"
-    IO.inspect(topic)
     AmpsEvents.send(event, %{"output" => topic}, %{})
   end
 end

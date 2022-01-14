@@ -3,8 +3,6 @@ defmodule MailboxAction do
 
   def run(msg, parms, _state) do
     recipient = parms["recipient"] || "unknown"
-    IO.inspect("MSG")
-    IO.inspect(msg)
 
     case AmpsAuth.mailbox_info(recipient) do
       nil ->
@@ -12,7 +10,13 @@ defmodule MailboxAction do
         {:error, "recipient does not have a registered mailbox #{recipient}"}
 
       _found ->
-        newmsg = Map.merge(msg, %{"recipient" => recipient, "status" => "mailboxed"})
+        newmsg =
+          Map.merge(msg, %{
+            "recipient" => recipient,
+            "status" => "mailboxed",
+            "mtime" => DateTime.utc_now() |> DateTime.to_iso8601()
+          })
+
         AmpsMailbox.add_message(recipient, newmsg)
         Logger.warning("put message in mailbox #{recipient}")
 

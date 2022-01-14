@@ -39,12 +39,6 @@ Ext.define("Amps.Application", {
       return;
     }
 
-    window.channel = window.userSocket.channel("notifications");
-
-    amfutil.channel = window.channel;
-    let channel = window.channel;
-    amfutil.channelHandlers(channel);
-
     var query = window.location.search.substring(1);
     var params = Ext.Object.fromQueryString(query);
     var tokens = route.split("/");
@@ -70,6 +64,7 @@ Ext.define("Amps.Application", {
         var routes = Object.keys(ampsgrids.grids).concat(
           Object.keys(ampsgrids.pages)
         );
+        amfutil.updateChannel();
         console.log(route);
         console.log(routes);
         if (routes.indexOf(tokens[0]) >= 0) {

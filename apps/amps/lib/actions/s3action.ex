@@ -19,7 +19,15 @@ defmodule S3Action do
 
   def test() do
     parms = DB.find_one("actions", %{"_id" => "61c26b29376f1c25dac499b4"})
-    run(%{"fpath" => "/private/tmp/0ebe5547-bf8d-4881-8ca4-01501515ecdb/Project #5.logicx.zip", "fname" => "proj #5.zip"}, parms, %{})
+
+    run(
+      %{
+        "fpath" => "/private/tmp/0ebe5547-bf8d-4881-8ca4-01501515ecdb/Project #5.logicx.zip",
+        "fname" => "proj #5.zip"
+      },
+      parms,
+      %{}
+    )
   end
 
   def run(msg, parms, _state) do
@@ -66,11 +74,11 @@ defmodule S3Action do
             )
             |> ExAws.request(req)
           else
-            resp = msg["fpath"]
-            |> S3.Upload.stream_file()
-            |> S3.upload(parms["bucket"], Path.join(parms["prefix"], msg["fname"]))
-            |> ExAws.request(req)
-            IO.inspect(resp)
+            resp =
+              msg["fpath"]
+              |> S3.Upload.stream_file()
+              |> S3.upload(parms["bucket"], Path.join(parms["prefix"], msg["fname"]))
+              |> ExAws.request(req)
           end
 
         "delete" ->
@@ -169,7 +177,6 @@ defmodule S3Action do
           case msg do
             :done ->
               path = Path.join(AmpsUtil.tempdir(msgid), Path.basename(path))
-              IO.inspect(File.stat(path))
 
               %{
                 "service" => parms["name"],
@@ -182,8 +189,6 @@ defmodule S3Action do
               }
 
             msg ->
-              IO.inspect(msg.body)
-
               %{
                 "service" => parms["name"],
                 "msgid" => msgid,
@@ -196,7 +201,7 @@ defmodule S3Action do
           end
 
         if parms["ackmode"] == "delete" do
-          IO.inspect(ExAws.S3.delete_object(bucket, path) |> ExAws.request(req))
+          ExAws.S3.delete_object(bucket, path) |> ExAws.request(req)
         end
 
         event =

@@ -55,7 +55,7 @@ defmodule Amps.MixProject do
       {:httpoison, "~> 1.8"},
       {:zstream, "~> 0.6.0"},
       {:elsa, "~> 1.0.0-rc.3"},
-      {:ex_aws, "~> 2.0"},
+      {:ex_aws, path: "./ex_aws", override: true},
       {:ex_aws_s3, "~> 2.0"},
       {:quantum, "~> 3.0"}
     ]

@@ -2,9 +2,9 @@ defmodule SftpAction do
   require Logger
 
   @doc """
-
+  
   sftp client action parms may contain the following...
-
+  
   connect_timeout - opt
   host - required
   password - opt or key_name
@@ -12,7 +12,7 @@ defmodule SftpAction do
   operation_timeout - opt
   port - required
   user - required
-
+  
   """
 
   def run(msg, parms, _state) do
@@ -80,11 +80,12 @@ defmodule SftpAction do
 
     {is, _os, _val} = AmpsUtil.get_stream(msg)
     fname = AmpsUtil.format(fspec, msg)
-    Logger.info("sending file to #{fname}")
+    fpath = Path.join(parms["folder"], fname)
+    Logger.info("sending file to #{fpath}")
 
     :ok =
       is
-      |> Stream.into(SFTPClient.stream_file!(conn, fname))
+      |> Stream.into(SFTPClient.stream_file!(conn, fpath))
       |> Stream.run()
 
     deliver_sftp(tail, parms, conn)

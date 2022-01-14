@@ -8,6 +8,15 @@ defmodule RouterAction do
   def run(msg, parms, state) do
     Logger.info("input #{inspect(msg)}")
     Logger.info("state #{inspect(state)}")
+
+    msg =
+      if parms["parse_edi"] do
+        {:ok, meta} = AmpsUtil.parse_edi(msg)
+        Map.merge(msg, meta)
+      else
+        msg
+      end
+
     rule = evaluate(parms, msg)
     Logger.info("rule #{inspect(rule)}")
     msgid = AmpsUtil.get_id()
@@ -17,9 +26,6 @@ defmodule RouterAction do
   end
 
   def run(subject, body) do
-    IO.inspect(subject)
-    IO.inspect(body)
-
     try do
       data = Poison.decode!(body)
       msg = data[:msg]

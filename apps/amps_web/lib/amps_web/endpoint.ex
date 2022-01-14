@@ -31,7 +31,9 @@ defmodule AmpsWeb.Endpoint do
   )
 
   socket("/socket", AmpsWeb.UserSocket,
-    websocket: true,
+    websocket: [
+      connect_info: [pow_config: [otp_app: :amps_web]]
+    ],
     longpoll: false,
     log: false
   )

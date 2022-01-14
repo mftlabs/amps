@@ -42,10 +42,13 @@ Ext.define("Amps.controller.AuthController", {
         Mask.hide();
         var obj = Ext.decode(response.responseText);
         if (obj.data) {
+          var token = obj.data.access_token;
           localStorage.setItem("loggedIn", true);
-          localStorage.setItem("access_token", obj.data.access_token);
+          localStorage.setItem("access_token", token);
           localStorage.setItem("renewal_token", obj.data.renewal_token);
           localStorage.setItem("user", JSON.stringify(obj.data.user));
+          amfutil.updateChannel();
+
           // localStorage.setItem(
           //   "userdetails",
           //   obj.firstname + " " + obj.lastname
@@ -127,7 +130,6 @@ Ext.define("Amps.controller.AuthController", {
       jsonData: {
         username: Ext.String.trim(username),
         password: passwd,
-        confirmpswd: confpasswd,
         firstname: Ext.String.trim(firstname),
         lastname: Ext.String.trim(lastname),
         email: email,

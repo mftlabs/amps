@@ -41,76 +41,76 @@ services:
     cap_add:
       - IPC_LOCK
     entrypoint: vault server -config=/vault/config/vault.json
-  # zookeeper:
-  #   image: 'bitnami/zookeeper:latest'
-  #   ports:
-  #     - '2181:2181'
-  #   environment:
-  #     - ALLOW_ANONYMOUS_LOGIN=yes
-  # kafka:
-  #   image: 'bitnami/kafka:latest'
-  #   ports:
-  #     - '9092:9092'
-  #   volumes: 
-  #     - ./kafka/secrets:/bitnami/kafka/config/certs
-  #   environment:
-  #     - KAFKA_BROKER_ID=1
-  #     - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
-  #     - ALLOW_PLAINTEXT_LISTENER=yes
-  #     - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=INTERNAL:PLAINTEXT,CLIENT:PLAINTEXT
-  #     - KAFKA_CFG_LISTENERS=INTERNAL://:9093,CLIENT://:9092
-  #     - KAFKA_CFG_ADVERTISED_LISTENERS=INTERNAL://kafka:9093,CLIENT://127.0.0.1:9092
-  #     - KAFKA_INTER_BROKER_LISTENER_NAME=INTERNAL
-  #     # - KAFKA_CLIENT_USER=user
-  #     # - KAFKA_CLIENT_PASSWORD=password
-  #     # - KAFKA_CERTIFICATE_PASSWORD=test12
-  #     # - KAFKA_CFG_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM=""
-  #     # - KAFKA_TLS_CLIENT_AUTH=required
-  #     # - KAFKA_OPTS=-Djavax.net.debug=all
-  #   depends_on:
-  #     - zookeeper
+  zookeeper:
+    image: 'bitnami/zookeeper:latest'
+    ports:
+      - '2181:2181'
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+  kafka:
+    image: 'bitnami/kafka:latest'
+    ports:
+      - '9092:9092'
+    volumes: 
+      - ./kafka/secrets:/bitnami/kafka/config/certs
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=INTERNAL:PLAINTEXT,CLIENT:PLAINTEXT
+      - KAFKA_CFG_LISTENERS=INTERNAL://:9093,CLIENT://:9092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=INTERNAL://kafka:9093,CLIENT://127.0.0.1:9092
+      - KAFKA_INTER_BROKER_LISTENER_NAME=INTERNAL
+      # - KAFKA_CLIENT_USER=user
+      # - KAFKA_CLIENT_PASSWORD=password
+      # - KAFKA_CERTIFICATE_PASSWORD=test12
+      # - KAFKA_CFG_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM=""
+      # - KAFKA_TLS_CLIENT_AUTH=required
+      # - KAFKA_OPTS=-Djavax.net.debug=all
+    depends_on:
+      - zookeeper
 
-  # minio1:
-  #   <<: *minio-common
-  #   hostname: minio1
-  #   volumes:
-  #     - ./volumes/data1-1:/data1
-  #     - ./volumes/data1-2:/data2
+  minio1:
+    <<: *minio-common
+    hostname: minio1
+    volumes:
+      - ./volumes/data1-1:/data1
+      - ./volumes/data1-2:/data2
 
-  # minio2:
-  #   <<: *minio-common
-  #   hostname: minio2
-  #   volumes:
-  #     - ./volumes/data2-1:/data1
-  #     - ./volumes/data2-2:/data2
+  minio2:
+    <<: *minio-common
+    hostname: minio2
+    volumes:
+      - ./volumes/data2-1:/data1
+      - ./volumes/data2-2:/data2
 
-  # minio3:
-  #   <<: *minio-common
-  #   hostname: minio3
-  #   volumes:
-  #     - ./volumes/data3-1:/data1
-  #     - ./volumes/data3-2:/data2
+  minio3:
+    <<: *minio-common
+    hostname: minio3
+    volumes:
+      - ./volumes/data3-1:/data1
+      - ./volumes/data3-2:/data2
 
-  # minio4:
-  #   <<: *minio-common
-  #   hostname: minio4
-  #   volumes:
-  #     - ./volumes/data4-1:/data1
-  #     - ./volumes/data4-2:/data2
+  minio4:
+    <<: *minio-common
+    hostname: minio4
+    volumes:
+      - ./volumes/data4-1:/data1
+      - ./volumes/data4-2:/data2
   nats:
     image: nats
-    command: "--cluster nats://0.0.0.0:6222 --name=nats --cluster_name=amps  --routes=nats://nats1:6222,nats://nats2:6222 -js"
+    command: "--cluster nats://0.0.0.0:6222 -m 8222 --name=nats --cluster_name=amps  --routes=nats://nats1:6222,nats://nats2:6222 -js"
 
     ports:
       - "8222:8222"
       - "4222:4222"
   nats1:
     image: nats
-    command: "--cluster nats://0.0.0.0:6222 --name=nats1 --cluster_name=amps  --routes=nats://nats:6222,nats://nats2:6222 -js"
+    command: "--cluster nats://0.0.0.0:6222 -m 8222 --name=nats1 --cluster_name=amps  --routes=nats://nats:6222,nats://nats2:6222 -js"
     depends_on: ["nats"]
   nats2:
     image: nats
-    command: "--cluster nats://0.0.0.0:6222 --name=nats2 --cluster_name=amps --routes=nats://nats:6222,nats://nats1:6222 -js"
+    command: "--cluster nats://0.0.0.0:6222 -m 8222 --name=nats2 --cluster_name=amps --routes=nats://nats:6222,nats://nats1:6222 -js"
     depends_on: ["nats"]
 
   # es01:
@@ -171,16 +171,16 @@ services:
   # environment:
   #   ELASTICSEARCH_URL: http://es01:9200
   #   ELASTICSEARCH_HOSTS: '["http://es01:9200","http://es02:9200","http://es03:9200"]'
-  # nginx:
-  #   image: nginx:1.19.2-alpine
-  #   hostname: nginx
-  #   volumes:
-  #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
-  #   ports:
-  #     - "9000:9000"
-  #     - "9001:9001"
-  #   depends_on:
-  #     - minio1
-  #     - minio2
-  #     - minio3
-  #     - minio4
+  nginx:
+    image: nginx:1.19.2-alpine
+    hostname: nginx
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    depends_on:
+      - minio1
+      - minio2
+      - minio3
+      - minio4

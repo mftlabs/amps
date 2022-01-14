@@ -1,4 +1,6 @@
 defmodule AmpsUtil do
+  alias AmpsWeb.DB
+
   def gettime() do
     DateTime.to_iso8601(DateTime.utc_now())
   end
@@ -59,16 +61,21 @@ defmodule AmpsUtil do
 
   def parse_edi(msg) do
     try do
-      #      fname = AmpsUtil.get_path(msg)
-      #      {:ok, is} = :file.open(fname, [:binary])
-      #      {:ok, val} = :file.pread(is, 0, 200)
-      val = msg["header"]
+      val =
+        if msg["fpath"] do
+          {:ok, file} = File.read(msg["fpath"])
+          {:ok, is} = :file.open(msg["fpath"], [:binary])
+          {:ok, val} = :file.pread(is, 0, 200)
+          val
+        else
+          String.slice(msg["data"], 0..200)
+        end
 
       if String.length(val) < 120 do
         msg
       else
         # IO.puts("header: #{inspect(val)}")
-        case :string.slice(val, 0, 2) do
+        case String.slice(val, 0..2) do
           "UNA" ->
             parse_una(val)
 
@@ -91,15 +98,15 @@ defmodule AmpsUtil do
     if byte_size(leader) < 107 do
       %{}
     else
-      hdr = :string.slice(leader, 0, 105)
-      sep = :string.slice(leader, 3, 3)
+      hdr = String.slice(leader, 0..105)
+      sep = String.slice(leader, 3..3)
 
       [_isa, _, _, _, _, squal, sender, rqual, receiver, date, time, _, _ver, icn, _, _test, _] =
-        :string.split(hdr, sep)
+        String.split(hdr, sep)
 
       tval = date <> ":" <> time
-      sender = :string.trim(squal <> ":" <> sender)
-      receiver = :string.trim(rqual <> ":" <> receiver)
+      sender = String.trim(squal <> ":" <> sender)
+      receiver = String.trim(rqual <> ":" <> receiver)
 
       {:ok,
        %{
@@ -114,29 +121,67 @@ defmodule AmpsUtil do
   end
 
   defp parse_una(leader) do
-    una = :string.slice(leader, 3, 8)
-    sub = :string.slice(una, 0, 0)
-    elem = :string.slice(una, 1, 1)
-    term = :string.slice(una, 5, 5)
-    rest = :string.slice(leader, 9, 200)
+    una = String.slice(leader, 3..8)
+    sub = String.slice(una, 0..0)
+    elem = String.slice(una, 1..1)
+    term = String.slice(una, 5..5)
+    rest = String.slice(leader, 9..200)
+    IO.inspect({una, sub, elem, term, rest})
     parse_unb(rest, sub, elem, term)
   end
 
   defp parse_unb(leader, sub \\ ":", elem \\ "+", term \\ "'") do
-    [header | _rest] = leader |> :string.split(term)
-    [_unb, _type, sender, receiver, dtime, icn, _pasw, aprf] = :string.split(header, elem)
-    sender = sender |> :string.split(sub) |> List.first()
-    receiver = receiver |> :string.split(sub) |> List.first()
+    [header | _rest] = leader |> String.replace("\n", "") |> String.split(term)
+    IO.inspect(header)
 
-    {:ok,
-     %{
-       "edistd" => "UNB",
-       "edisender" => sender,
-       "edireceiver" => receiver,
-       "editime" => dtime,
-       "ediaprf" => aprf,
-       "ediicn" => icn
-     }}
+    sections = [
+      "edistd",
+      "_type",
+      "edisender",
+      "edireceiver",
+      "edidtime",
+      "ediicn",
+      "_pasw",
+      "ediaprf",
+      "_ppcode",
+      "_ackreq",
+      "_iai",
+      "_testind"
+    ]
+
+    pieces = String.split(header, elem) |> Enum.take(8)
+
+    {idx, meta} =
+      Enum.reduce(pieces, {0, %{}}, fn piece, {index, acc} ->
+        sec = Enum.at(sections, index)
+
+        if !(String.first(sec) == "_") do
+          {index + 1, Map.put(acc, sec, piece)}
+        else
+          {index + 1, acc}
+        end
+      end)
+
+    sender = meta["edisender"] |> String.split(sub) |> List.first()
+    receiver = meta["edireceiver"] |> String.split(sub) |> List.first()
+
+    meta = meta |> Map.put("edisender", sender) |> Map.put("edireceiver", receiver)
+
+    {:ok, meta}
+
+    # IO.inspect(sender)
+    # IO.inspect(receiver)
+    # sender =
+
+    # {:ok,
+    #  %{
+    #    "edistd" => "UNB",
+    #    "edisender" => sender,
+    #    "edireceiver" => receiver,
+    #    "editime" => dtime,
+    #    "ediaprf" => aprf,
+    #    "ediicn" => icn
+    #  }}
   end
 
   def get_path(msg) do
@@ -356,17 +401,21 @@ defmodule AmpsUtil do
         IO.inspect(error)
         IO.puts("Creating Consumer")
 
+        cons =
+          Map.merge(
+            %Jetstream.API.Consumer{
+              name: name,
+              stream_name: stream,
+              filter_subject: filter
+            },
+            opts
+          )
+
+        IO.inspect(cons)
+
         case Jetstream.API.Consumer.create(
                gnat,
-               Map.merge(
-                 %Jetstream.API.Consumer{
-                   name: name,
-                   stream_name: stream,
-                   filter_subject: filter,
-                   deliver_policy: :new
-                 },
-                 opts
-               )
+               cons
              ) do
           {:ok, res} ->
             IO.inspect(res)
@@ -389,13 +438,25 @@ defmodule AmpsUtil do
     end
   end
 
+  def get_key(id) do
+    with {:ok, key} <- VaultDatabase.read("keys", id) do
+      key["data"]
+    end
+  end
+
   def get_kafka_auth(args, provider) do
-    cacertfile = Path.join(AmpsUtil.tempdir(args["name"]), "cacert")
-    File.write(cacertfile, provider["cacert"])
-    certfile = Path.join(AmpsUtil.tempdir(args["name"]), "cert")
-    File.write(certfile, provider["cert"])
-    keyfile = Path.join(AmpsUtil.tempdir(args["name"]), "key")
-    File.write(keyfile, provider["key"])
+    {cacertfile, certfile, keyfile} =
+      if String.contains?(provider["auth"], "SSL") do
+        cacertfile = Path.join(AmpsUtil.tempdir(args["name"]), "cacert")
+        File.write(cacertfile, AmpsUtil.get_key(provider["cacert"]))
+        certfile = Path.join(AmpsUtil.tempdir(args["name"]), "cert")
+        File.write(certfile, AmpsUtil.get_key(provider["cert"]))
+        keyfile = Path.join(AmpsUtil.tempdir(args["name"]), "key")
+        File.write(keyfile, AmpsUtil.get_key(provider["key"]))
+        {cacertfile, certfile, keyfile}
+      else
+        {nil, nil, nil}
+      end
 
     config =
       case provider["auth"] do

@@ -10,9 +10,22 @@ defmodule AmpsWeb.SessionController do
     |> Pow.Plug.authenticate_user(user_params)
     |> case do
       {:ok, conn} ->
+        user = Pow.Plug.current_user(conn)
+
+        ip = conn.remote_ip |> :inet_parse.ntoa() |> to_string()
+
+        AmpsEvents.send_history("amps.events.audit", "ui_audit", %{
+          "user" => user.firstname <> " " <> user.lastname,
+          "entity" => "session",
+          "action" => "create",
+          "parms" => %{
+            "ip" => ip
+          }
+        })
+
         json(conn, %{
           data: %{
-            user: Pow.Plug.current_user(conn),
+            user: user,
             access_token: conn.private.api_access_token,
             renewal_token: conn.private.api_renewal_token
           }
@@ -37,7 +50,13 @@ defmodule AmpsWeb.SessionController do
         |> put_status(401)
         |> json(%{error: %{status: 401, message: "Invalid token"}})
 
-      {conn, _user} ->
+      {conn, user} ->
+        AmpsEvents.send_history("amps.events.audit", "ui_audit", %{
+          "user" => user.firstname <> " " <> user.lastname,
+          "entity" => "session",
+          "action" => "renew"
+        })
+
         json(conn, %{
           data: %{
             access_token: conn.private.api_access_token,
@@ -49,6 +68,16 @@ defmodule AmpsWeb.SessionController do
 
   @spec delete(Conn.t(), map()) :: Conn.t()
   def delete(conn, _params) do
+    user = Pow.Plug.current_user(conn)
+
+    if user do
+      AmpsEvents.send_history("amps.events.audit", "ui_audit", %{
+        "user" => user.firstname <> " " <> user.lastname,
+        "entity" => "session",
+        "action" => "delete"
+      })
+    end
+
     conn
     |> Pow.Plug.delete()
     |> json(%{data: %{}})

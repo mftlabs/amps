@@ -44,8 +44,6 @@ defmodule Amps.SftpServer do
 
   defp authenticate(handler) do
     fn username, password, peer_address, state ->
-      IO.puts("authenticate")
-
       accepted =
         case handler do
           {module, fun} ->
@@ -61,6 +59,8 @@ defmodule Amps.SftpServer do
 
   defp init_daemon(options) do
     Logger.info("Starting SFTP daemon on #{options["port"]}")
+    key = AmpsUtil.get_key(options["server_key"])
+    options = Map.put(options, "server_key", key)
 
     daemon_opts = [
       shell: &dummy_shell/2,
@@ -541,7 +541,8 @@ defmodule AmpsKeyCallback do
       [name] = val[:key_cb_private]
       # IO.puts("sftp svc: #{name}")
       cfg = AmpsDatabase.get_config(name)
-      val = cfg["server_key"]
+      key = AmpsUtil.get_key(cfg["server_key"])
+      val = key
       [data] = :public_key.pem_decode(val)
       dec = :public_key.pem_entry_decode(data)
       {:ok, dec}

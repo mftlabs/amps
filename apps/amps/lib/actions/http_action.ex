@@ -9,10 +9,6 @@ defmodule HttpAction do
   end
 
   def req(msg, parms, state) do
-    IO.inspect(msg)
-    IO.inspect(parms)
-    IO.inspect(state)
-
     # case parms["method"] do
     # end
 
@@ -70,7 +66,6 @@ defmodule HttpAction do
 
         "delete" ->
           HTTPoison.delete(
-            String.to_atom(parms["method"]),
             parms["url"] <> parms["querystring"],
             parms["headers"],
             follow_redirect: true

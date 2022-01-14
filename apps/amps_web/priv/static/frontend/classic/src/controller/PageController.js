@@ -137,7 +137,7 @@ Ext.define("Amps.controller.PageController", {
         var grid = this.getView().down("#main-grid");
         var options = ["delete"];
         var config = ampsgrids.grids[route]();
-        console.log();
+        console.log(config);
 
         var column = {
           xtype: "actioncolumn",
@@ -158,7 +158,7 @@ Ext.define("Amps.controller.PageController", {
         mask.show();
 
         grid.reconfigure(
-          amfutil.createCollectionStore(
+          amfutil.createPageStore(
             Ext.util.History.getToken(),
             config.filter ? config.filter : {}
           ),
@@ -168,32 +168,42 @@ Ext.define("Amps.controller.PageController", {
         var store = grid.getStore();
         store.on(
           "load",
-          async function (scope, records, successful, operation, eOpts) {
-            console.log("wait");
-            var data;
-            if (grids[route].process) {
-              data = await grids[route].process(records);
-              console.log(data);
-              scope.loadData(data);
-            }
+          function (scope, records, successful, operation, eOpts) {
+            // console.log("wait");
+            // var data;
+            // if (config.process) {
+            //   data = await config.process(records);
+            //   console.log(data);
+            //   scope.loadData(data);
+            // }
 
-            console.log(data);
-            console.log("waited");
+            // console.log(data);
+            // console.log("waited");
             mask.hide();
           }
         );
 
-        if (route == "message_events") {
-          store.sort("etime", "DESC");
+        if (config.sort) {
+          Object.entries(config.sort).forEach((sort) => {
+            store.sort(sort[0], sort[1]);
+          });
         }
+
+        // grid.clearListeners();
+        grid.body.clearListeners();
 
         grid.setListeners({
           dblclick: {
             element: "body", //bind to the underlying body property on the panel
             fn: function (grid, rowIndex, e, obj) {
               var record = grid.record.data;
-              var scope = this;
-              amfutil.redirectTo(route + "/" + record._id);
+              console.log(config);
+              console.log(config.dblclick);
+              if (config.dblclick) {
+                config.dblclick(record);
+              } else {
+                amfutil.redirectTo(route + "/" + record._id);
+              }
             },
           },
           cellcontextmenu: function (

@@ -5,6 +5,7 @@ defmodule AmpsWeb.APIAuthPlug do
   alias Plug.Conn
   alias Pow.{Config, Plug, Store.CredentialsCache}
   alias PowPersistentSession.Store.PersistentSessionCache
+  alias AmpsWeb.Endpoint
 
   @doc """
   Fetches the user from access token.
@@ -13,11 +14,20 @@ defmodule AmpsWeb.APIAuthPlug do
   @spec fetch(Conn.t(), Config.t()) :: {Conn.t(), map() | nil}
   def fetch(conn, config) do
     with {:ok, signed_token} <- fetch_access_token(conn),
-         {:ok, token} <- verify_token(conn, signed_token, config),
-         {user, _metadata} <- CredentialsCache.get(store_config(config), token) do
+         {user, _metadata} <- get_credentials(conn, signed_token, config) do
       {conn, user}
     else
       _any -> {conn, nil}
+    end
+  end
+
+  @spec get_credentials(Conn.t(), binary(), Config.t()) :: map() | nil
+  def get_credentials(conn, signed_token, config) do
+    with {:ok, token} <- verify_token(conn, signed_token, config),
+         {user, metadata} <- CredentialsCache.get(store_config(config), token) do
+      {user, metadata}
+    else
+      _any -> nil
     end
   end
 
@@ -27,12 +37,17 @@ defmodule AmpsWeb.APIAuthPlug do
   The tokens are added to the `conn.private` as `:api_access_token` and
   `:api_renewal_token`. The renewal token is stored in the access token
   metadata and vice versa.
+
+  Both tokens will also store a fingerprint in the metadata that's either
+  fetched from `conn.private[:pow_api_session_fingerprint]` or randomly
+  generated.
   """
   @impl true
   @spec create(Conn.t(), map(), Config.t()) :: {Conn.t(), map()}
   def create(conn, user, config) do
     store_config = store_config(config)
     access_token = Pow.UUID.generate()
+    fingerprint = conn.private[:pow_api_session_fingerprint] || Pow.UUID.generate()
     renewal_token = Pow.UUID.generate()
 
     conn =
@@ -40,11 +55,17 @@ defmodule AmpsWeb.APIAuthPlug do
       |> Conn.put_private(:api_access_token, sign_token(conn, access_token, config))
       |> Conn.put_private(:api_renewal_token, sign_token(conn, renewal_token, config))
 
-    # The store caches will use their default `:ttl` settting. To change the
-    # `:ttl`, `Keyword.put(store_config, :ttl, :timer.minutes(10))` can be
-    # passed in as the first argument instead of `store_config`.
-    CredentialsCache.put(store_config, access_token, {user, [renewal_token: renewal_token]})
-    PersistentSessionCache.put(store_config, renewal_token, {user, [access_token: access_token]})
+    CredentialsCache.put(
+      store_config,
+      access_token,
+      {user, fingerprint: fingerprint, renewal_token: renewal_token}
+    )
+
+    PersistentSessionCache.put(
+      store_config,
+      renewal_token,
+      {[id: user.id], fingerprint: fingerprint, access_token: access_token}
+    )
 
     {conn, user}
   end
@@ -64,6 +85,8 @@ defmodule AmpsWeb.APIAuthPlug do
          {_user, metadata} <- CredentialsCache.get(store_config, token) do
       PersistentSessionCache.delete(store_config, metadata[:renewal_token])
       CredentialsCache.delete(store_config, token)
+
+      Endpoint.broadcast("users_socket:" <> metadata[:fingerprint], "disconnect", %{})
     else
       _any -> :ok
     end
@@ -77,6 +100,10 @@ defmodule AmpsWeb.APIAuthPlug do
   The access token, if any, will be deleted by fetching it from the renewal
   token metadata. The renewal token will be deleted from the store after the
   it has been fetched.
+
+  `:pow_api_session_fingerprint` will be set in `conn.private` with the
+  `:fingerprint` fetched from the metadata, to ensure it will be persisted in
+  the tokens generated in `create/2`.
   """
   @spec renew(Conn.t(), Config.t()) :: {Conn.t(), map() | nil}
   def renew(conn, config) do
@@ -84,15 +111,22 @@ defmodule AmpsWeb.APIAuthPlug do
 
     with {:ok, signed_token} <- fetch_access_token(conn),
          {:ok, token} <- verify_token(conn, signed_token, config),
-         {user, metadata} <- PersistentSessionCache.get(store_config, token) do
+         {clauses, metadata} <- PersistentSessionCache.get(store_config, token) do
       CredentialsCache.delete(store_config, metadata[:access_token])
       PersistentSessionCache.delete(store_config, token)
 
-      create(conn, user, config)
+      conn
+      |> Conn.put_private(:pow_api_session_fingerprint, metadata[:fingerprint])
+      |> load_and_create_session({clauses, metadata}, config)
     else
-      _any ->
-        IO.puts("didnt renew")
-        {conn, nil}
+      _any -> {conn, nil}
+    end
+  end
+
+  defp load_and_create_session(conn, {clauses, _metadata}, config) do
+    case Pow.Operations.get_by(clauses, config) do
+      nil -> {conn, nil}
+      user -> create(conn, user, config)
     end
   end
 
@@ -115,6 +149,6 @@ defmodule AmpsWeb.APIAuthPlug do
   defp store_config(config) do
     backend = Config.get(config, :cache_store_backend, Pow.Store.Backend.EtsCache)
 
-    [backend: backend, pow_config: config]
+    [backend: backend]
   end
 end

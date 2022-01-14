@@ -1,5 +1,6 @@
 defmodule SharePoint do
   alias AmpsWeb.DB
+  require Logger
 
   def run(msg, parms, state) do
     provider = DB.find_one("providers", %{"_id" => parms["provider"]})
@@ -92,27 +93,26 @@ defmodule SharePoint do
   def scan_folder(parms, folder, token, url, nested, rooturl) do
     Enum.each(folder["value"], fn obj ->
       if obj["folder"] do
-        url = Path.join(url, obj["name"])
+        if parms["scan"] do
+          url = Path.join(url, obj["name"])
 
-        {:ok, res} =
-          HTTPoison.get(
-            Path.join(url <> ":", "children"),
-            [{"Authorization", "Bearer " <> token}],
-            params: [{"select", "name,folder,id,size,@microsoft.graph.downloadUrl"}]
-          )
+          {:ok, res} =
+            HTTPoison.get(
+              Path.join(url <> ":", "children"),
+              [{"Authorization", "Bearer " <> token}],
+              params: [{"select", "name,folder,id,size,@microsoft.graph.downloadUrl"}]
+            )
 
-        folder = Jason.decode!(res.body)
-        scan_folder(parms, folder, token, url, Path.join(nested, obj["name"]), rooturl)
+          folder = Jason.decode!(res.body)
+          scan_folder(parms, folder, token, url, Path.join(nested, obj["name"]), rooturl)
+        end
       else
-        IO.puts("Object Path")
         obj_path = Path.join(nested, obj["name"])
-        IO.inspect(obj_path)
 
         if AmpsUtil.match(obj_path, parms) do
           msgid = AmpsUtil.get_id()
           dir = AmpsUtil.tempdir(msgid)
           path = Path.join(dir, obj["name"])
-          IO.inspect(path)
 
           file =
             if obj["size"] > 100_000 do
@@ -132,11 +132,11 @@ defmodule SharePoint do
                   [{"Authorization", "Bearer " <> token}]
                 )
 
-                File.write(path, resp.body)
+              File.write(path, resp.body)
 
-                %{
-                  "fpath" => path
-                }
+              %{
+                "fpath" => path
+              }
             end
 
           event =
@@ -155,8 +155,6 @@ defmodule SharePoint do
                 Path.join([rooturl, "items", obj["id"]]),
                 [{"Authorization", "Bearer " <> token}]
               )
-
-            IO.inspect(res)
           end
 
           event =
@@ -229,13 +227,10 @@ defmodule SharePoint do
       %HTTPoison.AsyncChunk{chunk: chunk, id: ^id} ->
         IO.binwrite(file, chunk)
         new_state = %{state | received_bytes: state.received_bytes + byte_size(chunk)}
-        IO.write("\r#{Progress.bar(state.received_bytes, state.total_bytes)}")
 
         receive_data(file, new_state)
 
       %HTTPoison.AsyncEnd{id: ^id} ->
-        IO.write("\r#{Progress.bar(state.received_bytes, state.total_bytes)}")
-
         if state.total_bytes === state.received_bytes do
           {:ok, state.received_bytes}
         else
@@ -255,8 +250,6 @@ defmodule SharePoint do
 
     url = Path.join(["https://graph.microsoft.com/v1.0/sites/", siteid, "/drive/root:", path])
 
-    IO.inspect(url)
-
     {:ok, res} =
       HTTPoison.post(
         url,
@@ -268,10 +261,7 @@ defmodule SharePoint do
         [{"Authorization", "Bearer " <> token}, {"content-type", "application/json"}]
       )
 
-    IO.inspect(res)
-
     body = Jason.decode!(res.body)
-    IO.inspect(body)
 
     chunk_size =
       if size < 62_914_560 do
@@ -290,7 +280,6 @@ defmodule SharePoint do
         end
 
       # IO.puts(start)
-      IO.puts(DateTime.to_iso8601(DateTime.utc_now()))
 
       {status, res} =
         HTTPoison.put(
@@ -305,19 +294,12 @@ defmodule SharePoint do
           recv_timeout: 60000
         )
 
-      IO.inspect(status)
-      IO.inspect(res)
-      IO.puts(DateTime.to_iso8601(DateTime.utc_now()))
-
       body = Jason.decode!(res.body)
       # IO.inspect(body["nextExpectedRanges"])
-
-      IO.write("\r#{Progress.bar(finish, size)}")
 
       if not done do
         {finish + 1, remaining - (finish - start)}
       else
-        IO.inspect(res)
         res
       end
     end)
@@ -327,11 +309,8 @@ defmodule SharePoint do
     fname = msg["fname"]
     path = parms["path"]
     path = Path.join([path, fname <> ":/content"])
-    IO.inspect(path)
 
     url = Path.join(["https://graph.microsoft.com/v1.0/sites/", siteid, "/drive/root:", path])
-
-    IO.inspect(url)
 
     HTTPoison.put(
       url,

@@ -2,8 +2,6 @@ defmodule KafkaPut do
   require Logger
 
   def run(msg, parms, _state) do
-    IO.inspect(parms)
-
     provider = DB.find_one("providers", %{"_id" => parms["provider"]})
 
     config = AmpsUtil.get_kafka_auth(parms, provider)

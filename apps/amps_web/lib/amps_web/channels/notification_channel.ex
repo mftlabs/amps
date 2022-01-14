@@ -13,7 +13,6 @@ defmodule AmpsWeb.NotificationChannel do
   end
 
   def handle_in("update", %{"page" => page}, socket) do
-    IO.inspect(page)
     broadcast_from!(socket, "update", %{page: page})
     {:noreply, socket}
   end
@@ -27,8 +26,6 @@ defmodule AmpsWeb.NotificationChannel do
         pid ->
           true
       end
-
-    # IO.inspect(response)
 
     {:reply, {:ok, response}, socket}
   end

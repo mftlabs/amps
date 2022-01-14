@@ -27,8 +27,6 @@ defmodule AmpsWeb.Vault do
 
   defp vault_startup() do
     host = Application.fetch_env!(:amps_web, AmpsWeb.Endpoint)[:vault_addr]
-    IO.puts("starting vault")
-    IO.inspect(host)
 
     vault =
       Vault.new(

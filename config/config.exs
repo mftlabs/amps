@@ -187,7 +187,8 @@ config :amps, :streams,
   "amps.svcs": "SERVICES",
   "amps.actions": "ACTIONS",
   "amps.delivery": "DELIVERY",
-  "amps.mailbox": "MAILBOX"
+  "amps.mailbox": "MAILBOX",
+  "amps.data": "DATA"
 
 config :amps, :elsa,
   endpoints: [localhost: 29092],
@@ -212,7 +213,10 @@ config :amps, :actions,
   kafkaput: KafkaPut,
   runscript: RunScriptAction,
   s3: S3Action,
-  sharepoint: SharePoint
+  sharepoint: SharePoint,
+  pgpencrypt: PGPEncrypt,
+  pgpdecrypt: PGPDecrypt,
+  batch: BatchAction
 
 # config :amps, :httpapi,
 #  options: [

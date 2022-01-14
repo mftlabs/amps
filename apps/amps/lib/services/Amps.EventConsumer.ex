@@ -50,6 +50,9 @@ defmodule Amps.EventConsumer do
 
     {stream, consumer} = AmpsUtil.get_names(opts)
     Logger.info("got stream #{stream} #{consumer}")
+
+    AmpsUtil.create_consumer(stream, consumer, opts["topic"])
+
     opts = Map.put(opts, "id", name)
 
     GenServer.start_link(
@@ -96,7 +99,7 @@ defmodule Amps.PullConsumer do
         stream_name: stream_name,
         consumer_name: consumer_name
       }) do
-    Process.link(connection_pid)
+    # Process.link(connection_pid)
     listening_topic = "_CON.#{nuid()}"
     IO.puts("handle init #{inspect(connection_pid)}")
     group = String.replace(parms["name"], " ", "_")

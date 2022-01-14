@@ -287,11 +287,14 @@ Ext.define("Amps.panel.Startup", {
               target: scope.up("startup"),
             });
             mask.show();
+            var rootvalues = rootfrom.getValues();
+            delete rootvalues.confirm;
+
             var resp = await Ext.Ajax.request({
               method: "post",
               url: "/api/startup",
               jsonData: {
-                root: rootform.getValues(),
+                root: rootvalues,
                 system: defaultform.getValues(),
               },
               success: function () {

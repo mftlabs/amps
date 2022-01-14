@@ -53,7 +53,6 @@ defmodule AmpsWeb.MixProject do
       {:argon2_elixir, "~> 2.0"},
       {:libvault, "~> 0.2.3"},
       {:mongodb_driver, "~> 0.7"},
-      {:ex_aws, "~> 2.2.7"},
       {:ex_aws_s3, "~> 2.3.1"},
       {:glob, "~> 1.0"},
       {:httpoison, "~> 1.8"},

@@ -50,8 +50,6 @@ defmodule ZipAction do
         msg
       end
 
-    IO.inspect(msg)
-
     {:ok, msg}
 
     # {:ok, AmpsUtil.get_output_msg(msg, val, parms)}

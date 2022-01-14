@@ -41,7 +41,7 @@ Ext.define("Amps.container.Workflow.Step", {
             columns: 2,
           },
           defaults: {
-            padding: 5,
+            padding: 10,
           },
           items: [
             {
@@ -54,22 +54,41 @@ Ext.define("Amps.container.Workflow.Step", {
               // rowspan: 2,
             },
             {
-              xtype: "container",
-              autoEl: {
-                tag: "a",
-                href: `#actions/${currStep.action._id}`,
-                target: "_blank",
-              },
-              items: [
-                {
-                  xtype: "component",
-                  style: {
-                    fontSize: 13,
+              xtype: "button",
+              text: currStep.action.name,
+              handler: async function () {
+                var action = await amfutil.getById(
+                  "actions",
+                  currStep.action._id
+                );
+                var config = ampsgrids.grids["actions"]();
+                var fields = config.fields;
+                if (config.update && config.update.fields) {
+                  fields.concat(config.update.fields);
+                }
+
+                var myForm = Ext.create("Amps.form.update");
+                myForm.loadForm(config, action, false, "actions");
+
+                var form = this.up("form");
+
+                var win = new Ext.window.Window({
+                  width: 600,
+                  height: 600,
+                  title: "Edit Action",
+                  modal: true,
+                  layout: "fit",
+                  items: [myForm],
+                  listeners: {
+                    close: function () {
+                      form.down("#steps").loadWorkflow(form);
+                    },
                   },
-                  autoEl: "div",
-                  html: currStep.action.name,
-                },
-              ],
+                });
+
+                win.show();
+                console.log(config.types);
+              },
             },
             {
               xtype: "component",
@@ -81,23 +100,42 @@ Ext.define("Amps.container.Workflow.Step", {
               },
             },
             {
-              xtype: "container",
-              autoEl: {
-                tag: "a",
-                href: `#services/${currStep.sub._id}`,
-                target: "_blank",
-              },
+              xtype: "button",
 
-              items: [
-                {
-                  xtype: "component",
-                  autoEl: "div",
-                  style: {
-                    fontSize: 13,
+              text: currStep.sub.name,
+              handler: async function () {
+                var action = await amfutil.getById(
+                  "services",
+                  currStep.sub._id
+                );
+                var config = ampsgrids.grids["services"]();
+                var fields = config.fields;
+                if (config.update && config.update.fields) {
+                  fields.concat(config.update.fields);
+                }
+
+                var myForm = Ext.create("Amps.form.update");
+                myForm.loadForm(config, action, false, "services");
+
+                var form = this.up("form");
+
+                var win = new Ext.window.Window({
+                  width: 600,
+                  height: 600,
+                  title: "Edit Service",
+                  modal: true,
+                  layout: "fit",
+                  items: [myForm],
+                  listeners: {
+                    close: function () {
+                      form.down("#steps").loadWorkflow(form);
+                    },
                   },
-                  html: currStep.sub.name,
-                },
-              ],
+                });
+
+                win.show();
+                console.log(config.types);
+              },
             },
           ],
         },
@@ -105,430 +143,416 @@ Ext.define("Amps.container.Workflow.Step", {
       if (currStep.steps) {
         b.insert({
           xtype: "container",
+          width: 50,
+          height: 50,
           layout: "center",
-          margin: 5,
           items: [
             {
-              xtype: "button",
-              iconCls: "x-fa fa-plus",
-              text: "Add",
-              handler: function () {
-                console.log("Input Topic: " + currStep.sub.topic);
-                console.log("Output Topic: " + currStep.topic.sub.topic);
-                console.log(currStep);
-
-                var win = new Ext.window.Window({
-                  title: "Add Step",
-                  modal: true,
-                  width: 600,
-                  height: 500,
-                  // resizable: false,
-                  layout: "fit",
-                  items: [
-                    {
-                      xtype: "panel",
-                      layout: "card",
-                      bodyStyle: "padding:15px",
-                      scrollable: true,
-                      itemId: "wizard",
-                      defaultListenerScope: true,
-                      //   tbar: [
-                      //     {
-                      //       xtype: "container",
-                      //       items: [
-                      //         {
-                      //           html: `<ul class="stepNav threeWide"><li id="user_step1" class="selected"><a href="#">User Details</a></li><li id="user_step2" class=""><a href="#">Provider Details</a></li><li id="user_step3" class=""><a href="#">Review</a></li></ul>`,
-                      //         },
-                      //       ],
-                      //     },
-                      //   ],
-
-                      items: [
-                        {
-                          xtype: "form",
-                          scrollable: true,
-
-                          layout: {
-                            type: "vbox",
-                            align: "stretch",
-                          },
-
-                          itemId: "card-0",
-                          items: [
-                            {
-                              html: `           <h1>AMPS Wizard</h1>
-                                <hr style="height:1px;border:none;color:lightgray;background-color:lightgray;"><h4>Step 1 of 3: Define an action below.</h4>`,
-                            },
-                            {
-                              xtype: "fieldcontainer",
-                              layout: {
-                                type: "vbox",
-                                align: "stretch",
-                              },
-                              listeners: {
-                                beforerender: function (scope) {
-                                  var actions = ampsgrids.grids["actions"]();
-                                  scope.insert(
-                                    0,
-                                    actions.fields.map((field) => {
-                                      field = Object.assign({}, field);
-                                      if (field.name == "type") {
-                                        console.log(field);
-                                        var types;
-                                        field = Ext.apply(field, {
-                                          listeners: {
-                                            beforerender: function (scope) {
-                                              var actionTypes = Object.assign(
-                                                {},
-                                                actions.types
-                                              );
-                                              console.log(actionTypes);
-                                              types = store = Object.entries(
-                                                actionTypes
-                                              ).reduce(function (
-                                                filtered,
-                                                type
-                                              ) {
-                                                type = Object.assign(
-                                                  {},
-                                                  type[1]
-                                                );
-                                                var output = type.fields.find(
-                                                  (field) =>
-                                                    field.name == "output"
-                                                );
-                                                if (output) {
-                                                  filtered.push(type);
-                                                  return filtered;
-                                                } else {
-                                                  return filtered;
-                                                }
-                                              },
-                                              []);
-                                              console.log(types);
-                                              scope.setStore(types);
-                                            },
-                                            change: function (scope, value) {
-                                              var form = scope.up("form");
-                                              var actionparms =
-                                                form.down("#typeparms");
-
-                                              actionparms.removeAll();
-                                              console.log(types);
-                                              actionparms.insert(
-                                                0,
-                                                types.find(
-                                                  (type) => type.field == value
-                                                ).fields
-                                              );
-                                              var output = form
-                                                .getForm()
-                                                .findField("output");
-                                              console.log(
-                                                currStep.step.sub.topic
-                                              );
-                                              output.setValue(
-                                                currStep.step.sub.topic
-                                              );
-                                              output.setReadOnly(true);
-                                            },
-                                          },
-                                        });
-                                      }
-                                      return field;
-                                    })
-                                  );
-                                },
-                              },
-                            },
-                          ],
-                          bbar: [
-                            "->",
-                            {
-                              itemId: "card-next",
-                              text: "Next &raquo;",
-                              handler: "showNext",
-                              formBind: true,
-                            },
-                          ],
-                        },
-                        {
-                          xtype: "form",
-
-                          itemId: "card-1",
-                          scrollable: true,
-
-                          items: [
-                            {
-                              html: `           <h1>AMPS Wizard</h1>
-                                <hr style="height:1px;border:none;color:lightgray;background-color:lightgray;"><h4>Step 2 of 3: Define a corresponding topic.</h4>`,
-                            },
-                            {
-                              xtype: "fieldcontainer",
-
-                              listeners: {
-                                beforerender: function (scope) {
-                                  scope.insert(
-                                    0,
-                                    ampsgrids.grids["topics"]().fields
-                                  );
-                                },
-                              },
-                            },
-                          ],
-                          bbar: [
-                            "->",
-                            {
-                              itemId: "card-prev",
-                              text: "&laquo; Previous",
-                              handler: "showPrevious",
-                            },
-                            {
-                              itemId: "card-next",
-                              text: "Next &raquo;",
-                              handler: "showNext",
-                              formBind: true,
-                            },
-                          ],
-                        },
-                        {
-                          xtype: "form",
-
-                          itemId: "card-2",
-                          scrollable: true,
-
-                          items: [
-                            {
-                              html: `         <h1>AMPS Wizard</h1>
-                                <hr style="height:1px;border:none;color:lightgray;background-color:lightgray;"><h4>Step 3 of 3: Define a subscriber that subscribes to your topic and performs your action.</h4>`,
-                            },
-                            {
-                              xtype: "fieldcontainer",
-
-                              listeners: {
-                                beforerender: function (scope) {
-                                  var services = ampsgrids.grids["services"]();
-                                  var fields = services.fields.concat(
-                                    services.types["subscriber"].fields
-                                  );
-
-                                  // console.log(action);
-                                  // console.log(topic);
-                                  scope.insert(
-                                    0,
-                                    fields.map((field) => {
-                                      if (
-                                        field.name == "action" ||
-                                        field.name == "topic"
-                                      ) {
-                                        field.readOnly = true;
-                                        field.forceSelection = false;
-                                      }
-                                      return field;
-                                    })
-                                  );
-                                },
-                              },
-                            },
-                          ],
-                          bbar: [
-                            "->",
-                            {
-                              itemId: "card-prev",
-                              text: "&laquo; Previous",
-                              handler: "showPrevious",
-                              // disabled: true,
-                            },
-                            {
-                              itemId: "card-next",
-                              formBind: true,
-                              text: "Finish",
-                              handler: async function (scope) {
-                                console.log("Finish");
-                                var actionform = scope
-                                  .up("#wizard")
-                                  .down("#card-0");
-                                var topicform = scope
-                                  .up("#wizard")
-                                  .down("#card-1");
-
-                                var subscriberform = scope.up("form");
-
-                                var action = actionform.getForm().getValues();
-                                action = ampsgrids.grids[
-                                  "actions"
-                                ]().add.process(actionform, action);
-
-                                var topic = topicform.getForm().getValues();
-                                topic = amfutil.convertNumbers(
-                                  topicform.getForm(),
-                                  topic
-                                );
-
-                                var subscriber = subscriberform
-                                  .getForm()
-                                  .getValues();
-                                subscriber = amfutil.convertNumbers(
-                                  subscriberform.getForm(),
-                                  subscriber
-                                );
-
-                                subscriber.type = "subscriber";
-                                subscriber.active = true;
-
-                                var wizard = scope.up("#wizard");
-                                if (currStep.ruleid) {
-                                  console.log("Updating Router Rule");
-                                  var idx = currStep.action.rules.findIndex(
-                                    (rule) => rule.id == currStep.ruleid
-                                  );
-                                  currStep.action.rules[idx].topic =
-                                    topic.topic;
-                                  console.log(currStep.action.rules[idx]);
-                                } else {
-                                  currStep.action.output = topic.topic;
-                                }
-
-                                amfutil.updateInCollection(
-                                  "actions",
-                                  currStep.action,
-                                  currStep.action._id
-                                );
-
-                                var actionid = await amfutil.addToCollection(
-                                  "actions",
-                                  action
-                                );
-                                console.log(actionid);
-                                var topicid = await amfutil.addToCollection(
-                                  "topics",
-                                  topic
-                                );
-                                console.log(topicid);
-                                subscriber.handler = actionid;
-
-                                var subscriberid =
-                                  await amfutil.addToCollection(
-                                    "services",
-                                    subscriber
-                                  );
-                                wizard.showNext();
-                                var confirmation = scope
-                                  .up("#wizard")
-                                  .down("#card-3");
-                                confirmation.loadConfirmation(
-                                  {
-                                    id: actionid,
-                                    name: action.name,
-                                  },
-                                  {
-                                    id: topicid,
-                                    name: topic.topic,
-                                  },
-                                  {
-                                    id: subscriberid,
-                                    name: subscriber.name,
-                                  }
-                                );
-                                console.log(subscriberid);
-                              },
-                            },
-                          ],
-                          listeners: {
-                            beforeactivate(scope) {
-                              var action = scope.down("combobox[name=handler]");
-                              console.log(action);
-                              var topic = scope.down("combobox[name=topic]");
-                              console.log(topic);
-                              var actionform = scope
-                                .up("panel")
-                                .down("#card-0");
-                              console.log(actionform);
-                              var topicform = scope.up("panel").down("#card-1");
-                              console.log(topicform);
-                              action.setValue(
-                                actionform
-                                  .down("textfield[name=name]")
-                                  .getValue()
-                              );
-                              topic.setValue(
-                                topicform
-                                  .down("displayfield[name=topic]")
-                                  .getValue()
-                              );
-                            },
-                          },
-                        },
-                        {
-                          xtype: "form",
-
-                          itemId: "card-3",
-                          loadConfirmation: function (
-                            action,
-                            topic,
-                            subscriber
-                          ) {
-                            var html = `
-                              <h1>AMPS Wizard</h1>
-                              <hr style="height:1px;border:none;color:lightgray;background-color:lightgray;">
-                              <h2>Complete! You defined:</h4>
-                              <h3>Action: <a href="#actions/${action.id}">${action.name}</a><h5>
-                              <h3>Topic: <a href="#topics/${topic.id}">${topic.name}</a><h5>
-                              <h3>Subscriber: <a href="#services/${subscriber.id}">${subscriber.name}</a> that listens on ${topic.name} and performs ${action.name}<h5>
-                              `;
-                            this.down("#confirm").setHtml(html);
-                          },
-                          items: [
-                            {
-                              itemId: "confirm",
-                              html: "",
-                            },
-                          ],
-                          bbar: [
-                            "->",
-                            {
-                              // formBind: true,
-                              text: "Close",
-                              handler: async function (scope) {
-                                form
-                                  .down("#steps")
-                                  .loadWorkflow(
-                                    amfutil.getElementByID("workflow")
-                                  );
-                                win.close();
-                              },
-                            },
-                          ],
-                        },
-                      ],
-
-                      showNext: function () {
-                        console.log("Next");
-                        this.doCardNavigation(1);
-                      },
-
-                      showPrevious: function (btn) {
-                        this.doCardNavigation(-1);
-                      },
-
-                      doCardNavigation: function (incr) {
-                        var me = this;
-                        var l = me.getLayout();
-                        var i = l.activeItem.itemId.split("card-")[1];
-                        var next = parseInt(i, 10) + incr;
-                        l.setActiveItem(next);
-
-                        // me.down("#card-prev").setDisabled(next === 0);
-                        // me.down("#card-next").setDisabled(next === 2);
-                      },
-                    },
-                  ],
-                });
-                win.show();
-              },
+              xtype: "component",
+              cls: "x-fa fa-arrow-right",
             },
           ],
         });
+        // b.insert({
+        //   xtype: "container",
+        //   layout: "center",
+        //   margin: 5,
+        //   items: [
+        //     {
+        //       xtype: "button",
+        //       iconCls: "x-fa fa-plus",
+        //       text: "Add",
+        //       handler: function () {
+        //         console.log("Input Topic: " + currStep.sub.topic);
+        //         console.log("Output Topic: " + currStep.topic.sub.topic);
+        //         console.log(currStep);
+        //         var win = new Ext.window.Window({
+        //           title: "Add Step",
+        //           modal: true,
+        //           width: 600,
+        //           height: 500,
+        //           // resizable: false,
+        //           layout: "fit",
+        //           items: [
+        //             {
+        //               xtype: "panel",
+        //               layout: "card",
+        //               bodyStyle: "padding:15px",
+        //               scrollable: true,
+        //               itemId: "wizard",
+        //               defaultListenerScope: true,
+        //               //   tbar: [
+        //               //     {
+        //               //       xtype: "container",
+        //               //       items: [
+        //               //         {
+        //               //           html: `<ul class="stepNav threeWide"><li id="user_step1" class="selected"><a href="#">User Details</a></li><li id="user_step2" class=""><a href="#">Provider Details</a></li><li id="user_step3" class=""><a href="#">Review</a></li></ul>`,
+        //               //         },
+        //               //       ],
+        //               //     },
+        //               //   ],
+        //               items: [
+        //                 {
+        //                   xtype: "form",
+        //                   scrollable: true,
+        //                   layout: {
+        //                     type: "vbox",
+        //                     align: "stretch",
+        //                   },
+        //                   itemId: "card-0",
+        //                   items: [
+        //                     {
+        //                       html: `           <h1>AMPS Wizard</h1>
+        //                         <hr style="height:1px;border:none;color:lightgray;background-color:lightgray;"><h4>Step 1 of 3: Define an action below.</h4>`,
+        //                     },
+        //                     {
+        //                       xtype: "fieldcontainer",
+        //                       layout: {
+        //                         type: "vbox",
+        //                         align: "stretch",
+        //                       },
+        //                       listeners: {
+        //                         beforerender: function (scope) {
+        //                           var actions = ampsgrids.grids["actions"]();
+        //                           scope.insert(
+        //                             0,
+        //                             actions.fields.map((field) => {
+        //                               field = Object.assign({}, field);
+        //                               if (field.name == "type") {
+        //                                 console.log(field);
+        //                                 var types;
+        //                                 field = Ext.apply(field, {
+        //                                   listeners: {
+        //                                     beforerender: function (scope) {
+        //                                       var actionTypes = Object.assign(
+        //                                         {},
+        //                                         actions.types
+        //                                       );
+        //                                       console.log(actionTypes);
+        //                                       types = store = Object.entries(
+        //                                         actionTypes
+        //                                       ).reduce(function (
+        //                                         filtered,
+        //                                         type
+        //                                       ) {
+        //                                         type = Object.assign(
+        //                                           {},
+        //                                           type[1]
+        //                                         );
+        //                                         var output = type.fields.find(
+        //                                           (field) =>
+        //                                             field.name == "output"
+        //                                         );
+        //                                         if (output) {
+        //                                           filtered.push(type);
+        //                                           return filtered;
+        //                                         } else {
+        //                                           return filtered;
+        //                                         }
+        //                                       },
+        //                                       []);
+        //                                       console.log(types);
+        //                                       scope.setStore(types);
+        //                                     },
+        //                                     change: function (scope, value) {
+        //                                       var form = scope.up("form");
+        //                                       var actionparms =
+        //                                         form.down("#typeparms");
+        //                                       actionparms.removeAll();
+        //                                       console.log(types);
+        //                                       actionparms.insert(
+        //                                         0,
+        //                                         types.find(
+        //                                           (type) => type.field == value
+        //                                         ).fields
+        //                                       );
+        //                                       var output = form
+        //                                         .getForm()
+        //                                         .findField("output");
+        //                                       console.log(
+        //                                         currStep.step.sub.topic
+        //                                       );
+        //                                       output.setValue(
+        //                                         currStep.step.sub.topic
+        //                                       );
+        //                                       output.setReadOnly(true);
+        //                                     },
+        //                                   },
+        //                                 });
+        //                               }
+        //                               return field;
+        //                             })
+        //                           );
+        //                         },
+        //                       },
+        //                     },
+        //                   ],
+        //                   bbar: [
+        //                     "->",
+        //                     {
+        //                       itemId: "card-next",
+        //                       text: "Next &raquo;",
+        //                       handler: "showNext",
+        //                       formBind: true,
+        //                     },
+        //                   ],
+        //                 },
+        //                 {
+        //                   xtype: "form",
+        //                   itemId: "card-1",
+        //                   scrollable: true,
+        //                   items: [
+        //                     {
+        //                       html: `           <h1>AMPS Wizard</h1>
+        //                         <hr style="height:1px;border:none;color:lightgray;background-color:lightgray;"><h4>Step 2 of 3: Define a corresponding topic.</h4>`,
+        //                     },
+        //                     {
+        //                       xtype: "fieldcontainer",
+        //                       listeners: {
+        //                         beforerender: function (scope) {
+        //                           scope.insert(
+        //                             0,
+        //                             ampsgrids.grids["topics"]().fields
+        //                           );
+        //                         },
+        //                       },
+        //                     },
+        //                   ],
+        //                   bbar: [
+        //                     "->",
+        //                     {
+        //                       itemId: "card-prev",
+        //                       text: "&laquo; Previous",
+        //                       handler: "showPrevious",
+        //                     },
+        //                     {
+        //                       itemId: "card-next",
+        //                       text: "Next &raquo;",
+        //                       handler: "showNext",
+        //                       formBind: true,
+        //                     },
+        //                   ],
+        //                 },
+        //                 {
+        //                   xtype: "form",
+        //                   itemId: "card-2",
+        //                   scrollable: true,
+        //                   items: [
+        //                     {
+        //                       html: `         <h1>AMPS Wizard</h1>
+        //                         <hr style="height:1px;border:none;color:lightgray;background-color:lightgray;"><h4>Step 3 of 3: Define a subscriber that subscribes to your topic and performs your action.</h4>`,
+        //                     },
+        //                     {
+        //                       xtype: "fieldcontainer",
+        //                       listeners: {
+        //                         beforerender: function (scope) {
+        //                           var services = ampsgrids.grids["services"]();
+        //                           var fields = services.fields.concat(
+        //                             services.types["subscriber"].fields
+        //                           );
+        //                           // console.log(action);
+        //                           // console.log(topic);
+        //                           scope.insert(
+        //                             0,
+        //                             fields.map((field) => {
+        //                               if (
+        //                                 field.name == "action" ||
+        //                                 field.name == "topic"
+        //                               ) {
+        //                                 field.readOnly = true;
+        //                                 field.forceSelection = false;
+        //                               }
+        //                               return field;
+        //                             })
+        //                           );
+        //                         },
+        //                       },
+        //                     },
+        //                   ],
+        //                   bbar: [
+        //                     "->",
+        //                     {
+        //                       itemId: "card-prev",
+        //                       text: "&laquo; Previous",
+        //                       handler: "showPrevious",
+        //                       // disabled: true,
+        //                     },
+        //                     {
+        //                       itemId: "card-next",
+        //                       formBind: true,
+        //                       text: "Finish",
+        //                       handler: async function (scope) {
+        //                         console.log("Finish");
+        //                         var actionform = scope
+        //                           .up("#wizard")
+        //                           .down("#card-0");
+        //                         var topicform = scope
+        //                           .up("#wizard")
+        //                           .down("#card-1");
+        //                         var subscriberform = scope.up("form");
+        //                         var action = actionform.getForm().getValues();
+        //                         action = ampsgrids.grids[
+        //                           "actions"
+        //                         ]().add.process(actionform, action);
+        //                         var topic = topicform.getForm().getValues();
+        //                         topic = amfutil.convertNumbers(
+        //                           topicform.getForm(),
+        //                           topic
+        //                         );
+        //                         var subscriber = subscriberform
+        //                           .getForm()
+        //                           .getValues();
+        //                         subscriber = amfutil.convertNumbers(
+        //                           subscriberform.getForm(),
+        //                           subscriber
+        //                         );
+        //                         subscriber.type = "subscriber";
+        //                         subscriber.active = true;
+        //                         var wizard = scope.up("#wizard");
+        //                         if (currStep.ruleid) {
+        //                           console.log("Updating Router Rule");
+        //                           var idx = currStep.action.rules.findIndex(
+        //                             (rule) => rule.id == currStep.ruleid
+        //                           );
+        //                           currStep.action.rules[idx].topic =
+        //                             topic.topic;
+        //                           console.log(currStep.action.rules[idx]);
+        //                         } else {
+        //                           currStep.action.output = topic.topic;
+        //                         }
+        //                         amfutil.updateInCollection(
+        //                           "actions",
+        //                           currStep.action,
+        //                           currStep.action._id
+        //                         );
+        //                         var actionid = await amfutil.addToCollection(
+        //                           "actions",
+        //                           action
+        //                         );
+        //                         console.log(actionid);
+        //                         var topicid = await amfutil.addToCollection(
+        //                           "topics",
+        //                           topic
+        //                         );
+        //                         console.log(topicid);
+        //                         subscriber.handler = actionid;
+        //                         var subscriberid =
+        //                           await amfutil.addToCollection(
+        //                             "services",
+        //                             subscriber
+        //                           );
+        //                         wizard.showNext();
+        //                         var confirmation = scope
+        //                           .up("#wizard")
+        //                           .down("#card-3");
+        //                         confirmation.loadConfirmation(
+        //                           {
+        //                             id: actionid,
+        //                             name: action.name,
+        //                           },
+        //                           {
+        //                             id: topicid,
+        //                             name: topic.topic,
+        //                           },
+        //                           {
+        //                             id: subscriberid,
+        //                             name: subscriber.name,
+        //                           }
+        //                         );
+        //                         console.log(subscriberid);
+        //                       },
+        //                     },
+        //                   ],
+        //                   listeners: {
+        //                     beforeactivate(scope) {
+        //                       var action = scope.down("combobox[name=handler]");
+        //                       console.log(action);
+        //                       var topic = scope.down("combobox[name=topic]");
+        //                       console.log(topic);
+        //                       var actionform = scope
+        //                         .up("panel")
+        //                         .down("#card-0");
+        //                       console.log(actionform);
+        //                       var topicform = scope.up("panel").down("#card-1");
+        //                       console.log(topicform);
+        //                       action.setValue(
+        //                         actionform
+        //                           .down("textfield[name=name]")
+        //                           .getValue()
+        //                       );
+        //                       topic.setValue(
+        //                         topicform
+        //                           .down("displayfield[name=topic]")
+        //                           .getValue()
+        //                       );
+        //                     },
+        //                   },
+        //                 },
+        //                 {
+        //                   xtype: "form",
+        //                   itemId: "card-3",
+        //                   loadConfirmation: function (
+        //                     action,
+        //                     topic,
+        //                     subscriber
+        //                   ) {
+        //                     var html = `
+        //                       <h1>AMPS Wizard</h1>
+        //                       <hr style="height:1px;border:none;color:lightgray;background-color:lightgray;">
+        //                       <h2>Complete! You defined:</h4>
+        //                       <h3>Action: <a href="#actions/${action.id}">${action.name}</a><h5>
+        //                       <h3>Topic: <a href="#topics/${topic.id}">${topic.name}</a><h5>
+        //                       <h3>Subscriber: <a href="#services/${subscriber.id}">${subscriber.name}</a> that listens on ${topic.name} and performs ${action.name}<h5>
+        //                       `;
+        //                     this.down("#confirm").setHtml(html);
+        //                   },
+        //                   items: [
+        //                     {
+        //                       itemId: "confirm",
+        //                       html: "",
+        //                     },
+        //                   ],
+        //                   bbar: [
+        //                     "->",
+        //                     {
+        //                       // formBind: true,
+        //                       text: "Close",
+        //                       handler: async function (scope) {
+        //                         form
+        //                           .down("#steps")
+        //                           .loadWorkflow(
+        //                             amfutil.getElementByID("workflow")
+        //                           );
+        //                         win.close();
+        //                       },
+        //                     },
+        //                   ],
+        //                 },
+        //               ],
+        //               showNext: function () {
+        //                 console.log("Next");
+        //                 this.doCardNavigation(1);
+        //               },
+        //               showPrevious: function (btn) {
+        //                 this.doCardNavigation(-1);
+        //               },
+        //               doCardNavigation: function (incr) {
+        //                 var me = this;
+        //                 var l = me.getLayout();
+        //                 var i = l.activeItem.itemId.split("card-")[1];
+        //                 var next = parseInt(i, 10) + incr;
+        //                 l.setActiveItem(next);
+        //                 // me.down("#card-prev").setDisabled(next === 0);
+        //                 // me.down("#card-next").setDisabled(next === 2);
+        //               },
+        //             },
+        //           ],
+        //         });
+        //         win.show();
+        //       },
+        //     },
+        //   ],
+        // });
       }
     } else {
       c.insert({
@@ -1139,6 +1163,14 @@ Ext.define("Amps.panel.Wizard", {
 
             {
               xtype: "displayfield",
+              submitValue: true,
+              name: "type",
+              fieldLabel: "Topic Type",
+              value: args["topic"].split(".")[1],
+            },
+
+            {
+              xtype: "displayfield",
               name: "topic",
               fieldLabel: "Topic",
               value: args["topic"],
@@ -1646,6 +1678,64 @@ Ext.define("Amps.panel.Wizard", {
 Ext.define("Amps.util.Grids", {
   singleton: true,
   grids: {
+    ui_audit: () => ({
+      title: "Audit Log",
+      actionIcons: ["searchpanelbtn", "clearfilter", "refreshbtn"],
+      sort: {
+        etime: "DESC",
+      },
+
+      dblclick: function (record) {
+        items = Object.entries(record.params).map((p) => ({
+          xtype: "displayfield",
+          fieldLabel: p[0],
+          value: JSON.stringify(p[1]),
+        }));
+        var win = new Ext.window.Window({
+          title: "Params",
+          modal: true,
+          width: 450,
+          height: 600,
+          resizable: false,
+          layout: "fit",
+          padding: 30,
+          scrollable: true,
+          items: [
+            {
+              xtype: "form",
+              items: items,
+            },
+          ],
+        });
+
+        win.show();
+      },
+      columns: [
+        { text: "User", dataIndex: "user", flex: 1, type: "text" },
+        {
+          text: "Action",
+          dataIndex: "action",
+          flex: 1,
+          type: "text",
+        },
+        {
+          text: "Entity",
+          dataIndex: "entity",
+          flex: 1,
+          type: "text",
+        },
+        {
+          text: "Event Time",
+          dataIndex: "etime",
+          flex: 1,
+          type: "date",
+          renderer: function (val) {
+            var date = new Date(val);
+            return date.toString();
+          },
+        },
+      ],
+    }),
     providers: () => ({
       object: "Provider",
       window: { height: 600, width: 600 },
@@ -1870,6 +1960,7 @@ Ext.define("Amps.util.Grids", {
               allowBlank: false,
               columns: 2,
               vertical: true,
+              tooltip: "The Kafka authentication method",
               items: [
                 { boxLabel: "None", name: "auth", inputValue: "NONE" },
                 {
@@ -1890,78 +1981,99 @@ Ext.define("Amps.util.Grids", {
               ],
               listeners: amfutil.renderListeners(function (scope, val) {
                 if (typeof val === "object" && val !== null) {
-                  val = val.auth;
+                  val = val.auth || "";
                 }
 
-                if (!val) {
-                  val = "NONE";
-                }
+                var sasl = scope.up("form").down("#sasl");
+                var ssl = scope.up("form").down("#ssl");
 
-                var sasl = ["sasl-mech", "sasl-username", "sasl-password"];
-                var ssl = ["ssl-cacert", "ssl-cert", "ssl-key"];
+                sasl.setHidden(!val.includes("SASL"));
+                sasl.setDisabled(!val.includes("SASL"));
 
-                for (var i = 0; i < sasl.length; i++) {
-                  var n = sasl[i];
-                  var comp = amfutil.getElementByID(n);
-                  console.log(comp);
-                  console.log(val.includes("SASL"));
-                  comp.setHidden(!val.includes("SASL"));
-                  comp.setDisabled(!val.includes("SASL"));
-                }
-
-                for (var i = 0; i < ssl.length; i++) {
-                  var n = ssl[i];
-                  var comp = amfutil.getElementByID(n);
-                  console.log(comp);
-                  console.log(val.includes("SSL"));
-
-                  comp.setHidden(!val.includes("SSL"));
-                  comp.setDisabled(!val.includes("SSL"));
-                }
+                ssl.setHidden(!val.includes("SSL"));
+                ssl.setDisabled(!val.includes("SSL"));
               }),
             },
             {
-              itemId: "sasl-mech",
-              xtype: "combobox",
-              name: "mechanism",
-              fieldLabel: "SASL Mechanism",
-              store: [
-                { field: "plain", value: "plain" },
-                { field: "scram_sha_256", value: "SCRAM SHA 256" },
-                { field: "scram_sha_512", value: "SCRAM SHA 512" },
+              xtype: "fieldcontainer",
+              itemId: "sasl",
+              layout: {
+                type: "vbox",
+                align: "stretch",
+              },
+              items: [
+                {
+                  itemId: "sasl-mech",
+                  xtype: "combobox",
+                  name: "mechanism",
+                  fieldLabel: "SASL Mechanism",
+                  tooltip: "The SASL Mechanism for SASL Auth",
+                  allowBlank: false,
+                  store: [
+                    { field: "plain", value: "plain" },
+                    { field: "scram_sha_256", value: "SCRAM SHA 256" },
+                    { field: "scram_sha_512", value: "SCRAM SHA 512" },
+                  ],
+                  displayField: "field",
+                  valueField: "value",
+                },
+                {
+                  itemId: "sasl-username",
+                  allowBlank: false,
+
+                  xtype: "textfield",
+                  name: "username",
+                  fieldLabel: "Username",
+                  tooltip: "The Username for SASL Auth",
+                },
+                {
+                  itemId: "sasl-password",
+                  allowBlank: false,
+
+                  xtype: "textfield",
+                  name: "password",
+                  fieldLabel: "Password",
+                  tooltip: "The Password for SASL Auth",
+                },
               ],
-              displayField: "field",
-              valueField: "value",
             },
+
             {
-              itemId: "sasl-username",
-              xtype: "textfield",
-              name: "username",
-              fieldLabel: "Username",
-            },
-            {
-              itemId: "sasl-password",
-              xtype: "textfield",
-              name: "password",
-              fieldLabel: "Password",
-            },
-            {
-              itemId: "ssl-cacert",
-              xtype: "loadkey",
-              name: "cacert",
-              fieldLabel: "Certificate Authority Certificate",
-            },
-            {
-              itemId: "ssl-cert",
-              xtype: "loadkey",
-              name: "cert",
-              fieldLabel: "Client Certificate",
-            },
-            {
-              itemId: "ssl-key",
-              xtype: "loadkey",
-              name: "key",
-              fieldLabel: "Client Key",
+              xtype: "fieldcontainer",
+              itemId: "ssl",
+              layout: {
+                type: "vbox",
+                align: "stretch",
+              },
+              items: [
+                {
+                  itemId: "ssl-cacert",
+                  allowBlank: false,
+
+                  xtype: "loadkey",
+                  name: "cacert",
+                  fieldLabel: "Certificate Authority Certificate",
+                  tooltip: "The Certificate Authority Certificate for SSL Auth",
+                },
+                {
+                  itemId: "ssl-cert",
+                  allowBlank: false,
+
+                  xtype: "loadkey",
+                  name: "cert",
+                  fieldLabel: "Client Certificate",
+                  tooltip: "The Client Certificate for SSL Auth",
+                },
+                {
+                  itemId: "ssl-key",
+                  allowBlank: false,
+
+                  xtype: "loadkey",
+                  name: "key",
+                  fieldLabel: "Client Key",
+                  tooltip: "The Client Key for SSL Auth",
+                },
+              ],
             },
           ],
           process: function (form) {
@@ -1975,11 +2087,6 @@ Ext.define("Amps.util.Grids", {
           field: "sharepoint",
           label: "SharePoint",
           fields: [
-            {
-              xtype: "textfield",
-              name: "name",
-              fieldLabel: "Name",
-            },
             {
               xtype: "textfield",
               name: "tenant",
@@ -2421,6 +2528,9 @@ Ext.define("Amps.util.Grids", {
       title: "Message Events",
       // filter: { parent: { $exists: false } },
       actionIcons: ["searchpanelbtn", "clearfilter", "refreshbtn"],
+      sort: {
+        etime: "DESC",
+      },
       columns: [
         { text: "Message ID", dataIndex: "msgid", flex: 1, type: "text" },
         {
@@ -2450,7 +2560,16 @@ Ext.define("Amps.util.Grids", {
           flex: 1,
           type: "fileSize",
         },
-        { text: "Event Time", dataIndex: "etime", flex: 1, type: "date" },
+        {
+          text: "Event Time",
+          dataIndex: "etime",
+          flex: 1,
+          type: "date",
+          renderer: function (val) {
+            var date = new Date(val);
+            return date.toString();
+          },
+        },
         {
           text: "Status",
           dataIndex: "status",
@@ -2522,7 +2641,7 @@ Ext.define("Amps.util.Grids", {
           type: "text",
         },
       ],
-      options: ["approve", "delete", "link", "downloadufa"],
+      options: ["approve", "delete", "link"],
       fields: [
         amfutil.combo(
           "Customer",
@@ -3201,48 +3320,48 @@ Ext.define("Amps.util.Grids", {
     }),
     actions: () => ({
       title: "Actions",
-      window: { height: 600, width: 600 },
+      window: { height: 600, width: 700 },
       types: {
-        generic: {
-          field: "generic",
-          label: "Generic",
-          fields: [
-            {
-              // Fieldset in Column 1 - collapsible via toggle button
-              xtype: "parmfield",
-              title: "Parameters",
-              name: "parms",
-            },
-          ],
-          load: function (form, record) {
-            //   console.log(record.parms);
-            //   var parms = Object.entries(record.parms).map((entry) => {
-            //     return { field: entry[0], value: entry[1] };
-            //   });
-            //   parms.forEach(function (p) {
-            //     var dcon = form.down("#parms");
-            //     var length = dcon.items.length;
-            //     if (typeof p.value === "boolean") {
-            //       var d = Ext.create("Amps.form.Parm.Bool");
-            //       d.down("#field").setValue(p.field);
-            //       d.down("#value").setValue(p.value);
-            //       dcon.insert(length - 1, d);
-            //     } else {
-            //       var d = Ext.create("Amps.form.Parm.String");
-            //       d.down("#field").setValue(p.field);
-            //       d.down("#value").setValue(p.value);
-            //       dcon.insert(length - 1, d);
-            //     }
-            //   });
-          },
-          process: function (form, values) {
-            console.log(values);
-            values.parms = amfutil.formatArrayField(values.parms);
-            delete values.field;
-            delete values.value;
-            return values;
-          },
-        },
+        // generic: {
+        //   field: "generic",
+        //   label: "Generic",
+        //   fields: [
+        //     {
+        //       // Fieldset in Column 1 - collapsible via toggle button
+        //       xtype: "parmfield",
+        //       title: "Parameters",
+        //       name: "parms",
+        //     },
+        //   ],
+        //   load: function (form, record) {
+        //     //   console.log(record.parms);
+        //     //   var parms = Object.entries(record.parms).map((entry) => {
+        //     //     return { field: entry[0], value: entry[1] };
+        //     //   });
+        //     //   parms.forEach(function (p) {
+        //     //     var dcon = form.down("#parms");
+        //     //     var length = dcon.items.length;
+        //     //     if (typeof p.value === "boolean") {
+        //     //       var d = Ext.create("Amps.form.Parm.Bool");
+        //     //       d.down("#field").setValue(p.field);
+        //     //       d.down("#value").setValue(p.value);
+        //     //       dcon.insert(length - 1, d);
+        //     //     } else {
+        //     //       var d = Ext.create("Amps.form.Parm.String");
+        //     //       d.down("#field").setValue(p.field);
+        //     //       d.down("#value").setValue(p.value);
+        //     //       dcon.insert(length - 1, d);
+        //     //     }
+        //     //   });
+        //   },
+        //   process: function (form, values) {
+        //     console.log(values);
+        //     values.parms = amfutil.formatArrayField(values.parms);
+        //     delete values.field;
+        //     delete values.value;
+        //     return values;
+        //   },
+        // },
         runscript: {
           field: "runscript",
           label: "Run Script",
@@ -3251,19 +3370,16 @@ Ext.define("Amps.util.Grids", {
               xtype: "textfield",
               name: "module",
               fieldLabel: "Script Name",
+              allowBlank: false,
+              tooltip: "The name of the Python module to run",
             },
-            amfutil.combo(
-              "Output Topic",
-              "output",
-              amfutil.createCollectionStore("topics", {}, { autoLoad: true }),
-              "topic",
-              "topic"
-            ),
+            amfutil.outputTopic(),
             {
               // Fieldset in Column 1 - collapsible via toggle button
               xtype: "parmfield",
               title: "Extra Parameters",
               name: "parms",
+              tooltip: "Additional Parameters to pass to your python module",
             },
           ],
           process: function (form, values) {
@@ -3283,24 +3399,19 @@ Ext.define("Amps.util.Grids", {
               xtype: "textfield",
               name: "from",
               fieldLabel: "From",
+              allowBlank: false,
+              tooltip: "Text to search for and replace in document",
             },
             {
               xtype: "textfield",
+              flex: 1,
               name: "to",
               fieldLabel: "To",
+              allowBlank: false,
+              tooltip: "Text to insert in document",
             },
-            {
-              xtype: "combobox",
-              name: "output",
-              fieldLabel: "Output Topic",
-              displayField: "topic",
-              valueField: "topic",
-              store: amfutil.createCollectionStore(
-                "topics",
-                {},
-                { autoLoad: true }
-              ),
-            },
+
+            amfutil.outputTopic(),
           ],
         },
         mailbox: {
@@ -3320,12 +3431,9 @@ Ext.define("Amps.util.Grids", {
                 },
                 { autoLoad: true }
               ),
+              tooltip: "The mailbox to deliver the message to",
             },
-            {
-              xtype: "textfield",
-              name: "format",
-              fieldLabel: "Format",
-            },
+            amfutil.formatFileName(),
           ],
         },
         unzip: {
@@ -3337,47 +3445,32 @@ Ext.define("Amps.util.Grids", {
               fieldLabel: "Max Files",
               name: "maxfiles",
               allowBlank: false,
-
+              tooltip: "The max number of files to unzip from a zip file.",
               // Arrange radio buttons into two columns, distributed vertically
             },
-            amfutil.combo(
-              "Output Topic",
-              "output",
-              amfutil.createCollectionStore("topics"),
-              "topic",
-              "topic"
-            ),
+            amfutil.outputTopic(),
           ],
         },
         zip: {
           field: "zip",
           label: "Zip",
           fields: [
-            {
-              xtype: "textfield",
-              fieldLabel: "File Name Format",
-              name: "format",
-              allowBlank: false,
+            amfutil.formatFileName({
               value: ".zip",
               validator: function (val) {
                 return val.endsWith(".zip") || "Filename must end in .zip";
               },
-
-              // Arrange radio buttons into two columns, distributed vertically
-            },
-            amfutil.combo(
-              "Output Topic",
-              "output",
-              amfutil.createCollectionStore("topics"),
-              "topic",
-              "topic"
-            ),
+            }),
+            amfutil.outputTopic(),
           ],
         },
         router: {
           field: "router",
           label: "Router",
           fields: [
+            amfutil.infoBlock(
+              "The Router Action consists of a series of rules. Each rule consists of an output topic and any number of match patterns. A match pattern consists of a metadata field and either a regex or glob pattern to match. A message that matches on all the match patterns will subsequently be routed to the specified topic."
+            ),
             {
               xtype: "checkbox",
               uncheckedValue: false,
@@ -3385,6 +3478,8 @@ Ext.define("Amps.util.Grids", {
               fieldLabel: "Parse EDI",
               name: "parse_edi",
               allowBlank: false,
+              tooltip:
+                "Parse additional metadata from EDI documents passing through this router.",
             },
             {
               xtype: "formrules",
@@ -3447,95 +3542,214 @@ Ext.define("Amps.util.Grids", {
         //     },
         //   ],
         // },
-        // pgp_encrypt: {
-        //   field: "pgp_encrypt",
-        //   label: "PGP Encrypt",
-        //   fields: [
-        //     {
-        //       xtype: "combobox",
-        //       fieldLabel: "Partner Encryption Key",
-        //       name: "partner_key",
-        //       store: Ext.create("Amps.store.Key"),
-        //       // listeners: {
-        //       //   beforerender: async function (scope) {
-        //       //     var store = await amfutil.createCollectionStore("keys");
-        //       //     scope.setStore(store);
-        //       //   },
-        //       // },
-        //       valueField: "name",
-        //       displayField: "name",
-        //       allowBlank: false,
-        //     },
-        //     {
-        //       xtype: "checkbox",
-        //       fieldLabel: "Compress",
-        //       name: "compress",
-        //       uncheckedValue: false,
-        //       inputValue: true,
-        //       allowBlank: false,
-        //     },
-        //     {
-        //       xtype: "checkbox",
-        //       fieldLabel: "Armor",
-        //       name: "armor",
-        //       uncheckedValue: false,
-        //       inputValue: true,
-        //       allowBlank: false,
-        //     },
-        //     {
-        //       xtype: "combobox",
-        //       fieldLabel: "Vault Signing Key",
-        //       name: "signing_key",
-        //       store: amfutil.createCollectionStore(
-        //         "keys",
-        //         {},
-        //         { autoLoad: true }
-        //       ),
-        //       valueField: "name",
-        //       displayField: "name",
-        //     },
-        //   ],
-        // },
-        // pgp_decrypt: {
-        //   field: "pgp_decrypt",
-        //   label: "PGP Decrypt",
-        //   fields: [
-        //     {
-        //       xtype: "combobox",
-        //       fieldLabel: "Decrypt Key",
-        //       name: "descrypt_key",
-        //       store: amfutil.createCollectionStore(
-        //         "keys",
-        //         {},
-        //         { autoLoad: true }
-        //       ),
-        //       valueField: "name",
-        //       displayField: "name",
-        //       allowBlank: false,
-        //     },
-        //     {
-        //       xtype: "combobox",
-        //       fieldLabel: "Partner Signing Key",
-        //       name: "partner_signing_key",
-        //       store: amfutil.createCollectionStore(
-        //         "keys",
-        //         {},
-        //         { autoLoad: true }
-        //       ),
-        //       valueField: "name",
-        //       displayField: "name",
-        //       allowBlank: false,
-        //     },
-        //     {
-        //       xtype: "checkbox",
-        //       fieldLabel: "Verify",
-        //       name: "verify",
-        //       uncheckedValue: false,
-        //       inputValue: true,
-        //       allowBlank: false,
-        //     },
-        //   ],
-        // },
+        batch: {
+          field: "batch",
+          label: "Batch",
+          fields: [
+            amfutil.combo(
+              "Input Type",
+              "inputtype",
+              [
+                { f: "topic", l: "Data Topic" },
+                { f: "mailbox", l: "Mailbox" },
+              ],
+              "f",
+              "l",
+              {
+                listeners: amfutil.renderListeners(function render(scope, val) {
+                  var conts = ["topic", "mailbox"];
+                  conts.forEach((con) => {
+                    console.log(con == val);
+                    var c = amfutil.getElementByID(con);
+                    c.setDisabled(con != val);
+                    c.setHidden(con != val);
+                  });
+                }),
+                tooltip:
+                  "From what source to fetch the files to batch. Can be either a data topic or a mailbox.",
+              }
+            ),
+            {
+              xtype: "fieldset",
+              title: "Topic",
+
+              itemId: "topic",
+              layout: {
+                type: "vbox",
+                align: "stretch",
+              },
+              disabled: true,
+              hidden: true,
+              items: [
+                amfutil.combo(
+                  "Input Topic",
+                  "input",
+                  amfutil.createCollectionStore("topics", { type: "data" }),
+                  "topic",
+                  "topic",
+                  {
+                    tooltip: "The data topic from which to batch files.",
+                  }
+                ),
+                amfutil.combo(
+                  "Deliver Policy",
+                  "policy",
+                  [
+                    { field: "all", label: "All" },
+                    { field: "new", label: "New" },
+                    { field: "last", label: "Last" },
+                    { field: "by_start_time", label: "Start Time" },
+                  ],
+                  "field",
+                  "label",
+                  {
+                    listeners: amfutil.renderListeners(function (scope, val) {
+                      var conts = ["by_start_time"];
+
+                      conts.forEach((cont) => {
+                        console.log(cont);
+                        var c = scope.up("fieldset").down("#" + cont);
+                        console.log(c);
+                        c.setHidden(val != cont);
+                        c.setDisabled(val != cont);
+                      });
+                    }),
+                  },
+                  amfutil.infoBlock(
+                    'When batching via a topic, messages are consumed according to this policy. "All" specifies that all files be consumed starting from the earliest. "New" specifies that all messages after the creation or update of this action be consumed. "Last" specifies that all messages be consumed starting with the most recent. "Start Time" specifies that all messages be consumed starting from the specified start time.'
+                  )
+                ),
+                {
+                  xtype: "datetime",
+                  itemId: "by_start_time",
+                  name: "start_time",
+                  fieldLabel: "Start Time",
+                  allowBlank: false,
+                  tooltip: 'The start time for the "Start Time" deliver policy',
+                },
+              ],
+            },
+            {
+              xtype: "fieldset",
+              title: "Mailbox",
+              itemId: "mailbox",
+              layout: {
+                type: "vbox",
+                align: "stretch",
+              },
+              disabled: true,
+              hidden: true,
+              items: [
+                amfutil.combo(
+                  "Mailbox",
+                  "mailbox",
+                  amfutil.createCollectionStore("users"),
+                  "username",
+                  "username",
+                  {
+                    tooltip: "The mailbox from which to batch files.",
+                  }
+                ),
+                {
+                  xtype: "numberfield",
+                  name: "from_time",
+                  fieldLabel: "Send From",
+                  tooltip:
+                    "The period from which to batch messages specified in seconds prior to action execution. (i.e. to batch all mailbox messages from the previous, one should do atleast 86400 seconds (24 hours)",
+                },
+              ],
+            },
+
+            amfutil.outputTopic(),
+            amfutil.formatFileName(),
+            {
+              xtype: "textfield",
+              name: "delimiter",
+              fieldLabel: "Delimiter",
+              allowblank: false,
+              tooltip: "The delimiter to use when batching messages.",
+            },
+          ],
+        },
+        pgpencrypt: {
+          field: "pgpencrypt",
+          label: "PGP Encrypt",
+          fields: [
+            {
+              xtype: "loadkey",
+              name: "key",
+              fieldLabel: "Encryption Key",
+              tooltip: "The recipient public encryption key.",
+            },
+            {
+              xtype: "checkbox",
+              fieldLabel: "Compress",
+              name: "compress",
+              uncheckedValue: false,
+              inputValue: true,
+              allowBlank: false,
+              tooltip: "A flag indicating whether or not to compress the file.",
+            },
+            {
+              xtype: "checkbox",
+              fieldLabel: "Armor",
+              name: "armor",
+              uncheckedValue: false,
+              inputValue: true,
+              allowBlank: false,
+              tooltip:
+                "A flag indicating whether or not to ASCII Armor the file.",
+            },
+            {
+              xtype: "loadkey",
+              name: "signing_key",
+              fieldLabel: "Signing Key",
+              tooltip: "The signing key.",
+            },
+            {
+              xtype: "textfield",
+              name: "passphrase",
+              inputType: "password",
+
+              fieldLabel: "Signing Key Passphrase",
+              tooltip: "The passphrase for the signing key.",
+            },
+            amfutil.formatFileName(),
+
+            amfutil.outputTopic(),
+          ],
+        },
+        pgpdecrypt: {
+          field: "pgpdecrypt",
+          label: "PGP Decrypt",
+          fields: [
+            {
+              xtype: "loadkey",
+              fieldLabel: "Decrypt Key",
+              name: "key",
+              allowBlank: false,
+              tooltip: "The private decryption key.",
+            },
+            {
+              xtype: "checkbox",
+              fieldLabel: "Verify Signature",
+              name: "verify",
+              uncheckedValue: false,
+              inputValue: true,
+              allowBlank: false,
+              tooltip: "Whether or not to verify the file signature.",
+            },
+            {
+              xtype: "loadkey",
+              fieldLabel: "Partner Signing Key",
+              name: "signing_key",
+              allowBlank: false,
+              tooltip: "The key to use when verifying the signature.",
+            },
+            amfutil.formatFileName(),
+            amfutil.outputTopic(),
+          ],
+        },
         http: {
           field: "http",
           label: "HTTP API",
@@ -3544,6 +3758,8 @@ Ext.define("Amps.util.Grids", {
               xtype: "textfield",
               name: "url",
               fieldLabel: "URL",
+              allowBlank: false,
+              tooltip: "The URL for the request.",
             },
             {
               xtype: "combobox",
@@ -3565,11 +3781,18 @@ Ext.define("Amps.util.Grids", {
                   label: "DELETE",
                 },
               ],
+              listeners: amfutil.renderListeners(function (scope, val) {
+                var get = this.up("form").down("#get");
+                get.setHidden(val != "get");
+                get.setDisabled(val != "get");
+              }),
+              tooltip: "The HTTP Method for the request.",
             },
             {
               xtype: "textfield",
               name: "querystring",
               fieldLabel: "Query String",
+              tooltip: `The URL query string beginning with "?" that will be appending the url`,
             },
             {
               // Fieldset in Column 1 - collapsible via toggle button
@@ -3577,6 +3800,7 @@ Ext.define("Amps.util.Grids", {
               title: "Headers",
               itemId: "parms",
               collapsible: true,
+              tooltip: `The HTTP Headers to set for the request`,
               onAdd: function (component, position) {
                 // component.setTitle("Match Pattern" + position);
                 console.log(component);
@@ -3601,48 +3825,62 @@ Ext.define("Amps.util.Grids", {
               ],
             },
             {
+              xtype: "fieldset",
+              itemId: "get",
+              layout: {
+                type: "vbox",
+                align: "stretch",
+              },
+              items: [amfutil.outputTopic()],
+            },
+            {
               xtype: "checkbox",
               uncheckedValue: false,
               inputValue: true,
               name: "oauth",
               fieldLabel: "OAuth",
-              listeners: {
-                change: function (scope, val) {
-                  var form = scope.up("form");
-                  var items = ["oauthurl", "oauthuser", "oauthpassword"];
-                  items.forEach((item) => {
-                    var field = form.getForm().findField(item);
-                    field.setHidden(!val);
-                    field.setDisabled(!val);
-                  });
-                },
+              listeners: amfutil.renderListeners(function (scope, val) {
+                var field = scope.up("form").down("#oauth");
+                console.log(field);
+                field.setHidden(!val);
+                field.setDisabled(!val);
+              }),
+              tooltip: "Whether to fetch OAuth Credentials",
+            },
+            {
+              xtype: "fieldcontainer",
+              itemId: "oauth",
+              layout: {
+                type: "vbox",
+                align: "stretch",
               },
-            },
-            {
-              xtype: "textfield",
-              name: "oauthurl",
-              itemId: "oathurl",
-              fieldLabel: "OAuth URL",
-              hidden: true,
-              disabled: true,
-            },
-            {
-              xtype: "textfield",
-              name: "oauthuser",
-              itemId: "oauthuser",
+              items: [
+                {
+                  xtype: "textfield",
+                  name: "oauthurl",
+                  itemId: "oathurl",
+                  fieldLabel: "OAuth URL",
 
-              fieldLabel: "OAuth User",
-              hidden: true,
-              disabled: true,
-            },
-            {
-              xtype: "textfield",
-              name: "oauthpassword",
-              itemId: "oauthpassword",
+                  tooltip: "URL to request OAuth Credentials",
+                },
+                {
+                  xtype: "textfield",
+                  name: "oauthuser",
+                  itemId: "oauthuser",
 
-              fieldLabel: "OAuth Password",
-              hidden: true,
-              disabled: true,
+                  fieldLabel: "OAuth User",
+
+                  tooltip: "OAuth Username",
+                },
+                {
+                  xtype: "textfield",
+                  name: "oauthpassword",
+                  itemId: "oauthpassword",
+                  tooltip: "OAuth Password",
+
+                  fieldLabel: "OAuth Password",
+                },
+              ],
             },
           ],
           load: function (form, record) {
@@ -3664,31 +3902,35 @@ Ext.define("Amps.util.Grids", {
               xtype: "textfield",
               name: "host",
               fieldLabel: "Host",
+              allowBlank: false,
+              tooltip: "The SFTP Host",
             },
             {
               xtype: "numberfield",
               name: "port",
               fieldLabel: "Port",
+              tooltip: "The SFTP Port",
             },
-            // {
-            //   xtype: "textfield",
-            //   name: "folder",
-            //   fieldLabel: "Folder",
-            // },
             {
               xtype: "textfield",
-              name: "format",
-              fieldLabel: "Format",
+              name: "folder",
+              fieldLabel: "Folder",
+              tooltip: "The Folder path to put the file",
             },
+            amfutil.formatFileName(),
             {
               xtype: "textfield",
               name: "user",
-              fieldLabel: "User",
+              allowBlank: false,
+              fieldLabel: "SFTP Username",
+              tooltip: "SFTP Username",
             },
             {
               xtype: "textfield",
               name: "password",
-              fieldLabel: "Password",
+              allowBlank: false,
+              fieldLabel: "SFTP Password",
+              tooltip: "SFTP Password",
             },
             // {
             //   xtype: "combobox",
@@ -3807,148 +4049,34 @@ Ext.define("Amps.util.Grids", {
           label: "Kafka PUT",
           fields: [
             {
-              xtype: "textfield",
-              fieldLabel: "Host",
-              name: "host",
-            },
-            {
-              xtype: "numberfield",
-              fieldLabel: "Port",
-              name: "port",
+              xtype: "combobox",
+              fieldLabel: "Kafka Provider",
+              name: "provider",
+              allowBlank: false,
+              blankText: "Select One",
+              vertical: true,
+              valueField: "_id",
+              displayField: "name",
+              store: amfutil.createCollectionStore("providers", {
+                type: "kafka",
+              }),
+              tooltip:
+                "The configured provider with broker and authenticiation configuration.",
             },
             {
               xtype: "textfield",
               fieldLabel: "Topic",
               name: "topic",
-            },
-            {
-              xtype: "numberfield",
-              fieldLabel: "Partition",
-              name: "partition",
-            },
-            {
-              xtype: "radiogroup",
-              fieldLabel: "Authentication",
-              name: "auth",
               allowBlank: false,
-              columns: 2,
-              vertical: true,
-              items: [
-                { boxLabel: "None", name: "auth", inputValue: "NONE" },
-                {
-                  boxLabel: "SASL_PLAINTEXT",
-                  name: "auth",
-                  inputValue: "SASL_PLAINTEXT",
-                },
-                {
-                  boxLabel: "SASL_SSL",
-                  name: "auth",
-                  inputValue: "SASL_SSL",
-                },
-                {
-                  boxLabel: "SSL",
-                  name: "auth",
-                  inputValue: "SSL",
-                },
-              ],
-              listeners: {
-                beforerender: function (scope) {
-                  var val = scope.getValue();
+              tooltip:
+                "The Kafka topic to which the message should be delivered",
+            },
 
-                  if (typeof val === "object" && val !== null) {
-                    val = val.auth;
-                  }
-                  var sasl = ["sasl-mech", "sasl-username", "sasl-password"];
-                  var ssl = ["ssl-cacert", "ssl-cert", "ssl-key"];
-                  for (var i = 0; i < sasl.length; i++) {
-                    var n = sasl[i];
-                    var comp = amfutil.getElementByID(n);
-                    console.log(comp);
-                    console.log(val.includes("SASL"));
-                    comp.setHidden(!val.includes("SASL"));
-                    comp.setDisabled(!val.includes("SASL"));
-                  }
-
-                  for (var i = 0; i < ssl.length; i++) {
-                    var n = ssl[i];
-                    var comp = amfutil.getElementByID(n);
-                    console.log(comp);
-                    console.log(val.includes("SSL"));
-
-                    comp.setHidden(!val.includes("SSL"));
-                    comp.setDisabled(!val.includes("SSL"));
-                  }
-                },
-                change: function (scope, val) {
-                  if (typeof val === "object" && val !== null) {
-                    val = val.auth;
-                  }
-                  var sasl = ["sasl-mech", "sasl-username", "sasl-password"];
-                  var ssl = ["ssl-cacert", "ssl-cert", "ssl-key"];
-                  for (var i = 0; i < sasl.length; i++) {
-                    var n = sasl[i];
-                    var comp = amfutil.getElementByID(n);
-                    console.log(comp);
-                    console.log(val.includes("SASL"));
-                    comp.setHidden(!val.includes("SASL"));
-                    comp.setDisabled(!val.includes("SASL"));
-                  }
-
-                  for (var i = 0; i < ssl.length; i++) {
-                    var n = ssl[i];
-                    var comp = amfutil.getElementByID(n);
-                    console.log(comp);
-                    console.log(val.includes("SSL"));
-
-                    comp.setHidden(!val.includes("SSL"));
-                    comp.setDisabled(!val.includes("SSL"));
-                  }
-                },
-              },
-            },
-            {
-              itemId: "sasl-mech",
-              xtype: "combobox",
-              name: "mechanism",
-              fieldLabel: "SASL Mechanism",
-              store: [
-                { field: "plain", value: "plain" },
-                { field: "scram_sha_256", value: "SCRAM SHA 256" },
-                { field: "scram_sha_512", value: "SCRAM SHA 512" },
-              ],
-              displayField: "field",
-              valueField: "value",
-            },
-            {
-              itemId: "sasl-username",
-              xtype: "textfield",
-              name: "username",
-              fieldLabel: "Username",
-            },
-            {
-              itemId: "sasl-password",
-              xtype: "textfield",
-              name: "password",
-              fieldLabel: "Password",
-            },
-            {
-              itemId: "ssl-cacert",
-              xtype: "loadkey",
-              name: "cacert",
-              fieldLabel: "Certificate Authority Certificate",
-            },
-            {
-              itemId: "ssl-cert",
-              xtype: "loadkey",
-              name: "cert",
-              fieldLabel: "Client Certificate",
-            },
-            {
-              itemId: "ssl-key",
-              xtype: "loadkey",
-              name: "key",
-              fieldLabel: "Client Key",
-            },
+            // {
+            //   xtype: "numberfield",
+            //   fieldLabel: "Partition",
+            //   name: "partition",
+            // },
           ],
         },
         // kafka_get: {
@@ -4051,6 +4179,7 @@ Ext.define("Amps.util.Grids", {
               valueField: "_id",
               displayField: "name",
               store: amfutil.createCollectionStore("providers", { type: "s3" }),
+              tooltip: "The configured S3 provider to use.",
             },
 
             {
@@ -4082,6 +4211,7 @@ Ext.define("Amps.util.Grids", {
                   component.setDisabled(cont != val);
                 });
               }),
+              tooltip: "The S3 operation to perform.",
             },
             {
               xtype: "fieldset",
@@ -4099,31 +4229,35 @@ Ext.define("Amps.util.Grids", {
                   xtype: "textfield",
                   name: "bucket",
                   fieldLabel: "Bucket",
+                  allowBlank: false,
+                  tooltip: "The S3 Bucket from which to get.",
                 },
                 {
                   xtype: "textfield",
                   name: "prefix",
                   fieldLabel: "Prefix",
+                  allowBlank: false,
+                  tooltip: "The Bucket Prefix from which to get.",
                 },
-                {
-                  xtype: "textfield",
-                  name: "format",
-                  fieldLabel: "File Format",
-                },
-                {
-                  xtype: "checkbox",
-                  name: "regex",
-                  fieldLabel: "Regex",
-                },
+
                 {
                   xtype: "textfield",
                   itemId: "matchpattern",
                   name: "pattern",
                   fieldLabel: "File Match Pattern",
+                  allowBlank: false,
+                  tooltip:
+                    "A match pattern to match against when getting files.",
+                },
+                {
+                  xtype: "checkbox",
+                  name: "regex",
+                  fieldLabel: "Regex",
+                  tooltip: "Whether to evaluate pattern using regex",
                 },
                 {
                   xtype: "radiogroup",
-                  fieldLabel: "Acknowledgment Mode",
+                  fieldLabel: "Acknowledgment",
                   itemId: "ackmode",
                   allowBlank: false,
                   name: "ackmode",
@@ -4147,14 +4281,11 @@ Ext.define("Amps.util.Grids", {
                       inputValue: "delete",
                     },
                   ],
+                  tooltip:
+                    "How to acknowledge a successful get of a file. Can either delete or do nothing.",
                 },
-                amfutil.combo(
-                  "Output Topic",
-                  "output",
-                  amfutil.createCollectionStore("topics"),
-                  "topic",
-                  "topic"
-                ),
+                amfutil.formatFileName(),
+                amfutil.outputTopic(),
               ],
             },
             {
@@ -4174,11 +4305,16 @@ Ext.define("Amps.util.Grids", {
                   xtype: "textfield",
                   name: "bucket",
                   fieldLabel: "Bucket",
+                  allowBlank: false,
+                  tooltip: "The bucket to which to put the message.",
                 },
                 {
                   xtype: "textfield",
                   name: "prefix",
                   fieldLabel: "Prefix",
+                  allowBlank: false,
+                  tooltip:
+                    "The prefix on the bucket to which to put the message.",
                 },
               ],
             },
@@ -4197,16 +4333,25 @@ Ext.define("Amps.util.Grids", {
                   xtype: "textfield",
                   name: "bucket",
                   fieldLabel: "Bucket",
+                  allowBlank: false,
+                  tooltip: "The bucket to delete from.",
                 },
                 {
                   xtype: "textfield",
                   name: "prefix",
                   fieldLabel: "Prefix",
+                  allowBlank: false,
+
+                  tooltip: "The bucket prefix to delete from.",
                 },
                 {
                   xtype: "textfield",
-                  fieldLabel: "Match Pattern",
+                  fieldLabel: "Path Match Pattern",
                   name: "pattern",
+                  allowBlank: false,
+
+                  tooltip:
+                    "The file path pattern to match when deciding whether to delete.",
                 },
               ],
               hidden: true,
@@ -4230,6 +4375,7 @@ Ext.define("Amps.util.Grids", {
               store: amfutil.createCollectionStore("providers", {
                 type: "sharepoint",
               }),
+              tooltip: "The configured Sharepoint Provider to use.",
             },
 
             {
@@ -4257,16 +4403,23 @@ Ext.define("Amps.util.Grids", {
                   component.setDisabled(cont != val);
                 });
               }),
+              tooltip:
+                "Whether to perform a download or upload operation on sharepoint.",
             },
             {
               xtype: "textfield",
               name: "host",
               fieldLabel: "Host",
+              tooltip: "The hoot rost for the sharepoint site",
+              allowBlank: false,
             },
             {
               xtype: "textfield",
               name: "sitepath",
               fieldLabel: "Site Path",
+              allowBlank: false,
+              tooltip:
+                "Relative path to the desired site. For example, Test.768@sharepoint.com/sites/test this would be third.",
             },
             {
               xtype: "fieldset",
@@ -4283,19 +4436,29 @@ Ext.define("Amps.util.Grids", {
                 {
                   xtype: "textfield",
                   name: "path",
+                  tooltip: "Path to the folder to scan.",
+                  allowBlank: false,
                   fieldLabel: "Folder Path",
                 },
                 {
                   xtype: "checkbox",
                   name: "regex",
                   fieldLabel: "Regex",
+                  allowBlank: false,
+
+                  tooltip: "Whether to use regex when matching.",
                 },
                 {
                   xtype: "textfield",
                   itemId: "matchpattern",
+                  tooltip: "The file path pattern.",
+
+                  allowBlank: false,
+
                   name: "pattern",
                   fieldLabel: "File Match Pattern",
                 },
+                amfutil.check("Scan Subdirectories", "scan"),
                 {
                   xtype: "radiogroup",
                   fieldLabel: "Acknowledgment Mode",
@@ -4322,14 +4485,10 @@ Ext.define("Amps.util.Grids", {
                       inputValue: "delete",
                     },
                   ],
+                  tooltip:
+                    "How to acknowledge a successful get of a file. Can either delete or do nothing.",
                 },
-                amfutil.combo(
-                  "Output Topic",
-                  "output",
-                  amfutil.createCollectionStore("topics"),
-                  "topic",
-                  "topic"
-                ),
+                amfutil.outputTopic(),
               ],
             },
             {
@@ -4349,6 +4508,8 @@ Ext.define("Amps.util.Grids", {
                   xtype: "textfield",
                   name: "path",
                   fieldLabel: "Upload Path",
+                  allowBlank: false,
+                  tooltip: "The path to which to upload the message",
                 },
               ],
             },
@@ -4401,32 +4562,38 @@ Ext.define("Amps.util.Grids", {
           name: "type",
           listeners: {
             beforerender: function (scope) {
+              var types = ampsgrids.grids.actions().types;
               if (scope.xtype == "combobox") {
-                scope.setStore(
-                  Object.entries(ampsgrids.grids.actions().types).map(
-                    (entry) => entry[1]
-                  )
-                );
+                scope.setStore(Object.entries(types).map((entry) => entry[1]));
+              }
+              var val = scope.getValue();
+              if (val) {
+                scope.up("form").down("#typeparms").setTitle(types[val].label);
               }
             },
             change: function (scope, value) {
               var form = scope.up("form");
               var actionparms = form.down("#typeparms");
               actionparms.removeAll();
-              actionparms.insert(
-                0,
+              var fields = amfutil.scanFields(
                 ampsgrids.grids.actions().types[value].fields
               );
+              console.log(fields);
+              actionparms.insert(0, fields);
+              var act = scope.getSelection();
+              scope.up("form").down("#typeparms").setTitle(act.data.label);
             },
           },
         },
         {
-          xtype: "fieldcontainer",
+          xtype: "fieldset",
           itemId: "typeparms",
+          scrollable: true,
           layout: {
             type: "vbox",
             align: "stretch",
           },
+          padding: 15,
           // width: 600,
         },
       ],
@@ -4466,7 +4633,7 @@ Ext.define("Amps.util.Grids", {
       title: "Topics",
       object: "Topic",
       actionIcons: ["addnewbtn", "searchpanelbtn", "clearfilter", "refreshbtn"],
-      options: ["upload", "delete"],
+      options: ["delete"],
       columns: [
         {
           text: "Topic",
@@ -4491,7 +4658,6 @@ Ext.define("Amps.util.Grids", {
       fields: [
         {
           xtype: "radiogroup",
-          isFormField: false,
           xtype: "radiogroup",
           fieldLabel: "Topic Type",
           name: "type",
@@ -4499,10 +4665,10 @@ Ext.define("Amps.util.Grids", {
           blankText: "Select One",
           columns: 3,
           vertical: true,
+          tooltip: "The type/function of this topic.",
           items: [
             {
               boxLabel: "Action",
-              isFormField: false,
               margin: 5,
               flex: 1,
               name: "type",
@@ -4513,7 +4679,6 @@ Ext.define("Amps.util.Grids", {
               margin: 5,
 
               boxLabel: "Service",
-              isFormField: false,
               name: "type",
               inputValue: "svcs",
             },
@@ -4521,8 +4686,7 @@ Ext.define("Amps.util.Grids", {
               flex: 1,
               margin: 5,
 
-              boxLabel: "Other",
-              isFormField: false,
+              boxLabel: "Data",
               name: "type",
               inputValue: "data",
             },
@@ -5329,7 +5493,6 @@ Ext.define("Amps.util.Grids", {
           displayField: "label",
           valueField: "field",
           forceSelection: true,
-          flex: 1,
           name: "usage",
           store: ["RSA", "SSH", "Encryption", "Signing", "Cert"],
         },
@@ -5354,6 +5517,7 @@ Ext.define("Amps.util.Grids", {
           xtype: "keyfield",
           name: "data",
           fieldLabel: "Key",
+          height: 600,
         },
       ],
       columns: [
@@ -5399,6 +5563,8 @@ Ext.define("Amps.util.Grids", {
               xtype: "container",
               load: function (scope, name) {
                 var prev;
+                var clicked = false;
+
                 var initialized = false;
 
                 function broadcast(name) {
@@ -5410,34 +5576,55 @@ Ext.define("Amps.util.Grids", {
                         (name + "-start-stop").replace(/\s/g, "")
                       );
 
-                      if (prev != payload) {
+                      if (prev != payload || clicked) {
                         console.log(button);
 
                         button.setDisabled(false);
+                        button.setText(payload ? "Stop" : "Start");
 
                         button.setIconCls(
                           payload
                             ? "x-fa fa-stop-circle"
                             : "x-fa fa-play-circle"
                         );
-                        button.setText(payload ? "Stop" : "Start");
                         button.setHandler(function (btn) {
                           console.log("CLICK");
-                          btn.setDisabled(true);
+                          button.setDisabled(true);
+
                           btn.setText(payload ? "Stopping" : "Starting");
+
+                          var action = payload ? "stop" : "start";
+
                           amfutil.ajaxRequest({
                             url: "/api/service/" + name,
                             jsonData: {
-                              action: payload ? "stop" : "start",
+                              action: action,
                             },
                             method: "POST",
                             timeout: 60000,
                             success: function (res) {
-                              button.setText(payload ? "Stopped" : "Started");
-                              console.log(Ext.decode(res.responseText));
+                              // var result = Ext.decode(res.responseText);
+                              // button.setDisabled(false);
+                              // console.log(result);
+                              // if (action == "start") {
+                              //   if (result.success) {
+                              //     button.setText("Stop");
+                              //   } else {
+                              //     button.setText("Start");
+                              //   }
+                              // } else {
+                              //   if (result.success) {
+                              //     button.setText("Start");
+                              //   } else {
+                              //     button.setText("Stop");
+                              //   }
+                              // }
+
+                              clicked = true;
                             },
                             failure: function (res) {
-                              button.setText(payload ? "Stopped" : "Started");
+                              console.log("failed");
+                              clicked = true;
                             },
                           });
                         });
@@ -5704,8 +5891,10 @@ Ext.define("Amps.util.Grids", {
             var record = data[0];
             this._id = record._id;
 
+            var dontrender = ["_id", "name", "modified", "modifiedby"];
+
             Object.entries(record).forEach((d) => {
-              if (d[0] == "_id" || d[0] == "name") {
+              if (dontrender.indexOf(d[0]) >= 0) {
               } else {
                 fc.insert({
                   xtype: "textfield",
@@ -5715,6 +5904,22 @@ Ext.define("Amps.util.Grids", {
                 });
               }
             });
+
+            fc.insert(-1, [
+              {
+                xtype: "displayfield",
+                name: "modifiedby",
+                fieldLabel: "Last Modified By",
+                value: record.modifiedby,
+              },
+              {
+                xtype: "displayfield",
+                name: "modified",
+                fieldLabel: "Modified On",
+                value: record.modified,
+              },
+            ]);
+
             this.setMasked(false);
           },
           items: [
@@ -5724,28 +5929,6 @@ Ext.define("Amps.util.Grids", {
                 type: "vbox",
                 align: "stretch",
               },
-              items: [
-                {
-                  xtype: "textfield",
-                  name: "storage_root",
-                  fieldLabel: "Permanent Storage Path",
-                },
-                {
-                  xtype: "textfield",
-                  name: "storage_temp",
-                  fieldLabel: "Temp Storage Path",
-                },
-                {
-                  xtype: "textfield",
-                  name: "storage_logs",
-                  fieldLabel: "Log Path",
-                },
-                {
-                  xtype: "textfield",
-                  name: "python_path",
-                  fieldLabel: "Python Path",
-                },
-              ],
             },
           ],
           buttons: [
@@ -5762,6 +5945,11 @@ Ext.define("Amps.util.Grids", {
                 var values = scope.up("form").getForm().getValues();
                 console.log(values);
                 var id = scope.up("form")._id;
+
+                var user = amfutil.get_user();
+
+                values.modifiedby = user.firstname + " " + user.lastname;
+                values.modified = new Date().toISOString();
 
                 amfutil.ajaxRequest({
                   headers: {

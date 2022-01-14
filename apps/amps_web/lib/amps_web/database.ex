@@ -25,7 +25,6 @@ defmodule AmpsWeb.DB do
   def delete(collection, clauses) do
     case db() do
       "pg" ->
-        IO.puts("pg")
         Postgres.delete(collection, clauses)
 
       "mongo" ->
@@ -40,7 +39,6 @@ defmodule AmpsWeb.DB do
   def delete_one(collection, clauses) do
     case db() do
       "pg" ->
-        IO.puts("pg")
         Postgres.delete_one(collection, clauses)
 
       "mongo" ->
@@ -108,14 +106,14 @@ defmodule AmpsWeb.DB do
         Map.put(
           clauses,
           "_id",
-          AmpsWeb.DataController.objectid(Map.get(clauses, "_id"))
+          MongoDB.objectid(Map.get(clauses, "_id"))
         )
 
       Map.has_key?(clauses, :_id) ->
         Map.put(
           clauses,
           :_id,
-          AmpsWeb.DataController.objectid(Map.get(clauses, :_id))
+          MongoDB.objectid(Map.get(clauses, :_id))
         )
 
       true ->
@@ -209,23 +207,25 @@ defmodule AmpsWeb.DB do
   end
 
   defmodule MongoDB do
+    def objectid(id) do
+      BSON.ObjectId.decode!(id)
+    end
+
     def add_to_field(collection, body, id, field) do
       {:ok, result} =
         Mongo.update_one(
           :mongo,
           collection,
-          %{"_id" => AmpsWeb.DataController.objectid(id)},
+          %{"_id" => objectid(id)},
           %{
             "$push": %{field => body}
           }
         )
 
-      IO.inspect(result)
-
       Mongo.find_one(
         :mongo,
         collection,
-        %{"_id" => AmpsWeb.DataController.objectid(id)},
+        %{"_id" => objectid(id)},
         projection: %{field => true}
       )
     end
@@ -235,7 +235,7 @@ defmodule AmpsWeb.DB do
         Mongo.find_one(
           :mongo,
           collection,
-          %{"_id" => AmpsWeb.DataController.objectid(id)}
+          %{"_id" => objectid(id)}
         )
 
       Enum.at(result[field], String.to_integer(idx))
@@ -246,13 +246,13 @@ defmodule AmpsWeb.DB do
         Mongo.update_one(
           :mongo,
           collection,
-          %{"_id" => AmpsWeb.DataController.objectid(id)},
+          %{"_id" => objectid(id)},
           %{
             "$set": %{(field <> "." <> idx) => body}
           }
         )
 
-      Mongo.find_one(:mongo, collection, %{"_id" => AmpsWeb.DataController.objectid(id)})
+      Mongo.find_one(:mongo, collection, %{"_id" => objectid(id)})
     end
 
     def delete_from_field(collection, body, id, field, _idx) do
@@ -260,7 +260,7 @@ defmodule AmpsWeb.DB do
         Mongo.update_one(
           :mongo,
           collection,
-          %{"_id" => AmpsWeb.DataController.objectid(id)},
+          %{"_id" => objectid(id)},
           %{
             "$pull": %{field => body}
           }
@@ -273,8 +273,6 @@ defmodule AmpsWeb.DB do
       case Mongo.insert_one(:mongo, collection, body) do
         {:ok, result} ->
           %Mongo.InsertOneResult{:acknowledged => _acknowledged, :inserted_id => id} = result
-          IO.inspect(id)
-          # AmpsWeb.Endpoint.broadcast("notifications", "update", %{page: collection})
           id
 
         {:error, error} ->
@@ -384,7 +382,7 @@ defmodule AmpsWeb.DB do
         Mongo.update_one(
           :mongo,
           collection,
-          %{"_id" => AmpsWeb.DataController.objectid(id)},
+          %{"_id" => objectid(id)},
           %{"$set": body}
         )
 
@@ -394,7 +392,6 @@ defmodule AmpsWeb.DB do
 
   defmodule Postgres do
     def test do
-      IO.puts("test")
     end
 
     def single_quote(val) do
@@ -406,14 +403,8 @@ defmodule AmpsWeb.DB do
     end
 
     def parse_filters(filters) do
-      IO.puts("filters")
-
       filters =
         Enum.reduce(filters, "", fn {key, values}, acc ->
-          IO.puts("filter")
-          IO.inspect(key)
-          IO.inspect(values)
-
           curr =
             if Kernel.is_map(values) do
               Enum.reduce(values, "", fn {op, val}, acc2 ->
@@ -446,19 +437,13 @@ defmodule AmpsWeb.DB do
           acc <> curr
         end)
 
-      IO.inspect(filters)
       filters = String.trim(filters, " AND ")
-      IO.inspect(filters)
     end
 
     def parse_sort(collection, sort) do
-      IO.inspect(sort)
-
       sort =
         if sort != nil do
           Enum.reduce(sort, "", fn x, acc ->
-            IO.inspect(x)
-
             {:ok, %Postgrex.Result{rows: data}} =
               Postgrex.query(
                 :postgres,
@@ -474,8 +459,6 @@ defmodule AmpsWeb.DB do
                 [] ->
                   nil
               end
-
-            IO.inspect(item)
 
             if item != nil do
               if Kernel.is_integer(item) do
@@ -504,16 +487,12 @@ defmodule AmpsWeb.DB do
     end
 
     def find_one_and_update(collection, clauses, body) do
-      IO.inspect(body)
-
       body =
         if Map.has_key?(body, "_id") do
           Map.drop(body, ["_id"])
         else
           body
         end
-
-      IO.inspect(body)
 
       Enum.reduce(body, "", fn {key, value}, _acc ->
         key =
@@ -523,7 +502,6 @@ defmodule AmpsWeb.DB do
             key
           end
 
-        IO.inspect(value)
         encoded = Jason.encode!(value)
 
         set =
@@ -537,7 +515,6 @@ defmodule AmpsWeb.DB do
             request
 
           {:error, error} ->
-            IO.inspect(error)
             error
         end
       end)
@@ -546,8 +523,6 @@ defmodule AmpsWeb.DB do
     end
 
     def update(collection, body, id) do
-      IO.inspect(body)
-
       body =
         if Map.has_key?(body, "_id") do
           Map.drop(body, ["_id"])
@@ -555,10 +530,7 @@ defmodule AmpsWeb.DB do
           body
         end
 
-      IO.inspect(body)
-
       Enum.reduce(body, "", fn {key, value}, _acc ->
-        IO.inspect(value)
         encoded = Jason.encode!(value)
 
         set =
@@ -573,7 +545,6 @@ defmodule AmpsWeb.DB do
             request
 
           {:error, error} ->
-            IO.inspect(error)
             error
         end
       end)
@@ -594,10 +565,7 @@ defmodule AmpsWeb.DB do
           ", TRUE)" <>
           " WHERE data->>'_id' = " <> single_quote(id) <> ";"
 
-      IO.inspect(query)
-
       {:ok, result} = Postgrex.query(:postgres, query, [])
-      IO.inspect(result)
       find_one(collection, %{"_id" => id})
     end
 
@@ -614,9 +582,7 @@ defmodule AmpsWeb.DB do
           ", TRUE)" <>
           " WHERE data->>'_id' = " <> single_quote(id) <> ";"
 
-      IO.inspect(query)
       {:ok, result} = Postgrex.query(:postgres, query, [])
-      IO.inspect(result)
       find_one(collection, %{"_id" => id})
     end
 
@@ -631,17 +597,12 @@ defmodule AmpsWeb.DB do
           "}'" <>
           " WHERE data->>'_id' = " <> single_quote(id) <> ";"
 
-      IO.inspect(query)
-
       {:ok, result} = Postgrex.query(:postgres, query, [])
-      IO.inspect(result)
       find_one(collection, %{"_id" => id})
     end
 
     # Update accounts set data = jsonb_set(data,'{fields}', data->'fields' || '{ "text": "thing" }', TRUE) where data->>'_id' = '6d2a826b-db3a-49ce-af6e-64f80400ffed';
     def where(clauses) do
-      IO.inspect(clauses)
-
       where =
         Enum.reduce(clauses, "", fn {key, value}, acc ->
           key =
@@ -651,12 +612,9 @@ defmodule AmpsWeb.DB do
               key
             end
 
-          IO.inspect(value)
-
           acc <> "data ->> " <> single_quote(key) <> " = " <> single_quote(value) <> " AND "
         end)
 
-      IO.inspect(where)
       where = String.trim(where, " AND ")
       " WHERE " <> where
     end
@@ -670,7 +628,6 @@ defmodule AmpsWeb.DB do
 
       {:ok, %Postgrex.Result{num_rows: _count, rows: data}} = Postgrex.query(:postgres, query, [])
 
-      # IO.inspect(data)
       data = Enum.reverse(data)
 
       Enum.reduce(data, [], fn [row], acc ->
@@ -679,17 +636,14 @@ defmodule AmpsWeb.DB do
     end
 
     def find_one(collection, clauses) do
-      IO.inspect(clauses)
       {:ok, _result} = handle_table(collection)
 
       query =
         "SELECT (data) FROM " <>
           collection <> where(clauses) <> " LIMIT 1;"
 
-      IO.inspect(query)
       {:ok, %Postgrex.Result{num_rows: _count, rows: data}} = Postgrex.query(:postgres, query, [])
 
-      IO.inspect(data)
       data = Enum.reverse(data)
 
       data =
@@ -705,11 +659,9 @@ defmodule AmpsWeb.DB do
 
       case Postgrex.query(:postgres, query, []) do
         {:ok, request} ->
-          IO.inspect(request)
           :ok
 
         {:error, error} ->
-          IO.inspect(error)
           error
       end
     end
@@ -719,18 +671,14 @@ defmodule AmpsWeb.DB do
 
       case Postgrex.query(:postgres, query, []) do
         {:ok, request} ->
-          IO.inspect(request)
           :ok
 
         {:error, error} ->
-          IO.inspect(error)
           error
       end
     end
 
     def insert(collection, body) do
-      IO.inspect(collection)
-      IO.inspect(body)
       id = UUID.uuid4()
       body = Map.put(body, "_id", id)
       {:ok, _result} = handle_table(collection)
@@ -739,33 +687,27 @@ defmodule AmpsWeb.DB do
       case Postgrex.query(:postgres, "INSERT INTO " <> collection <> " (data)
       VALUES('" <> body <> "') RETURNING data->'_id';", []) do
         {:ok, result} ->
-          IO.inspect(result)
           # AmpsWeb.Endpoint.broadcast("notifications", "update", %{page: collection})
           id
 
         {:error, error} ->
-          IO.inspect(error)
           error
       end
     end
 
     # defp delete_id(collection, id) do
     #   query = "DELETE FROM " <> collection <> " WHERE data->>'_id' = " <> single_quote(id) <> ";"
-    #   IO.inspect(query)
 
     #   case Postgrex.query(:postgres, query, []) do
     #     {:ok, request} ->
-    #       IO.inspect(request)
     #       :ok
 
     #     {:error, error} ->
-    #       IO.inspect(error)
     #       error
     #   end
     # end
 
     def create(collection, body) do
-      IO.inspect(body)
       {:ok, _result} = handle_table(collection)
       insert(collection, body)
     end
@@ -794,8 +736,6 @@ defmodule AmpsWeb.DB do
 
       # projection = query["projection"]
 
-      IO.inspect(query)
-
       filters =
         if query["filters"] != nil do
           Jason.decode!(query["filters"])
@@ -811,16 +751,12 @@ defmodule AmpsWeb.DB do
         end
 
       sort = parse_sort(collection, sort)
-      IO.inspect(sort)
-      IO.inspect(filters)
+
       preparedFilter = parse_filters(filters)
-      IO.inspect(preparedFilter)
       # preparedFilter = Filter.convert_sencha_filter(filters)
       # startRow = body["start"]
       # endRow = body["end"]
       # df = body["filterDateFields"]
-
-      IO.inspect(preparedFilter)
 
       preparedFilter =
         if preparedFilter != "" do
@@ -845,15 +781,12 @@ defmodule AmpsWeb.DB do
           offset <>
           ";"
 
-      IO.inspect(query)
-
       case Postgrex.query(
              :postgres,
              query,
              []
            ) do
         {:ok, %Postgrex.Result{num_rows: count, rows: data}} ->
-          IO.inspect(data)
           data = Enum.reverse(data)
 
           data =
@@ -864,7 +797,6 @@ defmodule AmpsWeb.DB do
           %{rows: data, success: true, count: count}
 
         {:error, error} ->
-          IO.inspect(error)
           error
       end
     end
@@ -872,8 +804,6 @@ defmodule AmpsWeb.DB do
 
   defmodule Elastic do
     def query(collection, query) do
-      IO.inspect(query)
-
       case Snap.Search.search(
              Amps.Elastic,
              path(collection),
@@ -890,14 +820,11 @@ defmodule AmpsWeb.DB do
             end)
             |> Enum.reverse()
 
-          IO.inspect(rows)
-
           %{rows: rows, success: true, count: response.hits.total["value"]}
 
         {:error, error} ->
           case error do
             %Snap.ResponseError{status: 404} ->
-              IO.inspect("404 Index")
               %{rows: [], success: true, count: 0}
 
             _ ->
@@ -981,7 +908,6 @@ defmodule AmpsWeb.DB do
 
     def find_one_and_update(collection, clauses, body) do
       item = find_one(collection, clauses)
-      IO.puts(item["_id"])
       {:ok, update(collection, body, item["_id"])}
     end
 
@@ -1031,15 +957,11 @@ defmodule AmpsWeb.DB do
                   }
 
                 %{"gt" => gt} ->
-                  IO.inspect(v)
-
                   %{
                     range: %{k => v}
                   }
 
                 %{"lt" => lt} ->
-                  IO.inspect(v)
-
                   %{
                     range: %{k => v}
                   }
@@ -1050,8 +972,6 @@ defmodule AmpsWeb.DB do
                       k => v
                     }
                   }
-
-                  IO.inspect(v)
               end
             else
               %{
@@ -1081,10 +1001,7 @@ defmodule AmpsWeb.DB do
          }
        }} = Amps.Elastic.get(path(collection))
 
-      IO.inspect(properties)
-
       Enum.reduce(sort, [], fn %{"direction" => dir, "property" => field}, acc ->
-        IO.inspect(field)
         dir = String.downcase(dir)
 
         sortfield =
@@ -1137,8 +1054,6 @@ defmodule AmpsWeb.DB do
     end
 
     def delete(collection, clauses) do
-      IO.inspect(convert_search(clauses))
-
       case Amps.Elastic.post(
              path(collection) <> "/_delete_by_query",
              %{
@@ -1149,12 +1064,10 @@ defmodule AmpsWeb.DB do
              }
            ) do
         {:ok, result} ->
-          IO.inspect(result)
           # AmpsWeb.Endpoint.broadcast("notifications", "update", %{page: collection})
           result["deleted"]
 
         {:error, error} ->
-          IO.inspect(error)
           error
       end
     end
@@ -1194,8 +1107,6 @@ defmodule AmpsWeb.DB do
             "refresh" => true
           }
         )
-
-      IO.inspect(result)
 
       find_one(
         collection,

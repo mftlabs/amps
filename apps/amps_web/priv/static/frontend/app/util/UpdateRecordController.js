@@ -16,7 +16,6 @@ Ext.define("Amps.form.update", {
   back: () => {
     var page = Ext.util.History.getToken().split("/")[0];
     var count = amfutil.getElementByID("edit_container").items.length;
-    console.log(count);
     if (count > 0) {
       amfutil.getElementByID("edit_container").items.items[0].destroy();
     }
@@ -33,16 +32,13 @@ Ext.define("Amps.form.update", {
       if (["textfield", "numberfield"].indexOf(f.xtype) > -1) {
         f.xtype = "displayfield";
       } else if (f.xtype == "radiogroup") {
-        console.log(f);
         f.xtype = "displayfield";
-        console.log(f);
         if (f.value) {
           f.value = f.value[f.name];
         }
       } else {
         f.readOnly = true;
         f.forceSelection = false;
-        console.log(f);
         if (f.items && f.items.length) {
           f.items = this.convertFields(f.items);
           // f.items =
@@ -59,11 +55,11 @@ Ext.define("Amps.form.update", {
     var record = this.record;
     var scope = this;
     f.value = record[f.name];
+
     if (f.xtype == "radiogroup") {
       f.value = {};
       f.value[f.name] = record[f.name];
     } else {
-      console.log(f);
       if (f.items && f.items.length) {
         f.items = await Promise.all(
           f.items.map(async (item) => {
@@ -71,6 +67,10 @@ Ext.define("Amps.form.update", {
           })
         );
       }
+    }
+
+    if (f.tooltip) {
+      f = amfutil.tooltip(f);
     }
 
     return f;
@@ -89,7 +89,12 @@ Ext.define("Amps.form.update", {
   },
 
   update: async function () {
-    var data = await amfutil.getCurrentItem();
+    var data;
+    if (this.route) {
+      data = await amfutil.getById(this.route, this.record._id);
+    } else {
+      data = await amfutil.getCurrentItem();
+    }
     console.log(data);
     if (this.config.transform) {
       data = this.config.transform(data);
@@ -99,6 +104,9 @@ Ext.define("Amps.form.update", {
   },
   edit: async function () {
     console.log("edit");
+    var route = this.route;
+    var scope = this;
+
     this.fields = await this.setValues(this.fields);
 
     console.log();
@@ -135,7 +143,6 @@ Ext.define("Amps.form.update", {
             click: function (btn) {
               var form = btn.up("form").getForm();
               var values = form.getValues();
-              var scope = this;
               var mask = new Ext.LoadMask({
                 msg: "Please wait...",
                 target: btn.up("updateform"),
@@ -145,13 +152,24 @@ Ext.define("Amps.form.update", {
               values = btn.up("form").process(btn.up("form"), values);
 
               values = amfutil.convertNumbers(form, values);
+
+              var user = amfutil.get_user();
+
+              values.modifiedby = user.firstname + " " + user.lastname;
+              values.modified = new Date().toISOString();
+
               console.log(values);
+              console.log(route);
+
+              route = route
+                ? route + "/" + scope.record._id
+                : Ext.util.History.getToken();
 
               amfutil.ajaxRequest({
                 headers: {
                   Authorization: localStorage.getItem("access_token"),
                 },
-                url: "/api/" + Ext.util.History.getToken(),
+                url: "/api/" + route,
                 method: "PUT",
                 timeout: 60000,
                 params: {},
@@ -225,7 +243,7 @@ Ext.define("Amps.form.update", {
     }
     this.editing = !this.editing;
   },
-  loadForm: function (config, record, title) {
+  loadForm: function (config, record, title, route) {
     this.config = config;
     this.record = record;
     if (config.transform) {
@@ -234,10 +252,46 @@ Ext.define("Amps.form.update", {
     if (title) {
       this.title = "Update " + config.object;
     }
+
+    if (route) {
+      this.route = route;
+    }
+
     this.fields = config.fields;
     if (config.update && config.update.fields) {
       this.fields = this.fields.concat(config.update.fields);
     }
+    var user = amfutil.get_user();
+
+    this.fields = this.fields.concat([
+      {
+        xtype: "displayfield",
+        fieldLabel: "Created By",
+        submitValue: true,
+        name: "createdby",
+      },
+
+      {
+        xtype: "displayfield",
+        fieldLabel: "Created on",
+        submitValue: true,
+        name: "created",
+      },
+
+      {
+        xtype: "displayfield",
+        fieldLabel: "Last Modified By",
+        submitValue: true,
+        name: "modifiedby",
+      },
+
+      {
+        xtype: "displayfield",
+        fieldLabel: "Modified on",
+        submitValue: true,
+        name: "modified",
+      },
+    ]);
 
     console.log(this.fields);
     this.item = config.object;

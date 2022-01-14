@@ -18,15 +18,15 @@ Ext.define("Amps.view.auth.Auth", {
         itemdId: "authpanel",
         items: [{ xtype: "login" }],
         buttons: [
-          {
-            formBind: true,
-            style:
-              "background: url('images/btn_google_signin_dark_normal_web@2x.png') no-repeat; background-size: cover !important; width: 166.1px; height: 40px; border: none;",
-            itemId: "googlebtn",
-            handler: function () {
-              amfutil.providerlogin("google");
-            },
-          },
+          // {
+          //   formBind: true,
+          //   style:
+          //     "background: url('images/btn_google_signin_dark_normal_web@2x.png') no-repeat; background-size: cover !important; width: 166.1px; height: 40px; border: none;",
+          //   itemId: "googlebtn",
+          //   handler: function () {
+          //     amfutil.providerlogin("google");
+          //   },
+          // },
         ],
       });
     }

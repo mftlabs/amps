@@ -1,0 +1,73 @@
+defmodule PGPDecrypt do
+  require Logger
+
+  def run(msg, parms, state) do
+    Logger.info("input #{inspect(msg)}")
+    {:ok, newmsg} = decrypt(msg, parms, state)
+    Logger.info("output #{inspect(newmsg)}")
+    AmpsEvents.send(newmsg, parms, state)
+  end
+
+  defp decrypt(msg, parms, _state) do
+    msgid = AmpsUtil.get_id()
+    dir = AmpsUtil.tempdir(msgid)
+    key = Path.join(dir, "key.asc")
+    signing_key = Path.join(dir, "signing_key.asc")
+
+    fpath = Path.join(dir, msgid)
+    File.write(key, AmpsUtil.get_key(parms["key"]))
+    File.write(signing_key, AmpsUtil.get_key(parms["signing_key"]))
+
+    exec =
+      "gpg --batch --pinentry-mode loopback --import #{signing_key}"
+      |> String.to_charlist()
+      |> :os.cmd()
+
+    exec =
+      "gpg --batch --pinentry-mode loopback --import #{key}"
+      |> String.to_charlist()
+      |> :os.cmd()
+
+    command = "#{if msg["data"] do
+      "echo \"#{msg["data"]}\" | "
+    end}gpg --batch --pinentry-mode loopback -o #{fpath} --decrypt #{if msg["fpath"] do
+      msg["fpath"]
+    end}"
+
+    exec =
+      command
+      |> String.to_charlist()
+      |> :os.cmd()
+      |> List.to_string()
+
+    if(String.contains?(exec, "failed")) do
+      raise exec
+    end
+
+    if parms["verify"] do
+      if String.contains?(exec, "Good signature") do
+        :ok
+      else
+        raise "Unverified Signature"
+      end
+    end
+
+    File.rm(key)
+    File.rm(signing_key)
+    info = File.stat!(fpath)
+
+    newmsg =
+      msg
+      |> Map.drop(["data"])
+      |> Map.merge(%{
+        "fpath" => fpath,
+        "fname" => AmpsUtil.format(parms["format"], msg),
+        "msgid" => msgid,
+        "fsize" => info.size,
+        "temp" => true,
+        "parent" => msg["msgid"]
+      })
+
+    {:ok, newmsg}
+  end
+end

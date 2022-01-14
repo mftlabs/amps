@@ -38,9 +38,10 @@ defmodule Amps.Application do
          url: Application.fetch_env!(:amps_web, AmpsWeb.Endpoint)[:mongo_addr],
          pool_size: 1
        ]},
+      {Amps.Startup, []},
+      AmpsWeb.Vault,
       Amps.SvcSupervisor,
       Amps.SvcManager,
-      {Amps.Startup, []},
       Amps.Scheduler
 
       # add this to db config...

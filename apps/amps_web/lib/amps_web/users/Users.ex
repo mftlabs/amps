@@ -45,18 +45,14 @@ defmodule AmpsDashboard.Users do
   end
 
   def update(_user, _params) do
-    IO.puts("update")
     {:error, :not_implemented}
   end
 
   def delete(_user) do
-    IO.puts("delete")
     {:error, :not_implemented}
   end
 
   def get_by(clauses) do
-    IO.inspect(clauses)
-
     filter =
       Enum.reduce(clauses, %{}, fn {key, value}, acc ->
         if key == :id do
@@ -74,13 +70,11 @@ defmodule AmpsDashboard.Users do
       Map.put(user, "id", BSON.ObjectId.encode!(user["_id"]))
       |> Map.new(fn {k, v} -> {String.to_atom(k), v} end)
 
-    IO.inspect(user)
     struct(AmpsDashboard.Users.User, user)
   end
 
   def google_upsert(params) do
     userinfo = params["userinfo"]
-    IO.inspect(userinfo)
     uid = params["uid"]
     user = AmpsWeb.DB.find_one("admin", %{google_id: uid})
 
@@ -113,11 +107,6 @@ defmodule AmpsDashboard.Users.Vault do
   def host(), do: Application.fetch_env!(:amps_web, AmpsWeb.Endpoint)[:vault_addr]
 
   def authenticate(body) do
-    IO.puts("Auth Method")
-    IO.inspect(Application.get_env(:amps_web, AmpsWeb.Endpoint)[:authmethod])
-    IO.puts("authenticate")
-    IO.inspect(body)
-
     vault =
       Vault.new(
         engine: Vault.Engine.KVV1,
@@ -136,7 +125,6 @@ defmodule AmpsDashboard.Users.Vault do
     case login do
       {:ok, _token, _ttl} ->
         user = AmpsWeb.DB.find_one("admin", %{username: body["username"]})
-        IO.inspect(user)
 
         if user["approved"] do
           Users.convert_to_user_struct(user)
@@ -153,7 +141,6 @@ defmodule AmpsDashboard.Users.Vault do
   # Use params to look up user and verify password with `MyApp.Users.User.verify_password/2
 
   def create(body) do
-    IO.puts("create")
     token = AmpsWeb.Vault.get_token(:vaulthandler)
 
     {:ok, vault} =
@@ -172,7 +159,6 @@ defmodule AmpsDashboard.Users.Vault do
         body: %{"token_policies" => "admin,default", password: body["password"]}
       )
 
-    IO.inspect(result)
     user = Map.drop(body, ["password"])
     user = Map.drop(user, ["confirmpswd"])
 
@@ -183,20 +169,15 @@ defmodule AmpsDashboard.Users.Vault do
     id = AmpsWeb.DB.insert("admin", user)
 
     user = Map.put(user, :id, id)
-    IO.inspect(result)
-    IO.inspect(user)
     userstruct = struct(AmpsDashboard.Users.User, user)
-    IO.inspect(userstruct)
     {:ok, userstruct}
   end
 
   def update(_user, _params) do
-    IO.puts("update")
     {:error, :not_implemented}
   end
 
   def delete(_user) do
-    IO.puts("delete")
     {:error, :not_implemented}
   end
 end
@@ -210,13 +191,9 @@ defmodule AmpsDashboard.Users.DB do
   def authenticate(body) do
     user = AmpsWeb.DB.find_one("admin", %{"username" => body["username"]})
     # user = Map.put(user, "_id", BSON.ObjectId.encode!(user["_id"]))
-    IO.inspect(body["password"])
 
     case check_pass(user, body["password"], hash_key: "password") do
       {:ok, user} ->
-        IO.inspect("verified")
-        IO.inspect(user)
-
         if user["approved"] do
           Users.convert_to_user_struct(user)
         else
@@ -224,7 +201,6 @@ defmodule AmpsDashboard.Users.DB do
         end
 
       {:error, reason} ->
-        IO.inspect(reason)
         reason
     end
 
@@ -232,13 +208,8 @@ defmodule AmpsDashboard.Users.DB do
   end
 
   def create(body) do
-    IO.inspect(body)
     password = body["password"]
-    IO.inspect(password)
     %{password_hash: hashed} = add_hash(password)
-    IO.inspect(hashed)
-
-    IO.inspect(check_pass(%{"password" => hashed}, password, hash_key: "password"))
 
     user =
       Map.drop(body, ["password"])
@@ -250,21 +221,16 @@ defmodule AmpsDashboard.Users.DB do
 
     user = Map.put(user, "id", id) |> Map.new(fn {k, v} -> {String.to_atom(k), v} end)
 
-    IO.inspect(user)
-
     user = struct(AmpsDashboard.Users.User, user)
-    IO.inspect(user)
 
     {:ok, user}
   end
 
   def update(_user, _params) do
-    IO.puts("update")
     {:error, :not_implemented}
   end
 
   def delete(_user) do
-    IO.puts("delete")
     {:error, :not_implemented}
   end
 end

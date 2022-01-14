@@ -61,7 +61,9 @@ defmodule Amps.SvcManager do
     res =
       case service_active?(name) do
         nil ->
-          {:ok, load_service(name)}
+          res = load_service(name)
+          IO.inspect(res)
+          res
 
         pid ->
           {:error, "Service Already Running #{inspect(pid)}"}
@@ -95,8 +97,10 @@ defmodule Amps.SvcManager do
           ]
 
           if args["tls"] do
-            cert = X509.Certificate.from_pem!(args["cert"]) |> X509.Certificate.to_der()
-            key = X509.PrivateKey.from_pem!(args["key"])
+            cert = AmpsUtil.get_key(args["cert"])
+            key = AmpsUtil.get_key(args["key"])
+            cert = X509.Certificate.from_pem!(cert) |> X509.Certificate.to_der()
+            key = X509.PrivateKey.from_pem!(key)
             keytype = Kernel.elem(key, 0)
             key = X509.PrivateKey.to_der(key)
 
@@ -131,13 +135,6 @@ defmodule Amps.SvcManager do
           ]
 
           provider = DB.find_one("providers", %{"_id" => args["provider"]})
-
-          cacertfile = Path.join(AmpsUtil.tempdir(args["name"]), "cacert")
-          File.write(cacertfile, provider["cacert"])
-          certfile = Path.join(AmpsUtil.tempdir(args["name"]), "cert")
-          File.write(certfile, provider["cert"])
-          keyfile = Path.join(AmpsUtil.tempdir(args["name"]), "key")
-          File.write(keyfile, provider["key"])
 
           config = AmpsUtil.get_kafka_auth(args, provider)
 
@@ -195,22 +192,31 @@ defmodule Amps.SvcManager do
     case AmpsDatabase.get_config(svcname) do
       nil ->
         Logger.info("service not found #{svcname}")
+        {:error, "Service not found"}
 
       parms ->
         opts = Map.delete(parms, "_id")
         count = opts["subs_count"] || 1
 
-        Enum.each(1..count, fn x ->
-          name = String.to_atom(svcname <> Integer.to_string(x))
+        try do
+          Enum.each(1..count, fn x ->
+            name = String.to_atom(svcname <> Integer.to_string(x))
 
-          case get_spec(name, opts) do
-            {:error, error} ->
-              Logger.warn("Service #{name} could not be started. Error: #{error}")
+            case get_spec(name, opts) do
+              {:error, error} ->
+                Logger.warn("Service #{name} could not be started. Error: #{error}")
+                raise error
 
-            spec ->
-              Amps.SvcSupervisor.start_child(name, spec)
-          end
-        end)
+              spec ->
+                Amps.SvcSupervisor.start_child(name, spec)
+            end
+          end)
+
+          {:ok, "Started #{opts["subs_count"]}"}
+        rescue
+          e ->
+            {:error, e.message}
+        end
     end
   end
 
