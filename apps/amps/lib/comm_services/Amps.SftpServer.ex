@@ -403,6 +403,7 @@ defmodule Amps.SftpHandler do
         fname = Path.basename(path)
         msgid = AmpsUtil.get_id()
         fpath = AmpsUtil.get_env(:storage_temp) <> "/" <> msgid
+        IO.inspect(fpath)
         dirname = Path.dirname(path)
 
         case :file.open(fpath, flags) do

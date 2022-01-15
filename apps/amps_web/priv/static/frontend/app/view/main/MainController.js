@@ -2075,6 +2075,8 @@ Ext.define("Amps.view.main.MainController", {
                   }
                 });
 
+                var user = amfutil.get_user();
+
                 data.createdby = user.firstname + " " + user.lastname;
                 data.created = new Date().toISOString();
 

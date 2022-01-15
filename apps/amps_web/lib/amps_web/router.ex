@@ -20,6 +20,8 @@ defmodule AmpsWeb.Router do
 
   pipeline :api_portal do
     plug(:accepts, ["json"])
+    plug(AmpsWeb.APIAuthPlug, otp_app: :amps)
+    plug(AmpsWeb.AuditPlug)
     plug(AmpsPortal.APIAuthPlug, otp_app: :amps_portal)
   end
 

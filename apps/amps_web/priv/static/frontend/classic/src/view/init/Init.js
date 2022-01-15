@@ -287,7 +287,7 @@ Ext.define("Amps.panel.Startup", {
               target: scope.up("startup"),
             });
             mask.show();
-            var rootvalues = rootfrom.getValues();
+            var rootvalues = rootform.getValues();
             delete rootvalues.confirm;
 
             var resp = await Ext.Ajax.request({

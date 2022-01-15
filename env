@@ -1,0 +1,8 @@
+SECRET_KEY_BASE=FZecDq8oIf+th6OcXfXYy5Y0cZi3QEsVIQsJ/qua2D0nrmE5qw/EDNtWN3j8KBBs
+AMPS_AUTH_METHOD=db
+AMPS_MONGO_ADDR=mongodb://localhost:27017/amps
+AMPS_VAULT_ADDR=http://localhost:8200
+AMPS_NATS_HOST=localhost
+AMPS_NATS_PORT=4222
+TZ=America/Chicago
+ERLPORT_PYTHON=C:/Users/abhay/AppData/Local/Programs/Python/Python310/python.exe

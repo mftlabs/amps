@@ -57,7 +57,9 @@ defmodule Amps.MixProject do
       {:elsa, "~> 1.0.0-rc.3"},
       {:ex_aws, path: "./ex_aws", override: true},
       {:ex_aws_s3, "~> 2.0"},
-      {:quantum, "~> 3.0"}
+      {:quantum, "~> 3.0"},
+      {:argon2_elixir, "~> 2.0"},
+      {:tesla, git: "https://github.com/teamon/tesla", override: true}
     ]
   end
 
