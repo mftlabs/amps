@@ -83,15 +83,18 @@ defmodule BatchAction do
         |> Stream.into(file)
         |> Stream.run()
 
+        info = File.stat!(fpath)
+
         newmsg =
-          Map.merge(
-            msg,
-            %{
-              "msgid" => msgid,
-              "fpath" => fpath,
-              "fname" => AmpsUtil.format(parms["format"], msg)
-            }
-          )
+          msg
+          |> Map.merge(%{
+            "msgid" => msgid,
+            "fpath" => fpath,
+            "fsize" => info.size,
+            "fname" => AmpsUtil.format(parms["format"], msg),
+            "temp" => true
+          })
+          |> Map.drop(["data"])
 
         {:ok, newmsg}
     end

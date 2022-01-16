@@ -53,15 +53,15 @@ defmodule AmpsPortal.DataController do
                 filename: msg["fname"]
               )
             else
-              if msg["temp"] do
-                send_download(conn, {:file, msg["fpath"]}, disposition: :attachment)
-              else
-                root = AmpsUtil.get_env(:storage_root)
+              # if msg["temp"] do
+              send_download(conn, {:file, msg["fpath"]}, disposition: :attachment)
+              # else
+              #   root = AmpsUtil.get_env(:storage_root)
 
-                send_download(conn, {:file, Path.join(root, msg["fpath"])},
-                  disposition: :attachment
-                )
-              end
+              #   send_download(conn, {:file, Path.join(root, msg["fpath"])},
+              #     disposition: :attachment
+              #   )
+              # end
             end
         end
     end

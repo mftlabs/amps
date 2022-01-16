@@ -34,7 +34,7 @@ Ext.define("Amps.Pages", {
         autoLoad: true,
       });
 
-      store.sort("ftime", "DESC");
+      store.sort("mtime", "DESC");
 
       console.log(store);
 
@@ -74,8 +74,8 @@ Ext.define("Amps.Pages", {
               flex: 1,
             },
             {
-              text: "File Time",
-              dataIndex: "ftime",
+              text: "Mailbox Time",
+              dataIndex: "mtime",
               flex: 1,
             },
             {

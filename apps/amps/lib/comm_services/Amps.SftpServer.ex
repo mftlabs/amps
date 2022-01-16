@@ -61,6 +61,7 @@ defmodule Amps.SftpServer do
     Logger.info("Starting SFTP daemon on #{options["port"]}")
     key = AmpsUtil.get_key(options["server_key"])
     options = Map.put(options, "server_key", key)
+    IO.inspect(options)
 
     daemon_opts = [
       shell: &dummy_shell/2,

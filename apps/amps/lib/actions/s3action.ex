@@ -17,19 +17,6 @@ defmodule S3Action do
 
   """
 
-  def test() do
-    parms = DB.find_one("actions", %{"_id" => "61c26b29376f1c25dac499b4"})
-
-    run(
-      %{
-        "fpath" => "/private/tmp/0ebe5547-bf8d-4881-8ca4-01501515ecdb/Project #5.logicx.zip",
-        "fname" => "proj #5.zip"
-      },
-      parms,
-      %{}
-    )
-  end
-
   def run(msg, parms, _state) do
     Logger.info("S3 Action Called")
 
@@ -45,17 +32,23 @@ defmodule S3Action do
               []
             end
 
-          with {:ok, %{body: body, headers: _headers, status_code: 200}} <-
-                 ExAws.S3.list_objects(parms["bucket"], opts)
-                 |> ExAws.request(req) do
-            list = body.contents
-            Logger.info("Got #{Enum.count(list)} objects")
+          case ExAws.S3.list_objects(parms["bucket"], opts)
+               |> ExAws.request(req) do
+            {:ok, %{body: body, headers: _headers, status_code: 200}} ->
+              list = body.contents
+              Logger.info("Got #{Enum.count(list)} objects")
 
-            Enum.each(list, fn obj ->
-              if(AmpsUtil.match(obj.key, parms)) do
-                get_message(req, parms, obj)
-              end
-            end)
+              Enum.each(list, fn obj ->
+                if(AmpsUtil.match(obj.key, parms)) do
+                  get_message(req, parms, obj)
+                end
+              end)
+
+            {:error, {:http_error, 404, _}} ->
+              raise "Bucket does not exist"
+
+            _ ->
+              raise "Error fetching get"
           end
 
         "put" ->
@@ -144,6 +137,9 @@ defmodule S3Action do
     path = obj.key
 
     msgid = AmpsUtil.get_id()
+    tmp = AmpsUtil.tempdir(msgid)
+
+    fpath = Path.join(tmp, Path.basename(path))
 
     message =
       case ExAws.S3.head_object(bucket, path)
@@ -153,15 +149,14 @@ defmodule S3Action do
             fsize = String.to_integer(fsize)
 
             if fsize <= 10000 do
-              ExAws.S3.get_object(bucket, path)
-              |> ExAws.request(req)
+              {:ok, msg} = ExAws.S3.get_object(bucket, path) |> ExAws.request(req)
+              File.write(fpath, msg.body)
+              {:ok, msg}
             else
-              tmp = AmpsUtil.tempdir(msgid)
-
               ExAws.S3.download_file(
                 bucket,
                 path,
-                Path.join(tmp, Path.basename(path))
+                fpath
               )
               |> ExAws.request(req)
             end
@@ -173,32 +168,30 @@ defmodule S3Action do
 
     case message do
       {:ok, msg} ->
-        event =
-          case msg do
-            :done ->
-              path = Path.join(AmpsUtil.tempdir(msgid), Path.basename(path))
+        # case msg do
+        #   :done ->
 
-              %{
-                "service" => parms["name"],
-                "msgid" => msgid,
-                "bucket" => parms["bucket"],
-                "prefix" => parms["prefix"],
-                "fpath" => path,
-                "ftime" => DateTime.to_iso8601(DateTime.utc_now()),
-                "fname" => Path.basename(obj.key)
-              }
+        event = %{
+          "service" => parms["name"],
+          "msgid" => msgid,
+          "bucket" => parms["bucket"],
+          "prefix" => parms["prefix"],
+          "fpath" => fpath,
+          "ftime" => DateTime.to_iso8601(DateTime.utc_now()),
+          "fname" => Path.basename(obj.key)
+        }
 
-            msg ->
-              %{
-                "service" => parms["name"],
-                "msgid" => msgid,
-                "bucket" => parms["bucket"],
-                "prefix" => parms["prefix"],
-                "data" => msg.body,
-                "ftime" => DateTime.to_iso8601(DateTime.utc_now()),
-                "fname" => Path.basename(obj.key)
-              }
-          end
+        #   msg ->
+        #     %{
+        #       "service" => parms["name"],
+        #       "msgid" => msgid,
+        #       "bucket" => parms["bucket"],
+        #       "prefix" => parms["prefix"],
+        #       "data" => msg.body,
+        #       "ftime" => DateTime.to_iso8601(DateTime.utc_now()),
+        #       "fname" => Path.basename(obj.key)
+        #     }
+        # end
 
         if parms["ackmode"] == "delete" do
           ExAws.S3.delete_object(bucket, path) |> ExAws.request(req)

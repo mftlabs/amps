@@ -169,11 +169,12 @@ defmodule AmpsWeb.UtilController do
 
   def get_history(msgid) do
     case DB.find("message_events", %{"msgid" => msgid}) do
-      nil ->
+      [] ->
         Logger.info("Message not found for id #{msgid}")
         []
 
       msgs ->
+        IO.inspect(msgs)
         msg = Enum.find(msgs, fn msg -> msg["status"] == "started" end)
         get_parents(msg, []) ++ msgs ++ get_children(msg, [])
     end

@@ -1194,117 +1194,258 @@ Ext.define("Amps.util.Utilities", {
     return field;
   },
 
-  tooltip: function (field) {
+  tooltip: function (field, opts) {
+    return Object.assign(
+      {
+        xtype: "fieldcontainer",
+        layout: {
+          type: "hbox",
+          align: "stretch",
+        },
+        items: [
+          Ext.apply(field, { flex: 1 }),
+          {
+            xtype: "fieldcontainer",
+            layout: "center",
+            width: 20,
+            maxHeight: 50,
+
+            listeners: {
+              render: function () {
+                var win = this.down("#tooltip");
+                this.getEl().on("mouseenter", function (e) {
+                  console.log(e);
+                  win.show();
+                  win.setPagePosition(e.parentEvent.pageX - 225, [
+                    e.parentEvent.pageY - 75,
+                  ]);
+                });
+
+                this.getEl().on("mouseleave", function () {
+                  win.hide();
+                });
+              },
+            },
+            items: [
+              {
+                xtype: "component",
+                cls: "x-fa fa-info",
+              },
+              {
+                xtype: "fieldcontainer",
+                layout: {
+                  type: "absolute",
+                },
+                items: [
+                  {
+                    xtype: "window",
+                    header: false,
+                    itemId: "tooltip",
+                    width: 300,
+                    height: 60,
+
+                    layout: "fit",
+                    items: [
+                      {
+                        xtype: "container",
+                        padding: 5,
+
+                        style: {
+                          background: "#5fa2dd",
+                          color: "white",
+                        },
+                        layout: {
+                          type: "hbox",
+                          align: "stretch",
+                        },
+                        items: [
+                          {
+                            xtype: "container",
+                            layout: "center",
+                            width: 35,
+                            items: [
+                              {
+                                xtype: "component",
+                                cls: "x-fa fa-info-circle",
+                              },
+                            ],
+                          },
+
+                          {
+                            xtype: "component",
+                            padding: 5,
+
+                            flex: 1,
+                            autoEl: "div",
+                            style: {
+                              "font-size": ".8rem",
+                              "font-weight": 400,
+                            },
+                            html: field.tooltip,
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      opts
+    );
+  },
+
+  loadKey: function (fieldLabel, name, opts) {
+    return amfutil.dynamicCreate(
+      Object.assign(
+        {
+          xtype: "combobox",
+          flex: 1,
+          displayField: "name",
+          fieldLabel: fieldLabel,
+          name: name,
+          valueField: "_id",
+          store: amfutil.createCollectionStore("keys", {}, { autoLoad: true }),
+          listeners: {
+            render: function (scope) {
+              var val = scope.getValue();
+
+              console.log(val);
+            },
+          },
+        },
+        opts
+      ),
+      "keys"
+    );
+  },
+
+  outputTopic: function () {
+    return amfutil.dynamicCreate(
+      amfutil.combo(
+        "Output Topic",
+        "output",
+        amfutil.createCollectionStore("topics", {}, { autoLoad: true }),
+        "topic",
+        "topic",
+        {
+          tooltip: "The topic to which this message will be sent",
+        }
+      ),
+      "topics"
+    );
+  },
+
+  dynamicCreate: function (field, collection) {
     return {
       xtype: "fieldcontainer",
       layout: {
         type: "hbox",
         align: "stretch",
       },
+      tooltip: field.tooltip ? field.tooltip : null,
+      flex: 1,
       items: [
-        Ext.apply(field, { flex: 1 }),
+        Ext.apply(field, {
+          flex: 1,
+          tooltip: field.tooltip ? null : field.tooltip,
+        }),
         {
-          xtype: "fieldcontainer",
+          xtype: "container",
           layout: "center",
-          width: 20,
-          maxHeight: 50,
-
-          listeners: {
-            render: function () {
-              var win = this.down("#tooltip");
-              // win.anchorTo(this);
-              this.getEl().on("mouseenter", function () {
-                win.show();
-                //logic of whatever you want happening...
-              });
-
-              this.getEl().on("mouseleave", function () {
-                win.hide();
-                //logic of whatever you want happening...
-              });
-            },
-          },
+          margin: { left: 5 },
+          cls: "button",
           items: [
             {
-              xtype: "component",
-              cls: "x-fa fa-info",
-            },
-            {
-              xtype: "fieldcontainer",
-              layout: {
-                type: "absolute",
+              xtype: "button",
+              iconCls: "x-fa fa-refresh",
+              cls: "button_light",
+              focusable: false,
+              style: {
+                "font-size": "1rem",
               },
-              items: [
-                {
-                  xtype: "window",
-                  header: false,
-                  itemId: "tooltip",
-                  y: -85,
-                  width: 300,
-                  height: 60,
+              handler: async function (btn) {
+                var config = ampsgrids.grids[collection]();
+                var cb = btn.up("fieldcontainer").down("combobox");
 
-                  layout: "fit",
-                  items: [
-                    {
-                      xtype: "container",
-                      padding: 5,
+                cb.getStore().reload();
+              },
+            },
+          ],
+        },
+        {
+          xtype: "container",
+          layout: "center",
+          cls: "button",
+          margin: { left: 5 },
 
-                      style: {
-                        background: "#5fa2dd",
-                        color: "white",
+          items: [
+            {
+              xtype: "button",
+              iconCls: "x-fa fa-plus",
+              cls: "button_light",
+              focusable: false,
+              style: {
+                "font-size": "1rem",
+              },
+              handler: async function (btn) {
+                var config = ampsgrids.grids[collection]();
+                var cb = btn.up("fieldcontainer").down("combobox");
+                var win = Ext.create("Amps.form.add", config.window);
+                win.loadForm(
+                  config.object,
+                  config.fields,
+                  (form, values) => {
+                    if (config.add && config.add.process) {
+                      values = config.add.process(form, values);
+                    }
+                    return values;
+                  },
+                  function (btn, values) {
+                    var mask = new Ext.LoadMask({
+                      msg: "Please wait...",
+                      target: btn.up("addform"),
+                    });
+                    mask.show();
+                    amfutil.ajaxRequest({
+                      headers: {
+                        Authorization: localStorage.getItem("access_token"),
                       },
-                      layout: {
-                        type: "hbox",
-                        align: "stretch",
+                      url: "api/" + collection,
+                      method: "POST",
+                      timeout: 60000,
+                      params: {},
+                      jsonData: values,
+                      success: function (response) {
+                        var data = Ext.decode(response.responseText);
+                        cb.getStore().reload();
+                        mask.hide();
+                        var item = btn.up("window").item;
+                        btn.setDisabled(false);
+                        console.log(data);
+                        Ext.toast(`${item} created`);
+                        // amfutil.broadcastEvent("update", {
+                        //   page: Ext.util.History.getToken(),
+                        // });
+                        btn.up("window").close();
                       },
-                      items: [
-                        {
-                          xtype: "container",
-                          layout: "center",
-                          width: 35,
-                          items: [
-                            {
-                              xtype: "component",
-                              cls: "x-fa fa-info-circle",
-                            },
-                          ],
-                        },
-
-                        {
-                          xtype: "component",
-                          padding: 5,
-
-                          flex: 1,
-                          autoEl: "div",
-                          style: {
-                            "font-size": ".8rem",
-                            "font-weight": 400,
-                          },
-                          html: field.tooltip,
-                        },
-                      ],
-                    },
-                  ],
-                },
-              ],
+                      failure: function (response) {
+                        mask.hide();
+                        btn.setDisabled(false);
+                        amfutil.onFailure("Failed to Create User", response);
+                      },
+                    });
+                  }
+                );
+                win.show();
+              },
             },
           ],
         },
       ],
     };
-  },
-
-  outputTopic: function () {
-    return amfutil.combo(
-      "Output Topic",
-      "output",
-      amfutil.createCollectionStore("topics", {}, { autoLoad: true }),
-      "topic",
-      "topic",
-      {
-        tooltip: "The topic to which this message will be sent",
-      }
-    );
   },
 
   formatFileName: function (opts = {}) {
@@ -1466,6 +1607,8 @@ Ext.define("Amps.util.Utilities", {
             headers: {
               Authorization: localStorage.getItem("access_token"),
             },
+            limitParam: "",
+
             extraParams: { filters: JSON.stringify(filters) },
             reader: {
               type: "json",
@@ -1611,7 +1754,7 @@ Ext.define("Amps.util.Utilities", {
     }
   },
 
-  duplicateHandler: async function (cmp, value, message) {
+  duplicateHandler: async function (cmp, value, message, validator) {
     var duplicate = await amfutil.checkDuplicate(value);
 
     if (duplicate) {
@@ -1619,8 +1762,20 @@ Ext.define("Amps.util.Utilities", {
       cmp.setValidation(message);
       // cmp.isValid(false);
     } else {
-      cmp.setActiveError();
-      cmp.setValidation();
+      if (validator) {
+        var invalid = validator(cmp.getValue());
+        console.log(invalid);
+        if (invalid) {
+          cmp.setActiveError(invalid);
+          cmp.setValidation(invalid);
+        } else {
+          cmp.setActiveError();
+          cmp.setValidation();
+        }
+      } else {
+        cmp.setActiveError();
+        cmp.setValidation();
+      }
     }
   },
 

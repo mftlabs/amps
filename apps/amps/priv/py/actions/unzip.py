@@ -19,12 +19,8 @@ def run(input):
             pwd = None
         files = []
         namelist = zf.namelist()
-        rng = 0
-        if parms["maxfiles"]:
-            rng = parms["maxfiles"]
-        else:
-            rng = len(namelist)
-        for i in range(rng):
+        for i in range(len(namelist)):
+
             name = namelist[i]
             dir = name.endswith("/")
             mac = name.startswith('__MACOSX/')
@@ -35,6 +31,9 @@ def run(input):
                 else:
                     zf.extract(name, outputdir)
                 files.append(os.path.join(outputdir, name))
+            if i == parms["maxfiles"]:
+                break
+
         output["status"] = "success"
         output["files"] = files
     except Exception as e:

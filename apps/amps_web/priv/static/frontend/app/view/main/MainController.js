@@ -710,22 +710,27 @@ Ext.define("Amps.form.Rule", {
     };
     console.log(id);
     var items = [
-      {
-        xtype: "combobox",
-        name: name + "-topic",
-        value: args["topic"],
-        readOnly: args["readOnly"],
-        fieldLabel: "Output Topic",
-        listeners: {
-          beforerender: async function (scope) {
-            scope.setStore(amfutil.createCollectionStore("topics"));
+      amfutil.dynamicCreate(
+        {
+          xtype: "combobox",
+          name: name + "-topic",
+          value: args["topic"],
+          readOnly: args["readOnly"],
+          tooltip:
+            "The topic to route the message if it matches all match patterns.",
+          fieldLabel: "Output Topic",
+          listeners: {
+            beforerender: async function (scope) {
+              scope.setStore(amfutil.createCollectionStore("topics"));
+            },
           },
+          displayField: "topic",
+          valueField: "topic",
+          allowBlank: false,
+          forceSelection: true,
         },
-        displayField: "topic",
-        valueField: "topic",
-        allowBlank: false,
-        forceSelection: true,
-      },
+        "topics"
+      ),
       {
         xtype: "matchpatterns",
         readOnly: args["readOnly"],
@@ -751,7 +756,7 @@ Ext.define("Amps.form.Rule", {
         },
       },
     ];
-    this.insert(0, items);
+    this.insert(0, amfutil.scanFields(items));
   },
 
   title: "Rule",
@@ -999,6 +1004,131 @@ Ext.define("Amps.form.Matchpattern", {
   },
   constructor: function (args) {
     this.callParent(args);
+    this.insert(0, [
+      {
+        xtype: "fieldcontainer",
+        layout: "anchor",
+        defaults: { anchor: "100%" },
+        flex: 1,
+        items: [
+          {
+            xtype: "fieldcontainer",
+            layout: "hbox",
+            items: [
+              amfutil.tooltip(
+                {
+                  xtype: "combobox",
+                  fieldLabel: "Field",
+                  allowBlank: false,
+                  displayField: "description",
+                  tooltip: "The Metadata Field to match on",
+                  valueField: "field",
+                  flex: 1,
+                  name: "field",
+                  listeners: {
+                    change: "onChange",
+                  },
+                  store: [],
+                  itemId: "field",
+                },
+                {
+                  flex: 1,
+                }
+              ),
+              {
+                xtype: "splitter",
+                tabIndex: -1,
+              },
+              amfutil.tooltip(
+                {
+                  xtype: "checkbox",
+                  fieldLabel: "Regex",
+                  tooltip: "Whether to match using regex",
+
+                  inputValue: true,
+                  uncheckedValue: false,
+                  flex: 1,
+                  name: "regex",
+                  listeners: {
+                    change: "onRegexChange",
+                  },
+                  itemId: "regex",
+                },
+                {
+                  flex: 1,
+                }
+              ),
+            ],
+          },
+          {
+            xtype: "fieldcontainer",
+
+            // The body area will contain three text fields, arranged
+            // horizontally, separated by draggable splitters.
+            layout: "hbox",
+            items: [
+              amfutil.tooltip(
+                {
+                  xtype: "textfield",
+                  fieldLabel: "Pattern",
+                  name: "pattern",
+                  tooltip:
+                    "The pattern to match against the specified metadata field value",
+
+                  flex: 1,
+                  listeners: {
+                    change: "onChange",
+                  },
+                  allowBlank: false,
+                  itemId: "pattern",
+                },
+                {
+                  flex: 1,
+                }
+              ),
+              {
+                xtype: "splitter",
+                tabIndex: -1,
+              },
+              amfutil.tooltip(
+                {
+                  validateOnChange: true,
+                  xtype: "textfield",
+                  fieldLabel: "Testcase",
+                  tooltip: "A field to test a potential metadata value",
+                  name: "test",
+                  flex: 1,
+                  listeners: {
+                    change: "onTestChange",
+                  },
+                  itemId: "test",
+                },
+                {
+                  flex: 1,
+                }
+              ),
+            ],
+          },
+          {
+            xtype: "container",
+            height: 30,
+            hidden: true,
+            itemId: "message_view",
+          },
+        ],
+      },
+      {
+        xtype: "button",
+        itemId: "patternbutton",
+        margin: { left: 5 },
+        width: 50,
+        iconCls: "x-fa fa-trash",
+        handler: function (button, event) {
+          console.log(button);
+          button.up("fieldset").remove(button.up("fieldcontainer"));
+        },
+      },
+    ]);
     this.insert({
       xtype: "hidden",
       name: args["name"] ? args["name"] : "patterns",
@@ -1047,105 +1177,6 @@ Ext.define("Amps.form.Matchpattern", {
       // );
     },
   },
-  items: [
-    {
-      xtype: "fieldcontainer",
-      layout: "anchor",
-      defaults: { anchor: "100%" },
-      flex: 1,
-      items: [
-        {
-          xtype: "fieldcontainer",
-          layout: "hbox",
-          items: [
-            {
-              xtype: "combobox",
-              fieldLabel: "Field",
-              allowBlank: false,
-              displayField: "description",
-              valueField: "field",
-              flex: 1,
-              name: "field",
-              listeners: {
-                change: "onChange",
-              },
-              store: [],
-              itemId: "field",
-            },
-            {
-              xtype: "splitter",
-              tabIndex: -1,
-            },
-            {
-              xtype: "checkbox",
-              fieldLabel: "Regex",
-
-              inputValue: true,
-              uncheckedValue: false,
-              flex: 1,
-              name: "regex",
-              listeners: {
-                change: "onRegexChange",
-              },
-              itemId: "regex",
-            },
-          ],
-        },
-        {
-          xtype: "fieldcontainer",
-
-          // The body area will contain three text fields, arranged
-          // horizontally, separated by draggable splitters.
-          layout: "hbox",
-          items: [
-            {
-              xtype: "textfield",
-              fieldLabel: "Pattern",
-              name: "pattern",
-              flex: 1,
-              listeners: {
-                change: "onChange",
-              },
-              allowBlank: false,
-              itemId: "pattern",
-            },
-            {
-              xtype: "splitter",
-              tabIndex: -1,
-            },
-            {
-              validateOnChange: true,
-              xtype: "textfield",
-              fieldLabel: "Testcase",
-              name: "test",
-              flex: 1,
-              listeners: {
-                change: "onTestChange",
-              },
-              itemId: "test",
-            },
-          ],
-        },
-        {
-          xtype: "container",
-          height: 30,
-          hidden: true,
-          itemId: "message_view",
-        },
-      ],
-    },
-    {
-      xtype: "button",
-      itemId: "patternbutton",
-      margin: { left: 5 },
-      width: 50,
-      iconCls: "x-fa fa-trash",
-      handler: function (button, event) {
-        console.log(button);
-        button.up("fieldset").remove(button.up("fieldcontainer"));
-      },
-    },
-  ],
 });
 
 Ext.define("Amps.form.Defaults", {
@@ -1556,47 +1587,17 @@ Ext.define("Amps.form.add", {
   scrollable: true,
   // resizable: false,
   layout: "fit",
-  loadForm: function (item, fields, process = (form, val) => val) {
+  loadForm: function (item, fields, process = (form, val) => val, request) {
     this.item = item;
     this.title = "Add " + item;
     this.process = process;
     var user = amfutil.get_user();
 
-    // fields = fields.concat([
-    //   {
-    //     xtype: "displayfield",
-    //     fieldLabel: "Created By",
-    //     submitValue: true,
-    //     name: "createdby",
-    //     value: user.firstname + " " + user.lastname,
-    //   },
+    if (request) {
+      this.request = request;
+    }
 
-    //   {
-    //     xtype: "displayfield",
-    //     fieldLabel: "Created on",
-    //     submitValue: true,
-    //     name: "created",
-    //     value: new Date().toISOString(),
-    //   },
-
-    //   {
-    //     xtype: "displayfield",
-    //     fieldLabel: "Last Modified By",
-    //     submitValue: true,
-    //     name: "modifiedby",
-    //     value: user.firstname + " " + user.lastname,
-    //   },
-
-    //   {
-    //     xtype: "displayfield",
-    //     fieldLabel: "Modified on",
-    //     submitValue: true,
-    //     name: "modified",
-    //     value: new Date().toISOString(),
-    //   },
-    // ]);
-
-    // fields = amfutil.scanFields(fields);
+    fields = amfutil.scanFields(fields);
 
     fields.forEach((field) => {
       this.down("form").insert(field);
@@ -1625,6 +1626,7 @@ Ext.define("Amps.form.add", {
           formBind: true,
           listeners: {
             click: function (btn) {
+              var scope = btn.up("addform");
               var grid = amfutil.getElementByID("main-grid");
               var form = btn.up("form").getForm();
               var values = form.getValues();
@@ -1644,46 +1646,52 @@ Ext.define("Amps.form.add", {
               values.modified = new Date().toISOString();
 
               btn.setDisabled(true);
-              var mask = new Ext.LoadMask({
-                msg: "Please wait...",
-                target: btn.up("addform"),
-              });
-              mask.show();
-              amfutil.ajaxRequest({
-                headers: {
-                  Authorization: localStorage.getItem("access_token"),
-                },
-                url: "api/" + Ext.util.History.getToken(),
-                method: "POST",
-                timeout: 60000,
-                params: {},
-                jsonData: values,
-                success: function (response) {
-                  mask.hide();
-                  var item = btn.up("window").item;
-                  btn.setDisabled(false);
-                  var data = Ext.decode(response.responseText);
-                  Ext.toast(`${item} created`);
-                  amfutil.broadcastEvent("update", {
-                    page: Ext.util.History.getToken(),
-                  });
-                  var tokens = Ext.util.History.getToken().split("/");
-                  if (tokens.length > 1) {
-                    amfutil
-                      .getElementByID(`${tokens[0]}-${tokens[2]}`)
-                      .getStore()
-                      .reload();
-                  } else {
-                    amfutil.getElementByID("main-grid").getStore().reload();
-                  }
-                  btn.up("window").close();
-                },
-                failure: function (response) {
-                  mask.hide();
-                  btn.setDisabled(false);
-                  amfutil.onFailure("Failed to Create User", response);
-                },
-              });
+              console.log(scope);
+              if (scope.request) {
+                scope.request(btn, values);
+              } else {
+                var mask = new Ext.LoadMask({
+                  msg: "Please wait...",
+                  target: btn.up("addform"),
+                });
+                mask.show();
+
+                amfutil.ajaxRequest({
+                  headers: {
+                    Authorization: localStorage.getItem("access_token"),
+                  },
+                  url: "api/" + Ext.util.History.getToken(),
+                  method: "POST",
+                  timeout: 60000,
+                  params: {},
+                  jsonData: values,
+                  success: function (response) {
+                    mask.hide();
+                    var item = btn.up("window").item;
+                    btn.setDisabled(false);
+                    var data = Ext.decode(response.responseText);
+                    Ext.toast(`${item} created`);
+                    amfutil.broadcastEvent("update", {
+                      page: Ext.util.History.getToken(),
+                    });
+                    var tokens = Ext.util.History.getToken().split("/");
+                    if (tokens.length > 1) {
+                      amfutil
+                        .getElementByID(`${tokens[0]}-${tokens[2]}`)
+                        .getStore()
+                        .reload();
+                    } else {
+                      amfutil.getElementByID("main-grid").getStore().reload();
+                    }
+                    btn.up("window").close();
+                  },
+                  failure: function (response) {
+                    mask.hide();
+                    btn.setDisabled(false);
+                    amfutil.onFailure("Failed to Create User", response);
+                  },
+                });
+              }
             },
           },
         },

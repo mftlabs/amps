@@ -8,6 +8,7 @@ defmodule AmpsEvents do
       data = %{msg: msg, state: state}
 
       Gnat.pub(:gnat, topic, Poison.encode!(data))
+      send_history("amps.events.messages", "messages", msg)
     else
       topic = "amps.action.error"
       newstate = Map.put(state, :error, "output topic missing in action")

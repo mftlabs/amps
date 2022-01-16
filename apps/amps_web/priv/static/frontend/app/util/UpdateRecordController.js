@@ -29,13 +29,13 @@ Ext.define("Amps.form.update", {
     return fields.map((field) => {
       var f = Object.assign({}, field);
 
-      if (["textfield", "numberfield"].indexOf(f.xtype) > -1) {
-        f.xtype = "displayfield";
-      } else if (f.xtype == "radiogroup") {
+      if (f.xtype == "radiogroup") {
         f.xtype = "displayfield";
         if (f.value) {
           f.value = f.value[f.name];
         }
+      } else if (f.xtype == "button") {
+        f.disabled = true;
       } else {
         f.readOnly = true;
         f.forceSelection = false;
@@ -51,9 +51,11 @@ Ext.define("Amps.form.update", {
 
   setValue: async function (field) {
     var f = await Object.assign({}, field);
+    console.log(f);
     var config = this.config;
     var record = this.record;
     var scope = this;
+    console.log(f);
     f.value = record[f.name];
 
     if (f.xtype == "radiogroup") {
@@ -67,10 +69,6 @@ Ext.define("Amps.form.update", {
           })
         );
       }
-    }
-
-    if (f.tooltip) {
-      f = amfutil.tooltip(f);
     }
 
     return f;
@@ -150,20 +148,20 @@ Ext.define("Amps.form.update", {
               mask.show();
               console.log(values);
               values = btn.up("form").process(btn.up("form"), values);
-
+              console.log(values);
               values = amfutil.convertNumbers(form, values);
-
+              console.log(values);
               var user = amfutil.get_user();
 
               values.modifiedby = user.firstname + " " + user.lastname;
               values.modified = new Date().toISOString();
 
-              console.log(values);
-              console.log(route);
-
               route = route
                 ? route + "/" + scope.record._id
                 : Ext.util.History.getToken();
+
+              console.log(route);
+              console.log(values);
 
               amfutil.ajaxRequest({
                 headers: {
@@ -231,6 +229,7 @@ Ext.define("Amps.form.update", {
 
     if (typefields) {
       console.log(typefields);
+      typefields = amfutil.scanFields(typefields);
       this.down("#typeparms").setConfig({ defaults: this.defaults });
       if (this.editing) {
         this.down("#typeparms").insert(0, typefields);
@@ -293,13 +292,15 @@ Ext.define("Amps.form.update", {
       },
     ]);
 
+    this.fields = amfutil.scanFields(this.fields);
+
     console.log(this.fields);
     this.item = config.object;
     // this.subgrid = subgrid;
     if (config.update && config.update.process) {
       this.process = config.update.process;
     } else {
-      this.process = (val) => val;
+      this.process = (form, val) => val;
     }
 
     this.editing = false;
@@ -342,7 +343,7 @@ Ext.define("Amps.util.UpdateRecordController", {
       admin: this.updateUser,
       agentget: this.updateAgentGet,
       agentput: this.updateAgentPut,
-      topics: this.updateTopic,
+      // topics: this.updateTopic,
       // actions: this.updateAction,
       // services: this.updateService,
     };
@@ -997,6 +998,42 @@ Ext.define("Amps.util.UpdateRecordController", {
             //   },
             // },
             width: 400,
+          },
+          {
+            xtype: "radiogroup",
+            xtype: "radiogroup",
+            fieldLabel: "Topic Type",
+            name: "type",
+            allowBlank: false,
+            blankText: "Select One",
+            columns: 3,
+            vertical: true,
+            tooltip: "The type/function of this topic.",
+            items: [
+              {
+                boxLabel: "Action",
+                margin: 5,
+                flex: 1,
+                name: "type",
+                inputValue: "actions",
+              },
+              {
+                flex: 1,
+                margin: 5,
+
+                boxLabel: "Service",
+                name: "type",
+                inputValue: "svcs",
+              },
+              {
+                flex: 1,
+                margin: 5,
+
+                boxLabel: "Data",
+                name: "type",
+                inputValue: "data",
+              },
+            ],
           },
           {
             xtype: "textfield",

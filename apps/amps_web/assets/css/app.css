@@ -157,8 +157,8 @@
 }
 
 .rtb .x-btn-default-small {
-  border-color: #e4e4e4 !important;
-  background-color: #f6f6f6 !important;
+  border-color: #ffffff !important;
+  background-color: #ffffff !important;
   margin-left: 4px;
   margin-top: 5px;
   height: 42px;
@@ -166,7 +166,7 @@
 .rtb .x-btn-icon-el-default-small {
   font-size: 17px;
   height: auto;
-  color: #919191;
+  color: #404040;
   line-height: 24px;
 }
 
@@ -397,3 +397,23 @@ h6 {
   letter-spacing: 0;
   line-height: 1.4;
 } */
+
+.button_light {
+  background-color: #404040;
+  border: #404040;
+  transition: .2s;
+}
+
+.button_light:hover {
+  background-color: #555555;
+  border: #555555;
+  transition: .2s;
+
+}
+
+.button_light:active {
+  background-color: #555555;
+  border: #555555;
+  transition: .2s;
+
+}

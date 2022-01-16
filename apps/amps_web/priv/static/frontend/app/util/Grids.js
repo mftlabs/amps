@@ -1176,11 +1176,6 @@ Ext.define("Amps.panel.Wizard", {
               value: args["topic"],
               submitValue: true,
             },
-            {
-              xtype: "textfield",
-              name: "desc",
-              fieldLabel: "Topic Description",
-            },
           ],
         };
         topic.remove(topic.down("#createtopic"));
@@ -1431,7 +1426,7 @@ Ext.define("Amps.panel.Wizard", {
                       "Topic",
                       "existing",
                       amfutil.createCollectionStore("topics"),
-                      "desc",
+                      "topic",
                       "topic"
                     )
                   );
@@ -1515,8 +1510,18 @@ Ext.define("Amps.panel.Wizard", {
             console.log("Finish");
             var actionform = scope.up("#wizard").down("#card-0");
             var topicform = scope.up("#wizard").down("#card-1");
+            var user = amfutil.get_user();
 
             var subscriberform = scope.up("form");
+
+            function audit(d) {
+              d.createdby = user.firstname + " " + user.lastname;
+              d.created = new Date().toISOString();
+
+              d.modifiedby = user.firstname + " " + user.lastname;
+              d.modified = new Date().toISOString();
+              return d;
+            }
 
             var action = actionform.getForm().getValues();
             var actionid;
@@ -1525,6 +1530,8 @@ Ext.define("Amps.panel.Wizard", {
                 actionform,
                 action
               );
+
+              action = audit(action);
 
               actionid = await amfutil.addToCollection("actions", action);
               console.log(actionid);
@@ -1551,6 +1558,8 @@ Ext.define("Amps.panel.Wizard", {
               if (topics.length) {
                 topicid = topics[0]._id;
               } else {
+                topic = audit(topic);
+
                 topicid = await amfutil.addToCollection("topics", topic);
               }
             } else {
@@ -1575,6 +1584,8 @@ Ext.define("Amps.panel.Wizard", {
 
             console.log(topicid);
             subscriber.handler = actionid;
+
+            subscriber = audit(subscriber);
 
             var subscriberid = await amfutil.addToCollection(
               "services",
@@ -1609,8 +1620,10 @@ Ext.define("Amps.panel.Wizard", {
           }
 
           var topicval = topicform.getValues();
-          if (topicval.new) {
-            topic.setValue(topicval.new);
+          console.log(topicval);
+
+          if (topicval.existing) {
+            topic.setValue(topicval.existing);
           } else {
             topic.setValue(
               topicform.down("displayfield[name=topic]").getValue()
@@ -1625,7 +1638,6 @@ Ext.define("Amps.panel.Wizard", {
       itemId: "card-3",
       loadConfirmation: function (action, topic, subscriber) {
         var html = `
-            <h1>AMPS Wizard</h1>
             <hr style="height:1px;border:none;color:lightgray;background-color:lightgray;">
             <h2>Complete! You defined:</h4>
             <h3>Action: <a href="#actions/${action.id}">${action.name}</a><h5>
@@ -1635,6 +1647,10 @@ Ext.define("Amps.panel.Wizard", {
         this.down("#confirm").setHtml(html);
       },
       items: [
+        {
+          xtype: "component",
+          html: "<h1>AMPS Wizard</h1>",
+        },
         {
           itemId: "confirm",
           html: "",
@@ -1758,7 +1774,7 @@ Ext.define("Amps.util.Grids", {
           fields: [
             {
               xtype: "combobox",
-              fieldLabel: "S3 Provider",
+              fieldLabel: "S3 Service",
               name: "provider",
               allowBlank: false,
               blankText: "Select One",
@@ -1775,10 +1791,10 @@ Ext.define("Amps.util.Grids", {
                 });
               }),
             },
+
             {
               xtype: "fieldset",
-              hidden: true,
-              disabled: true,
+
               title: "Minio",
 
               itemId: "Minio",
@@ -1818,8 +1834,7 @@ Ext.define("Amps.util.Grids", {
             },
             {
               xtype: "fieldset",
-              hidden: true,
-              disabled: true,
+
               title: "AWS",
               itemId: "AWS",
               items: [
@@ -1878,11 +1893,7 @@ Ext.define("Amps.util.Grids", {
               listeners: {
                 afterrender: function (scope) {
                   var val = scope.getValue();
-                  var components = [
-                    "#proxyurl",
-                    "#proxyusername",
-                    "#proxypassword",
-                  ];
+                  var components = ["#proxy"];
                   components.forEach((name) => {
                     var component = scope.up("form").down(name);
                     component.setHidden(!val);
@@ -1890,11 +1901,7 @@ Ext.define("Amps.util.Grids", {
                   });
                 },
                 change: function (scope, val) {
-                  var components = [
-                    "#proxyurl",
-                    "#proxyusername",
-                    "#proxypassword",
-                  ];
+                  var components = ["#proxy"];
                   components.forEach((name) => {
                     var component = scope.up("form").down(name);
                     component.setHidden(!val);
@@ -1904,29 +1911,31 @@ Ext.define("Amps.util.Grids", {
               },
             },
             {
-              xtype: "textfield",
-              itemId: "proxyurl",
-              name: "proxy_url",
-              hidden: true,
-              disabled: true,
-              fieldLabel: "Proxy Url",
-            },
-            {
-              xtype: "textfield",
-              itemId: "proxyusername",
-              hidden: true,
-              disabled: true,
-              name: "proxy_username",
-              fieldLabel: "Proxy Username",
-            },
-            {
-              xtype: "textfield",
-              itemId: "proxypassword",
+              xtype: "fieldcontainer",
+              itemId: "proxy",
+              items: [
+                {
+                  xtype: "textfield",
+                  itemId: "proxyurl",
+                  name: "proxy_url",
 
-              hidden: true,
-              disabled: true,
-              name: "proxy_password",
-              fieldLabel: "Proxy Password",
+                  fieldLabel: "Proxy Url",
+                },
+                {
+                  xtype: "textfield",
+                  itemId: "proxyusername",
+
+                  name: "proxy_username",
+                  fieldLabel: "Proxy Username",
+                },
+                {
+                  xtype: "textfield",
+                  itemId: "proxypassword",
+
+                  name: "proxy_password",
+                  fieldLabel: "Proxy Password",
+                },
+              ],
             },
           ],
         },
@@ -2046,33 +2055,15 @@ Ext.define("Amps.util.Grids", {
                 align: "stretch",
               },
               items: [
-                {
-                  itemId: "ssl-cacert",
-                  allowBlank: false,
-
-                  xtype: "loadkey",
-                  name: "cacert",
-                  fieldLabel: "Certificate Authority Certificate",
+                amfutil.loadKey("Certificate Authority Certificate", "cacert", {
                   tooltip: "The Certificate Authority Certificate for SSL Auth",
-                },
-                {
-                  itemId: "ssl-cert",
-                  allowBlank: false,
-
-                  xtype: "loadkey",
-                  name: "cert",
-                  fieldLabel: "Client Certificate",
+                }),
+                amfutil.loadKey("Client Certificate", "cert", {
                   tooltip: "The Client Certificate for SSL Auth",
-                },
-                {
-                  itemId: "ssl-key",
-                  allowBlank: false,
-
-                  xtype: "loadkey",
-                  name: "key",
-                  fieldLabel: "Client Key",
+                }),
+                amfutil.loadKey("Client Key", "key", {
                   tooltip: "The Client Key for SSL Auth",
-                },
+                }),
               ],
             },
           ],
@@ -2524,6 +2515,71 @@ Ext.define("Amps.util.Grids", {
         },
       },
     }),
+    // messages: () => ({
+    //   title: "Messages",
+    //   // filter: { parent: { $exists: false } },
+    //   actionIcons: ["searchpanelbtn", "clearfilter", "refreshbtn"],
+    //   sort: {
+    //     etime: "DESC",
+    //   },
+    //   columns: [
+    //     { text: "Message ID", dataIndex: "msgid", flex: 1, type: "text" },
+    //     {
+    //       text: "Action",
+    //       dataIndex: "action",
+    //       flex: 1,
+    //       value: "true",
+    //       type: "text",
+    //     },
+    //     {
+    //       text: "Parent",
+    //       dataIndex: "parent",
+    //       flex: 1,
+    //       value: "true",
+    //       type: "text",
+    //     },
+    //     {
+    //       text: "File Name",
+    //       dataIndex: "fname",
+    //       flex: 1,
+    //       value: "true",
+    //       type: "text",
+    //     },
+    //     {
+    //       text: "File Size",
+    //       dataIndex: "fsize",
+    //       flex: 1,
+    //       type: "fileSize",
+    //     },
+    //     {
+    //       text: "Event Time",
+    //       dataIndex: "etime",
+    //       flex: 1,
+    //       type: "date",
+    //       renderer: function (val) {
+    //         var date = new Date(val);
+    //         return date.toString();
+    //       },
+    //     },
+    //     {
+    //       text: "Status",
+    //       dataIndex: "status",
+    //       flex: 1,
+    //       type: "combo",
+    //       options: [
+    //         {
+    //           field: "received",
+    //           label: "Received",
+    //         },
+    //         {
+    //           field: "routed",
+    //           label: "Routed",
+    //         },
+    //       ],
+    //     },
+    //   ],
+    //   options: [],
+    // }),
     message_events: () => ({
       title: "Message Events",
       // filter: { parent: { $exists: false } },
@@ -2607,7 +2663,7 @@ Ext.define("Amps.util.Grids", {
         {
           xtype: "textfield",
           name: "name",
-          fieldLabel: "Account Name",
+          fieldLabel: "Customer Name",
         },
         {
           xtype: "textfield",
@@ -3620,12 +3676,19 @@ Ext.define("Amps.util.Grids", {
                   )
                 ),
                 {
-                  xtype: "datetime",
+                  xtype: "fieldcontainer",
                   itemId: "by_start_time",
-                  name: "start_time",
-                  fieldLabel: "Start Time",
-                  allowBlank: false,
-                  tooltip: 'The start time for the "Start Time" deliver policy',
+
+                  items: [
+                    {
+                      xtype: "datetime",
+                      name: "start_time",
+                      fieldLabel: "Start Time",
+                      allowBlank: false,
+                      tooltip:
+                        'The start time for the "Start Time" deliver policy',
+                    },
+                  ],
                 },
               ],
             },
@@ -3675,12 +3738,9 @@ Ext.define("Amps.util.Grids", {
           field: "pgpencrypt",
           label: "PGP Encrypt",
           fields: [
-            {
-              xtype: "loadkey",
-              name: "key",
-              fieldLabel: "Encryption Key",
+            amfutil.loadKey("Encryption Key", "key", {
               tooltip: "The recipient public encryption key.",
-            },
+            }),
             {
               xtype: "checkbox",
               fieldLabel: "Compress",
@@ -3700,12 +3760,9 @@ Ext.define("Amps.util.Grids", {
               tooltip:
                 "A flag indicating whether or not to ASCII Armor the file.",
             },
-            {
-              xtype: "loadkey",
-              name: "signing_key",
-              fieldLabel: "Signing Key",
+            amfutil.loadKey("Signing Key", "signing_key", {
               tooltip: "The signing key.",
-            },
+            }),
             {
               xtype: "textfield",
               name: "passphrase",
@@ -3723,13 +3780,9 @@ Ext.define("Amps.util.Grids", {
           field: "pgpdecrypt",
           label: "PGP Decrypt",
           fields: [
-            {
-              xtype: "loadkey",
-              fieldLabel: "Decrypt Key",
-              name: "key",
-              allowBlank: false,
+            amfutil.loadKey("Decrypt Key", "key", {
               tooltip: "The private decryption key.",
-            },
+            }),
             {
               xtype: "checkbox",
               fieldLabel: "Verify Signature",
@@ -3739,13 +3792,9 @@ Ext.define("Amps.util.Grids", {
               allowBlank: false,
               tooltip: "Whether or not to verify the file signature.",
             },
-            {
-              xtype: "loadkey",
-              fieldLabel: "Partner Signing Key",
-              name: "signing_key",
-              allowBlank: false,
+            amfutil.loadKey("Partner Signing Key", "signing_key", {
               tooltip: "The key to use when verifying the signature.",
-            },
+            }),
             amfutil.formatFileName(),
             amfutil.outputTopic(),
           ],
@@ -3782,7 +3831,7 @@ Ext.define("Amps.util.Grids", {
                 },
               ],
               listeners: amfutil.renderListeners(function (scope, val) {
-                var get = this.up("form").down("#get");
+                var get = scope.up("form").down("#get");
                 get.setHidden(val != "get");
                 get.setDisabled(val != "get");
               }),
@@ -4048,21 +4097,24 @@ Ext.define("Amps.util.Grids", {
           field: "kafkaput",
           label: "Kafka PUT",
           fields: [
-            {
-              xtype: "combobox",
-              fieldLabel: "Kafka Provider",
-              name: "provider",
-              allowBlank: false,
-              blankText: "Select One",
-              vertical: true,
-              valueField: "_id",
-              displayField: "name",
-              store: amfutil.createCollectionStore("providers", {
-                type: "kafka",
-              }),
-              tooltip:
-                "The configured provider with broker and authenticiation configuration.",
-            },
+            amfutil.dynamicCreate(
+              {
+                xtype: "combobox",
+                fieldLabel: "Kafka Provider",
+                name: "provider",
+                allowBlank: false,
+                blankText: "Select One",
+                vertical: true,
+                valueField: "_id",
+                displayField: "name",
+                store: amfutil.createCollectionStore("providers", {
+                  type: "kafka",
+                }),
+                tooltip:
+                  "The configured provider with broker and authenticiation configuration.",
+              },
+              "providers"
+            ),
             {
               xtype: "textfield",
               fieldLabel: "Topic",
@@ -4169,18 +4221,23 @@ Ext.define("Amps.util.Grids", {
           field: "s3",
           label: "S3",
           fields: [
-            {
-              xtype: "combobox",
-              fieldLabel: "S3 Provider",
-              name: "provider",
-              allowBlank: false,
-              blankText: "Select One",
-              vertical: true,
-              valueField: "_id",
-              displayField: "name",
-              store: amfutil.createCollectionStore("providers", { type: "s3" }),
-              tooltip: "The configured S3 provider to use.",
-            },
+            amfutil.dynamicCreate(
+              {
+                xtype: "combobox",
+                fieldLabel: "S3 Provider",
+                name: "provider",
+                allowBlank: false,
+                blankText: "Select One",
+                vertical: true,
+                valueField: "_id",
+                displayField: "name",
+                store: amfutil.createCollectionStore("providers", {
+                  type: "s3",
+                }),
+                tooltip: "The configured S3 provider to use.",
+              },
+              "providers"
+            ),
 
             {
               xtype: "combobox",
@@ -4363,20 +4420,23 @@ Ext.define("Amps.util.Grids", {
           field: "sharepoint",
           label: "Sharepoint",
           fields: [
-            {
-              xtype: "combobox",
-              fieldLabel: "Sharepoint Provider",
-              name: "provider",
-              allowBlank: false,
-              blankText: "Select One",
-              vertical: true,
-              valueField: "_id",
-              displayField: "name",
-              store: amfutil.createCollectionStore("providers", {
-                type: "sharepoint",
-              }),
-              tooltip: "The configured Sharepoint Provider to use.",
-            },
+            amfutil.dynamicCreate(
+              {
+                xtype: "combobox",
+                fieldLabel: "Sharepoint Provider",
+                name: "provider",
+                allowBlank: false,
+                blankText: "Select One",
+                vertical: true,
+                valueField: "_id",
+                displayField: "name",
+                store: amfutil.createCollectionStore("providers", {
+                  type: "sharepoint",
+                }),
+                tooltip: "The configured Sharepoint Provider to use.",
+              },
+              "providers"
+            ),
 
             {
               xtype: "combobox",
@@ -4527,6 +4587,7 @@ Ext.define("Amps.util.Grids", {
           xtype: "textfield",
           name: "name",
           fieldLabel: "Name",
+          tooltip: "Unique Action Name",
           allowBlank: false,
           listeners: {
             change: async function (cmp, value, oldValue, eOpts) {
@@ -4549,11 +4610,15 @@ Ext.define("Amps.util.Grids", {
           xtype: "textfield",
           name: "desc",
           fieldLabel: "Description",
+          tooltip: "Action Description",
+
           allowBlank: false,
         },
         {
           xtype: "combobox",
           fieldLabel: "Action Type",
+          tooltip: "Action Type",
+
           allowBlank: false,
           displayField: "label",
           valueField: "field",
@@ -4722,7 +4787,7 @@ Ext.define("Amps.util.Grids", {
 
                 parm = {
                   xtype: "textfield",
-                  fieldLabel: "Parm",
+                  fieldLabel: "Custom",
                   allowBlank: false,
                   isFormField: false,
                   listeners: {
@@ -4830,7 +4895,7 @@ Ext.define("Amps.util.Grids", {
                 parm = {
                   xtype: "textfield",
                   isFormField: false,
-                  fieldLabel: "Parm",
+                  fieldLabel: "Custom",
                   allowBlank: false,
                   listeners: {
                     change: function (scope, val) {
@@ -4883,8 +4948,12 @@ Ext.define("Amps.util.Grids", {
           listeners: {
             beforerender: function (scope) {
               var val = scope.getValue();
-              scope.pieces = ["amps", " ", " ", " "];
-              scope.setValue(scope.pieces.join("."));
+              if (val) {
+                scope.pieces = val.split(".");
+              } else {
+                scope.pieces = ["amps", " ", " ", " "];
+                scope.setValue(scope.pieces.join("."));
+              }
             },
             change: async function (cmp, value, oldValue, eOpts) {
               var duplicate = await amfutil.checkDuplicate({
@@ -4970,12 +5039,24 @@ Ext.define("Amps.util.Grids", {
           fieldLabel: "Name",
           allowBlank: false,
           submitValue: true,
+
           listeners: {
             change: async function (cmp, value, oldValue, eOpts) {
+              function validator(val) {
+                var regex = new RegExp("\\s");
+                console.log(val);
+                console.log(regex.test(val));
+                // Check for white space
+                if (regex.test(val)) {
+                  //alert();
+                  return "Service name cannot contain spaces.";
+                }
+              }
               await amfutil.duplicateHandler(
                 cmp,
                 { services: { name: value } },
-                "Service Already Exists"
+                "Service Already Exists",
+                validator
               );
             },
           },
@@ -5042,12 +5123,15 @@ Ext.define("Amps.util.Grids", {
             return topic.replace(reg, "_");
           },
           fields: [
-            amfutil.combo(
-              "Provider",
-              "provider",
-              amfutil.createCollectionStore("providers", { type: "kafka" }),
-              "_id",
-              "name"
+            amfutil.dynamicCreate(
+              amfutil.combo(
+                "Provider",
+                "provider",
+                amfutil.createCollectionStore("providers", { type: "kafka" }),
+                "_id",
+                "name"
+              ),
+              "providers"
             ),
             {
               row: true,
@@ -5160,24 +5244,8 @@ Ext.define("Amps.util.Grids", {
                 },
               },
             },
-            {
-              itemId: "cert",
-              row: true,
-              xtype: "loadkey",
-              name: "cert",
-              fieldLabel: "Server Cert",
-              // hidden: true,
-              // disabled: true,
-            },
-            {
-              itemId: "key",
-              row: true,
-              xtype: "loadkey",
-              name: "key",
-              fieldLabel: "Server Key",
-              // hidden: true,
-              // disabled: true,
-            },
+            amfutil.loadKey("Server Cert", "cert"),
+            amfutil.loadKey("Server Key", "key"),
             {
               xtype: "checkbox",
               inputValue: true,
@@ -5255,12 +5323,7 @@ Ext.define("Amps.util.Grids", {
             //   },
             // },
 
-            {
-              row: true,
-              xtype: "loadkey",
-              fieldLabel: "Server Key",
-              name: "server_key",
-            },
+            amfutil.loadKey("Server Key", "server_key"),
 
             {
               xtype: "checkbox",
@@ -5461,6 +5524,9 @@ Ext.define("Amps.util.Grids", {
     }),
     keys: () => ({
       title: "Keys",
+      window: {
+        width: 600,
+      },
       actionIcons: ["addnewbtn", "searchpanelbtn", "clearfilter", "refreshbtn"],
       options: ["delete"],
       object: "Key",
@@ -5517,7 +5583,6 @@ Ext.define("Amps.util.Grids", {
           xtype: "keyfield",
           name: "data",
           fieldLabel: "Key",
-          height: 600,
         },
       ],
       columns: [
@@ -5577,8 +5642,6 @@ Ext.define("Amps.util.Grids", {
                       );
 
                       if (prev != payload || clicked) {
-                        console.log(button);
-
                         button.setDisabled(false);
                         button.setText(payload ? "Stop" : "Start");
 
