@@ -44,7 +44,8 @@ defmodule AmpsPortal.UserController do
         IO.inspect(conn)
     end
 
-    [host: host] = Application.get_env(:amps_web, AmpsWeb.Endpoint)[:url]
+    config = Application.get_env(:amps_portal, AmpsPortal.Endpoint)[:url]
+    host = Keyword.get(config, :host)
     IO.inspect(host)
 
     [:inet6, port: port] = Application.get_env(:master_proxy, :http)

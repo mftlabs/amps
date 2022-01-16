@@ -40,14 +40,21 @@ defmodule PGPEncrypt do
     dir = AmpsUtil.tempdir(msgid)
     key = Path.join(dir, "key.asc")
     signing_key = Path.join(dir, "signing_key.asc")
+
     fpath = Path.join(dir, msgid)
-    File.write(key, AmpsUtil.get_key(parms["key"]))
-    File.write(signing_key, AmpsUtil.get_key(parms["signing_key"]))
+    IO.inspect(signing_key)
+    IO.inspect(key)
+
+    IO.inspect(File.write(key, AmpsUtil.get_key(parms["key"])))
+    IO.inspect(File.write(signing_key, AmpsUtil.get_key(parms["signing_key"])))
+    IO.inspect(File.stat!(key))
 
     exec =
       "gpg --pinentry-mode loopback --passphrase #{parms["passphrase"]} --import #{signing_key}"
       |> String.to_charlist()
       |> :os.cmd()
+
+    IO.inspect(exec)
 
     exec =
       exec |> List.to_string() |> String.split(" ") |> Enum.at(2) |> String.trim_trailing(":")
@@ -63,14 +70,15 @@ defmodule PGPEncrypt do
     end} --recipient-file #{key} --local-user #{keyid} --pinentry-mode loopback --passphrase #{parms["passphrase"]} --sign -o #{fpath} --encrypt #{if msg["fpath"] do
       msg["fpath"]
     end}"
+    IO.inspect(command)
 
     exec =
       command
       |> String.to_charlist()
       |> :os.cmd()
 
-    File.rm(key)
-    File.rm(signing_key)
+    # File.rm(key)
+    # File.rm(signing_key)
 
     case exec do
       [] ->

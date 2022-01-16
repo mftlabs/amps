@@ -17,8 +17,6 @@ defmodule AmpsPortal.Users do
   end
 
   def authenticate(body) do
-    IO.puts("Authenticate")
-
     case body["provider"] do
       "google" ->
         google_upsert(body)
@@ -57,9 +55,6 @@ defmodule AmpsPortal.Users do
   end
 
   def get_by(clauses) do
-    IO.puts("Clauses")
-    IO.inspect(clauses)
-
     filter =
       Enum.reduce(clauses, %{}, fn {key, value}, acc ->
         if key == :id do
@@ -69,25 +64,19 @@ defmodule AmpsPortal.Users do
         end
       end)
 
-    IO.inspect(filter)
-
     convert_to_user_struct(AmpsWeb.DB.find_one("users", filter))
   end
 
   def convert_to_user_struct(user) do
-    IO.inspect(user)
-
     user =
       Map.put(user, "id", BSON.ObjectId.encode!(user["_id"]))
       |> Map.new(fn {k, v} -> {String.to_atom(k), v} end)
 
-    IO.inspect(user)
     struct(AmpsPortal.Users.User, user)
   end
 
   def google_upsert(params) do
     userinfo = params["userinfo"]
-    IO.inspect(userinfo)
     uid = params["uid"]
     user = AmpsWeb.DB.find_one("users", %{google_id: uid})
 
@@ -120,11 +109,6 @@ defmodule AmpsPortal.Users.Vault do
   def host(), do: Application.fetch_env!(:amps_web, AmpsWeb.Endpoint)[:vault_addr]
 
   def authenticate(body) do
-    IO.puts("Auth Method")
-    IO.inspect(Application.get_env(:amps_web, AmpsWeb.Endpoint)[:authmethod])
-    IO.puts("authenticate")
-    IO.inspect(body)
-
     vault =
       Vault.new(
         engine: Vault.Engine.KVV1,
@@ -138,12 +122,9 @@ defmodule AmpsPortal.Users.Vault do
         password: body["password"]
       })
 
-    Logger.debug("Var value: #{inspect(login)}")
-
     case login do
       {:ok, _token, _ttl} ->
         user = AmpsWeb.DB.find_one("users", %{username: body["username"]})
-        IO.inspect(user)
 
         if user["approved"] do
           Users.convert_to_user_struct(user)
@@ -160,7 +141,6 @@ defmodule AmpsPortal.Users.Vault do
   # Use params to look up user and verify password with `MyApp.Users.User.verify_password/2
 
   def create(body) do
-    IO.puts("create")
     token = AmpsWeb.Vault.get_token(:vaulthandler)
 
     {:ok, vault} =
@@ -171,8 +151,6 @@ defmodule AmpsPortal.Users.Vault do
         credentials: %{token: token}
       )
       |> Vault.auth()
-
-    Logger.debug("#{inspect(vault)}")
 
     result =
       Vault.request(vault, :post, "auth/userpass/users/" |> Kernel.<>(body["username"]),
@@ -190,10 +168,7 @@ defmodule AmpsPortal.Users.Vault do
     id = AmpsWeb.DB.insert("users", user)
 
     user = Map.put(user, :id, id)
-    IO.inspect(result)
-    IO.inspect(user)
     userstruct = struct(AmpsPortal.Users.User, user)
-    IO.inspect(userstruct)
     {:ok, userstruct}
   end
 
@@ -216,13 +191,9 @@ defmodule AmpsPortal.Users.DB do
 
   def authenticate(body) do
     user = AmpsWeb.DB.find_one("users", %{"username" => body["username"]})
-    IO.inspect(user)
-    IO.inspect(body["password"])
 
     case check_pass(user, body["password"], hash_key: "password") do
       {:ok, user} ->
-        IO.inspect("verified")
-
         if user["approved"] do
           Users.convert_to_user_struct(user)
         else
@@ -238,13 +209,8 @@ defmodule AmpsPortal.Users.DB do
   end
 
   def create(body) do
-    IO.inspect(body)
     password = body["password"]
-    IO.inspect(password)
     %{password_hash: hashed} = add_hash(password)
-    IO.inspect(hashed)
-
-    IO.inspect(check_pass(%{"password" => hashed}, password, hash_key: "password"))
 
     user =
       Map.drop(body, ["password"])

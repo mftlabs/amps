@@ -23,22 +23,28 @@ defmodule PGPDecrypt do
       |> String.to_charlist()
       |> :os.cmd()
 
+    IO.inspect(exec)
+
     exec =
       "gpg --batch --pinentry-mode loopback --import #{key}"
       |> String.to_charlist()
       |> :os.cmd()
 
+    IO.inspect(exec)
     command = "#{if msg["data"] do
       "echo \"#{msg["data"]}\" | "
-    end}gpg --batch --pinentry-mode loopback -o #{fpath} --decrypt #{if msg["fpath"] do
+    end}gpg --batch --pinentry-mode loopback --passphrase #{parms["passphrase"]} -o #{fpath} --decrypt #{if msg["fpath"] do
       msg["fpath"]
     end}"
+    IO.inspect(exec)
 
     exec =
       command
       |> String.to_charlist()
       |> :os.cmd()
       |> List.to_string()
+
+    IO.inspect(exec)
 
     if(String.contains?(exec, "failed")) do
       raise exec

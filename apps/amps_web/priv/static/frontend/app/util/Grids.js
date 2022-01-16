@@ -2456,12 +2456,15 @@ Ext.define("Amps.util.Grids", {
           store: Array.from({ length: 31 }, (x, i) => (i + 1).toString()),
           fieldLabel: "Days of the Month",
         },
-        amfutil.combo(
-          "Topic",
-          "topic",
-          amfutil.createCollectionStore("topics"),
-          "topic",
-          "topic"
+        amfutil.dynamicCreate(
+          amfutil.combo(
+            "Topic",
+            "topic",
+            amfutil.createCollectionStore("topics"),
+            "topic",
+            "topic"
+          ),
+          "topics"
         ),
         {
           xtype: "arrayfield",
@@ -3783,6 +3786,13 @@ Ext.define("Amps.util.Grids", {
             amfutil.loadKey("Decrypt Key", "key", {
               tooltip: "The private decryption key.",
             }),
+            {
+              xtype: "textfield",
+              inputType: "password",
+              name: "passphrase",
+              fieldLabel: "Decryption Key Passphrase",
+              tooltip: "Passphrase for Decryption Key",
+            },
             {
               xtype: "checkbox",
               fieldLabel: "Verify Signature",

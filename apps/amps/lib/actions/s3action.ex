@@ -4,9 +4,9 @@ defmodule S3Action do
   alias ExAws.S3
 
   @doc """
-
+  
   sftp client action parms may contain the following...
-
+  
   connect_timeout - opt
   host - required
   password - opt or key_name
@@ -14,7 +14,7 @@ defmodule S3Action do
   operation_timeout - opt
   port - required
   user - required
-
+  
   """
 
   def run(msg, parms, _state) do
@@ -72,6 +72,8 @@ defmodule S3Action do
               |> S3.Upload.stream_file()
               |> S3.upload(parms["bucket"], Path.join(parms["prefix"], msg["fname"]))
               |> ExAws.request(req)
+
+            IO.inspect(resp)
           end
 
         "delete" ->
@@ -104,7 +106,7 @@ defmodule S3Action do
     :ok
   end
 
-  defp req(parms) do
+  def req(parms) do
     provider = DB.find_one("providers", %{"_id" => parms["provider"]})
 
     req = [

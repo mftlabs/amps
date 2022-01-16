@@ -34,7 +34,7 @@ defmodule Amps.Umbrella.MixProject do
   # Dependencies listed here are available only for this project
   # and cannot be accessed from applications inside the apps/ folder.
   defp deps do
-    [{:ex_aws, path: "./apps/amps/ex_aws", override: true}]
+    []
   end
 
   # Aliases are shortcuts or tasks specific to the current project.
