@@ -376,6 +376,7 @@ Ext.define("Amps.form.ArrayField", {
   mixins: {
     field: "Ext.form.field.Field",
   },
+  flex: 1,
   xtype: "arrayfield",
   collapsible: true,
   fields: [],
@@ -1596,8 +1597,9 @@ Ext.define("Amps.form.add", {
     if (request) {
       this.request = request;
     }
-
+    console.log(fields);
     fields = amfutil.scanFields(fields);
+    console.log(fields);
 
     fields.forEach((field) => {
       this.down("form").insert(field);
@@ -2153,6 +2155,7 @@ Ext.define("Amps.view.main.MainController", {
         var fields = [];
         fields = fields.concat(ampsgrids.grids["services"]().fields);
         fields = fields.concat(service.fields);
+        fields = amfutil.scanFields(fields);
         console.log(fields);
 
         for (var i = 0; i < fields.length; i++) {
@@ -2273,7 +2276,7 @@ Ext.define("Amps.view.main.MainController", {
         labelWidth: 140,
       },
       scrollable: true,
-      items: [
+      items: amfutil.scanFields([
         {
           xtype: "textfield",
           name: "username",
@@ -2281,6 +2284,7 @@ Ext.define("Amps.view.main.MainController", {
           maskRe: /[^\^ ~`!@#$%^&*()+=[\]{}\\|?/:;,<>"']/,
           vtype: "alphnumVtype",
           vtypeText: "Please enter a valid user name",
+          tooltip: "The Username for this user",
           allowBlank: false,
           itemId: "username",
           listeners: {
@@ -2316,6 +2320,7 @@ Ext.define("Amps.view.main.MainController", {
           name: "password",
           fieldLabel: "Password",
           inputType: "password",
+          tooltip: "The password for this user",
           allowBlank: false,
           maskRe: /[^\^ ]/,
           vtype: "passwordCheck",
@@ -2370,6 +2375,8 @@ Ext.define("Amps.view.main.MainController", {
           name: "confirmpwd",
           fieldLabel: "Confirm Password",
           inputType: "password",
+          tooltip: "Confirm the password for this user",
+
           maskRe: /[^\^ ]/,
           id: "confpasswd_id",
           allowBlank: false,
@@ -2398,11 +2405,13 @@ Ext.define("Amps.view.main.MainController", {
         },
         {
           xtype: "textfield",
-          name: "given_name",
+          tooltip: "The First Name of this user",
+
+          name: "firstname",
           itemId: "given_name",
           fieldLabel: "Given Name",
           vtype: "textbox",
-          vtypeText: "Please enter a valid given name",
+          vtypeText: "Please enter a valid first name",
           allowBlank: false,
           width: 400,
           listeners: {
@@ -2418,12 +2427,13 @@ Ext.define("Amps.view.main.MainController", {
         },
         {
           xtype: "textfield",
-          name: "surname",
+          name: "lastname",
           itemId: "surname",
-          fieldLabel: "Surname",
+          fieldLabel: "Last Name",
+          tooltip: "The last name of the user",
           allowBlank: false,
           vtype: "textbox",
-          vtypeText: "Please enter a valid surname",
+          vtypeText: "Please enter a valid Last Name",
           width: 400,
           listeners: {
             blur: function (field) {
@@ -2438,6 +2448,7 @@ Ext.define("Amps.view.main.MainController", {
           name: "email",
           vtype: "email",
           fieldLabel: "Email",
+          tooltip: "The user's email",
           allowBlank: false,
           //  minLength:MftDashboard.util.FieldValidations.EMAIL_MIN_LENTGH,
           //   maxLength:MftDashboard.util.FieldValidations.EMAIL_MAX_LENTGH,
@@ -2453,6 +2464,8 @@ Ext.define("Amps.view.main.MainController", {
           xtype: "textfield",
           name: "phone",
           fieldLabel: "Phone Number",
+          tooltip: "The user's phone",
+
           allowBlank: false,
           itemId: "phone_number",
           vtype: "phone",
@@ -2464,7 +2477,7 @@ Ext.define("Amps.view.main.MainController", {
             },
           },
         },
-      ],
+      ]),
       buttons: [
         {
           text: "Save",

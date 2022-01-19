@@ -1,7 +1,11 @@
 Ext.define("Amps.view.form.Key", {
   extend: "Ext.form.FieldContainer",
   xtype: "keyfield",
-  layout: "hbox",
+  flex: 1,
+  layout: {
+    type: "hbox",
+    align: "stretch",
+  },
 
   defaults: {
     margin: 5,

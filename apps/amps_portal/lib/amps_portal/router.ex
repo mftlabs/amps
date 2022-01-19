@@ -31,13 +31,15 @@ defmodule AmpsPortal.Router do
     resources("/session", SessionController, singleton: true, only: [:create, :delete])
     post("/session/renew", SessionController, :renew)
     get("/users/token/:token", UserController, :parse_user_token)
-    get("/users/link/:id", UserController, :get_user_link)
+    post("/users/link/:email", UserController, :send_user_link)
     post("/users/password", UserController, :reset_password)
   end
 
   scope "/api", AmpsPortal do
     pipe_through([:api, :api_protected])
     get("/msg/:msgid", DataController, :get_message)
+    delete("/msg/:msgid", DataController, :delete_message)
+
     get("/inbox", DataController, :get_messages)
     get("/user", UserController, :get)
     put("/user", UserController, :update)

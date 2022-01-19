@@ -40,13 +40,13 @@ Ext.define("Amps.Pages", {
 
       return {
         actionbar: [
-          {
-            xtype: "button",
-            iconCls: "x-fa fa-search",
-            handler: function () {
-              store.reload();
-            },
-          },
+          // {
+          //   xtype: "button",
+          //   iconCls: "x-fa fa-search",
+          //   handler: function () {
+          //     store.reload();
+          //   },
+          // },
           {
             xtype: "button",
             iconCls: "x-fa fa-refresh",
@@ -87,86 +87,121 @@ Ext.define("Amps.Pages", {
               cell: {
                 xtype: "widgetcell",
                 widget: {
-                  xtype: "button",
-                  iconCls: "x-fa fa-download",
-                  handler: async function (scope, val) {
-                    console.log(scope);
-                    console.log(val);
-                    var widget = scope.up("widget");
-                    console.log(widget);
-                    var msg = widget._record.data;
+                  xtype: "container",
 
-                    var pbar = new Ext.Progress();
+                  items: [
+                    {
+                      xtype: "button",
+                      iconCls: "x-fa fa-download",
+                      handler: async function (scope, val) {
+                        console.log(scope);
+                        console.log(val);
+                        var widget = scope.up("widgetcell");
+                        console.log(widget);
+                        var msg = widget._record.data;
 
-                    var msgbox = new Ext.MessageBox();
-                    msgbox.show({
-                      title: "Downloading...",
-                      items: [pbar],
-                      width: 300,
-                      closable: false,
-                    });
-                    await ampsutil.renew_session();
-                    await fetch("/api/msg/" + msg.msgid, {
-                      headers: {
-                        Authorization: localStorage.getItem("access_token"),
+                        var pbar = new Ext.Progress();
+
+                        var msgbox = new Ext.MessageBox();
+                        msgbox.show({
+                          title: "Downloading...",
+                          items: [pbar],
+                          width: 300,
+                          closable: false,
+                        });
+                        await ampsutil.renew_session();
+                        await fetch("/api/msg/" + msg.msgid, {
+                          headers: {
+                            Authorization: localStorage.getItem("access_token"),
+                          },
+                        })
+                          .then(async (response) => {
+                            if (response.ok) {
+                              var progress = 0;
+                              var size;
+                              for (let entry of response.headers.entries()) {
+                                if (entry[0] == "content-length") {
+                                  size = entry[1];
+                                }
+                              }
+                              filename = msg.fname;
+                              console.log(size);
+
+                              console.log(response);
+                              const reader = response.body.getReader();
+                              return new ReadableStream({
+                                start(controller) {
+                                  return pump();
+                                  function pump() {
+                                    return reader
+                                      .read()
+                                      .then(({ done, value }) => {
+                                        // When no more data needs to be consumed, close the stream
+                                        if (done) {
+                                          controller.close();
+                                          return;
+                                        }
+                                        // Enqueue the next data chunk into our target stream
+                                        progress += value.length;
+                                        pbar.setValue(progress / size);
+                                        controller.enqueue(value);
+                                        return pump();
+                                      });
+                                  }
+                                },
+                              });
+                            } else {
+                              msgbox.close();
+                              Ext.MessageBox.alert(
+                                "Error",
+                                "Failed to Download UFA Agent"
+                              );
+                              throw new Error("Something went wrong");
+                            }
+                          })
+                          .then((stream) => new Response(stream))
+                          .then((response) => response.blob())
+                          .then((blob) => {
+                            const url = URL.createObjectURL(blob);
+                            const link = document.createElement("a");
+                            link.href = url;
+                            link.setAttribute("download", filename);
+                            document.body.appendChild(link);
+                            msgbox.close();
+                            link.click();
+                            link.remove();
+                          })
+                          .catch((err) => console.error(err));
                       },
-                    })
-                      .then(async (response) => {
-                        if (response.ok) {
-                          var progress = 0;
-                          var size;
-                          for (let entry of response.headers.entries()) {
-                            if (entry[0] == "content-length") {
-                              size = entry[1];
+                    },
+                    {
+                      xtype: "button",
+                      iconCls: "x-fa fa-trash",
+                      handler: async function (scope, val) {
+                        console.log(scope);
+                        console.log(val);
+                        var widget = scope.up("widgetcell");
+                        console.log(widget);
+                        var msg = widget._record.data;
+                        Ext.Msg.confirm(
+                          "Confirm Message Deletion",
+                          "Are you sure you want to delete this message?",
+                          function (btn) {
+                            if (btn == "yes") {
+                              console.log("yes");
+                              ampsutil.ajaxRequest({
+                                url: "api/msg/" + msg.msgid,
+                                method: "delete",
+                                success: function () {
+                                  store.reload();
+                                },
+                              });
                             }
                           }
-                          filename = msg.fname;
-                          console.log(size);
-
-                          console.log(response);
-                          const reader = response.body.getReader();
-                          return new ReadableStream({
-                            start(controller) {
-                              return pump();
-                              function pump() {
-                                return reader.read().then(({ done, value }) => {
-                                  // When no more data needs to be consumed, close the stream
-                                  if (done) {
-                                    controller.close();
-                                    return;
-                                  }
-                                  // Enqueue the next data chunk into our target stream
-                                  progress += value.length;
-                                  pbar.setValue(progress / size);
-                                  controller.enqueue(value);
-                                  return pump();
-                                });
-                              }
-                            },
-                          });
-                        } else {
-                          msgbox.close();
-                          Ext.MessageBox.alert(
-                            "Error",
-                            "Failed to Download UFA Agent"
-                          );
-                          throw new Error("Something went wrong");
-                        }
-                      })
-                      .then((stream) => new Response(stream))
-                      .then((response) => response.blob())
-                      .then((blob) => {
-                        const url = URL.createObjectURL(blob);
-                        const link = document.createElement("a");
-                        link.href = url;
-                        link.setAttribute("download", filename);
-                        document.body.appendChild(link);
-                        msgbox.close();
-                        link.click();
-                        link.remove();
-                      })
-                      .catch((err) => console.error(err));
-                  },
+                        );
+                      },
+                    },
+                  ],
                 },
                 // Start file download.
               },

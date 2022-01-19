@@ -464,8 +464,7 @@ defmodule AmpsUtil do
           [
             # ssl: true,
             sasl:
-              {String.to_existing_atom(provider["mechanism"]), provider["username"],
-               provider["password"]}
+              {String.to_atom(provider["mechanism"]), provider["username"], provider["password"]}
           ]
 
         "SASL_SSL" ->

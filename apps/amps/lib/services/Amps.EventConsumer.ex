@@ -165,6 +165,7 @@ defmodule Amps.PullConsumer do
 
           AmpsEvents.send_history("amps.events.action", "message_events", msg, %{
             "status" => "started",
+            "topic" => parms["topic"],
             "action" => actparms["name"]
           })
 
@@ -178,6 +179,7 @@ defmodule Amps.PullConsumer do
               IO.puts("ack next message")
 
               AmpsEvents.send_history("amps.events.action", "message_events", msg, %{
+                "topic" => parms["topic"],
                 "status" => "completed",
                 "action" => actparms["name"]
               })

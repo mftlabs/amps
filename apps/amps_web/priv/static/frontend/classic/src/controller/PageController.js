@@ -474,6 +474,79 @@ Ext.define("Amps.controller.PageController", {
     }
   },
 
+  resetPassword: async function (grid, rowIndex, colIndex, e) {
+    var record = grid.getStore().getAt(rowIndex);
+
+    Ext.MessageBox.confirm(
+      "Reset Password",
+      `Are you sure you want to reset ${record.data.firstname} ${record.data.lastname}'s password?`,
+      async function (res) {
+        if (res == "yes") {
+          console.log("yes");
+          var resp = await amfutil.ajaxRequest({
+            method: "GET",
+            url: "/api/users/reset/" + record.data._id,
+            failure: function () {
+              Ext.toast("Couldn't reset password");
+            },
+          });
+          var data = Ext.decode(resp.responseText);
+          if (data.success) {
+            var win = new Ext.window.Window({
+              title: "Password Reset",
+              modal: true,
+              width: 300,
+              padding: 10,
+              layout: {
+                type: "vbox",
+                align: "stretch",
+              },
+              items: [
+                {
+                  xtype: "component",
+                  autoEl: "h3",
+                  html: "Password Successfully Reset",
+                },
+
+                {
+                  xtype: "container",
+                  layout: "center",
+                  items: [
+                    {
+                      xtype: "button",
+                      text: "Copy Password",
+                      handler: function (btn) {
+                        navigator.clipboard
+                          .writeText(data.success.password)
+                          .then(
+                            function () {
+                              console.log(
+                                "Async: Copying to clipboard was successful!"
+                              );
+                              Ext.toast("Copied to clipboard");
+                            },
+                            function (err) {
+                              console.error(
+                                "Async: Could not copy text: ",
+                                err
+                              );
+                            }
+                          );
+                      },
+                    },
+                  ],
+                },
+              ],
+            });
+            win.show();
+          }
+        }
+      }
+    );
+
+    // console.log(resp);
+  },
+
   getLink: async function (grid, rowIndex, colIndex, e) {
     var record = grid.getStore().getAt(rowIndex);
     console.log(record);
@@ -484,7 +557,7 @@ Ext.define("Amps.controller.PageController", {
 
     var resp = await amfutil.ajaxRequest({
       method: "GET",
-      url: url,
+      url: "/api/users/link/" + record.data._id,
     });
 
     var link = Ext.decode(resp.responseText);
@@ -685,19 +758,24 @@ Ext.define("Amps.controller.PageController", {
     console.log("Upload");
     var rec = grid.getStore().getAt(rowIndex);
     var uploadWindow = new Ext.window.Window({
-      title: "Upload File to Topic: " + rec.data.desc,
+      title: "Upload File to Topic: " + rec.data.topic,
       modal: true,
-      width: 500,
+      width: 600,
+      height: 500,
       scrollable: true,
       resizable: false,
       layout: "fit",
+      padding: 10,
       items: [
         {
           xtype: "form",
           defaults: {
             padding: 5,
             labelWidth: 140,
-            width: 480,
+          },
+          layout: {
+            type: "vbox",
+            align: "stretch",
           },
           scrollable: true,
           items: [
@@ -748,56 +826,23 @@ Ext.define("Amps.controller.PageController", {
                 var form = this.up("form").getForm();
                 var fields = form.getFields();
                 var values = form.getValues();
-                var files = fields.items[1].extractFileInput().files;
+                var files = fields.items[0].extractFileInput().files;
 
-                var defaults = values.defaults
-                  ? Array.isArray(values.defaults)
-                    ? values.defaults.map((defaultobj) => {
-                        return JSON.parse(defaultobj);
-                      })
-                    : [JSON.parse(values.defaults)]
-                  : [];
-
-                console.log(defaults);
-                var meta = defaults.map((def) => {
-                  return { field: "x-amz-meta-" + def.field, value: def.value };
-                });
+                var meta = amfutil.formatArrayField(values.defaults);
+                console.log(meta);
                 // console.log(files);
                 Array.from(files).forEach((file) => {
-                  var prefix = values.prefix.length
-                    ? values.prefix.slice(-1) == "/"
-                      ? values.prefix
-                      : values.prefix + "/"
-                    : values.prefix;
-                  amfutil.ajaxRequest({
-                    jsonData: {
-                      fname: prefix + file.name,
-                      bucket: rec.data.name,
-                      host: window.location.hostname,
-                    },
-                    url: "/api/upload",
-                    headers: {
-                      Authorization: localStorage.getItem("access_token"),
-                    },
-                    method: "POST",
-                    timeout: 60000,
-                    success: function (response) {
-                      var url = Ext.decode(response.responseText);
-                      console.log(file);
-                      console.log(url);
-                      uploadWindow.close();
-                      amfuploads.handleUpload(
-                        url,
-                        file,
-                        prefix,
-                        rec.data.name,
-                        meta
-                      );
+                  var topic = rec.data.topic;
+                  amfuploads.handleUpload(
+                    encodeURI("api/upload/" + topic),
+                    file,
+                    topic,
+                    meta
+                  );
 
-                      // msgbox.anchorTo(Ext.getBody(), "br");
-                    },
-                  });
+                  // msgbox.anchorTo(Ext.getBody(), "br");
                 });
+                uploadWindow.close();
               },
             },
             {
@@ -816,6 +861,16 @@ Ext.define("Amps.controller.PageController", {
     });
     uploadWindow.show();
   },
+
+  reprocess: async function (grid, rowIndex, colIndex, e) {
+    var record = grid.getStore().getAt(rowIndex).data;
+    console.log(record);
+    amfutil.ajaxRequest({
+      url: "api/msg/reprocess/" + record.msgid,
+      method: "post",
+    });
+    grid.getStore().reload();
+  },
 });
 
 Ext.define("Amps.window.Uploads", {
@@ -825,64 +880,83 @@ Ext.define("Amps.window.Uploads", {
   height: 500,
   closeAction: "method-hide",
   uploads: [],
-  title: "Pending Uploads",
+  title: "Uploads",
 
   update: function () {
     this.down("grid").setStore(this.uploads);
   },
 
-  handleUpload: function (url, file, prefix, bucket, metadata) {
+  handleUpload: async function (url, file, topic, metadata) {
+    await amfutil.renew_session();
     var scope = this;
     var data = new FormData();
+    console.log(url);
+
     data.append("file", file);
+    data.append("meta", JSON.stringify(metadata));
 
     let request = new XMLHttpRequest();
-    request.open("PUT", url);
-    metadata.forEach((meta) => {
-      request.setRequestHeader(meta.field, meta.value);
-      console.log(meta);
-    });
+    request.open("POST", url);
     request.setRequestHeader(
       "Authorization",
       localStorage.getItem("access_token")
     );
 
-    request.setRequestHeader("Content-Type", file.type);
-
     var id = Math.floor(Math.random() * Date.now());
     console.log(id);
     // upload progress event
+    var startTime = new Date();
+
     request.upload.addEventListener("progress", function (e) {
       // upload progress as percentage
-      let progress = e.loaded / e.total;
-      var idx = scope.uploads.findIndex((item) => item.id == id);
-      if (progress > 0.99) {
-        progress = 0.99;
+      var endTime = new Date();
+      var timeDiff = endTime - startTime;
+      if (timeDiff > 500) {
+        let progress = e.loaded / e.total;
+        var idx = scope.uploads.findIndex((item) => item.id == id);
+        if (progress > 0.99) {
+          progress = 0.99;
+        }
+        scope.uploads[idx].progress = progress;
+        console.log(scope.uploads[idx]);
+        startTime = new Date();
+        scope.update();
       }
-      scope.uploads[idx].progress = progress;
-      scope.update();
     });
 
     // request finished event
     request.addEventListener("load", function (e) {
       console.log(request.status);
       console.log(request.response);
-      scope.removeUpload(id);
+      var idx = scope.uploads.findIndex((item) => item.id == id);
+      scope.uploads[idx].progress = 1;
+
+      scope.uploads[idx].status = "Uploaded";
+      scope.update();
+    });
+
+    request.addEventListener("abort", function (e) {
+      var idx = scope.uploads.findIndex((item) => item.id == id);
+
+      scope.uploads[idx].status = "Aborted";
+      scope.update();
     });
 
     scope.uploads.push({
       id: id,
       progress: 0,
       fname: file.name,
-      bucket: bucket,
-      prefix: prefix,
+      topic: topic,
       request: request,
+      status: "Uploading",
     });
 
+    console.log(data);
     // send POST request to server
     request.send(data);
 
     scope.show();
+    scope.update();
   },
 
   removeUpload: function (id) {
@@ -891,10 +965,16 @@ Ext.define("Amps.window.Uploads", {
     this.update();
   },
 
+  hasPending: function () {
+    var pending = this.uploads.filter((item) => item.status == "Uploading");
+    return pending.length;
+  },
+
   cancelUpload: function (grid, rowIndex) {
     var rec = grid.getStore().getAt(rowIndex);
+    console.log(rec);
     rec.data.request.abort();
-    this.removeUpload(rec.data.id);
+    this.update();
   },
   items: [
     {
@@ -902,8 +982,7 @@ Ext.define("Amps.window.Uploads", {
 
       columns: [
         { text: "File Name", dataIndex: "fname", flex: 1, type: "text" },
-        { text: "Bucket", dataIndex: "bucket", flex: 1, type: "text" },
-        { text: "Prefix", dataIndex: "prefix", flex: 1, type: "text" },
+        { text: "Topic", dataIndex: "topic", flex: 1, type: "text" },
         {
           text: "Upload Progress",
           dataIndex: "progress",
@@ -915,6 +994,10 @@ Ext.define("Amps.window.Uploads", {
           },
         },
         {
+          text: "Status",
+          dataIndex: "status",
+        },
+        {
           xtype: "actioncolumn",
           text: "Actions",
           dataIndex: "actions",
@@ -922,10 +1005,23 @@ Ext.define("Amps.window.Uploads", {
           items: [
             {
               name: "cancel",
+              iconCls: "x-fa fa-stop-circle actionicon",
+              tooltip: "Cancel File Upload",
+              handler: function (grid, rowIndex, colIndex, btn, e, record) {
+                console.log("Cancel");
+                grid.up("window").cancelUpload(grid, rowIndex);
+              },
+              isDisabled: function (view, rowIndex, colIndex, item, record) {
+                return !(record.get("status") == "Uploading");
+              },
+            },
+            {
+              name: "cancel",
               iconCls: "x-fa fa-times-circle actionicon",
               tooltip: "Cancel File Upload",
-              handler: function (grid, rowIndex, colIndex) {
+              handler: function (grid, rowIndex, colIndex, btn, e, record) {
                 grid.up("window").cancelUpload(grid, rowIndex);
+                grid.up("window").removeUpload(record.data.id);
               },
             },
           ],

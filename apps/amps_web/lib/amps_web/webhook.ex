@@ -13,20 +13,24 @@ defmodule AmpsWeb.Webhook do
 
   plug(:dispatch)
 
-  post "/events" do
+  get "/:user/events" do
     IO.inspect(conn)
-    data = conn.body_params()
-    IO.puts("events called")
-    IO.inspect(data)
-    send_resp(conn, 200, "ok")
+    user = conn.params["user"]
+    IO.puts("events #{user} called")
+    send_file(conn, 200, "mix.exs")
   end
 
   post "/upload" do
     IO.inspect(conn)
-    data = conn.body_params()
-    IO.puts("events called")
+
+    # user = conn.params["user"]
+    # IO.inspect(user)
+    user = "hello"
+    IO.puts("upload to #{user} called")
+    data = conn.body_params
+
     IO.inspect(data)
-    send_resp(conn, 200, "ok")
+    send_resp(conn, 200, "Uploaded that ish")
   end
 
   match _ do

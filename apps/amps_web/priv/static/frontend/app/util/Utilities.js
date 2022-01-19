@@ -697,6 +697,7 @@ Ext.define("Amps.util.Utilities", {
   renewPromise: null,
   channel: null,
   socket: null,
+  stores: [],
 
   gridactions: {
     approve: {
@@ -749,11 +750,25 @@ Ext.define("Amps.util.Utilities", {
       tooltip: "Click here to get link",
       handler: "getLink",
     },
+    reprocess: {
+      name: "reprocess",
+      iconCls: "x-fa fa-undo",
+      itemId: "reprocess",
+      tooltip: "Click here to reprocess message",
+      handler: "reprocess",
+    },
+    reset: {
+      name: "link",
+      iconCls: "x-fa fa-key actionicon",
+      itemId: "resetPassword",
+      tooltip: "Click here to reset user password",
+      handler: "resetPassword",
+    },
     upload: {
       name: "upload",
       iconCls: "x-fa fa-upload actionicon",
       itemId: "upload",
-      tooltip: "Upload File to Bucket",
+      tooltip: "Upload File to Topic",
       handler: "handleUpload",
     },
   },
@@ -839,19 +854,18 @@ Ext.define("Amps.util.Utilities", {
     });
   },
 
-  text: function (label, name, value, extra) {
+  text: function (label, name, opts) {
     return Object.assign(
       {
         xtype: "textfield",
         name: name,
         fieldLabel: label,
-        value: value,
       },
-      extra
+      opts
     );
   },
 
-  checkbox: function (label, name, value, extra) {
+  checkbox: function (label, name, value, opts) {
     return Object.assign(
       {
         xtype: "checkbox",
@@ -861,7 +875,7 @@ Ext.define("Amps.util.Utilities", {
         fieldLabel: label,
         value: value,
       },
-      extra
+      opts
     );
   },
 
@@ -1175,6 +1189,26 @@ Ext.define("Amps.util.Utilities", {
     } catch {}
   },
 
+  searchFields: function (fields, func) {
+    fields = fields.map((field) => {
+      field = amfutil.search(field, func);
+      return field;
+    });
+    console.log(fields);
+    return fields;
+  },
+
+  search: function (field, func) {
+    field = func(field);
+    if (field.items && field.items.length) {
+      field.items = field.items.map((item) => {
+        return amfutil.search(item, func);
+      });
+    }
+
+    return field;
+  },
+
   scanFields: function (fields) {
     fields = fields.map((field) => {
       field = amfutil.scan(field);
@@ -1194,16 +1228,31 @@ Ext.define("Amps.util.Utilities", {
     return field;
   },
 
+  renderContainer: function (itemId, items) {
+    return {
+      xtype: "fieldcontainer",
+      itemId: itemId,
+      layout: {
+        type: "vbox",
+        align: "stretch",
+      },
+      items: items,
+    };
+  },
+
   tooltip: function (field, opts) {
     return Object.assign(
       {
         xtype: "fieldcontainer",
+        row: field.row,
         layout: {
           type: "hbox",
           align: "stretch",
         },
         items: [
-          Ext.apply(field, { flex: 1 }),
+          Ext.apply(field, {
+            flex: 1,
+          }),
           {
             xtype: "fieldcontainer",
             layout: "center",
@@ -1214,10 +1263,9 @@ Ext.define("Amps.util.Utilities", {
               render: function () {
                 var win = this.down("#tooltip");
                 this.getEl().on("mouseenter", function (e) {
-                  console.log(e);
                   win.show();
                   win.setPagePosition(e.parentEvent.pageX - 225, [
-                    e.parentEvent.pageY - 75,
+                    e.parentEvent.pageY - win.getHeight() - 15,
                   ]);
                 });
 
@@ -1230,6 +1278,7 @@ Ext.define("Amps.util.Utilities", {
               {
                 xtype: "component",
                 cls: "x-fa fa-info",
+                itemId: "info-icon",
               },
               {
                 xtype: "fieldcontainer",
@@ -1242,7 +1291,6 @@ Ext.define("Amps.util.Utilities", {
                     header: false,
                     itemId: "tooltip",
                     width: 300,
-                    height: 60,
 
                     layout: "fit",
                     items: [
@@ -1341,6 +1389,7 @@ Ext.define("Amps.util.Utilities", {
   dynamicCreate: function (field, collection) {
     return {
       xtype: "fieldcontainer",
+      dynamic: true,
       layout: {
         type: "hbox",
         align: "stretch",
@@ -1448,6 +1497,12 @@ Ext.define("Amps.util.Utilities", {
     };
   },
 
+  dynamicRemove: function (field) {
+    var r = field.items[0];
+    r.tooltip = field.tooltip;
+    return r;
+  },
+
   formatFileName: function (opts = {}) {
     return {
       xtype: "fieldcontainer",
@@ -1477,6 +1532,7 @@ Ext.define("Amps.util.Utilities", {
     return {
       xtype: "container",
       layout: "fit",
+      padding: 5,
       items: [
         {
           xtype: "container",
@@ -1595,49 +1651,70 @@ Ext.define("Amps.util.Utilities", {
     return store;
   },
 
+  compareOpts: function (x, y, val = true) {
+    Object.entries(x).forEach((entry) => {
+      var v = entry[1];
+      if (
+        typeof entry[1] === "object" &&
+        !Array.isArray(entry[1]) &&
+        entry[1] !== null
+      ) {
+        val = amfutil.compareFilters(x[entry[0]], y[entry[0]], val);
+      } else {
+        val = val && y[entry[0]] == x[entry[0]];
+      }
+    });
+    return val;
+  },
+
   createCollectionStore: function (collection, filters = {}, opts = {}) {
-    var store = Ext.create(
-      "Ext.data.Store",
-      Object.assign(
-        {
-          remoteSort: true,
-          proxy: {
-            type: "rest",
-            url: `/api/store/${collection}`,
-            headers: {
-              Authorization: localStorage.getItem("access_token"),
-            },
-            limitParam: "",
-
-            extraParams: { filters: JSON.stringify(filters) },
-            reader: {
-              type: "json",
-              rootProperty: "rows",
-              totalProperty: "count",
-            },
-            listeners: {
-              load: function (data) {
-                console.log(data);
-              },
-              exception: amfutil.refresh_on_failure,
-            },
-          },
-          autoLoad: true,
-        },
-        opts
-      )
+    var check = amfutil.stores.find(
+      (store) =>
+        store.config.collection == collection &&
+        amfutil.compareOpts(store.config.filters, filters) &&
+        amfutil.compareOpts(store.config.opts, opts)
     );
+    console.log(check);
+    if (check) {
+      return check.store;
+    } else {
+      var store = Ext.create(
+        "Ext.data.Store",
+        Object.assign(
+          {
+            remoteSort: true,
+            proxy: {
+              type: "rest",
+              url: `/api/store/${collection}`,
+              headers: {
+                Authorization: localStorage.getItem("access_token"),
+              },
+              limitParam: "",
 
-    // store.on(
-    //   "load",
-    //   function (storescope, records, successful, operation, eOpts) {
-    //     console.log("STORE SUCCESS: " + successful);
-    //     if (!successful) {
-    //       storescope.reload();
-    //     }
-    //   }
-    // );
-    return store;
+              extraParams: { filters: JSON.stringify(filters) },
+              reader: {
+                type: "json",
+                rootProperty: "rows",
+                totalProperty: "count",
+              },
+              listeners: {
+                load: function (data) {
+                  console.log(data);
+                },
+                exception: amfutil.refresh_on_failure,
+              },
+            },
+            autoLoad: true,
+          },
+          opts
+        )
+      );
+      amfutil.stores.push({
+        store: store,
+        config: { collection: collection, filters: filters, opts: opts },
+      });
+      return store;
+    }
   },
 
   createFieldStore: function (collection, id, field, opts = {}) {
@@ -1962,7 +2039,7 @@ Ext.define("Amps.util.Utilities", {
     return obj;
   },
 
-  setGridStore: function (filters) {
+  setGridStore: function (filters, config) {
     // console.log(filters);
     var route = Ext.util.History.currentToken;
     var grid = amfutil.getElementByID("main-grid");
@@ -1990,6 +2067,19 @@ Ext.define("Amps.util.Utilities", {
         autoLoad: true,
       })
     );
+    console.log(config);
+
+    if (config && config.sort) {
+      var store = grid.getStore();
+
+      amfutil.setStoreSort(store, config.sort);
+    }
+  },
+
+  setStoreSort(store, sort) {
+    Object.entries(sort).forEach((sort) => {
+      store.sort(sort[0], sort[1]);
+    });
   },
 
   checkReg: function (regx, samplevalue, type) {
@@ -2060,7 +2150,7 @@ Ext.define("Amps.util.Utilities", {
     window.clearForm();
 
     console.log(form);
-    amfutil.setGridStore();
+    amfutil.setGridStore({}, ampsgrids.grids[Ext.util.History.getToken()]());
 
     amfutil.getElementByID("searchwindow").close();
     amfutil.getElementByID("searchpanelbtn").setIconCls("x-fa fa-search");
@@ -2311,7 +2401,8 @@ Ext.define("Amps.util.Utilities", {
               }
             });
             console.log(filters);
-            amfutil.setGridStore(filters);
+            amfutil.setGridStore(filters, page);
+
             amfutil.getElementByID("searchwindow").close();
             amfutil
               .getElementByID("searchpanelbtn")

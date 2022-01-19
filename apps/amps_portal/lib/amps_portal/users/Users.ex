@@ -55,6 +55,8 @@ defmodule AmpsPortal.Users do
   end
 
   def get_by(clauses) do
+    IO.inspect(clauses)
+
     filter =
       Enum.reduce(clauses, %{}, fn {key, value}, acc ->
         if key == :id do
@@ -64,7 +66,13 @@ defmodule AmpsPortal.Users do
         end
       end)
 
-    convert_to_user_struct(AmpsWeb.DB.find_one("users", filter))
+    case AmpsWeb.DB.find_one("users", filter) do
+      nil ->
+        nil
+
+      obj ->
+        convert_to_user_struct(obj)
+    end
   end
 
   def convert_to_user_struct(user) do
@@ -259,10 +267,15 @@ defmodule AmpsPortal.Users.User do
 
   def reset_password_changeset(user, attrs) do
     IO.inspect(user)
-    IO.inspect(attrs)
-    res = AmpsWeb.DB.find_one_and_update("users", %{"_id" => user.id}, attrs)
-    IO.inspect(res)
-    user
+
+    case user.username do
+      nil ->
+        nil
+
+      _ ->
+        res = AmpsWeb.DB.find_one_and_update("users", %{"_id" => user.id}, attrs)
+        user
+    end
   end
 
   def changeset(user, _params) do

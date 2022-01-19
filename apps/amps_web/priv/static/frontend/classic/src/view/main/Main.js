@@ -113,7 +113,7 @@ Ext.define("Amps.view.main.Main", {
         {
           xtype: "button",
           itemId: "clearfilter",
-          html: '<img src="resources/images/clear-filters.png" />',
+          html: '<img style="max-width:100%;" width=16 height=17 src="resources/images/clear_filter.png" />',
           handler: "onClearFilter",
           tooltip: "Clear Filter",
           hidden: true,

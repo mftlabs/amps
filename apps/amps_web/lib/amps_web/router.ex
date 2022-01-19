@@ -14,15 +14,8 @@ defmodule AmpsWeb.Router do
   end
 
   pipeline :api do
-    plug(:accepts, ["json"])
+    # plug(:accepts, ["json"])
     plug(AmpsWeb.APIAuthPlug, otp_app: :amps)
-  end
-
-  pipeline :api_portal do
-    plug(:accepts, ["json"])
-    plug(AmpsWeb.APIAuthPlug, otp_app: :amps)
-    plug(AmpsWeb.AuditPlug)
-    plug(AmpsPortal.APIAuthPlug, otp_app: :amps_portal)
   end
 
   pipeline :api_protected do
@@ -32,23 +25,9 @@ defmodule AmpsWeb.Router do
   end
 
   scope "/api", AmpsWeb do
-    pipe_through(:api_portal)
-    get("/users/link/:id", DataController, :get_user_link)
-  end
-
-  scope "/api", AmpsWeb do
     pipe_through(:api)
     get("/startup", UtilController, :initialized)
     post("/startup", UtilController, :startup)
-    get("/message_events/history/:msgid", UtilController, :history)
-    get("/message_events/download/:msgid", DataController, :download)
-    post("/workflow", UtilController, :workflow)
-    post("/duplicate", UtilController, :duplicate)
-    get("/port/:port", UtilController, :in_use)
-    post("/service/:name", ServiceController, :handle_service)
-    get("/service/:name", ServiceController, :ping_service)
-    post("/reprocess", DataController, :reprocess)
-    post("/upload", DataController, :get_url)
 
     resources("/session", SessionController, singleton: true, only: [:create, :delete])
     post("/session/renew", SessionController, :renew)
@@ -60,11 +39,21 @@ defmodule AmpsWeb.Router do
     post("/util/glob", UtilController, :glob_match)
     post("/user/reset-password", UserController, :send_password_email)
     post("/user/reg", UserController, :register)
+    post("/duplicate", UtilController, :duplicate)
   end
 
   scope "/api", AmpsWeb do
     pipe_through([:api, :api_protected])
+    get("/users/reset/:id", DataController, :reset_password)
 
+    get("/message_events/history/:msgid", UtilController, :history)
+    get("/message_events/download/:msgid", DataController, :download)
+    post("/workflow", UtilController, :workflow)
+    get("/port/:port", UtilController, :in_use)
+    post("/service/:name", ServiceController, :handle_service)
+    get("/service/:name", ServiceController, :ping_service)
+    post("/msg/reprocess/:msgid", DataController, :reprocess)
+    post("/upload/:topic", DataController, :upload)
     get("/agent/download/:id", AgentController, :download_agent)
     get("/rules/fields/:id", DataController, :get_match_fields)
     # get("/:collection", DataController, :get_rows)

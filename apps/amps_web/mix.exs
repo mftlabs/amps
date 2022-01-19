@@ -66,7 +66,8 @@ defmodule AmpsWeb.MixProject do
       {:timex, "~> 3.0"},
       {:tesla, git: "https://github.com/teamon/tesla", override: true},
       {:gnat, "~> 1.2"},
-      {:x509, "~> 0.8.0"}
+      {:x509, "~> 0.8.0"},
+      {:master_proxy, "~> 0.1"}
       # {:uuid, "~> 1.1"}
     ]
   end

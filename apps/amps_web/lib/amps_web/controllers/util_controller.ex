@@ -211,60 +211,92 @@ defmodule AmpsWeb.UtilController do
   end
 
   def workflow(conn, %{"topic" => topic, "meta" => meta}) do
-    json(conn, %{"steps" => find_topics(topic, meta), "topic" => topic})
+    {steps, topics} = find_topics(topic, meta, [])
+    IO.inspect(steps)
+    IO.inspect(topics)
+
+    res =
+      case steps do
+        [] ->
+          %{
+            "steps" => steps,
+            "action" => %{"output" => topic},
+            "topics" => Enum.reverse(topics),
+            "topic" => topic
+          }
+
+        steps ->
+          %{"steps" => steps, "topics" => Enum.reverse(topics), "topic" => topic}
+      end
+
+    json(conn, res)
   end
 
-  defp find_topics(topic, meta) do
-    subs =
-      DB.find("services", %{
-        type: "subscriber"
-      })
+  defp find_topics(topic, meta, topics) do
+    IO.inspect(topics)
 
-    Enum.reduce(subs, [], fn sub, acc ->
-      if match_topic(sub["topic"], topic) do
-        action = DB.find_one("actions", %{"_id" => sub["handler"]})
-        step = %{"action" => action, "sub" => sub}
+    if Enum.member?(topics, topic) do
+      Logger.warn("Workflow loop detected")
+      {[%{"loop" => true, "topic" => topic}], topics}
+    else
+      subs =
+        DB.find("services", %{
+          type: "subscriber"
+        })
 
-        step =
-          if action["type"] == "router" do
-            rule = RouterAction.evaluate(action, meta)
+      topics = [topic | topics]
 
-            # rule["topic"]
+      {steps, topics} =
+        Enum.reduce(subs, {[], topics}, fn sub, {steps, topics} ->
+          if match_topic(sub["topic"], topic) do
+            action = DB.find_one("actions", %{"_id" => sub["handler"]})
+            step = %{"action" => action, "sub" => sub, "topic" => sub["topic"]}
 
-            step
-            |> Map.put(
-              "ruleid",
-              rule["id"]
-            )
-            |> Map.put(
-              "steps",
-              find_topics(rule["topic"], Map.merge(meta, %{}))
-            )
-            |> Map.put(
-              "topic",
-              rule["topic"]
-            )
+            {step, topics} =
+              if action["type"] == "router" do
+                rule = RouterAction.evaluate(action, meta)
+
+                # rule["topic"]
+                {steps, topics} = find_topics(rule["topic"], Map.merge(meta, %{}), topics)
+
+                step =
+                  step
+                  |> Map.put(
+                    "ruleid",
+                    rule["id"]
+                  )
+                  |> Map.put(
+                    "steps",
+                    steps
+                  )
+
+                {step, topics}
+              else
+                if action["output"] do
+                  {steps, topics} = find_topics(action["output"], Map.merge(meta, %{}), topics)
+
+                  IO.inspect(steps)
+                  IO.inspect(topics)
+
+                  step =
+                    step
+                    |> Map.put(
+                      "steps",
+                      steps
+                    )
+
+                  {step, topics}
+                else
+                  {step, topics}
+                end
+              end
+
+            {[step | steps], topics}
           else
-            if action["output"] do
-              step
-              |> Map.put(
-                "steps",
-                find_topics(action["output"], Map.merge(meta, %{}))
-              )
-              |> Map.put(
-                "topic",
-                action["output"]
-              )
-            else
-              step
-            end
+            {steps, topics}
           end
-
-        [step | acc]
-      else
-        acc
-      end
-    end)
+        end)
+    end
   end
 
   defp match_topic(stopic, wtopic) do

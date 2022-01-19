@@ -25,6 +25,7 @@ defmodule AmpsWeb.DataController do
            :update_in_field,
            :delete_from_field,
            :get_user_link,
+           :reset_password,
            :reprocess,
            :download,
            :upload
@@ -38,32 +39,82 @@ defmodule AmpsWeb.DataController do
 
   plug(AmpsWeb.AuditPlug)
 
-  def reprocess(conn, _params) do
-    message = conn.body_params()
-    S3.reprocess(message)
-    json(conn, :ok)
+  def reset_password(conn, %{"id" => id}) do
+    obj = AmpsWeb.DB.find_one("users", %{"_id" => id})
+    length = 15
+    password = :crypto.strong_rand_bytes(length) |> Base.url_encode64() |> binary_part(0, length)
+    IO.inspect(password)
+    %{password_hash: hashed} = add_hash(password)
+    # res = PowResetPassword.Plug.update_user_password(conn, %{"password" => hashed})
+
+    res =
+      AmpsWeb.DB.find_one_and_update("users", %{"username" => obj["username"]}, %{
+        "password" => hashed
+      })
+
+    json(conn, %{success: %{password: password}})
   end
 
   def get_user_link(conn, %{"id" => id}) do
-    obj = DB.find_one("users", %{"_id" => id})
-    [host: host] = Application.get_env(:amps_web, AmpsWeb.Endpoint)[:url]
+    obj = AmpsWeb.DB.find_one("users", %{"_id" => id})
+    IO.inspect(id)
+    IO.inspect(conn)
+    config = Application.get_env(:amps_portal, AmpsPortal.Endpoint)[:url]
+    host = Keyword.get(config, :host)
 
-    edited = Map.put(conn, :host, host)
-
-    {:ok, map, conn} =
-      PowResetPassword.Plug.create_reset_token(edited, %{"email" => obj["email"]})
+    {:ok, map, powcon} =
+      %Plug.Conn{secret_key_base: conn.secret_key_base, host: host}
+      |> Pow.Plug.put_config(otp_app: :amps_portal)
+      |> PowResetPassword.Plug.create_reset_token(%{"email" => obj["email"]})
 
     token = map.token
 
-    resp =
-      conn
-      |> PowResetPassword.Plug.load_user_by_token(token)
+    powcon
+    |> PowResetPassword.Plug.load_user_by_token(token)
+    |> case do
+      {:ok, conn} ->
+        IO.inspect(conn)
+    end
+
+    IO.inspect(host)
 
     [:inet6, port: port] = Application.get_env(:master_proxy, :http)
+    IO.inspect(port)
     json(conn, "#{host}:#{port}/?token=#{token}#setpassword")
   end
 
-  def upload(conn, _params) do
+  @spec upload(Plug.Conn.t(), map) :: Plug.Conn.t()
+  def upload(conn, %{"topic" => topic, "file" => file, "meta" => meta}) do
+    msgid = AmpsUtil.get_id()
+    dir = AmpsUtil.tempdir(msgid)
+    fpath = Path.join(dir, msgid)
+    File.cp(file.path, fpath)
+    info = File.stat!(fpath)
+    meta = Jason.decode!(meta)
+
+    msg =
+      Map.merge(
+        %{
+          "msgid" => msgid,
+          "fname" => file.filename,
+          "fpath" => fpath,
+          "fsize" => info.size,
+          "ftime" => DateTime.to_iso8601(DateTime.utc_now())
+        },
+        meta
+      )
+
+    AmpsEvents.send(msg, %{"output" => topic}, %{})
+    json(conn, :ok)
+  end
+
+  def reprocess(conn, %{"msgid" => msgid}) do
+    obj = AmpsWeb.DB.find_one("message_events", %{"msgid" => msgid, "status" => "started"})
+    topic = obj["topic"]
+    msg = obj |> Map.drop(["status", "action", "topic", "_id", "index", "etime"])
+    AmpsEvents.send(msg, %{"output" => topic}, %{})
+
+    json(conn, :ok)
   end
 
   def index(conn, %{"collection" => collection}) do

@@ -8,14 +8,8 @@ defmodule AmpsWeb.AuditPlug do
   end
 
   def call(conn, opts) do
-    Plug.Conn.register_before_send(conn, fn conn ->
-      Logger.info("Sent a #{conn.status} response")
-      conn
-    end)
-
     user = conn.assigns().current_user
     info = Phoenix.Router.route_info(AmpsWeb.Router, conn.method, conn.path_info, conn.host)
-
     params = info.path_params
 
     params =

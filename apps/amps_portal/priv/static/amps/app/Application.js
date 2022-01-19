@@ -53,6 +53,8 @@ Ext.define("Amps.Application", {
             token: token,
           },
         });
+      } else {
+        window.location.href = window.location.pathname;
       }
       if (result.status == "error") {
         console.log(result.error);
@@ -86,6 +88,8 @@ Ext.define("Amps.Application", {
         //   this.redirectTo("messages");
         // }
         ampsuploads = Amps.Authorized.Uploads;
+        this.redirectTo("inbox", { replace: true });
+
         Ext.Viewport.add({
           xtype: "authorized",
         });

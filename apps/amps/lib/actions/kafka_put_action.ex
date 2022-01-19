@@ -1,5 +1,6 @@
 defmodule KafkaPut do
   require Logger
+  alias AmpsWeb.DB
 
   def run(msg, parms, _state) do
     provider = DB.find_one("providers", %{"_id" => parms["provider"]})

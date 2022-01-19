@@ -272,6 +272,7 @@ label.x-form-required-field > span:after {
   background-image: url("../../priv/static/images/icons/s3.svg")
 }
 
+
 .workflow-step {
   position: relative;
 }

@@ -66,4 +66,15 @@ defmodule AmpsPortal.DataController do
         end
     end
   end
+
+  def delete_message(conn, %{"msgid" => msgid}) do
+    case Pow.Plug.current_user(conn) do
+      nil ->
+        send_resp(conn, 403, "Forbidden")
+
+      user ->
+        DB.delete_one("mailbox", %{"recipient" => user.username, "msgid" => msgid})
+        json(conn, :ok)
+    end
+  end
 end

@@ -74,7 +74,7 @@ Ext.define("Amps.Unauthorized.Login", {
         handler: "onLoginClick",
       },
       {
-        text: "Signup",
+        text: "Signup Instead",
         flex: 1,
         cls: "button_class",
         itemId: "signup_btn_id",

@@ -13,8 +13,7 @@ defmodule Amps.Umbrella.MixProject do
           applications: [
             amps: :permanent,
             amps_web: :permanent,
-            amps_portal: :permanent,
-            proxy: :permanent
+            amps_portal: :permanent
           ]
         ]
       ]

@@ -24,7 +24,11 @@ defmodule SharePoint do
 
         folder = Jason.decode!(res.body)
 
-        scan_folder(parms, folder, token, url, "", rooturl)
+        if Map.has_key?(folder, "error") do
+          raise "Folder Not Found"
+        else
+          scan_folder(parms, folder, token, url, "", rooturl)
+        end
 
       "upload" ->
         if msg["data"] do

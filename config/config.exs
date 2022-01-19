@@ -48,11 +48,11 @@ config :master_proxy,
   # https: [:inet6, port: 4443],
   backends: [
     %{
-      host: ~r/^admin.#{System.get_env("AMPS_HOST_URL", "localhost")}$/,
+      host: ~r/^admin.#{System.get_env("AMPS_HOST", "localhost")}$/,
       phoenix_endpoint: AmpsWeb.Endpoint
     },
     %{
-      host: ~r/^#{System.get_env("AMPS_HOST_URL", "localhost")}$/,
+      host: ~r/^#{System.get_env("AMPS_HOST", "localhost")}$/,
       phoenix_endpoint: AmpsPortal.Endpoint
     }
   ]

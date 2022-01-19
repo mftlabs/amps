@@ -4,32 +4,6 @@ defmodule PGPEncrypt do
   def run(msg, parms, state) do
     # Logger.info("input #{inspect(msg)}")
 
-    # msg = %{
-    #   # "fpath" => "mix.exs",
-    #   "data" => "echo \"hello\"",
-    #   "fname" => "test.gpg"
-    # }
-
-    # parms = %{
-    #   "key" => "-----BEGIN PGP PUBLIC KEY BLOCK-----
-
-    #   mDMEYdTCzxYJKwYBBAHaRw8BAQdAQq0+70kO/jVqgnh5Hu2u2GE+NQ05btYKocii
-    #   G8/1CHq0IUFiaGF5IFJhbSA8YWJoYXlrcmFtMTJAZ21haWwuY29tPoiaBBMWCgBC
-    #   FiEEDfORZLd+UH0KaCiHvCXgL5Lph2AFAmHUws8CGwMFCQPCZwAFCwkIBwIDIgIB
-    #   BhUKCQgLAgQWAgMBAh4HAheAAAoJELwl4C+S6Ydgd9MA/ip7IbwnaYIh6f5VelyB
-    #   oi/NHm18K+ScxHf+F5Zz6Q+RAQCVwpEaWqtWNZxshzklsaC9Gy4DW6ckvvLe167S
-    #   K9PZBLg4BGHUws8SCisGAQQBl1UBBQEBB0AUn/941g8dSmOxUxPePDbRwLje4Uiw
-    #   b1paCLilHFIVLQMBCAeIfgQYFgoAJhYhBA3zkWS3flB9Cmgoh7wl4C+S6YdgBQJh
-    #   1MLPAhsMBQkDwmcAAAoJELwl4C+S6YdgrgoBAKwdgQm1jTjOLSuaPlrAr12278+P
-    #   mIIAKFTGknG8cm0gAP9WD6U1t0zc/Hn1UpeTevXfkQ/K5PPsXkoVb+OWZ6CYDQ==
-    #   =euaf
-    #   -----END PGP PUBLIC KEY BLOCK-----",
-    #   "passphrase" => "test123",
-    #   "format" => "{fname}_{HH}_{SS}",
-    #   "armor" => true,
-    #   "compress" => true
-    # }
-
     {:ok, newmsg} = encrypt(msg, parms, state)
     Logger.info("output #{inspect(newmsg)}")
     AmpsEvents.send(newmsg, parms, state)
@@ -53,8 +27,6 @@ defmodule PGPEncrypt do
       "gpg --pinentry-mode loopback --passphrase #{parms["passphrase"]} --import #{signing_key}"
       |> String.to_charlist()
       |> :os.cmd()
-
-    IO.inspect(exec)
 
     exec =
       exec |> List.to_string() |> String.split(" ") |> Enum.at(2) |> String.trim_trailing(":")
