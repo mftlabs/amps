@@ -5880,21 +5880,23 @@ Ext.define("Amps.util.Grids", {
                         });
                       }
                       prev = payload;
-                      var status = scope.down("#status");
-                      status.setHtml(
-                        `<div>
-                              <div class="led 
-                              ${payload ? "green" : "red"}
-                              "
-                                  ></div>
-                              </div>`
-                      );
+                      if (scope.items) {
+                        var status = scope.down("#status");
+                        status.setHtml(
+                          `<div>
+                                <div class="led 
+                                ${payload ? "green" : "red"}
+                                "
+                                    ></div>
+                                </div>`
+                        );
+                      }
                     }
                   );
                 }
                 broadcast(name);
 
-                console.log(scope.down("#status"));
+                // console.log(scope.down("#status"));
 
                 function timeout() {
                   setTimeout(function () {
@@ -5903,6 +5905,8 @@ Ext.define("Amps.util.Grids", {
                       Ext.util.History.getToken().split("/")[0] == "monitoring"
                     ) {
                       timeout();
+                    } else {
+                      return;
                     }
                   }, 1000);
                 }
@@ -5924,8 +5928,8 @@ Ext.define("Amps.util.Grids", {
               ],
             },
             onWidgetAttach: function (col, widget, rec) {
-              console.log(widget);
-              console.log(rec.data.name);
+              // console.log(widget);
+              // console.log(rec.data.name);
               widget.setStyle({
                 backgroundColor: "transparent",
                 display: "flex",
@@ -5949,8 +5953,8 @@ Ext.define("Amps.util.Grids", {
               load: function (name) {},
             },
             onWidgetAttach: function (col, widget, rec) {
-              console.log(widget);
-              console.log(rec.data.name);
+              // console.log(widget);
+              // console.log(rec.data.name);
               widget.itemId = (rec.data.name + "-start-stop").replace(
                 /\s/g,
                 ""

@@ -1659,7 +1659,7 @@ Ext.define("Amps.util.Utilities", {
         !Array.isArray(entry[1]) &&
         entry[1] !== null
       ) {
-        val = amfutil.compareFilters(x[entry[0]], y[entry[0]], val);
+        val = amfutil.compareOpts(x[entry[0]], y[entry[0]], val);
       } else {
         val = val && y[entry[0]] == x[entry[0]];
       }
