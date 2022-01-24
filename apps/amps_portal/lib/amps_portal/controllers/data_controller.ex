@@ -1,7 +1,7 @@
 defmodule AmpsPortal.DataController do
   use AmpsPortal, :controller
   import Argon2
-  alias AmpsWeb.DB
+  alias Amps.DB
 
   def get_messages(conn, _params) do
     # if vault_collection(collection) do

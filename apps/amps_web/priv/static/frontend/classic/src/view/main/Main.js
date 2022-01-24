@@ -128,6 +128,14 @@ Ext.define("Amps.view.main.Main", {
           handler: "onRefreshButtonClicked",
         },
         {
+          xtype: "button",
+          itemId: "reprocess",
+          iconCls: "x-fa fa-undo",
+          tooltip: "Reprocess",
+          hidden: true,
+          handler: "onReprocessClicked",
+        },
+        {
           xtype: "container",
           itemId: "messages",
           hidden: true,

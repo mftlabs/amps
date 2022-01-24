@@ -1,5 +1,5 @@
 defmodule AmpsUtil do
-  alias AmpsWeb.DB
+  alias Amps.DB
 
   def gettime() do
     DateTime.to_iso8601(DateTime.utc_now())

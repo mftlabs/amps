@@ -1,5 +1,5 @@
 defmodule SharePoint do
-  alias AmpsWeb.DB
+  alias Amps.DB
   require Logger
 
   def run(msg, parms, state) do

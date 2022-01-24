@@ -62,12 +62,12 @@ defmodule AmpsDashboard.Users do
         end
       end)
 
-    convert_to_user_struct(AmpsWeb.DB.find_one("admin", filter))
+    convert_to_user_struct(Amps.DB.find_one("admin", filter))
   end
 
   def convert_to_user_struct(user) do
     user =
-      Map.put(user, "id", BSON.ObjectId.encode!(user["_id"]))
+      Map.put(user, "id", user["_id"])
       |> Map.new(fn {k, v} -> {String.to_atom(k), v} end)
 
     struct(AmpsDashboard.Users.User, user)
@@ -76,7 +76,7 @@ defmodule AmpsDashboard.Users do
   def google_upsert(params) do
     userinfo = params["userinfo"]
     uid = params["uid"]
-    user = AmpsWeb.DB.find_one("admin", %{google_id: uid})
+    user = Amps.DB.find_one("admin", %{google_id: uid})
 
     if user do
       convert_to_user_struct(user)
@@ -91,7 +91,7 @@ defmodule AmpsDashboard.Users do
         |> Map.put("provider", "google")
         |> Map.merge(%{"approved" => false, "role" => "Guest"})
 
-      id = AmpsWeb.DB.insert("admin", user)
+      id = Amps.DB.insert("admin", user)
 
       user = Map.put(user, :id, id)
       struct(AmpsDashboard.Users.User, user)
@@ -124,7 +124,7 @@ defmodule AmpsDashboard.Users.Vault do
 
     case login do
       {:ok, _token, _ttl} ->
-        user = AmpsWeb.DB.find_one("admin", %{username: body["username"]})
+        user = Amps.DB.find_one("admin", %{username: body["username"]})
 
         if user["approved"] do
           Users.convert_to_user_struct(user)
@@ -166,7 +166,7 @@ defmodule AmpsDashboard.Users.Vault do
       Map.merge(user, %{"approved" => false, "role" => "Guest", "provider" => "vault"})
       |> Map.new(fn {k, v} -> {String.to_atom(k), v} end)
 
-    id = AmpsWeb.DB.insert("admin", user)
+    id = Amps.DB.insert("admin", user)
 
     user = Map.put(user, :id, id)
     userstruct = struct(AmpsDashboard.Users.User, user)
@@ -189,7 +189,7 @@ defmodule AmpsDashboard.Users.DB do
   import Argon2
 
   def authenticate(body) do
-    user = AmpsWeb.DB.find_one("admin", %{"username" => body["username"]})
+    user = Amps.DB.find_one("admin", %{"username" => body["username"]})
     # user = Map.put(user, "_id", BSON.ObjectId.encode!(user["_id"]))
 
     case check_pass(user, body["password"], hash_key: "password") do
@@ -217,7 +217,7 @@ defmodule AmpsDashboard.Users.DB do
       |> Map.put("password", hashed)
       |> Map.merge(%{"approved" => false, "role" => "Guest", "provider" => "amps"})
 
-    id = AmpsWeb.DB.insert("admin", user)
+    id = Amps.DB.insert("admin", user)
 
     user = Map.put(user, "id", id) |> Map.new(fn {k, v} -> {String.to_atom(k), v} end)
 

@@ -76,6 +76,7 @@ end
 defmodule Amps.HistoryPullConsumer do
   use GenServer
   require Logger
+  alias Amps.DB
 
   def init(%{
         parms: parms,
@@ -112,7 +113,7 @@ defmodule Amps.HistoryPullConsumer do
     name = parms["name"]
     Logger.info("got history message #{name}: #{message.topic} / #{message.body}")
     data = Poison.decode!(message.body)
-    Mongo.insert_one!(:mongo, data["index"], data)
+    DB.insert(data["index"], data)
     Jetstream.ack_next(message, state.listening_topic)
     {:noreply, state}
   end

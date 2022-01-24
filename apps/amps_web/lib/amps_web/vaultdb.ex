@@ -152,16 +152,14 @@ defmodule VaultDatabase do
   def get_rows(path) do
     {:ok, vault} = VaultDatabase.get_vault()
 
-    case Vault.list(vault, "kv/" <> path) do
+    case Vault.list(vault, Path.join("kv/amps", path)) do
       {:ok, %{"keys" => keys}} ->
         data =
           Enum.reduce(keys, [], fn key, acc ->
             {:ok, body} =
               Vault.read(
                 vault,
-                "kv/" <>
-                  path <>
-                  "/" <> key
+                Path.join(["kv/amps", path, key])
               )
 
             body = Map.put(body, "_id", key)

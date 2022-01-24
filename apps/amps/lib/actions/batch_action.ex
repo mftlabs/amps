@@ -1,6 +1,6 @@
 defmodule BatchAction do
   require Logger
-  alias AmpsWeb.DB
+  alias Amps.DB
 
   def run(msg, parms, state) do
     Logger.info("input #{inspect(msg)}")

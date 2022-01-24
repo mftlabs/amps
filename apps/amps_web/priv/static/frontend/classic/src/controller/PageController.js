@@ -397,8 +397,8 @@ Ext.define("Amps.controller.PageController", {
           "This service is currently running, are you sure you want to delete it?";
       }
     } else if (tokens[0] == "actions") {
-      var rows = await amfutil.getCollectionData("topics", {
-        "rules.action": rec.data.name,
+      var rows = await amfutil.getCollectionData("services", {
+        handler: rec.data._id,
       });
       console.log(rows);
       if (rows.length) {
@@ -439,7 +439,7 @@ Ext.define("Amps.controller.PageController", {
                 var data = Ext.decode(response.responseText);
                 mask.hide();
                 amfutil.broadcastEvent("update", {
-                  page: Ext.util.History.getToken(),
+                  page: tokens[0],
                 });
                 Ext.toast({
                   title: "Delete",
@@ -862,14 +862,102 @@ Ext.define("Amps.controller.PageController", {
     uploadWindow.show();
   },
 
+  sendEvent: async function (grid, rowIndex, colIndex) {
+    console.log("Upload");
+    var rec = grid.getStore().getAt(rowIndex);
+    var uploadWindow = new Ext.window.Window({
+      title: "Send Event to Topic: " + rec.data.topic + "?",
+      modal: true,
+      width: 600,
+      height: 500,
+      scrollable: true,
+      resizable: false,
+      layout: "fit",
+      padding: 10,
+      items: [
+        {
+          xtype: "form",
+          defaults: {
+            padding: 5,
+            labelWidth: 140,
+          },
+          layout: {
+            type: "vbox",
+            align: "stretch",
+          },
+          scrollable: true,
+          items: [
+            {
+              // Fieldset in Column 1 - collapsible via toggle button
+              xtype: "fieldset",
+              title: "Additional Metadata",
+              collapsible: true,
+              onAdd: function (component, position) {
+                // component.setTitle("Match Pattern" + position);
+                console.log(component);
+                console.log(position);
+              },
+              items: [
+                {
+                  xtype: "button",
+                  text: "Add",
+                  handler: function (button, event) {
+                    var formpanel = button.up();
+
+                    formpanel.insert(
+                      formpanel.items.length - 1,
+                      Ext.create("Amps.form.Defaults")
+                    );
+                  },
+                },
+              ],
+            },
+          ],
+
+          buttons: [
+            {
+              text: "Send",
+              handler: function () {
+                var form = this.up("form").getForm();
+                var fields = form.getFields();
+                var values = form.getValues();
+
+                var meta = amfutil.formatArrayField(values.defaults);
+                console.log(meta);
+                var topic = rec.data.topic;
+                // console.log(files);
+                amfutil.ajaxRequest({
+                  url: "api/event/" + topic,
+                  method: "post",
+                  jsonData: { meta: JSON.stringify(meta) },
+                  success: function () {
+                    uploadWindow.close();
+                  },
+                });
+                // msgbox.anchorTo(Ext.getBody(), "br");
+              },
+            },
+            {
+              text: "Cancel",
+              cls: "button_class",
+              itemId: "cancel",
+              listeners: {
+                click: function (btn) {
+                  uploadWindow.close();
+                },
+              },
+            },
+          ],
+        },
+      ],
+    });
+    uploadWindow.show();
+  },
+
   reprocess: async function (grid, rowIndex, colIndex, e) {
     var record = grid.getStore().getAt(rowIndex).data;
     console.log(record);
-    amfutil.ajaxRequest({
-      url: "api/msg/reprocess/" + record.msgid,
-      method: "post",
-    });
-    grid.getStore().reload();
+    amfutil.reprocess(grid, record.msgid);
   },
 });
 

@@ -11,10 +11,7 @@ RUN mix local.hex --force && \
     mix local.rebar --force
 
 COPY mix.exs mix.lock config/ ./
-COPY apps/amps/mix.exs ./apps/amps/
-COPY apps/amps_web/mix.exs ./apps/amps_web/
-COPY apps/amps_portal/mix.exs ./apps/amps_portal/
-COPY apps/proxy/mix.exs ./apps/proxy/
+COPY apps ./apps
 
 
 RUN mix deps.get --only prod && \
@@ -33,9 +30,9 @@ FROM elixir:1.12.1
 
 # WORKDIR /release
 
-COPY --from=build /build/_build/prod/rel/amps .
+COPY --from=build /build/_build/prod/rel/amps ./amps
 # --chown=release:release 
 # USER release
 # EXPOSE 4000
 
-CMD ["bin/amps", "start"]
+CMD ["/bin/sh"]

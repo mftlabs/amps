@@ -40,7 +40,7 @@ defmodule AmpsWeb.Vault do
       {:ok, %{"errors" => errors}} ->
         IO.inspect(errors)
 
-        case AmpsWeb.DB.find_one("services", %{"name" => "vault"}) do
+        case Amps.DB.find_one("services", %{"name" => "vault"}) do
           nil ->
             {:ok, {:missing, "Missing Vault Config"}}
 
@@ -62,17 +62,17 @@ defmodule AmpsWeb.Vault do
         unseal_vault(vault, keys)
         initialize_vault(vault, keys)
 
-        case AmpsWeb.DB.find_one("services", %{
+        case Amps.DB.find_one("services", %{
                "name" => "vault"
              }) do
           nil ->
-            AmpsWeb.DB.insert("services", %{
+            Amps.DB.insert("services", %{
               "name" => "vault",
               "keys" => AmpsWeb.Encryption.encrypt(Jason.encode!(keys))
             })
 
           body ->
-            AmpsWeb.DB.update(
+            Amps.DB.update(
               "services",
               %{
                 "name" => "vault",

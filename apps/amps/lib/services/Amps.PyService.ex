@@ -32,17 +32,44 @@ defmodule Amps.PyService do
 
   @impl true
   def handle_call({:pyrun, msg, parms}, _from, pid) do
-    module = parms[:module]
+    path = AmpsUtil.get_env(:python_path)
+    {:ok, pid} = :python.start([{:python_path, to_charlist(path)}])
+    IO.inspect(parms)
+    module = String.to_atom(parms["module"])
     xparm = %{:msg => msg, :parms => parms}
     jparms = Poison.encode!(xparm)
-    result = :python.call(pid, module, :run, [jparms])
-    rparm = Poison.decode!(result)
-    status = rparm["status"] || "failed"
 
-    if status == "failed" do
-      {:reply, {:error, result["reason"]}, pid}
-    else
-      {:reply, {:ok, rparm}, pid}
+    try do
+      result = :python.call(pid, module, :run, [jparms])
+
+      case result do
+        :undefined ->
+          {:reply, {:error, "Nothing returned from script"}, pid}
+
+        result ->
+          rparm =
+            try do
+              Poison.decode!(result)
+            rescue
+              _ ->
+                {:reply, {:error, "JSON Encoded object not returned from script"}, pid}
+            end
+
+          if is_map(rparm) do
+            status = rparm["status"] || "failed"
+
+            if status == "failed" do
+              {:reply, {:error, result["reason"]}, pid}
+            else
+              {:reply, {:ok, rparm}, pid}
+            end
+          else
+            {:reply, {:error, "JSON Encoded object not returned from script"}, pid}
+          end
+      end
+    rescue
+      e ->
+        {:reply, {:error, e}, pid}
     end
   end
 

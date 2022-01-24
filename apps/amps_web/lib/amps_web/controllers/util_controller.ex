@@ -2,7 +2,7 @@ defmodule AmpsWeb.UtilController do
   use AmpsWeb, :controller
   require Logger
   import Argon2
-  alias AmpsWeb.DB
+  alias Amps.DB
   alias AmpsWeb.Encryption
   alias Amps.SvcManager
   alias AmpsWeb.ServiceController
@@ -77,7 +77,7 @@ defmodule AmpsWeb.UtilController do
   end
 
   def initialized(conn, _params) do
-    case AmpsWeb.DB.find_one("admin", %{"systemdefault" => true}) do
+    case Amps.DB.find_one("admin", %{"systemdefault" => true}) do
       nil ->
         json(conn, false)
 
@@ -89,7 +89,7 @@ defmodule AmpsWeb.UtilController do
   def startup(conn, _params) do
     body = conn.body_params()
 
-    root = AmpsWeb.DB.find_one("admin", %{"systemdefault" => true})
+    root = Amps.DB.find_one("admin", %{"systemdefault" => true})
 
     host = Application.fetch_env!(:amps_web, AmpsWeb.Endpoint)[:vault_addr]
 
@@ -123,9 +123,9 @@ defmodule AmpsWeb.UtilController do
       end
 
       systemdefaults = Map.merge(body["system"], %{"name" => "SYSTEM"})
-      AmpsWeb.DB.insert("services", systemdefaults)
+      Amps.DB.insert("services", systemdefaults)
 
-      AmpsWeb.DB.insert("admin", root)
+      Amps.DB.insert("admin", root)
 
       Amps.SvcManager.load_system_parms()
       send_resp(conn, 200, "Created")
@@ -233,8 +233,6 @@ defmodule AmpsWeb.UtilController do
   end
 
   defp find_topics(topic, meta, topics) do
-    IO.inspect(topics)
-
     if Enum.member?(topics, topic) do
       Logger.warn("Workflow loop detected")
       {[%{"loop" => true, "topic" => topic}], topics}
@@ -249,7 +247,9 @@ defmodule AmpsWeb.UtilController do
       {steps, topics} =
         Enum.reduce(subs, {[], topics}, fn sub, {steps, topics} ->
           if match_topic(sub["topic"], topic) do
+            IO.inspect(sub)
             action = DB.find_one("actions", %{"_id" => sub["handler"]})
+            IO.inspect(action)
             step = %{"action" => action, "sub" => sub, "topic" => sub["topic"]}
 
             {step, topics} =
@@ -316,7 +316,7 @@ defmodule AmpsWeb.UtilController do
 
   def create_store(conn, %{"collection" => collection}) do
     if AmpsWeb.DataController.vault_collection(collection) do
-      data = VaultDatabase.get_rows("amps/" <> collection)
+      data = VaultDatabase.get_rows(collection)
 
       json(
         conn,

@@ -1,9 +1,9 @@
-defmodule AmpsWeb.DB do
+defmodule Amps.DB do
   require Logger
 
-  alias AmpsWeb.DB.Postgres
-  alias AmpsWeb.DB.MongoDB
-  alias AmpsWeb.DB.Elastic
+  alias Amps.DB.Postgres
+  alias Amps.DB.MongoDB
+  alias Amps.DB.Elastic
 
   defp db() do
     Application.get_env(:amps, :db)
@@ -121,7 +121,7 @@ defmodule AmpsWeb.DB do
     end
   end
 
-  def find(collection, clauses \\ %{}) do
+  def find(collection, clauses \\ %{}, opts \\ %{}) do
     case db() do
       "pg" ->
         Postgres.find(collection, clauses)
@@ -135,7 +135,7 @@ defmodule AmpsWeb.DB do
         |> Enum.to_list()
 
       "es" ->
-        Elastic.find(collection, clauses)
+        Elastic.find(collection, clauses, opts)
     end
   end
 
@@ -805,7 +805,7 @@ defmodule AmpsWeb.DB do
   defmodule Elastic do
     def query(collection, query) do
       case Snap.Search.search(
-             Amps.Elastic,
+             Amps.Cluster,
              path(collection),
              query
            ) do
@@ -880,25 +880,34 @@ defmodule AmpsWeb.DB do
       query(collection, query)
     end
 
-    def find(collection, clauses) do
-      %{rows: rows, success: true, count: count} =
-        query(collection, %{
-          query: convert_search(clauses),
-          size: 10000
-        })
+    def find(collection, clauses, opts \\ %{}) do
+      %{rows: rows, success: success, count: count} =
+        query(
+          collection,
+          Map.merge(
+            %{
+              query: convert_search(clauses),
+              size: 10000
+            },
+            opts
+          )
+        )
 
       rows
     end
 
     def find_one(collection, clauses) do
+      IO.inspect(collection)
+      IO.inspect(clauses)
+
       case query(collection, %{
              query: convert_search(clauses),
              size: 1
            }) do
-        %{rows: [one], success: true, count: count} ->
+        %{rows: [one], success: true, count: 1} ->
           one
 
-        %{rows: [], success: true, count: count} ->
+        %{rows: [], success: true, count: 0} ->
           nil
 
         nil ->
@@ -912,8 +921,9 @@ defmodule AmpsWeb.DB do
     end
 
     def path(collection) do
-      pfx = Application.get_env(:amps_web, AmpsWeb.Endpoint)[:elastic_prefix]
-      path = pfx <> "-" <> collection
+      # pfx = Application.get_env(:amps_web, AmpsWeb.Endpoint)[:elastic_prefix]
+      # path = pfx <> "-" <> collection
+      collection
     end
 
     def format_search(map) do
@@ -945,44 +955,53 @@ defmodule AmpsWeb.DB do
         |> format_search()
         |> Enum.reduce([], fn {k, v}, acc ->
           filter =
-            if Kernel.is_map(v) do
-              case v do
-                %{"regex" => val} ->
-                  %{
-                    wildcard: %{
-                      k => %{
-                        "value" => "*" <> val <> "*"
+            case k do
+              "exists" ->
+                %{k => v}
+
+              _ ->
+                if Kernel.is_map(v) do
+                  case v do
+                    %{"regex" => val} ->
+                      %{
+                        "query_string" => %{
+                          "query" => "*" <> val <> "*",
+                          "fields" => [
+                            k <> ".keyword"
+                          ]
+                        }
                       }
-                    }
-                  }
 
-                %{"gt" => gt} ->
-                  %{
-                    range: %{k => v}
-                  }
+                    %{"gt" => gt} ->
+                      %{
+                        range: %{k => v}
+                      }
 
-                %{"lt" => lt} ->
-                  %{
-                    range: %{k => v}
-                  }
+                    %{"lt" => lt} ->
+                      %{
+                        range: %{k => v}
+                      }
 
-                _ ->
+                    _ ->
+                      %{
+                        match: %{
+                          k => v
+                        }
+                      }
+                  end
+                else
                   %{
                     match: %{
                       k => v
                     }
                   }
-              end
-            else
-              %{
-                match: %{
-                  k => v
-                }
-              }
+                end
             end
 
           [filter | acc]
         end)
+
+      IO.inspect(search)
 
       %{
         bool: %{
@@ -992,42 +1011,46 @@ defmodule AmpsWeb.DB do
     end
 
     def convert_sort(collection, sort) do
-      {:ok,
-       %{
-         "amf-accounts" => %{
-           "mappings" => %{
-             "properties" => properties
+      case Amps.Cluster.get(path(collection)) do
+        {:error, e} ->
+          []
+
+        {:ok,
+         %{
+           ^collection => %{
+             "mappings" => %{
+               "properties" => properties
+             }
            }
-         }
-       }} = Amps.Elastic.get(path(collection))
+         }} ->
+          Enum.reduce(sort, [], fn %{"direction" => dir, "property" => field}, acc ->
+            dir = String.downcase(dir)
 
-      Enum.reduce(sort, [], fn %{"direction" => dir, "property" => field}, acc ->
-        dir = String.downcase(dir)
+            sortfield =
+              case properties[field]["type"] do
+                "date" ->
+                  %{field => dir}
 
-        sortfield =
-          case properties[field]["type"] do
-            "date" ->
-              %{field => dir}
+                "text" ->
+                  %{
+                    (field <> ".keyword") => dir
+                  }
+              end
 
-            "text" ->
-              %{
-                (field <> ".keyword") => dir
-              }
-          end
-
-        [sortfield | acc]
-      end)
+            [sortfield | acc]
+          end)
+      end
     end
 
     def insert(collection, body) do
-      case Amps.Elastic.post(path(collection) <> "/" <> collection, body, %{
+      case Amps.Cluster.post(path(collection) <> "/" <> collection, body, %{
              "refresh" => true
            }) do
         {:ok, response} ->
-          response
+          {:ok, response["_id"]}
 
         {:error, reason} ->
-          reason
+          {:error, reason}
       end
     end
 
@@ -1035,7 +1058,7 @@ defmodule AmpsWeb.DB do
       body = Map.drop(body, ["_id"])
 
       case(
-        Amps.Elastic.post(
+        Amps.Cluster.post(
           path(collection) <> "/_update/" <> id,
           %{
             "doc" => body
@@ -1054,7 +1077,7 @@ defmodule AmpsWeb.DB do
     end
 
     def delete(collection, clauses) do
-      case Amps.Elastic.post(
+      case Amps.Cluster.post(
              path(collection) <> "/_delete_by_query",
              %{
                query: convert_search(clauses)
@@ -1073,7 +1096,7 @@ defmodule AmpsWeb.DB do
     end
 
     def delete_one(collection, clauses) do
-      case Amps.Elastic.post(
+      case Amps.Cluster.post(
              path(collection) <> "/_delete_by_query",
              %{
                query: convert_search(clauses)
@@ -1094,7 +1117,7 @@ defmodule AmpsWeb.DB do
 
     def add_to_field(collection, body, id, field) do
       {:ok, result} =
-        Amps.Elastic.post(
+        Amps.Cluster.post(
           path(collection) <> "/_update_by_query",
           %{
             "script" => %{
@@ -1116,7 +1139,7 @@ defmodule AmpsWeb.DB do
 
     def update_in_field(collection, body, id, field, idx) do
       {:ok, result} =
-        Amps.Elastic.post(
+        Amps.Cluster.post(
           path(collection) <> "/_update_by_query",
           %{
             "script" => %{
@@ -1135,7 +1158,7 @@ defmodule AmpsWeb.DB do
 
     def delete_from_field(collection, body, id, field, idx) do
       {:ok, result} =
-        Amps.Elastic.post(
+        Amps.Cluster.post(
           path(collection) <> "/_update_by_query",
           %{
             "script" => %{

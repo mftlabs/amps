@@ -58,13 +58,17 @@ config :master_proxy,
   ]
 
 config :amps,
-  db: "mongo"
+  db: "es"
 
 config :amps, :gnat,
   host: String.to_charlist(System.get_env("AMPS_NATS_HOST", "localhost")),
   port: String.to_integer(System.get_env("AMPS_NATS_PORT", "4222"))
 
 config :amps, Amps.Mailer, adapter: Swoosh.Adapters.Local
+
+config :amps, Amps.Cluster, url: "http://localhost:9200"
+# username: "admin",
+# password: "admin"
 
 # Swoosh API client is needed for adapters other than SMTP.
 config :swoosh, :api_client, false
@@ -92,7 +96,6 @@ config :amps_web, AmpsWeb.Endpoint,
   #   certfile: "/etc/letsencrypt/live/amps.hub4edi.dev/cert.pem"
   # ],
   authmethod: System.get_env("AMPS_AUTH_METHOD") || "db",
-  db: "mongo",
   vault_addr: System.get_env("AMPS_VAULT_ADDR", "http://localhost:8200"),
   mongo_addr: System.get_env("AMPS_MONGO_ADDR", "mongodb://localhost:27017/amps"),
   minio_addr:

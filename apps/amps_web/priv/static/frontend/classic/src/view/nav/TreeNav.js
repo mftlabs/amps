@@ -94,11 +94,10 @@ Ext.define("Amps.view.nav.TreeNav", {
               tooltip: "Services",
             },
             {
-              iconCls: "x-fa fa-key",
+              iconCls: "x-fa fa-tasks",
               leaf: true,
-              rowCls: "keys",
-              text: "Keys",
-              tooltip: "Keys",
+              rowCls: "actions",
+              text: "Actions",
             },
             {
               iconCls: "x-fa fa-edit",
@@ -107,11 +106,13 @@ Ext.define("Amps.view.nav.TreeNav", {
               text: "Topics",
             },
             {
-              iconCls: "x-fa fa-tasks",
+              iconCls: "x-fa fa-key",
               leaf: true,
-              rowCls: "actions",
-              text: "Actions",
+              rowCls: "keys",
+              text: "Keys",
+              tooltip: "Keys",
             },
+
             // {
             //   iconCls: "x-fa fa-arrow-down",
             //   leaf: true,

@@ -2,7 +2,7 @@ defmodule AmpsWeb.ServiceController do
   use AmpsWeb, :controller
   require Logger
   import Argon2
-  alias AmpsWeb.DB
+  alias Amps.DB
   alias Amps.SvcManager
 
   plug(

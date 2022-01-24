@@ -9,7 +9,7 @@ defmodule AmpsWeb.DataController do
   use AmpsWeb, :controller
   require Logger
   import Argon2
-  alias AmpsWeb.DB
+  alias Amps.DB
   alias AmpsWeb.Encryption
   alias Amps.SvcManager
   alias AmpsWeb.ServiceController
@@ -24,7 +24,6 @@ defmodule AmpsWeb.DataController do
            :add_to_field,
            :update_in_field,
            :delete_from_field,
-           :get_user_link,
            :reset_password,
            :reprocess,
            :download,
@@ -40,47 +39,18 @@ defmodule AmpsWeb.DataController do
   plug(AmpsWeb.AuditPlug)
 
   def reset_password(conn, %{"id" => id}) do
-    obj = AmpsWeb.DB.find_one("users", %{"_id" => id})
+    obj = Amps.DB.find_one("users", %{"_id" => id})
     length = 15
     password = :crypto.strong_rand_bytes(length) |> Base.url_encode64() |> binary_part(0, length)
     IO.inspect(password)
     %{password_hash: hashed} = add_hash(password)
     # res = PowResetPassword.Plug.update_user_password(conn, %{"password" => hashed})
 
-    res =
-      AmpsWeb.DB.find_one_and_update("users", %{"username" => obj["username"]}, %{
-        "password" => hashed
-      })
+    Amps.DB.find_one_and_update("users", %{"username" => obj["username"]}, %{
+      "password" => hashed
+    })
 
     json(conn, %{success: %{password: password}})
-  end
-
-  def get_user_link(conn, %{"id" => id}) do
-    obj = AmpsWeb.DB.find_one("users", %{"_id" => id})
-    IO.inspect(id)
-    IO.inspect(conn)
-    config = Application.get_env(:amps_portal, AmpsPortal.Endpoint)[:url]
-    host = Keyword.get(config, :host)
-
-    {:ok, map, powcon} =
-      %Plug.Conn{secret_key_base: conn.secret_key_base, host: host}
-      |> Pow.Plug.put_config(otp_app: :amps_portal)
-      |> PowResetPassword.Plug.create_reset_token(%{"email" => obj["email"]})
-
-    token = map.token
-
-    powcon
-    |> PowResetPassword.Plug.load_user_by_token(token)
-    |> case do
-      {:ok, conn} ->
-        IO.inspect(conn)
-    end
-
-    IO.inspect(host)
-
-    [:inet6, port: port] = Application.get_env(:master_proxy, :http)
-    IO.inspect(port)
-    json(conn, "#{host}:#{port}/?token=#{token}#setpassword")
   end
 
   @spec upload(Plug.Conn.t(), map) :: Plug.Conn.t()
@@ -108,8 +78,18 @@ defmodule AmpsWeb.DataController do
     json(conn, :ok)
   end
 
+  def send_event(conn, %{"topic" => topic, "meta" => meta}) do
+    msgid = AmpsUtil.get_id()
+    dir = AmpsUtil.tempdir(msgid)
+    fpath = Path.join(dir, msgid)
+    meta = Jason.decode!(meta)
+
+    AmpsEvents.send(meta, %{"output" => topic}, %{})
+    json(conn, :ok)
+  end
+
   def reprocess(conn, %{"msgid" => msgid}) do
-    obj = AmpsWeb.DB.find_one("message_events", %{"msgid" => msgid, "status" => "started"})
+    obj = Amps.DB.find_one("message_events", %{"msgid" => msgid, "status" => "started"})
     topic = obj["topic"]
     msg = obj |> Map.drop(["status", "action", "topic", "_id", "index", "etime"])
     AmpsEvents.send(msg, %{"output" => topic}, %{})
@@ -119,8 +99,7 @@ defmodule AmpsWeb.DataController do
 
   def index(conn, %{"collection" => collection}) do
     if vault_collection(collection) do
-      data = VaultDatabase.get_rows("amps/" <> collection)
-      # IO.inspect(data)
+      data = VaultDatabase.get_rows(collection)
 
       json(
         conn,
@@ -155,11 +134,11 @@ defmodule AmpsWeb.DataController do
 
           body = Map.put(body, "password", nil)
 
-          DB.insert("mailbox_auth", %{
-            mailbox: body["username"],
-            password: body["password"],
-            active: true
-          })
+          # DB.insert("mailbox_auth", %{
+          #   mailbox: body["username"],
+          #   password: body["password"],
+          #   active: true
+          # })
 
           # account = S3.Minio.create_account(conn.body_params())
           # S3.create_schedule(account)
@@ -181,10 +160,9 @@ defmodule AmpsWeb.DataController do
           conn.body_params()
       end
 
-    res =
+    {:ok, res} =
       if vault_collection(collection) do
-        {:ok, resp} = VaultDatabase.insert(collection, body)
-        resp
+        VaultDatabase.insert(collection, body)
       else
         DB.insert(collection, body)
       end
@@ -213,6 +191,7 @@ defmodule AmpsWeb.DataController do
         nil
     end
 
+    IO.inspect(res)
     json(conn, res)
   end
 
@@ -688,7 +667,7 @@ defmodule Filter do
 end
 
 defmodule S3 do
-  alias AmpsWeb.DB
+  alias Amps.DB
 
   def create_schedule(account) do
     schedule = %{
@@ -731,7 +710,7 @@ defmodule S3 do
   end
 
   def update_schedule(id) do
-    account = AmpsWeb.DB.find_one("accounts", %{"_id" => id})
+    account = Amps.DB.find_one("accounts", %{"_id" => id})
 
     schedule = %{
       "account" => %{
@@ -829,10 +808,10 @@ defmodule S3 do
           reason: error
         }
 
-        AmpsWeb.DB.insert("message_status", ev)
+        Amps.DB.insert("message_status", ev)
 
         {:ok, val} =
-          AmpsWeb.DB.find_one_and_update(
+          Amps.DB.find_one_and_update(
             "messages",
             %{msgid: msgid},
             %{status: ev.status, stime: ev.stime}
@@ -857,10 +836,10 @@ defmodule S3 do
       reason: "Manual Reprocess"
     }
 
-    AmpsWeb.DB.insert("message_status", ev)
+    Amps.DB.insert("message_status", ev)
 
     {:ok, val} =
-      AmpsWeb.DB.find_one_and_update(
+      Amps.DB.find_one_and_update(
         "messages",
         %{msgid: msgid},
         %{status: ev.status, stime: ev.stime}

@@ -2,7 +2,7 @@ import Crontab.CronExpression
 
 defmodule Amps.Scheduler do
   use Quantum, otp_app: :amps
-  alias AmpsWeb.DB
+  alias Amps.DB
   require Logger
 
   def init(config) do

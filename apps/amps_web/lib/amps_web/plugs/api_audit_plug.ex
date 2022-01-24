@@ -10,22 +10,22 @@ defmodule AmpsWeb.AuditPlug do
   def call(conn, opts) do
     user = conn.assigns().current_user
     info = Phoenix.Router.route_info(AmpsWeb.Router, conn.method, conn.path_info, conn.host)
+
     params = info.path_params
 
-    params =
-      if Map.has_key?(params, "collection") do
-        params["collection"]
-      else
-        Jason.encode!(params)
-      end
+    entity = Jason.encode!(params)
 
-    Logger.info("#{user.firstname} #{user.lastname} performed #{info.plug_opts} on #{params}")
+    Logger.info("#{user.firstname} #{user.lastname} performed #{info.plug_opts} on #{entity}")
 
     AmpsEvents.send_history("amps.events.audit", "ui_audit", %{
       "user" => user.firstname <> " " <> user.lastname,
-      "entity" => params,
+      "entity" => entity,
       "action" => info.plug_opts,
-      "params" => Map.merge(conn.body_params(), %{"query_params" => conn.query_params()})
+      "params" => %{
+        "path_params" => params,
+        "body_params" => conn.body_params(),
+        "query_params" => conn.query_params()
+      }
     })
 
     conn

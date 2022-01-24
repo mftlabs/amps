@@ -1,14 +1,14 @@
 defmodule AmpsPortal.UserController do
   use AmpsPortal, :controller
   import Argon2
-  alias AmpsWeb.DB
+  alias Amps.DB
   alias Plug.Conn
   alias Pow.{Config, Plug, Store.Backend.EtsCache, UUID}
   alias PowResetPassword.Ecto.Context, as: ResetPasswordContext
   alias PowResetPassword.Store.ResetTokenCache
 
   def get(conn, _params) do
-    res = AmpsWeb.DB.find_one("users", %{"_id" => Pow.Plug.current_user(conn).id})
+    res = Amps.DB.find_one("users", %{"_id" => Pow.Plug.current_user(conn).id})
     IO.inspect(res)
     json(conn, res)
   end
@@ -28,7 +28,7 @@ defmodule AmpsPortal.UserController do
         body
       end
 
-    {:ok, res} = AmpsWeb.DB.find_one_and_update("users", %{"_id" => user.id}, body)
+    {:ok, res} = Amps.DB.find_one_and_update("users", %{"_id" => user.id}, body)
     json(conn, res)
   end
 
@@ -79,7 +79,7 @@ defmodule AmpsPortal.UserController do
         config = Plug.fetch_config(conn)
 
         res =
-          AmpsWeb.DB.find_one_and_update("users", %{"username" => user["username"]}, %{
+          Amps.DB.find_one_and_update("users", %{"username" => user["username"]}, %{
             "password" => hashed
           })
 

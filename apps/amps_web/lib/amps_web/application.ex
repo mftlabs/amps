@@ -37,7 +37,6 @@ defmodule AmpsWeb.Application do
       # Start the Endpoint (http/https)
       AmpsWeb.Endpoint,
       # AmpsWeb.Minio,
-      # AmpsWeb.Cluster,
 
       # Start a worker by calling: AmpsDashboard.Worker.start_link(arg)
       # {AmpsDashboard.Worker, arg}

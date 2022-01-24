@@ -1,12 +1,12 @@
 defmodule S3Action do
   require Logger
-  alias AmpsWeb.DB
+  alias Amps.DB
   alias ExAws.S3
 
   @doc """
-  
+
   sftp client action parms may contain the following...
-  
+
   connect_timeout - opt
   host - required
   password - opt or key_name
@@ -14,7 +14,7 @@ defmodule S3Action do
   operation_timeout - opt
   port - required
   user - required
-  
+
   """
 
   def run(msg, parms, _state) do
@@ -172,6 +172,7 @@ defmodule S3Action do
       {:ok, msg} ->
         # case msg do
         #   :done ->
+        info = File.stat!(fpath)
 
         event = %{
           "service" => parms["name"],
@@ -179,6 +180,7 @@ defmodule S3Action do
           "bucket" => parms["bucket"],
           "prefix" => parms["prefix"],
           "fpath" => fpath,
+          "fsize" => info.size,
           "ftime" => DateTime.to_iso8601(DateTime.utc_now()),
           "fname" => Path.basename(obj.key)
         }

@@ -11,7 +11,7 @@ defmodule AmpsWeb.AgentController do
   )
 
   def download_agent(conn, %{"id" => id}) do
-    account = AmpsWeb.DB.find_one("accounts", %{"_id" => id})
+    account = Amps.DB.find_one("accounts", %{"_id" => id})
     _host = Application.fetch_env!(:amps_web, AmpsWeb.Endpoint)[:url]
 
     IO.puts(id)

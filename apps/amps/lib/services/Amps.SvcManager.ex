@@ -1,7 +1,7 @@
 defmodule Amps.SvcManager do
   use GenServer
   require Logger
-  alias AmpsWeb.DB
+  alias Amps.DB
 
   def start_link(_args) do
     Logger.info("starting service manager")

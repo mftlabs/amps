@@ -231,6 +231,7 @@ defmodule Amps.SftpChannel do
   end
 
   def init(options) do
+    IO.inspect(options)
     :ssh_sftpd.init(options)
   end
 
@@ -326,6 +327,15 @@ defmodule Amps.SftpHandler do
       IO.inspect(state)
       # state = List.keydelete(state, :options, 0)
       AmpsEvents.send(msg, %{"output" => topic}, %{})
+
+      AmpsEvents.send_history(
+        "amps.events.messages",
+        "message_events",
+        Map.merge(msg, %{
+          "status" => "received"
+        })
+      )
+
       {{:ok, '/'}, state}
     end
   end

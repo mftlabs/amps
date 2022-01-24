@@ -9,16 +9,16 @@ defmodule AmpsWeb.Startup do
 
   def startup() do
     # create_default_account()
-    create_defaults_rules()
+    # create_defaults_rules()
     # create_root()
     setup_jetstream()
     create_history()
   end
 
   def create_history() do
-    IO.inspect(AmpsWeb.DB.find_one("services", %{"name" => "history updater"}))
+    IO.inspect(Amps.DB.find_one("services", %{"name" => "history updater"}))
 
-    case AmpsWeb.DB.find_one("services", %{"name" => "history updater"}) do
+    case Amps.DB.find_one("services", %{"name" => "history updater"}) do
       nil ->
         IO.puts("Creating History Updater")
 
@@ -30,7 +30,7 @@ defmodule AmpsWeb.Startup do
           topic: "amps.events.*"
         }
 
-        AmpsWeb.DB.insert("services", history)
+        Amps.DB.insert("services", history)
 
         Amps.SvcManager.start_service(history.name)
 
@@ -103,10 +103,10 @@ defmodule AmpsWeb.Startup do
       "name" => "SYSTEM"
     }
 
-    case AmpsWeb.DB.find_one("services", %{"name" => "SYSTEM"}) do
+    case Amps.DB.find_one("services", %{"name" => "SYSTEM"}) do
       nil ->
         IO.puts("Creating SYSTEM Default Account")
-        AmpsWeb.DB.insert("services", system_defaults)
+        Amps.DB.insert("services", system_defaults)
 
       object ->
         IO.puts("SYSTEM Defaults Already Exist")
@@ -134,10 +134,10 @@ defmodule AmpsWeb.Startup do
       "systemdefault" => true
     }
 
-    case AmpsWeb.DB.find_one("rules", %{"name" => "SYSTEM"}) do
+    case Amps.DB.find_one("rules", %{"name" => "SYSTEM"}) do
       nil ->
         IO.puts("Creating SYSTEM Default Rules")
-        AmpsWeb.DB.insert("rules", system_rules)
+        Amps.DB.insert("rules", system_rules)
 
       object ->
         IO.puts("SYSTEM Default Rules Already Exist")
@@ -145,7 +145,7 @@ defmodule AmpsWeb.Startup do
   end
 
   def create_root() do
-    root = AmpsWeb.DB.find_one("admin", %{"systemdefault" => true})
+    root = Amps.DB.find_one("admin", %{"systemdefault" => true})
     host = Application.fetch_env!(:amps_web, AmpsWeb.Endpoint)[:vault_addr]
 
     username = System.get_env("AMPS_ROOT_USER", "root")
@@ -190,7 +190,7 @@ defmodule AmpsWeb.Startup do
         IO.inspect(result)
       end
 
-      AmpsWeb.DB.insert("admin", root)
+      Amps.DB.insert("admin", root)
     else
       IO.puts("Root User Already Exists")
     end

@@ -40,9 +40,9 @@ Ext.define("Amps.view.form.Key", {
               `input[name=${name + "_file"}]`
             )[0].files[0];
             console.log(file);
-            if (file) {
+            if (file && file.size < 5000) {
               var reader = new FileReader();
-              reader.readAsText(file, "UTF-8");
+              reader.readAsBinaryString(file);
               reader.onload = function (evt) {
                 scope
                   .up("fieldcontainer")

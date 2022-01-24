@@ -418,3 +418,7 @@ h6 {
   transition: .2s;
 
 }
+
+.boldrow {
+font-weight: 700;
+}

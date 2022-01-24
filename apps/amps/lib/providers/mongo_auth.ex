@@ -1,14 +1,15 @@
 defmodule AmpsAuth do
   import Argon2
+  alias Amps.DB
 
   def mailbox_info(mailbox, _opts \\ []) do
-    Mongo.find_one(:mongo, "mailbox_auth", %{mailbox: mailbox})
+    DB.find_one("users", %{username: mailbox})
   end
 
   def check_cred(user, pass, _opts \\ []) do
     # IO.puts("checking password #{user} #{pass}")
 
-    case Mongo.find_one(:mongo, "users", %{username: to_string(user)}) do
+    case DB.find_one("users", %{username: to_string(user)}) do
       nil ->
         IO.puts("not found")
         false

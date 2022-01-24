@@ -31,23 +31,24 @@ defmodule Amps.Application do
       # Start the PubSub system
       {Phoenix.PubSub, name: Amps.PubSub},
       Supervisor.Spec.worker(Gnat.ConnectionSupervisor, [gnat_supervisor_settings, []]),
-      {Mongo,
-       [
-         name: :mongo,
-         database: "amps",
-         url: Application.fetch_env!(:amps_web, AmpsWeb.Endpoint)[:mongo_addr],
-         pool_size: 1
-       ]},
+      # {Mongo,
+      #  [
+      #    name: :mongo,
+      #    database: "amps",
+      #    url: Application.fetch_env!(:amps_web, AmpsWeb.Endpoint)[:mongo_addr],
+      #    pool_size: 1
+      #  ]},
+      {Amps.Cluster, []},
       {Amps.Startup, []},
       AmpsWeb.Vault,
       Amps.SvcSupervisor,
       Amps.SvcManager,
-      Amps.Scheduler
+      Amps.Scheduler,
 
       # add this to db config...
 
       # worker pool to run python actions
-      # :poolboy.child_spec(:worker, Application.get_env(:amps, :pyworker)[:config])
+      :poolboy.child_spec(:worker, Application.get_env(:amps, :pyworker)[:config])
     ]
 
     Supervisor.start_link(children, strategy: :one_for_one, name: Amps.Supervisor)

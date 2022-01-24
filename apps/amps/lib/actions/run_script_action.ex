@@ -1,31 +1,26 @@
 defmodule RunScriptAction do
-  use Export.Python
+  require Logger
 
   def run(msg, parms, state) do
-    {:ok, py} = Python.start(python_path: AmpsUtil.get_env(:python_path))
+    result =
+      case parms["script_type"] do
+        "python" ->
+          Amps.PyService.call(msg, parms)
 
-    with res <-
-           py
-           |> Python.call(
-             run(
-               Jason.encode!(%{"msg" => msg, "action" => parms}),
-               Jason.encode!(parms["parms"])
-             ),
-             from_file: parms["module"] |> String.replace_trailing(".py", "")
-           )
-           |> Jason.decode!() do
-      if res["success"] do
-        newmsg =
-          Map.merge(msg, %{
-            "msgid" => AmpsUtil.get_id(),
-            "temp" => true,
-            "parent" => msg["msgid"]
-          })
+        _ ->
+          nil
 
-        AmpsEvents.send(newmsg, parms, state)
-      else
-        raise res["reason"]
+          # do better checking to see if module exists
+          # apply(String.to_atom("Elixir." <> parms["module"]), :run, [parms, files])
       end
+
+    case result do
+      {:ok, rparm} ->
+        Logger.info("Script returned: #{inspect(rparm)}")
+        :ok
+
+      {:error, error} ->
+        raise error
     end
   end
 end

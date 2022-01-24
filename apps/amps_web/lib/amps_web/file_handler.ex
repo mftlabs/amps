@@ -147,7 +147,7 @@ defmodule AmpsWeb.FileHandler do
   defp doHeartbeat(event) do
     IO.puts("heartbeat received #{inspect(event)}")
     event = Map.drop(event, ["fsize", "fname"])
-    AmpsWeb.DB.insert("sysstatus", event)
+    Amps.DB.insert("sysstatus", event)
     :ok
   end
 
@@ -155,7 +155,7 @@ defmodule AmpsWeb.FileHandler do
     # do rules
     # send event
     IO.puts("upload event received #{inspect(event)}")
-    AmpsWeb.DB.insert("messages", event)
+    Amps.DB.insert("messages", event)
     bucket = event["bucket"]
     {status, reason, action, current} = register(bucket, event)
     update_message_status(status, reason, action, current)
@@ -166,7 +166,7 @@ defmodule AmpsWeb.FileHandler do
     # do rules
     # send event
     IO.puts("reprocess event received #{inspect(event)}")
-    # AmpsWeb.DB.insert("messages", event)
+    # Amps.DB.insert("messages", event)
     bucket = event["bucket"]
     IO.inspect("event")
     IO.inspect(event)
@@ -204,7 +204,7 @@ defmodule AmpsWeb.FileHandler do
   end
 
   defp evaluate(user, msg) do
-    case AmpsWeb.DB.find_one("rules", %{name: user}) do
+    case Amps.DB.find_one("rules", %{name: user}) do
       nil ->
         {msg, nil}
 
@@ -336,7 +336,7 @@ defmodule AmpsWeb.FileHandler do
     defaults = rule["defaults"] || %{}
     meta = Map.merge(event, defaults)
 
-    AmpsWeb.DB.find_one_and_update("messages", %{"msgid" => event["msgid"]}, meta)
+    Amps.DB.find_one_and_update("messages", %{"msgid" => event["msgid"]}, meta)
 
     result =
       put_object_copy(to, to_path, from, from_path,
@@ -413,12 +413,12 @@ defmodule AmpsWeb.FileHandler do
       reason: reason
     }
 
-    AmpsWeb.DB.insert("message_status", ev)
+    Amps.DB.insert("message_status", ev)
     location = event["location"] || ""
     # improve error handling here...
     if location != "" do
       {:ok, val} =
-        AmpsWeb.DB.find_one_and_update(
+        Amps.DB.find_one_and_update(
           "messages",
           %{msgid: msgid},
           %{location: location, status: status, stime: stime}
@@ -427,7 +427,7 @@ defmodule AmpsWeb.FileHandler do
       IO.puts("updated status and location #{inspect(val)}")
     else
       {:ok, val} =
-        AmpsWeb.DB.find_one_and_update(
+        Amps.DB.find_one_and_update(
           "messages",
           %{msgid: msgid},
           %{status: status, stime: stime}

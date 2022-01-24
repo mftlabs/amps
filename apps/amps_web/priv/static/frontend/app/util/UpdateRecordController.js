@@ -36,6 +36,8 @@ Ext.define("Amps.form.update", {
         }
       } else if (f.xtype == "button") {
         f.disabled = true;
+      } else if (f.xtype == "displayfield") {
+        f.displaying = true;
       } else {
         f.readOnly = true;
         f.forceSelection = false;
@@ -343,7 +345,7 @@ Ext.define("Amps.util.UpdateRecordController", {
       admin: this.updateUser,
       agentget: this.updateAgentGet,
       agentput: this.updateAgentPut,
-      // topics: this.updateTopic,
+      topics: this.updateTopic,
       // actions: this.updateAction,
       // services: this.updateService,
     };
@@ -975,6 +977,7 @@ Ext.define("Amps.util.UpdateRecordController", {
   updateTopic: function (record, route, scope, close) {
     var grid = Ext.ComponentQuery.query("#main-grid")[0];
     console.log("record is ", record);
+
     var myForm = Ext.create("Amps.form.update");
     myForm.loadForm(
       {
@@ -983,7 +986,7 @@ Ext.define("Amps.util.UpdateRecordController", {
           {
             xtype: "textfield",
             name: "topic",
-            fieldLabel: "Topic Subject",
+            fieldLabel: "Topic",
             allowBlank: false,
             value: record.topic,
             // listeners: {
@@ -998,6 +1001,7 @@ Ext.define("Amps.util.UpdateRecordController", {
             //   },
             // },
             width: 400,
+            tooltip: "The Topic",
           },
           {
             xtype: "radiogroup",
@@ -1041,13 +1045,13 @@ Ext.define("Amps.util.UpdateRecordController", {
             fieldLabel: "Topic Description",
             value: record.desc,
             allowBlank: false,
-
+            tooltip: "Topic Description",
             width: 400,
           },
         ],
       },
       record,
-      "Topic"
+      true
     );
     return myForm;
   },

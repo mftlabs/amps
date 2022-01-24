@@ -54,6 +54,8 @@ defmodule AmpsWeb.Router do
     get("/service/:name", ServiceController, :ping_service)
     post("/msg/reprocess/:msgid", DataController, :reprocess)
     post("/upload/:topic", DataController, :upload)
+    post("/event/:topic", DataController, :send_event)
+
     get("/agent/download/:id", AgentController, :download_agent)
     get("/rules/fields/:id", DataController, :get_match_fields)
     # get("/:collection", DataController, :get_rows)
