@@ -39,7 +39,9 @@ defmodule AmpsPortal.Router do
     pipe_through([:api, :api_protected])
     get("/msg/:msgid", DataController, :get_message)
     delete("/msg/:msgid", DataController, :delete_message)
-
+    get("/ufa/sched/:username", UFAController, :get_sched)
+    post("/ufa/upload/:username", UFAController, :handle_upload)
+    get("/ufa/heartbeat/:username", UFAController, :heartbeat)
     get("/inbox", DataController, :get_messages)
     get("/user", UserController, :get)
     put("/user", UserController, :update)

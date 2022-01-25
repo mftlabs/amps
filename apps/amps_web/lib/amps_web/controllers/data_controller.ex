@@ -97,6 +97,17 @@ defmodule AmpsWeb.DataController do
     json(conn, :ok)
   end
 
+  def reroute(conn, %{"id" => id}) do
+    obj = Amps.DB.find_one("message_events", %{"_id" => id})
+    body = conn.body_params()
+    topic = body["topic"]
+    meta = Jason.decode!(body["meta"])
+    msg = obj |> Map.drop(["status", "action", "topic", "_id", "index", "etime"])
+    AmpsEvents.send(Map.merge(msg, meta), %{"output" => topic}, %{})
+
+    json(conn, :ok)
+  end
+
   def index(conn, %{"collection" => collection}) do
     if vault_collection(collection) do
       data = VaultDatabase.get_rows(collection)
@@ -385,10 +396,15 @@ defmodule AmpsWeb.DataController do
             nil
         end
 
-      "accounts" ->
+      "users" ->
         case field do
           "rules" ->
-            S3.update_schedule(id)
+            DB.find_one_and_update("users", %{"_id" => id}, %{
+              "ufa" => %{
+                "stime" =>
+                  DateTime.utc_now() |> DateTime.truncate(:millisecond) |> DateTime.to_iso8601()
+              }
+            })
 
           _ ->
             nil
@@ -413,6 +429,12 @@ defmodule AmpsWeb.DataController do
     json(conn, result)
   end
 
+  def update_field(conn, %{"collection" => collection, "id" => id, "field" => field}) do
+    body = conn.body_params()
+    DB.find_one_and_update(collection, %{"_id" => id}, %{field => body})
+    json(conn, :ok)
+  end
+
   def update_in_field(conn, %{
         "collection" => collection,
         "id" => id,
@@ -428,6 +450,20 @@ defmodule AmpsWeb.DataController do
         case field do
           "defaults" ->
             Application.put_env(:amps, String.to_atom(body["field"]), body["value"])
+
+          _ ->
+            nil
+        end
+
+      "users" ->
+        case field do
+          "rules" ->
+            DB.find_one_and_update("users", %{"_id" => id}, %{
+              "ufa" => %{
+                "stime" =>
+                  DateTime.utc_now() |> DateTime.truncate(:millisecond) |> DateTime.to_iso8601()
+              }
+            })
 
           _ ->
             nil
@@ -471,10 +507,15 @@ defmodule AmpsWeb.DataController do
             nil
         end
 
-      "accounts" ->
+      "users" ->
         case field do
           "rules" ->
-            S3.update_schedule(id)
+            DB.find_one_and_update("users", %{"_id" => id}, %{
+              "ufa" => %{
+                "stime" =>
+                  DateTime.utc_now() |> DateTime.truncate(:millisecond) |> DateTime.to_iso8601()
+              }
+            })
 
           _ ->
             nil
@@ -507,6 +548,7 @@ defmodule AmpsWeb.DataController do
     end
   end
 
+  @spec delete_batch_consumer(nil | maybe_improper_list | map) :: any
   def delete_batch_consumer(body) do
     if body["inputtype"] == "topic" do
       {stream, consumer} = AmpsUtil.get_names(%{"name" => body["name"], "topic" => body["input"]})

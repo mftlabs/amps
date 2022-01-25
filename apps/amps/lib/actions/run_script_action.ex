@@ -20,18 +20,26 @@ defmodule RunScriptAction do
 
         if parms["send_output"] do
           msgid = AmpsUtil.get_id()
+          newmsg = rparm["msg"]
 
           event =
-            Map.merge(
-              msg,
-              %{
-                "msgid" => msgid,
-                "parent" => msg["msgid"],
-                "fpath" => msg["fpath"],
-                "ftime" => DateTime.to_iso8601(DateTime.utc_now()),
-                "fname" => AmpsUtil.format(parms["format"], msg)
-              }
-            )
+            if newmsg do
+              msg
+              |> Map.merge(newmsg)
+              |> Map.merge(%{
+                "parent" => msg["msgid"]
+              })
+            else
+              Map.merge(
+                msg,
+                %{
+                  "msgid" => msgid,
+                  "parent" => msg["msgid"],
+                  "ftime" => DateTime.to_iso8601(DateTime.utc_now()),
+                  "fname" => AmpsUtil.format(parms["format"], msg)
+                }
+              )
+            end
 
           AmpsEvents.send(event, parms, %{})
         end

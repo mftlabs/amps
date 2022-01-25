@@ -15,6 +15,7 @@ Ext.define("Amps.form.Parms", {
     if (args["title"]) {
       this.setTitle(args["title"]);
     }
+    console.log(args["types"]);
     if (args["types"]) {
       var types = args["types"];
       if (types.length > 1) {
@@ -24,12 +25,13 @@ Ext.define("Amps.form.Parms", {
       } else {
         this.removeAll();
         args["types"].forEach((type) => {
-          var button = Object.assign(
-            { itemId: "parmbutton" },
-            scope.types[type]
-          );
+          var button = Object.assign(scope.types[type], {
+            itemId: "parmbutton",
+            xtype: "button",
+          });
           button.text = "Add";
-          scope.insert(button);
+          console.log(scope);
+          scope.insert(0, button);
         });
       }
     } else {
@@ -40,6 +42,7 @@ Ext.define("Amps.form.Parms", {
     }
     console.log(scope.down("#addMenu"));
     this.loadParms(args["value"], args["readOnly"]);
+    console.log(args);
     this.setReadOnly(args["readOnly"]);
   },
 
@@ -105,7 +108,6 @@ Ext.define("Amps.form.Parms", {
     console.log(buttons);
     if (readOnly) {
       buttons.forEach((b) => {
-        console.log(b);
         b.setHidden(true);
       });
     }

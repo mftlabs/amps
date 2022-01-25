@@ -712,6 +712,13 @@ Ext.define("Amps.util.Utilities", {
       itemId: "reprocess",
       tooltip: "Click here to reprocess message",
       handler: "reprocess",
+      isActionDisabled: function (v, r, c, i, record) {
+        if (record.data.topic) {
+          return false;
+        } else {
+          return true;
+        }
+      },
     },
     reset: {
       name: "link",
@@ -733,6 +740,13 @@ Ext.define("Amps.util.Utilities", {
       itemId: "event",
       tooltip: "Send Event to Topic",
       handler: "sendEvent",
+    },
+    reroute: {
+      name: "event",
+      iconCls: "x-fa fa-random actionicon",
+      itemId: "event",
+      tooltip: "Reroute Event to new Topic",
+      handler: "reroute",
     },
   },
 
@@ -823,7 +837,7 @@ Ext.define("Amps.util.Utilities", {
     });
   },
 
-  text: function (label, name, opts) {
+  text: function (label, name, opts = {}) {
     return Object.assign(
       {
         xtype: "textfield",
@@ -2219,14 +2233,17 @@ Ext.define("Amps.util.Utilities", {
     amfutil.hideAllButtons();
     var fieldMenu = amfutil.getElementByID("actionbar").down("#fieldactions");
     var items = ampsgrids.grids[collection]().subgrids[field].actionIcons;
-    fieldMenu.items.items.forEach((item) => {
-      console.log(item);
-      if (items.indexOf(item.itemId) >= 0) {
-        console.log("showing");
-        item.show();
-      }
-    });
-    fieldMenu.show();
+    if (items) {
+      fieldMenu.items.items.forEach((item) => {
+        console.log(item);
+        if (items.indexOf(item.itemId) >= 0) {
+          console.log("showing");
+          item.show();
+        }
+      });
+      fieldMenu.show();
+    }
+
     //   amfutil.getElementByID("addnewbtn").componentname = "accounts";
   },
 

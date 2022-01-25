@@ -170,13 +170,13 @@ defmodule Amps.DB do
   def get_in_field(collection, id, field, idx) do
     case db() do
       "pg" ->
-        Postgres.update_in_field(collection, id, field, idx)
+        Postgres.get_in_field(collection, id, field, idx)
 
       "mongo" ->
         MongoDB.get_in_field(collection, id, field, idx)
 
       "es" ->
-        Elastic.update_in_field(collection, id, field, idx)
+        Elastic.get_in_field(collection, id, field, idx)
     end
   end
 
@@ -896,15 +896,21 @@ defmodule Amps.DB do
       rows
     end
 
-    def find_one(collection, clauses) do
+    def find_one(collection, clauses, opts \\ %{}) do
       IO.inspect(collection)
       IO.inspect(clauses)
 
-      case query(collection, %{
-             query: convert_search(clauses),
-             size: 1
-           }) do
-        %{rows: [one], success: true, count: 1} ->
+      case query(
+             collection,
+             Map.merge(
+               %{
+                 query: convert_search(clauses),
+                 size: 1
+               },
+               opts
+             )
+           ) do
+        %{rows: [one], success: true, count: _} ->
           one
 
         %{rows: [], success: true, count: 0} ->
@@ -1137,6 +1143,19 @@ defmodule Amps.DB do
       )
     end
 
+    def get_in_field(collection, id, field, idx) do
+      item =
+        find_one(
+          collection,
+          %{"_id" => id},
+          %{"fields" => [field]}
+        )
+
+      IO.inspect(item[field])
+      Enum.at(item[field], String.to_integer(idx))
+    end
+
+    @spec update_in_field(any, any, any, any, any) :: any
     def update_in_field(collection, body, id, field, idx) do
       {:ok, result} =
         Amps.Cluster.post(

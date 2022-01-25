@@ -33,10 +33,11 @@ defmodule Amps.PyService do
   @impl true
   def handle_call({:pyrun, msg, parms}, _from, pid) do
     path = AmpsUtil.get_env(:python_path)
+    tmp = AmpsUtil.get_env(:storage_temp)
     {:ok, pid} = :python.start([{:python_path, to_charlist(path)}])
     IO.inspect(parms)
     module = String.to_atom(parms["module"])
-    xparm = %{:msg => msg, :parms => parms}
+    xparm = %{:msg => msg, :parms => parms, :sysparms => %{"tempdir" => tmp}}
     jparms = Poison.encode!(xparm)
 
     try do

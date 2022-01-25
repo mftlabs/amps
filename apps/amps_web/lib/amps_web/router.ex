@@ -53,6 +53,8 @@ defmodule AmpsWeb.Router do
     post("/service/:name", ServiceController, :handle_service)
     get("/service/:name", ServiceController, :ping_service)
     post("/msg/reprocess/:msgid", DataController, :reprocess)
+    post("/msg/reroute/:id", DataController, :reroute)
+
     post("/upload/:topic", DataController, :upload)
     post("/event/:topic", DataController, :send_event)
 
@@ -62,6 +64,7 @@ defmodule AmpsWeb.Router do
     get("/store/:collection", UtilController, :create_store)
     resources("/:collection/", DataController, except: [:new, :edit])
     get("/:collection/:id/:field", DataController, :get_field)
+    put("/:collection/:id/:field", DataController, :update_field)
     post("/:collection/:id/:field", DataController, :add_to_field)
     get("/:collection/:id/:field/:idx", DataController, :get_in_field)
 

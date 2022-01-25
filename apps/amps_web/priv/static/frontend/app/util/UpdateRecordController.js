@@ -53,11 +53,11 @@ Ext.define("Amps.form.update", {
 
   setValue: async function (field) {
     var f = await Object.assign({}, field);
-    console.log(f);
+    // console.log(f);
     var config = this.config;
     var record = this.record;
     var scope = this;
-    console.log(f);
+    // console.log(f);
     f.value = record[f.name];
 
     if (f.xtype == "radiogroup") {
@@ -154,9 +154,10 @@ Ext.define("Amps.form.update", {
               values = amfutil.convertNumbers(form, values);
               console.log(values);
               var user = amfutil.get_user();
-
-              values.modifiedby = user.firstname + " " + user.lastname;
-              values.modified = new Date().toISOString();
+              if (this.audit) {
+                values.modifiedby = user.firstname + " " + user.lastname;
+                values.modified = new Date().toISOString();
+              }
 
               route = route
                 ? route + "/" + scope.record._id
@@ -244,7 +245,7 @@ Ext.define("Amps.form.update", {
     }
     this.editing = !this.editing;
   },
-  loadForm: function (config, record, title, route) {
+  loadForm: function (config, record, title, route = false, audit = true) {
     this.config = config;
     this.record = record;
     if (config.transform) {
@@ -254,8 +255,10 @@ Ext.define("Amps.form.update", {
       this.title = "Update " + config.object;
     }
 
-    if (route) {
-      this.route = route;
+    this.route = route;
+
+    if (audit) {
+      this.audit = audit;
     }
 
     this.fields = config.fields;
@@ -264,35 +267,37 @@ Ext.define("Amps.form.update", {
     }
     var user = amfutil.get_user();
 
-    this.fields = this.fields.concat([
-      {
-        xtype: "displayfield",
-        fieldLabel: "Created By",
-        submitValue: true,
-        name: "createdby",
-      },
+    if (this.audit) {
+      this.fields = this.fields.concat([
+        {
+          xtype: "displayfield",
+          fieldLabel: "Created By",
+          submitValue: true,
+          name: "createdby",
+        },
 
-      {
-        xtype: "displayfield",
-        fieldLabel: "Created on",
-        submitValue: true,
-        name: "created",
-      },
+        {
+          xtype: "displayfield",
+          fieldLabel: "Created on",
+          submitValue: true,
+          name: "created",
+        },
 
-      {
-        xtype: "displayfield",
-        fieldLabel: "Last Modified By",
-        submitValue: true,
-        name: "modifiedby",
-      },
+        {
+          xtype: "displayfield",
+          fieldLabel: "Last Modified By",
+          submitValue: true,
+          name: "modifiedby",
+        },
 
-      {
-        xtype: "displayfield",
-        fieldLabel: "Modified on",
-        submitValue: true,
-        name: "modified",
-      },
-    ]);
+        {
+          xtype: "displayfield",
+          fieldLabel: "Modified on",
+          submitValue: true,
+          name: "modified",
+        },
+      ]);
+    }
 
     this.fields = amfutil.scanFields(this.fields);
 
@@ -419,36 +424,6 @@ Ext.define("Amps.util.UpdateRecordController", {
         var field = subgrid[0];
 
         var gridinfo = subgrid[1];
-        var items = gridinfo.options
-          ? gridinfo.options.map((option) => amfutil.gridactions[option])
-          : null;
-
-        var actioncolumn = {
-          xtype: "actioncolumn",
-          text: "Actions",
-          dataIndex: "actions",
-          controller: "rules",
-          width: 175,
-          items: items,
-        };
-
-        var grid = new Ext.grid.Panel({
-          cls: "ufa-grid",
-          itemId: `${route}-${field}`,
-          field: field,
-
-          plugins: ["gridfilters"],
-          store: amfutil.createFieldStore(route, record._id, field),
-          columns: gridinfo.columns.concat(items ? [actioncolumn] : null),
-          bbar: {
-            xtype: "pagingtoolbar",
-            displayInfo: true,
-          },
-        });
-
-        console.log(gridinfo.title);
-        console.log(field);
-
         function handleAction() {
           var tokens = Ext.util.History.getToken().split("/");
           if (tokens.length >= 3) {
@@ -459,82 +434,143 @@ Ext.define("Amps.util.UpdateRecordController", {
             }
           }
         }
+        if (gridinfo.grid) {
+          var items = gridinfo.options
+            ? gridinfo.options.map((option) => amfutil.gridactions[option])
+            : null;
 
-        var fieldPanel = new Ext.panel.Panel({
-          title: gridinfo.title,
-          layout: "card",
-          field: field,
-          itemId: field + "-page-panel",
-          items: [grid],
-          listeners: {
-            afterlayout: function (fp, layout, eopts) {
-              console.log(layout, "changed");
-              handleAction();
+          var actioncolumn = {
+            xtype: "actioncolumn",
+            text: "Actions",
+            dataIndex: "actions",
+            controller: "rules",
+            width: 175,
+            items: items,
+          };
+
+          var grid = new Ext.grid.Panel({
+            cls: "ufa-grid",
+            itemId: `${route}-${field}`,
+            field: field,
+
+            plugins: ["gridfilters"],
+            store: amfutil.createFieldStore(route, record._id, field),
+            columns: gridinfo.columns.concat(items ? [actioncolumn] : null),
+            bbar: {
+              xtype: "pagingtoolbar",
+              displayInfo: true,
             },
-          },
-        });
+          });
 
-        grid.setListeners({
-          rowdblclick: function (grid, record, element, rowIndex, e, eOpts) {
-            console.log(rowIndex);
-            console.log(route);
-            // amfutil.hideAllButtons();
-            let currRoute = Ext.util.History.getToken();
-            var tbar = [
-              {
-                xtype: "button",
-                text: "Back",
-                itemId: "detailsbackbtn",
-                iconCls: "fa fa-arrow-circle-left",
-                handler: function (btn) {
-                  fieldPanel.setActiveItem(0);
-                  amfutil.redirectTo(currRoute);
-                  fieldPanel.remove(1);
-                },
+          console.log(gridinfo.title);
+          console.log(field);
+          console.log(grid);
+
+          var fieldPanel = new Ext.panel.Panel({
+            title: gridinfo.title,
+            layout: "card",
+            field: field,
+            itemId: field + "-page-panel",
+
+            items: [grid],
+            listeners: {
+              afterlayout: function (fp, layout, eopts) {
+                console.log(layout, "changed");
+                handleAction();
               },
-            ];
+            },
+          });
 
-            const back = () => {
-              fieldPanel.setActiveItem(0);
-              amfutil.redirectTo(currRoute);
-              fieldPanel.remove(1);
-            };
-            // amfutil.hideAllButtons();
-
-            var config = page.subgrids[field];
-            console.log(config);
-            var fields = config.fields;
-            if (config.update && config.update.fields) {
-              fields.concat(config.update.fields);
-            }
-
-            var updateForm = Ext.create("Amps.form.update");
-            updateForm.loadForm(config, record.data);
-            console.log(config.types);
-            var win = Ext.create("Ext.window.Window", {
-              title: "View " + config.object,
-              items: [updateForm],
-              modal: true,
-              listeners: {
-                hide: function () {
-                  amfutil.redirectTo(currRoute);
-                  // handleAction();
+          grid.setListeners({
+            rowdblclick: function (grid, record, element, rowIndex, e, eOpts) {
+              console.log(rowIndex);
+              console.log(route);
+              // amfutil.hideAllButtons();
+              let currRoute = Ext.util.History.getToken();
+              var tbar = [
+                {
+                  xtype: "button",
+                  text: "Back",
+                  itemId: "detailsbackbtn",
+                  iconCls: "fa fa-arrow-circle-left",
+                  handler: function (btn) {
+                    fieldPanel.setActiveItem(0);
+                    amfutil.redirectTo(currRoute);
+                    fieldPanel.remove(1);
+                  },
                 },
+              ];
+
+              const back = () => {
+                fieldPanel.setActiveItem(0);
+                amfutil.redirectTo(currRoute);
+                fieldPanel.remove(1);
+              };
+              // amfutil.hideAllButtons();
+
+              var config = page.subgrids[field];
+              console.log(config);
+              var fields = config.fields;
+              if (config.update && config.update.fields) {
+                fields.concat(config.update.fields);
+              }
+
+              var updateForm = Ext.create("Amps.form.update");
+              updateForm.loadForm(config, record.data);
+              console.log(config.types);
+              console.log(gridinfo);
+              var win = Ext.create("Ext.window.Window", {
+                title: "View " + config.object,
+                layout: "fit",
+                items: [updateForm],
+                width: 600,
+                height: 600,
+                modal: true,
+                listeners: {
+                  hide: function () {
+                    amfutil.redirectTo(currRoute);
+                    // handleAction();
+                  },
+                },
+              });
+              win.show();
+
+              // fieldPanel.insert({
+              //   xtype: "panel",
+              //   tbar: tbar,
+              //   items: [updateForm],
+              //   layout: "fit",
+              // });
+              amfutil.redirect(currRoute + "/" + rowIndex);
+            },
+          });
+
+          return fieldPanel;
+        } else {
+          var updateForm = Ext.create("Amps.form.update");
+          updateForm.loadForm(
+            gridinfo,
+            record[field] || {},
+            false,
+            false,
+            false
+          );
+          var fieldPanel = new Ext.panel.Panel({
+            title: gridinfo.title,
+            layout: "card",
+            field: field,
+            itemId: field + "-page-panel",
+            items: [updateForm],
+            listeners: {
+              afterlayout: function (fp, layout, eopts) {
+                console.log(layout, "changed");
+                handleAction();
               },
-            });
-            win.show();
+            },
+          });
 
-            // fieldPanel.insert({
-            //   xtype: "panel",
-            //   tbar: tbar,
-            //   items: [updateForm],
-            //   layout: "fit",
-            // });
-            amfutil.redirect(currRoute + "/" + rowIndex);
-          },
-        });
-
-        return fieldPanel;
+          return fieldPanel;
+        }
       })
     );
     console.log(tabItems);

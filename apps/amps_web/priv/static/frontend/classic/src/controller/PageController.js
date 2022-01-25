@@ -842,7 +842,106 @@ Ext.define("Amps.controller.PageController", {
 
                   // msgbox.anchorTo(Ext.getBody(), "br");
                 });
+                grid.getStore().reload();
+
                 uploadWindow.close();
+              },
+            },
+            {
+              text: "Cancel",
+              cls: "button_class",
+              itemId: "cancel",
+              listeners: {
+                click: function (btn) {
+                  uploadWindow.close();
+                },
+              },
+            },
+          ],
+        },
+      ],
+    });
+    uploadWindow.show();
+  },
+
+  reroute: async function (grid, rowIndex, colIndex) {
+    var rec = grid.getStore().getAt(rowIndex);
+    var uploadWindow = new Ext.window.Window({
+      title: "Reroute Event",
+      modal: true,
+      width: 600,
+      height: 500,
+      scrollable: true,
+      resizable: false,
+      layout: "fit",
+      padding: 10,
+      items: [
+        {
+          xtype: "form",
+          defaults: {
+            padding: 5,
+            labelWidth: 140,
+          },
+          // layout: {
+          //   type: "vbox",
+          //   align: "stretch",
+          // },
+          scrollable: true,
+          items: [
+            amfutil.outputTopic(),
+            {
+              // Fieldset in Column 1 - collapsible via toggle button
+              xtype: "fieldset",
+              title: "Additional Metadata",
+              collapsible: true,
+              onAdd: function (component, position) {
+                // component.setTitle("Match Pattern" + position);
+                console.log(component);
+                console.log(position);
+              },
+              items: [
+                {
+                  xtype: "button",
+                  text: "Add",
+                  handler: function (button, event) {
+                    var formpanel = button.up();
+
+                    formpanel.insert(
+                      formpanel.items.length - 1,
+                      Ext.create("Amps.form.Defaults")
+                    );
+                  },
+                },
+              ],
+            },
+          ],
+
+          buttons: [
+            {
+              text: "Send",
+              formBind: true,
+              handler: function (scope) {
+                var form = this.up("form").getForm();
+                scope.up("window").setLoading(true);
+                var fields = form.getFields();
+                var values = form.getValues();
+
+                var meta = amfutil.formatArrayField(values.defaults);
+                console.log(meta);
+                // console.log(files);
+                amfutil.ajaxRequest({
+                  url: "api/msg/reroute/" + rec.data._id,
+                  method: "post",
+                  jsonData: {
+                    meta: JSON.stringify(meta),
+                    topic: values.output,
+                  },
+                  success: function () {
+                    uploadWindow.close();
+                    grid.getStore().reload();
+                  },
+                });
+                // msgbox.anchorTo(Ext.getBody(), "br");
               },
             },
             {
@@ -931,6 +1030,7 @@ Ext.define("Amps.controller.PageController", {
                   method: "post",
                   jsonData: { meta: JSON.stringify(meta) },
                   success: function () {
+                    grid.getStore().reload();
                     uploadWindow.close();
                   },
                 });
