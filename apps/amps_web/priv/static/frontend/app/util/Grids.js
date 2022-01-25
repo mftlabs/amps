@@ -1735,7 +1735,7 @@ Ext.define("Amps.panel.Wizard", {
                 { id: subscriberid, name: subscriber.name }
               );
               console.log(subscriberid);
-            } catch {
+            } catch (e){
               mask.hide();
             }
           },

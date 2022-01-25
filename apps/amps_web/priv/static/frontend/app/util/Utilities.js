@@ -1212,7 +1212,7 @@ Ext.define("Amps.util.Utilities", {
         );
       }, true);
       return match;
-    } catch {}
+    } catch (e){}
   },
 
   searchFields: function (fields, func) {
