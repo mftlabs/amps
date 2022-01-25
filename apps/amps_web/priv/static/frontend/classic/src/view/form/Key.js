@@ -34,6 +34,8 @@ Ext.define("Amps.view.form.Key", {
         // height: 100,
         listeners: {
           change: function (scope, value) {
+            var newValue = value.replace(/C:\\fakepath\\/g, '');
+            scope.setRawValue(newValue);
             var id = scope.getInputId();
             console.log(id);
             var file = document.querySelectorAll(
