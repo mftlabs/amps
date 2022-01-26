@@ -92,6 +92,8 @@ if config_env() == :prod do
     pg_addr: System.get_env("AMPS_POSTGRES_ADDR"),
     secret_key_base: secret_key_base
 
+  config :amps, Amps.Cluster, url: System.get_env("AMPS_OS_ADDR", "http://localhost:9200")
+
   config :ex_aws, :s3,
     access_key_id: "minioadmin",
     secret_access_key: "minioadmin",
