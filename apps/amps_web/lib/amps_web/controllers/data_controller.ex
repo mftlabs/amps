@@ -380,6 +380,29 @@ defmodule AmpsWeb.DataController do
     json(conn, data[field])
   end
 
+  def get_streams(conn, _params) do
+    {:ok, %{streams: streams}} = Jetstream.API.Stream.list(:gnat)
+    json(conn, streams)
+  end
+
+  def get_consumers(conn, %{"stream" => stream}) do
+    {:ok, %{consumers: consumers}} = Jetstream.API.Consumer.list(:gnat, stream)
+
+    consumers =
+      Enum.reduce(consumers, [], fn consumer, acc ->
+        {:ok, info} = Jetstream.API.Consumer.info(:gnat, stream, consumer)
+
+        info =
+          Map.merge(info, info.config)
+          |> Map.merge(info.delivered)
+          |> Map.drop([:config, :delivered])
+
+        [info | acc]
+      end)
+
+    json(conn, consumers)
+  end
+
   def add_to_field(conn, %{"collection" => collection, "id" => id, "field" => field}) do
     Logger.debug("Adding Field")
     body = conn.body_params()

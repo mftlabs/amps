@@ -226,8 +226,15 @@ defmodule AmpsWeb.UtilController do
           }
 
         steps ->
-          %{"steps" => steps, "topics" => Enum.reverse(topics), "topic" => topic}
+          %{
+            "steps" => steps,
+            "action" => %{"output" => topic},
+            "topics" => Enum.reverse(topics),
+            "topic" => topic
+          }
       end
+
+    IO.inspect(res)
 
     json(conn, res)
   end
@@ -242,14 +249,10 @@ defmodule AmpsWeb.UtilController do
           type: "subscriber"
         })
 
-      topics = [topic | topics]
-
       {steps, topics} =
         Enum.reduce(subs, {[], topics}, fn sub, {steps, topics} ->
           if match_topic(sub["topic"], topic) do
-            IO.inspect(sub)
             action = DB.find_one("actions", %{"_id" => sub["handler"]})
-            IO.inspect(action)
             step = %{"action" => action, "sub" => sub, "topic" => sub["topic"]}
 
             {step, topics} =
@@ -257,6 +260,8 @@ defmodule AmpsWeb.UtilController do
                 rule = RouterAction.evaluate(action, meta)
 
                 # rule["topic"]
+                topics = [topic | topics]
+
                 {steps, topics} = find_topics(rule["topic"], Map.merge(meta, %{}), topics)
 
                 step =
@@ -273,6 +278,8 @@ defmodule AmpsWeb.UtilController do
                 {step, topics}
               else
                 if action["output"] do
+                  topics = [topic | topics]
+
                   {steps, topics} = find_topics(action["output"], Map.merge(meta, %{}), topics)
 
                   IO.inspect(steps)

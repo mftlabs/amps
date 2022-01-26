@@ -54,6 +54,8 @@ defmodule AmpsWeb.Router do
     get("/service/:name", ServiceController, :ping_service)
     post("/msg/reprocess/:msgid", DataController, :reprocess)
     post("/msg/reroute/:id", DataController, :reroute)
+    get("/:stream/consumers", DataController, :get_consumers)
+    get("/streams", DataController, :get_streams)
 
     post("/upload/:topic", DataController, :upload)
     post("/event/:topic", DataController, :send_event)

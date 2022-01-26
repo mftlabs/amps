@@ -1226,7 +1226,7 @@ Ext.define("Amps.util.Utilities", {
         );
       }, true);
       return match;
-    } catch (e){}
+    } catch (e) {}
   },
 
   searchFields: function (fields, func) {
@@ -1310,18 +1310,15 @@ Ext.define("Amps.util.Utilities", {
             maxHeight: 50,
 
             listeners: {
-              render: function () {
-                var win = this.down("#tooltip");
-                this.getEl().on("mouseenter", function (e) {
-                  win.show();
-                  win.setPagePosition(e.parentEvent.pageX - 225, [
-                    e.parentEvent.pageY - win.getHeight() - 15,
-                  ]);
+              afterrender: function (me) {
+                // Register the new tip with an element's ID
+                Ext.tip.QuickTipManager.register({
+                  target: me.getId(), // Target button's ID
+                  text: field.tooltip, // Tip content
                 });
-
-                this.getEl().on("mouseleave", function () {
-                  win.hide();
-                });
+              },
+              destroy: function (me) {
+                Ext.tip.QuickTipManager.unregister(me.getId());
               },
             },
             items: [
@@ -1329,62 +1326,6 @@ Ext.define("Amps.util.Utilities", {
                 xtype: "component",
                 cls: "x-fa fa-info",
                 itemId: "info-icon",
-              },
-              {
-                xtype: "fieldcontainer",
-                layout: {
-                  type: "absolute",
-                },
-                items: [
-                  {
-                    xtype: "window",
-                    header: false,
-                    itemId: "tooltip",
-                    width: 300,
-                    layout: "fit",
-                    items: [
-                      {
-                        xtype: "container",
-                        padding: 5,
-
-                        style: {
-                          background: "#5fa2dd",
-                          color: "white",
-                        },
-                        layout: {
-                          type: "hbox",
-                          align: "stretch",
-                        },
-                        items: [
-                          {
-                            xtype: "container",
-                            layout: "center",
-                            width: 35,
-                            items: [
-                              {
-                                xtype: "component",
-                                cls: "x-fa fa-info-circle",
-                              },
-                            ],
-                          },
-
-                          {
-                            xtype: "component",
-                            padding: 5,
-
-                            flex: 1,
-                            autoEl: "div",
-                            style: {
-                              "font-size": ".8rem",
-                              "font-weight": 400,
-                            },
-                            html: field.tooltip,
-                          },
-                        ],
-                      },
-                    ],
-                  },
-                ],
               },
             ],
           },

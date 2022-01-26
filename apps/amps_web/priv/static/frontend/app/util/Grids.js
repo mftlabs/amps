@@ -5,6 +5,7 @@ Ext.define("Amps.container.Workflow.Step", {
     type: "hbox",
     align: "stretch",
   },
+  height: 200,
 
   constructor: function (args) {
     this.callParent(args);
@@ -17,7 +18,10 @@ Ext.define("Amps.container.Workflow.Step", {
 
     if (step.step) {
       var currStep = step.step;
-
+      var tp = currStep.topic.substring(0, 37);
+      if (currStep.topic.length > 37) {
+        tp += "...";
+      }
       if (currStep.loop) {
         console.log("Loop");
         c.setStyle({
@@ -32,7 +36,20 @@ Ext.define("Amps.container.Workflow.Step", {
             "font-weight": 400,
           },
           autoEl: "div",
-          html: `#${steps.items.items.length + 1}` + " " + currStep.topic,
+          html:
+            `#${Ext.ComponentQuery.query("workflowstep").length}` + " " + tp,
+          listeners: {
+            afterrender: function (me) {
+              // Register the new tip with an element's ID
+              Ext.tip.QuickTipManager.register({
+                target: me.getId(), // Target button's ID
+                text: currStep.topic, // Tip content
+              });
+            },
+            destroy: function (me) {
+              Ext.tip.QuickTipManager.unregister(me.getId());
+            },
+          },
         });
         c.insert(1, [
           {
@@ -90,16 +107,37 @@ Ext.define("Amps.container.Workflow.Step", {
         ]);
       } else {
         console.log(currStep);
+
         c.insert({
-          xtype: "component",
-          style: {
-            background: "#5fa2dd",
-            padding: 10,
-            color: "white",
-            "font-weight": 400,
-          },
-          autoEl: "div",
-          html: `#${steps.items.items.length + 1}` + " " + currStep.topic,
+          xtype: "container",
+          items: [
+            {
+              xtype: "component",
+              style: {
+                background: "#5fa2dd",
+                padding: 10,
+                color: "white",
+                "font-weight": 400,
+              },
+              autoEl: "div",
+              html:
+                `#${Ext.ComponentQuery.query("workflowstep").length}` +
+                " " +
+                tp,
+              listeners: {
+                afterrender: function (me) {
+                  // Register the new tip with an element's ID
+                  Ext.tip.QuickTipManager.register({
+                    target: me.getId(), // Target button's ID
+                    text: currStep.topic, // Tip content
+                  });
+                },
+                destroy: function (me) {
+                  Ext.tip.QuickTipManager.unregister(me.getId());
+                },
+              },
+            },
+          ],
         });
         c.insert(1, [
           {
@@ -176,6 +214,7 @@ Ext.define("Amps.container.Workflow.Step", {
                         items: [myForm],
                         listeners: {
                           close: function () {
+                            console.log(form.down("#steps"));
                             form.down("#steps").loadWorkflow(form);
                           },
                         },
@@ -259,418 +298,6 @@ Ext.define("Amps.container.Workflow.Step", {
       }
 
       if (currStep.steps) {
-        b.insert({
-          xtype: "container",
-          width: 50,
-          height: 50,
-          layout: "center",
-          items: [
-            {
-              xtype: "component",
-              cls: "x-fa fa-arrow-right",
-            },
-          ],
-        });
-        // b.insert({
-        //   xtype: "container",
-        //   layout: "center",
-        //   margin: 5,
-        //   items: [
-        //     {
-        //       xtype: "button",
-        //       iconCls: "x-fa fa-plus",
-        //       text: "Add",
-        //       handler: function () {
-        //         console.log("Input Topic: " + currStep.sub.topic);
-        //         console.log("Output Topic: " + currStep.topic.sub.topic);
-        //         console.log(currStep);
-        //         var win = new Ext.window.Window({
-        //           title: "Add Step",
-        //           modal: true,
-        //           width: 600,
-        //           height: 500,
-        //           // resizable: false,
-        //           layout: "fit",
-        //           items: [
-        //             {
-        //               xtype: "panel",
-        //               layout: "card",
-        //               bodyStyle: "padding:15px",
-        //               scrollable: true,
-        //               itemId: "wizard",
-        //               defaultListenerScope: true,
-        //               //   tbar: [
-        //               //     {
-        //               //       xtype: "container",
-        //               //       items: [
-        //               //         {
-        //               //           html: `<ul class="stepNav threeWide"><li id="user_step1" class="selected"><a href="#">User Details</a></li><li id="user_step2" class=""><a href="#">Provider Details</a></li><li id="user_step3" class=""><a href="#">Review</a></li></ul>`,
-        //               //         },
-        //               //       ],
-        //               //     },
-        //               //   ],
-        //               items: [
-        //                 {
-        //                   xtype: "form",
-        //                   scrollable: true,
-        //                   layout: {
-        //                     type: "vbox",
-        //                     align: "stretch",
-        //                   },
-        //                   itemId: "card-0",
-        //                   items: [
-        //                     {
-        //                       html: `           <h1>AMPS Wizard</h1>
-        //                         <hr style="height:1px;border:none;color:lightgray;background-color:lightgray;"><h4>Step 1 of 3: Define an action below.</h4>`,
-        //                     },
-        //                     {
-        //                       xtype: "fieldcontainer",
-        //                       layout: {
-        //                         type: "vbox",
-        //                         align: "stretch",
-        //                       },
-        //                       listeners: {
-        //                         beforerender: function (scope) {
-        //                           var actions = ampsgrids.grids["actions"]();
-        //                           scope.insert(
-        //                             0,
-        //                             actions.fields.map((field) => {
-        //                               field = Object.assign({}, field);
-        //                               if (field.name == "type") {
-        //                                 console.log(field);
-        //                                 var types;
-        //                                 field = Ext.apply(field, {
-        //                                   listeners: {
-        //                                     beforerender: function (scope) {
-        //                                       var actionTypes = Object.assign(
-        //                                         {},
-        //                                         actions.types
-        //                                       );
-        //                                       console.log(actionTypes);
-        //                                       types = store = Object.entries(
-        //                                         actionTypes
-        //                                       ).reduce(function (
-        //                                         filtered,
-        //                                         type
-        //                                       ) {
-        //                                         type = Object.assign(
-        //                                           {},
-        //                                           type[1]
-        //                                         );
-        //                                         var output = type.fields.find(
-        //                                           (field) =>
-        //                                             field.name == "output"
-        //                                         );
-        //                                         if (output) {
-        //                                           filtered.push(type);
-        //                                           return filtered;
-        //                                         } else {
-        //                                           return filtered;
-        //                                         }
-        //                                       },
-        //                                       []);
-        //                                       console.log(types);
-        //                                       scope.setStore(types);
-        //                                     },
-        //                                     change: function (scope, value) {
-        //                                       var form = scope.up("form");
-        //                                       var actionparms =
-        //                                         form.down("#typeparms");
-        //                                       actionparms.removeAll();
-        //                                       console.log(types);
-        //                                       actionparms.insert(
-        //                                         0,
-        //                                         types.find(
-        //                                           (type) => type.field == value
-        //                                         ).fields
-        //                                       );
-        //                                       var output = form
-        //                                         .getForm()
-        //                                         .findField("output");
-        //                                       console.log(
-        //                                         currStep.step.sub.topic
-        //                                       );
-        //                                       output.setValue(
-        //                                         currStep.step.sub.topic
-        //                                       );
-        //                                       output.setReadOnly(true);
-        //                                     },
-        //                                   },
-        //                                 });
-        //                               }
-        //                               return field;
-        //                             })
-        //                           );
-        //                         },
-        //                       },
-        //                     },
-        //                   ],
-        //                   bbar: [
-        //                     "->",
-        //                     {
-        //                       itemId: "card-next",
-        //                       text: "Next &raquo;",
-        //                       handler: "showNext",
-        //                       formBind: true,
-        //                     },
-        //                   ],
-        //                 },
-        //                 {
-        //                   xtype: "form",
-        //                   itemId: "card-1",
-        //                   scrollable: true,
-        //                   items: [
-        //                     {
-        //                       html: `           <h1>AMPS Wizard</h1>
-        //                         <hr style="height:1px;border:none;color:lightgray;background-color:lightgray;"><h4>Step 2 of 3: Define a corresponding topic.</h4>`,
-        //                     },
-        //                     {
-        //                       xtype: "fieldcontainer",
-        //                       listeners: {
-        //                         beforerender: function (scope) {
-        //                           scope.insert(
-        //                             0,
-        //                             ampsgrids.grids["topics"]().fields
-        //                           );
-        //                         },
-        //                       },
-        //                     },
-        //                   ],
-        //                   bbar: [
-        //                     "->",
-        //                     {
-        //                       itemId: "card-prev",
-        //                       text: "&laquo; Previous",
-        //                       handler: "showPrevious",
-        //                     },
-        //                     {
-        //                       itemId: "card-next",
-        //                       text: "Next &raquo;",
-        //                       handler: "showNext",
-        //                       formBind: true,
-        //                     },
-        //                   ],
-        //                 },
-        //                 {
-        //                   xtype: "form",
-        //                   itemId: "card-2",
-        //                   scrollable: true,
-        //                   items: [
-        //                     {
-        //                       html: `         <h1>AMPS Wizard</h1>
-        //                         <hr style="height:1px;border:none;color:lightgray;background-color:lightgray;"><h4>Step 3 of 3: Define a subscriber that subscribes to your topic and performs your action.</h4>`,
-        //                     },
-        //                     {
-        //                       xtype: "fieldcontainer",
-        //                       listeners: {
-        //                         beforerender: function (scope) {
-        //                           var services = ampsgrids.grids["services"]();
-        //                           var fields = services.fields.concat(
-        //                             services.types["subscriber"].fields
-        //                           );
-        //                           // console.log(action);
-        //                           // console.log(topic);
-        //                           scope.insert(
-        //                             0,
-        //                             fields.map((field) => {
-        //                               if (
-        //                                 field.name == "action" ||
-        //                                 field.name == "topic"
-        //                               ) {
-        //                                 field.readOnly = true;
-        //                                 field.forceSelection = false;
-        //                               }
-        //                               return field;
-        //                             })
-        //                           );
-        //                         },
-        //                       },
-        //                     },
-        //                   ],
-        //                   bbar: [
-        //                     "->",
-        //                     {
-        //                       itemId: "card-prev",
-        //                       text: "&laquo; Previous",
-        //                       handler: "showPrevious",
-        //                       // disabled: true,
-        //                     },
-        //                     {
-        //                       itemId: "card-next",
-        //                       formBind: true,
-        //                       text: "Finish",
-        //                       handler: async function (scope) {
-        //                         console.log("Finish");
-        //                         var actionform = scope
-        //                           .up("#wizard")
-        //                           .down("#card-0");
-        //                         var topicform = scope
-        //                           .up("#wizard")
-        //                           .down("#card-1");
-        //                         var subscriberform = scope.up("form");
-        //                         var action = actionform.getForm().getValues();
-        //                         action = ampsgrids.grids[
-        //                           "actions"
-        //                         ]().add.process(actionform, action);
-        //                         var topic = topicform.getForm().getValues();
-        //                         topic = amfutil.convertNumbers(
-        //                           topicform.getForm(),
-        //                           topic
-        //                         );
-        //                         var subscriber = subscriberform
-        //                           .getForm()
-        //                           .getValues();
-        //                         subscriber = amfutil.convertNumbers(
-        //                           subscriberform.getForm(),
-        //                           subscriber
-        //                         );
-        //                         subscriber.type = "subscriber";
-        //                         subscriber.active = true;
-        //                         var wizard = scope.up("#wizard");
-        //                         if (currStep.ruleid) {
-        //                           console.log("Updating Router Rule");
-        //                           var idx = currStep.action.rules.findIndex(
-        //                             (rule) => rule.id == currStep.ruleid
-        //                           );
-        //                           currStep.action.rules[idx].topic =
-        //                             topic.topic;
-        //                           console.log(currStep.action.rules[idx]);
-        //                         } else {
-        //                           currStep.action.output = topic.topic;
-        //                         }
-        //                         amfutil.updateInCollection(
-        //                           "actions",
-        //                           currStep.action,
-        //                           currStep.action._id
-        //                         );
-        //                         var actionid = await amfutil.addToCollection(
-        //                           "actions",
-        //                           action
-        //                         );
-        //                         console.log(actionid);
-        //                         var topicid = await amfutil.addToCollection(
-        //                           "topics",
-        //                           topic
-        //                         );
-        //                         console.log(topicid);
-        //                         subscriber.handler = actionid;
-        //                         var subscriberid =
-        //                           await amfutil.addToCollection(
-        //                             "services",
-        //                             subscriber
-        //                           );
-        //                         wizard.showNext();
-        //                         var confirmation = scope
-        //                           .up("#wizard")
-        //                           .down("#card-3");
-        //                         confirmation.loadConfirmation(
-        //                           {
-        //                             id: actionid,
-        //                             name: action.name,
-        //                           },
-        //                           {
-        //                             id: topicid,
-        //                             name: topic.topic,
-        //                           },
-        //                           {
-        //                             id: subscriberid,
-        //                             name: subscriber.name,
-        //                           }
-        //                         );
-        //                         console.log(subscriberid);
-        //                       },
-        //                     },
-        //                   ],
-        //                   listeners: {
-        //                     beforeactivate(scope) {
-        //                       var action = scope.down("combobox[name=handler]");
-        //                       console.log(action);
-        //                       var topic = scope.down("combobox[name=topic]");
-        //                       console.log(topic);
-        //                       var actionform = scope
-        //                         .up("panel")
-        //                         .down("#card-0");
-        //                       console.log(actionform);
-        //                       var topicform = scope.up("panel").down("#card-1");
-        //                       console.log(topicform);
-        //                       action.setValue(
-        //                         actionform
-        //                           .down("textfield[name=name]")
-        //                           .getValue()
-        //                       );
-        //                       topic.setValue(
-        //                         topicform
-        //                           .down("displayfield[name=topic]")
-        //                           .getValue()
-        //                       );
-        //                     },
-        //                   },
-        //                 },
-        //                 {
-        //                   xtype: "form",
-        //                   itemId: "card-3",
-        //                   loadConfirmation: function (
-        //                     action,
-        //                     topic,
-        //                     subscriber
-        //                   ) {
-        //                     var html = `
-        //                       <h1>AMPS Wizard</h1>
-        //                       <hr style="height:1px;border:none;color:lightgray;background-color:lightgray;">
-        //                       <h2>Complete! You defined:</h4>
-        //                       <h3>Action: <a href="#actions/${action.id}">${action.name}</a><h5>
-        //                       <h3>Topic: <a href="#topics/${topic.id}">${topic.name}</a><h5>
-        //                       <h3>Subscriber: <a href="#services/${subscriber.id}">${subscriber.name}</a> that listens on ${topic.name} and performs ${action.name}<h5>
-        //                       `;
-        //                     this.down("#confirm").setHtml(html);
-        //                   },
-        //                   items: [
-        //                     {
-        //                       itemId: "confirm",
-        //                       html: "",
-        //                     },
-        //                   ],
-        //                   bbar: [
-        //                     "->",
-        //                     {
-        //                       // formBind: true,
-        //                       text: "Close",
-        //                       handler: async function (scope) {
-        //                         form
-        //                           .down("#steps")
-        //                           .loadWorkflow(
-        //                             amfutil.getElementByID("workflow")
-        //                           );
-        //                         win.close();
-        //                       },
-        //                     },
-        //                   ],
-        //                 },
-        //               ],
-        //               showNext: function () {
-        //                 console.log("Next");
-        //                 this.doCardNavigation(1);
-        //               },
-        //               showPrevious: function (btn) {
-        //                 this.doCardNavigation(-1);
-        //               },
-        //               doCardNavigation: function (incr) {
-        //                 var me = this;
-        //                 var l = me.getLayout();
-        //                 var i = l.activeItem.itemId.split("card-")[1];
-        //                 var next = parseInt(i, 10) + incr;
-        //                 l.setActiveItem(next);
-        //                 // me.down("#card-prev").setDisabled(next === 0);
-        //                 // me.down("#card-next").setDisabled(next === 2);
-        //               },
-        //             },
-        //           ],
-        //         });
-        //         win.show();
-        //       },
-        //     },
-        //   ],
-        // });
       }
     } else {
       if (step.ruleid) {
@@ -688,7 +315,10 @@ Ext.define("Amps.container.Workflow.Step", {
           "font-weight": 400,
         },
         autoEl: "div",
-        html: `#${steps.items.items.length + 1}` + " " + step.action.output,
+        html:
+          `#${Ext.ComponentQuery.query("workflowstep").length}` +
+          " " +
+          step.action.output,
       });
       c.insert({
         xtype: "container",
@@ -796,126 +426,135 @@ Ext.define("Amps.container.Workflow", {
                 defaults: {
                   margin: 5,
                 },
+
                 // style: {
                 //   borderStyle: "solid",
                 // },
                 items: [
                   {
-                    xtype: "panel",
-                    title: rec.name,
-                    border: 5,
-                    width: 300,
-                    style: {
-                      "box-shadow":
-                        "rgba(0, 0, 0, 0.25) 0px 0.0625em 0.0625em, rgba(0, 0, 0, 0.25) 0px 0.125em 0.5em, rgba(255, 255, 255, 0.1) 0px 0px 0px 1px inset",
-                    },
-
-                    bodyPadding: 10,
+                    xtype: "container",
+                    height: 250,
+                    layout: "center",
                     items: [
                       {
-                        xtype: "container",
+                        xtype: "panel",
+                        title: rec.name,
+                        border: 5,
+                        width: 300,
+                        style: {
+                          "box-shadow":
+                            "rgba(0, 0, 0, 0.25) 0px 0.0625em 0.0625em, rgba(0, 0, 0, 0.25) 0px 0.125em 0.5em, rgba(255, 255, 255, 0.1) 0px 0px 0px 1px inset",
+                        },
+
+                        bodyPadding: 10,
                         items: [
                           {
-                            xtype: "displayfield",
-                            submitValue: true,
-                            value: rec.name,
-                            // fieldStyle: {
-                            //   "font-size": "2rem",
-                            // },
-                            itemId: "service",
-                            allowBlank: false,
+                            xtype: "container",
+                            items: [
+                              {
+                                xtype: "displayfield",
+                                submitValue: true,
+                                value: rec.name,
+                                // fieldStyle: {
+                                //   "font-size": "2rem",
+                                // },
+                                itemId: "service",
+                                allowBlank: false,
 
-                            // labelStyle: `font-size: 2rem;`,
-                            fieldLabel: "Service",
-                            name: "service",
+                                // labelStyle: `font-size: 2rem;`,
+                                fieldLabel: "Service",
+                                name: "service",
 
-                            displayField: "name",
-                            valueField: "name",
-                          },
-                        ],
-                        listeners: {
-                          beforerender: function (scope) {
-                            var cb = ampsgrids.grids
-                              .services()
-                              .types[rec.type].combo(rec);
-                            console.log(cb);
-                            scope.insert(cb);
-                            var win = Ext.create("Ext.window.Window", {
-                              xtype: "window",
-                              itemId: "metadata",
-                              title: "Metadata for " + rec.name,
-                              scrollable: true,
-                              closeAction: "method-hide",
-                              // constrain: true,
-                              width: 500,
-                              height: 500,
-                              padding: 10,
-                              items: [
-                                {
-                                  xtype: "arrayfield",
-                                  name: "meta",
-                                  title: "Additional Metadata",
-                                  arrayfield: "Metadata",
-                                  arrayfields: [
+                                displayField: "name",
+                                valueField: "name",
+                              },
+                            ],
+                            listeners: {
+                              beforerender: function (scope) {
+                                var cb = ampsgrids.grids
+                                  .services()
+                                  .types[rec.type].combo(rec);
+                                console.log(cb);
+                                scope.insert(cb);
+                                var win = Ext.create("Ext.window.Window", {
+                                  xtype: "window",
+                                  itemId: "metadata",
+                                  title: "Metadata for " + rec.name,
+                                  scrollable: true,
+                                  closeAction: "method-hide",
+                                  // constrain: true,
+                                  width: 500,
+                                  height: 500,
+                                  padding: 10,
+                                  items: [
                                     {
-                                      xtype: "textfield",
-                                      name: "field",
-                                      fieldLabel: "Field",
-                                      labelWidth: 35,
-                                    },
-                                    {
-                                      xtype: "textfield",
+                                      xtype: "arrayfield",
+                                      name: "meta",
+                                      title: "Additional Metadata",
+                                      arrayfield: "Metadata",
+                                      arrayfields: [
+                                        {
+                                          xtype: "textfield",
+                                          name: "field",
+                                          fieldLabel: "Field",
+                                          labelWidth: 35,
+                                        },
+                                        {
+                                          xtype: "textfield",
 
-                                      name: "value",
-                                      fieldLabel: "Value",
-                                      labelWidth: 35,
+                                          name: "value",
+                                          fieldLabel: "Value",
+                                          labelWidth: 35,
+                                        },
+                                      ],
                                     },
                                   ],
-                                },
-                              ],
-                            });
-                            scope.insert(win);
-                          },
-                        },
-                        // cls: "button_class",
-                      },
-
-                      {
-                        xtype: "container",
-                        layout: {
-                          type: "hbox",
-                          align: "stretch",
-                        },
-                        items: [
-                          {
-                            xtype: "button",
-                            text: "Edit Metadata",
-                            margin: 1,
-
-                            flex: 1,
-                            handler: function (btn) {
-                              btn.up("form").down("#metadata").show();
+                                });
+                                scope.insert(win);
+                              },
                             },
+                            // cls: "button_class",
                           },
-                          // {
-                          //   formBind: true,
-                          //   xtype: "button",
-                          //   margin: 1,
 
-                          //   flex: 1,
-                          //   scale: "small",
-                          //   text: "Map Workflow",
-                          //   handler: async function (btn) {
-                          //     var form = btn.up("form");
+                          {
+                            xtype: "container",
+                            layout: {
+                              type: "hbox",
+                              align: "stretch",
+                            },
+                            items: [
+                              {
+                                xtype: "button",
+                                text: "Edit Metadata",
+                                margin: 1,
 
-                          //     form.down("#steps").loadWorkflow(form);
-                          //     // console.log(data);
-                          //   },
-                          // },
+                                flex: 1,
+                                handler: function (btn) {
+                                  btn.up("form").down("#metadata").show();
+                                },
+                              },
+                              // {
+                              //   formBind: true,
+                              //   xtype: "button",
+                              //   margin: 1,
+
+                              //   flex: 1,
+                              //   scale: "small",
+                              //   text: "Map Workflow",
+                              //   handler: async function (btn) {
+                              //     var form = btn.up("form");
+
+                              //     form.down("#steps").loadWorkflow(form);
+                              //     // console.log(data);
+                              //   },
+                              // },
+                            ],
+                          },
                         ],
                       },
                     ],
                   },
+
                   {
                     xtype: "container",
                     layout: "center",
@@ -941,6 +580,7 @@ Ext.define("Amps.container.Workflow", {
                     flex: 1,
                     itemId: "steps",
                     margin: 5,
+                    choices: {},
                     layout: { type: "hbox", align: "stretch" },
                     scrollable: true,
                     loadWorkflow: async function (form) {
@@ -990,70 +630,123 @@ Ext.define("Amps.container.Workflow", {
                       steps.removeAll();
                       function loadStep(step) {
                         console.log(step);
-                        if (step.step) {
-                          var currStep = step.step;
-                          steps.insert({
-                            xtype: "workflowstep",
-                            step: step,
-                            steps: steps,
-                            form: form,
-                          });
-                          loadStep(currStep);
-                        } else {
-                          if (step.steps) {
-                            if (step.steps.length == 1) {
-                              step.step = step.steps[0];
-                              loadStep(step);
-                            } else if (step.steps.length > 1) {
-                              steps.insert({
-                                xtype: "form",
-                                layout: "center",
-                                items: [
-                                  {
-                                    xtype: "container",
-                                    layout: {
-                                      type: "hbox",
-                                      align: "stretch",
-                                    },
-                                    items: [
-                                      {
-                                        xtype: "combobox",
-                                        store: step.steps.map((step) => ({
-                                          sub_name: step.sub.name,
-                                        })),
-                                        displayField: "sub_name",
-                                        valueField: "sub_name",
-                                        name: "step",
-                                        value: step.steps[0].sub.name,
-                                        listeners: amfutil.renderListeners(
-                                          function (scope, val) {
-                                            step.step = step.steps.find(
-                                              (step) => step.sub.name == val
-                                            );
-                                            loadStep(step);
-                                          }
-                                        ),
-                                      },
-                                      {
-                                        xtype: "component",
-                                        cls: "x-fa fa-arrow-right",
-                                      },
-                                    ],
-                                  },
-                                ],
-                              });
-                            } else {
-                              steps.insert({
-                                xtype: "workflowstep",
-                                step: step,
-                                steps: steps,
-                                form: form,
-                              });
-                              console.log("Add New?");
-                            }
+                        if (step.steps) {
+                          if (step.steps.length && step.steps[0].loop) {
+                            console.log("loop");
+                            console.log(step);
+                            steps.insert({
+                              xtype: "workflowstep",
+                              step: Ext.apply(step, { step: step.steps[0] }),
+                              steps: steps,
+                              form: form,
+                            });
                           } else {
-                            console.log("done");
+                            var curr = steps.items.items.length;
+                            var allSteps = step.steps;
+                            var val;
+                            if (step.steps.length) {
+                              val =
+                                steps.choices[curr] || step.steps[0].sub.name;
+                            } else {
+                              val = "New Subscriber";
+                            }
+
+                            steps.insert({
+                              xtype: "container",
+                              layout: "center",
+                              padding: 10,
+                              items: [
+                                {
+                                  xtype: "container",
+                                  layout: {
+                                    type: "hbox",
+                                    align: "stretch",
+                                  },
+                                  items: [
+                                    {
+                                      xtype: "container",
+                                      layout: {
+                                        type: "vbox",
+                                        align: "stretch",
+                                      },
+                                      items: [
+                                        {
+                                          xtype: "combobox",
+                                          forceSelection: true,
+                                          fieldLabel: "Subscriber",
+                                          store: allSteps
+                                            .map((step) => step.sub.name)
+                                            .concat(["New Subscriber"]),
+
+                                          name: "step",
+                                          value: val,
+
+                                          listeners: amfutil.renderListeners(
+                                            function (scope, val) {
+                                              steps.choices[curr] = val;
+                                              Object.entries(
+                                                steps.choices
+                                              ).forEach((entry) => {
+                                                if (entry[0] > curr) {
+                                                  delete steps.choices[
+                                                    entry[0]
+                                                  ];
+                                                }
+                                              });
+                                              console.log(curr + 1);
+                                              console.log(
+                                                steps.items.items.length
+                                              );
+
+                                              for (
+                                                var i =
+                                                  steps.items.items.length;
+                                                i > curr;
+                                                i--
+                                              ) {
+                                                steps.remove(i);
+                                              }
+                                              var cont = scope.up("container");
+                                              console.log(cont);
+                                              cont.remove(cont.items.items[1]);
+                                              if (val == "New Subscriber") {
+                                                cont.insert({
+                                                  xtype: "workflowstep",
+                                                  step: Ext.apply(step, {
+                                                    step: null,
+                                                    steps: [],
+                                                  }),
+                                                  steps: steps,
+                                                  form: form,
+                                                });
+                                              } else {
+                                                var currStep = allSteps.find(
+                                                  (step) => step.sub.name == val
+                                                );
+                                                cont.insert({
+                                                  xtype: "workflowstep",
+                                                  step: Ext.apply(step, {
+                                                    step: currStep,
+                                                  }),
+                                                  steps: steps,
+                                                  form: form,
+                                                });
+                                                console.log(currStep);
+                                                loadStep(currStep);
+                                              }
+                                              console.log(steps.items);
+                                            }
+                                          ),
+                                        },
+                                      ],
+                                    },
+                                  ],
+                                },
+                              ],
+                            });
                           }
+                        } else {
+                          console.log("done");
                         }
                         mask.hide();
                       }
@@ -1110,36 +803,43 @@ Ext.define("Amps.container.Workflow", {
                 // },
                 items: [
                   {
-                    xtype: "panel",
-                    title: rec.name,
-                    border: 5,
-                    width: 300,
-                    style: {
-                      "box-shadow":
-                        "rgba(0, 0, 0, 0.25) 0px 0.0625em 0.0625em, rgba(0, 0, 0, 0.25) 0px 0.125em 0.5em, rgba(255, 255, 255, 0.1) 0px 0px 0px 1px inset",
-                    },
-
-                    bodyPadding: 10,
+                    xtype: "container",
+                    height: 250,
+                    layout: "center",
                     items: [
                       {
-                        xtype: "container",
+                        xtype: "panel",
+                        title: rec.name,
+                        border: 5,
+                        width: 300,
+                        style: {
+                          "box-shadow":
+                            "rgba(0, 0, 0, 0.25) 0px 0.0625em 0.0625em, rgba(0, 0, 0, 0.25) 0px 0.125em 0.5em, rgba(255, 255, 255, 0.1) 0px 0px 0px 1px inset",
+                        },
+
+                        bodyPadding: 10,
                         items: [
                           {
-                            xtype: "displayfield",
-                            submitValue: true,
-                            value: rec.name,
-                            // fieldStyle: {
-                            //   "font-size": "2rem",
-                            // },
-                            itemId: "service",
-                            allowBlank: false,
+                            xtype: "container",
+                            items: [
+                              {
+                                xtype: "displayfield",
+                                submitValue: true,
+                                value: rec.name,
+                                // fieldStyle: {
+                                //   "font-size": "2rem",
+                                // },
+                                itemId: "service",
+                                allowBlank: false,
 
-                            // labelStyle: `font-size: 2rem;`,
-                            fieldLabel: "Job",
-                            name: "job",
+                                // labelStyle: `font-size: 2rem;`,
+                                fieldLabel: "Job",
+                                name: "job",
 
-                            displayField: "name",
-                            valueField: "name",
+                                displayField: "name",
+                                valueField: "name",
+                              },
+                            ],
                           },
                         ],
                       },
@@ -1169,6 +869,7 @@ Ext.define("Amps.container.Workflow", {
                     xtype: "container",
                     flex: 1,
                     itemId: "steps",
+                    choices: {},
                     margin: 5,
                     layout: { type: "hbox", align: "stretch" },
                     scrollable: true,
@@ -1193,42 +894,123 @@ Ext.define("Amps.container.Workflow", {
                       steps.removeAll();
                       function loadStep(step) {
                         console.log(step);
-                        if (step.step) {
-                          var currStep = step.step;
-                          console.log(currStep.sub.topic);
-                          steps.insert({
-                            xtype: {
+                        if (step.steps) {
+                          if (step.steps.length && step.steps[0].loop) {
+                            console.log("loop");
+                            console.log(step);
+                            steps.insert({
                               xtype: "workflowstep",
-                              step: step,
+                              step: Ext.apply(step, { step: step.steps[0] }),
                               steps: steps,
                               form: form,
-                            },
-                          });
-                          loadStep(currStep);
-                        } else {
-                          if (step.steps) {
-                            if (step.steps.length == 1) {
-                              step.step = step.steps[0];
-                              loadStep(step);
-                            } else if (step.steps.length > 1) {
-                              if (step.steps) {
-                              } else {
-                                console.log("choose");
-                              }
-                            } else {
-                              steps.insert({
-                                xtype: {
-                                  xtype: "workflowstep",
-                                  step: step,
-                                  steps: steps,
-                                  form: form,
-                                },
-                              });
-                              console.log("Add New?");
-                            }
+                            });
                           } else {
-                            console.log("done");
+                            var curr = steps.items.items.length;
+                            var allSteps = step.steps;
+                            var val;
+                            if (step.steps.length) {
+                              val =
+                                steps.choices[curr] || step.steps[0].sub.name;
+                            } else {
+                              val = "New Subscriber";
+                            }
+
+                            steps.insert({
+                              xtype: "container",
+                              layout: "center",
+                              padding: 10,
+                              items: [
+                                {
+                                  xtype: "container",
+                                  layout: {
+                                    type: "hbox",
+                                    align: "stretch",
+                                  },
+                                  items: [
+                                    {
+                                      xtype: "container",
+                                      layout: {
+                                        type: "vbox",
+                                        align: "stretch",
+                                      },
+                                      items: [
+                                        {
+                                          xtype: "combobox",
+                                          forceSelection: true,
+                                          fieldLabel: "Subscriber",
+                                          store: allSteps
+                                            .map((step) => step.sub.name)
+                                            .concat(["New Subscriber"]),
+
+                                          name: "step",
+                                          value: val,
+
+                                          listeners: amfutil.renderListeners(
+                                            function (scope, val) {
+                                              steps.choices[curr] = val;
+                                              Object.entries(
+                                                steps.choices
+                                              ).forEach((entry) => {
+                                                if (entry[0] > curr) {
+                                                  delete steps.choices[
+                                                    entry[0]
+                                                  ];
+                                                }
+                                              });
+                                              console.log(curr + 1);
+                                              console.log(
+                                                steps.items.items.length
+                                              );
+
+                                              for (
+                                                var i =
+                                                  steps.items.items.length;
+                                                i > curr;
+                                                i--
+                                              ) {
+                                                steps.remove(i);
+                                              }
+                                              var cont = scope.up("container");
+                                              console.log(cont);
+                                              cont.remove(cont.items.items[1]);
+                                              if (val == "New Subscriber") {
+                                                cont.insert({
+                                                  xtype: "workflowstep",
+                                                  step: Ext.apply(step, {
+                                                    step: null,
+                                                    steps: [],
+                                                  }),
+                                                  steps: steps,
+                                                  form: form,
+                                                });
+                                              } else {
+                                                var currStep = allSteps.find(
+                                                  (step) => step.sub.name == val
+                                                );
+                                                cont.insert({
+                                                  xtype: "workflowstep",
+                                                  step: Ext.apply(step, {
+                                                    step: currStep,
+                                                  }),
+                                                  steps: steps,
+                                                  form: form,
+                                                });
+                                                console.log(currStep);
+                                                loadStep(currStep);
+                                              }
+                                              console.log(steps.items);
+                                            }
+                                          ),
+                                        },
+                                      ],
+                                    },
+                                  ],
+                                },
+                              ],
+                            });
                           }
+                        } else {
+                          console.log("done");
                         }
                         mask.hide();
                       }
@@ -6012,6 +5794,77 @@ Ext.define("Amps.util.Grids", {
         },
       },
     }),
+    consumers: () => {
+      amfutil.ajaxRequest({
+        url: "api/streams",
+        success: function (resp) {
+          var streams = Ext.decode(resp.responseText);
+          console.log(streams);
+          var tabPanel = new Ext.tab.Panel({
+            listeners: {
+              beforetabchange(tabPanel, newCard, oldCard, eOpts) {
+                newCard.getStore().reload();
+              },
+            },
+            items: streams.map((stream) => {
+              return {
+                title: stream,
+                xtype: "grid",
+                tbar: [
+                  {
+                    iconCls: "x-fa fa-refresh",
+                    handler: function (scope) {
+                      scope.up("grid").getStore().reload();
+                    },
+                  },
+                ],
+                store: Ext.create("Ext.data.Store", {
+                  proxy: {
+                    type: "rest",
+                    url: `/api/${stream}/consumers`,
+                    headers: {
+                      Authorization: localStorage.getItem("access_token"),
+                    },
+                  },
+                  autoLoad: true,
+                }),
+                columns: [
+                  {
+                    text: "Name",
+                    dataIndex: "name",
+                    flex: 1,
+                  },
+                  {
+                    text: "Pending",
+                    dataIndex: "num_pending",
+                    flex: 1,
+                  },
+                  {
+                    text: "Redelivered",
+                    dataIndex: "num_redelivered",
+                    flex: 1,
+                  },
+                  {
+                    text: "Topic",
+                    dataIndex: "filter_subject",
+                    flex: 1,
+                  },
+                ],
+              };
+            }),
+          });
+          amfutil.getElementByID("consumers").insert(tabPanel);
+        },
+      });
+
+      return {
+        view: {
+          xtype: "container",
+          layout: "fit",
+          itemId: "consumers",
+        },
+      };
+    },
     wizard: () => ({
       view: {
         xtype: "wizard",
