@@ -14,6 +14,7 @@ defmodule MailboxAction do
           Map.merge(msg, %{
             "recipient" => recipient,
             "status" => "mailboxed",
+            "fname" => AmpsUtil.format(parms["format"], msg),
             "mtime" => DateTime.utc_now() |> DateTime.to_iso8601()
           })
 

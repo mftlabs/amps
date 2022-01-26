@@ -59,21 +59,27 @@ defmodule S3Action do
               []
             end
 
-          if msg["data"] do
-            ExAws.S3.put_object(
-              parms["bucket"],
-              Path.join(parms["prefix"], msg["fname"]),
-              msg["data"]
-            )
-            |> ExAws.request(req)
-          else
-            resp =
+          resp =
+            if msg["data"] do
+              ExAws.S3.put_object(
+                parms["bucket"],
+                Path.join(parms["prefix"], msg["fname"]),
+                msg["data"]
+              )
+              |> ExAws.request(req)
+            else
               msg["fpath"]
               |> S3.Upload.stream_file()
               |> S3.upload(parms["bucket"], Path.join(parms["prefix"], msg["fname"]))
               |> ExAws.request(req)
+            end
 
-            IO.inspect(resp)
+          case resp do
+            {:ok, resp} ->
+              Logger.info("Uploaded")
+
+            {:error, error} ->
+              raise error
           end
 
         "delete" ->
