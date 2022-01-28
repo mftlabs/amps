@@ -21,7 +21,7 @@ defmodule Amps.KafkaConsumer do
     event = %{
       "service" => opts["name"],
       "msgid" => msgid,
-      "topic" => msg.topic,
+      "ktopic" => msg.topic,
       "data" => msg.value,
       "ftime" => DateTime.to_iso8601(DateTime.utc_now())
     }

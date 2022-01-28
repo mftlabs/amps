@@ -108,7 +108,6 @@ defmodule Amps.HistoryPullConsumer do
   end
 
   def handle_info({:msg, message}, state) do
-    IO.inspect(message)
     parms = state[:parms]
     name = parms["name"]
     Logger.info("got history message #{name}: #{message.topic} / #{message.body}")

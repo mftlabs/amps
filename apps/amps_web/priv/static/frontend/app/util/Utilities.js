@@ -489,6 +489,7 @@ const filterTypes = {
               xtype: "numberfield",
               anchor: "100%",
               fieldLabel: "Minimum",
+              minValue: 0,
               name: "minSize",
               itemId: field.dataIndex + "minSize",
               emptyText: "Minimum File Size",
@@ -570,6 +571,7 @@ const filterTypes = {
               fieldLabel: "Maximum",
               name: "maxSize",
               itemId: field.dataIndex + "maxSize",
+              minValue: 0,
               emptyText: "Maximum File Size",
               padding: { left: 0, top: 0, bottom: 6 },
               listeners: {
@@ -756,6 +758,7 @@ Ext.define("Amps.util.Utilities", {
     "clearfilter",
     "refreshbtn",
     "reprocess",
+    "reroute",
   ],
 
   from: null,
@@ -928,7 +931,6 @@ Ext.define("Amps.util.Utilities", {
   },
 
   channelHandlers: function (channel) {
-    console.log(channel);
     channel
       .join()
       .receive("ok", (resp) => {
@@ -953,7 +955,7 @@ Ext.define("Amps.util.Utilities", {
 
   renderMainApp: function () {},
 
-  broadcastEvent: function (
+  broadcastEvent: async function (
     event,
     message,
     callback = (payload) => console.log(payload)
@@ -967,7 +969,32 @@ Ext.define("Amps.util.Utilities", {
       .push(event, message, 10000)
       .receive("ok", (payload) => callback(payload))
       .receive("error", (err) => console.log("phoenix errored", err))
-      .receive("timeout", () => console.log("timed out pushing"));
+      .receive("timeout", async () => {
+        console.log("timed out pushing");
+      });
+  },
+  updateChannel: async function () {
+    if (amfutil.socket) {
+      amfutil.socket.disconnect();
+    }
+    var token = localStorage.getItem("access_token");
+    console.log(token);
+    amfutil.socket = new window.pSocket("/socket", {
+      params: { token: token },
+    });
+
+    amfutil.socket.onError(async function (e) {
+      amfutil.socket.disconnect();
+      console.log(e);
+    });
+
+    amfutil.socket.connect();
+
+    var channel = amfutil.socket.channel("notifications");
+
+    amfutil.channel = channel;
+
+    amfutil.channelHandlers(channel);
   },
   providercallback: function (params, scope) {
     var session_params = localStorage.getItem("session_params");
@@ -1069,6 +1096,15 @@ Ext.define("Amps.util.Utilities", {
       parms[v.field] = v.value;
     });
     return parms;
+  },
+
+  nameValidator(val) {
+    var regex = new RegExp("(\\s|-)");
+    // Check for white space
+    if (regex.test(val)) {
+      //alert();
+      return "Names cannot contain spaces or hyphens.";
+    }
   },
 
   formatMatchPatterns(values) {
@@ -1731,25 +1767,6 @@ Ext.define("Amps.util.Utilities", {
         render(scope, val);
       },
     };
-  },
-
-  updateChannel: function () {
-    if (amfutil.socket) {
-      amfutil.socket.disconnect();
-    }
-    var token = localStorage.getItem("access_token");
-    console.log(token);
-    amfutil.socket = new window.pSocket("/socket", {
-      params: { token: token },
-    });
-
-    amfutil.socket.connect();
-
-    var channel = amfutil.socket.channel("notifications");
-
-    amfutil.channel = channel;
-
-    amfutil.channelHandlers(channel);
   },
 
   renew_session: async function () {

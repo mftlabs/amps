@@ -9,6 +9,7 @@ Ext.define("Amps.form.update", {
   defaults: {
     labelWidth: 175,
   },
+  resizable: true,
   bodyPadding: 25,
   height: 500,
   scrollable: true,
@@ -1405,6 +1406,14 @@ Ext.define("Amps.util.UpdateRecordController", {
               //  amfutil.removeSpaces(item.itemId);
               capslock_id = Ext.ComponentQuery.query("#user_capslock_id")[0];
               capslock_id.setHidden(true);
+            },
+            change: async function (cmp) {
+              await amfutil.duplicateHandler(
+                cmp,
+                { admin: { username: value } },
+                "Admin User Already Exists",
+                amfutil.nameValidator
+              );
             },
           },
           width: 550,

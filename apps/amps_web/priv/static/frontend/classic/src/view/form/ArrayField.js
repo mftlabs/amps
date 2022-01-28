@@ -169,7 +169,7 @@ Ext.define("Amps.form.ArrayField", {
 });
 
 Ext.define("Amps.form.ArrayField.Field", {
-  extend: "Ext.form.FieldSet",
+  extend: "Ext.form.FieldContainer",
   collapsible: true,
   layout: {
     type: "vbox",
@@ -181,11 +181,6 @@ Ext.define("Amps.form.ArrayField.Field", {
     var name = "field-" + amfutil.makeRandom();
     this.itemId = name;
     this.name = name;
-    if (args["title"]) {
-      this.setTitle(args["title"]);
-    } else {
-      this.setTitle("Field");
-    }
     args.register(name);
     this.deregister = function () {
       args.deregister(name);
@@ -303,9 +298,12 @@ Ext.define("Amps.form.ArrayField.Field", {
       flex: 1,
       handler: function (button, event) {
         console.log(button);
-        button.up("fieldset").deregister();
+        button.up("fieldcontainer").deregister();
 
-        button.up("fieldset").up("fieldset").remove(button.up("fieldset"));
+        button
+          .up("fieldcontainer")
+          .up("fieldset")
+          .remove(button.up("fieldcontainer"));
       },
     },
   ],

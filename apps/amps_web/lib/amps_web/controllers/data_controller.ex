@@ -108,6 +108,24 @@ defmodule AmpsWeb.DataController do
     json(conn, :ok)
   end
 
+  def reroute_many(conn, _params) do
+    body = conn.body_params()
+    ids = body["ids"]
+    topic = body["topic"]
+    meta = Jason.decode!(body["meta"])
+
+    Enum.each(ids, fn id ->
+      obj = Amps.DB.find_one("message_events", %{"_id" => id})
+      body = conn.body_params()
+      topic = body["topic"]
+      meta = Jason.decode!(body["meta"])
+      msg = obj |> Map.drop(["status", "action", "topic", "_id", "index", "etime"])
+      AmpsEvents.send(Map.merge(msg, meta), %{"output" => topic}, %{})
+    end)
+
+    json(conn, :ok)
+  end
+
   def index(conn, %{"collection" => collection}) do
     if vault_collection(collection) do
       data = VaultDatabase.get_rows(collection)
@@ -340,9 +358,6 @@ defmodule AmpsWeb.DataController do
           "mailbox" => object["username"]
         })
 
-      "rules" ->
-        S3.Minio.delete_bucket(object)
-
       "services" ->
         types = SvcManager.service_types()
 
@@ -383,24 +398,6 @@ defmodule AmpsWeb.DataController do
   def get_streams(conn, _params) do
     {:ok, %{streams: streams}} = Jetstream.API.Stream.list(:gnat)
     json(conn, streams)
-  end
-
-  def get_consumers(conn, %{"stream" => stream}) do
-    {:ok, %{consumers: consumers}} = Jetstream.API.Consumer.list(:gnat, stream)
-
-    consumers =
-      Enum.reduce(consumers, [], fn consumer, acc ->
-        {:ok, info} = Jetstream.API.Consumer.info(:gnat, stream, consumer)
-
-        info =
-          Map.merge(info, info.config)
-          |> Map.merge(info.delivered)
-          |> Map.drop([:config, :delivered])
-
-        [info | acc]
-      end)
-
-    json(conn, consumers)
   end
 
   def add_to_field(conn, %{"collection" => collection, "id" => id, "field" => field}) do

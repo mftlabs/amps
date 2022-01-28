@@ -10,9 +10,13 @@ import Config
 # which you should run after static files are built and
 # before starting your production server.
 config :amps_portal, AmpsPortal.Endpoint,
-  url: [host: System.get_env("AMPS_HOST", "localhost"), port: 80],
-  cache_static_manifest: "priv/static/cache_manifest.json",
-  server: false
+  url: [
+    host: System.get_env("AMPS_HOST", "localhost"),
+    port: String.to_integer(System.get_env("AMPS_PORT"))
+  ],
+  cache_static_manifest: "priv/static/cache_manifest.json"
+
+# server: false
 
 # ## SSL Support
 #
@@ -59,9 +63,13 @@ config :amps_portal, AmpsPortal.Endpoint,
 # before starting your production server.
 
 config :amps_web, AmpsWeb.Endpoint,
-  url: [host: "admin." <> System.get_env("AMPS_HOST", "localhost"), port: 80],
-  cache_static_manifest: "priv/static/cache_manifest.json",
-  server: false
+  url: [
+    host: "admin." <> System.get_env("AMPS_HOST", "localhost"),
+    port: String.to_integer(System.get_env("AMPS_PORT"))
+  ],
+  cache_static_manifest: "priv/static/cache_manifest.json"
+
+# server: false
 
 # ## SSL Support
 #

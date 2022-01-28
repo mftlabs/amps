@@ -31,13 +31,11 @@ Ext.define("Amps.controller.MatchPatternController", {
 
     msgView.setVisible(true);
     msgView.setHtml(
-      ` <p style="text-align: right;font-weight: 600;color: ${
+      ` <div style="color: ${matched ? "green" : "red"};> <i  style="color: ${
         matched ? "green" : "red"
-      }; margin-top: -1rem;margin-left: 81px;"> <i  style="color: ${
-        matched ? "green" : "red"
-      };" class="fa fa-check" aria-hidden="true"></i> File Name ${
+      };" class="fa fa-check" aria-hidden="true"></i>  ${
         matched ? "" : "Not"
-      } Matched</p>`
+      } Matched</div>`
     );
 
     this.onChange();

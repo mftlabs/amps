@@ -3,13 +3,13 @@ Ext.define("Amps.form.add", {
   xtype: "addform",
   modal: true,
   minWidth: 500,
-  maxHeight: 600,
+  // maxHeight: 600,
   scrollable: true,
   // resizable: false,
   layout: "fit",
   loadForm: function (item, fields, process = (form, val) => val, request) {
     this.item = item;
-    this.title = "Add " + item;
+    this.title = "Create " + item;
     this.process = process;
     var user = amfutil.get_user();
 

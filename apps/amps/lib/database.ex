@@ -874,7 +874,8 @@ defmodule Amps.DB do
         query: filters,
         sort: sort,
         from: from,
-        size: size
+        size: size,
+        track_total_hits: true
       }
 
       query(collection, query)
@@ -897,9 +898,6 @@ defmodule Amps.DB do
     end
 
     def find_one(collection, clauses, opts \\ %{}) do
-      IO.inspect(collection)
-      IO.inspect(clauses)
-
       case query(
              collection,
              Map.merge(
@@ -1006,8 +1004,6 @@ defmodule Amps.DB do
 
           [filter | acc]
         end)
-
-      IO.inspect(search)
 
       %{
         bool: %{

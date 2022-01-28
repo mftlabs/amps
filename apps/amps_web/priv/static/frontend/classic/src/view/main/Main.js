@@ -136,6 +136,14 @@ Ext.define("Amps.view.main.Main", {
           handler: "onReprocessClicked",
         },
         {
+          xtype: "button",
+          itemId: "reroute",
+          iconCls: "x-fa fa-random",
+          tooltip: "Reroute",
+          hidden: true,
+          handler: "onRerouteClicked",
+        },
+        {
           xtype: "container",
           itemId: "messages",
           hidden: true,

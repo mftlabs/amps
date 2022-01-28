@@ -106,6 +106,18 @@ Ext.define("Amps.view.nav.TreeNav", {
               text: "Actions",
             },
             {
+              iconCls: "x-fa fa-random",
+              leaf: true,
+              rowCls: "rules",
+              text: "Routing Rules",
+            },
+            {
+              iconCls: "x-fa fa-flag",
+              leaf: true,
+              rowCls: "fields",
+              text: "Metadata Fields",
+            },
+            {
               iconCls: "x-fa fa-edit",
               leaf: true,
               rowCls: "topics",

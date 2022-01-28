@@ -1,0 +1,40 @@
+FROM centos:7 as build
+
+RUN yum update -y
+RUN yum install epel-release -y
+RUN yum groupinstall 'Development Tools' -y
+RUN yum install gcc gcc-c++ glibc-devel make ncurses-devel openssl-devel autoconf java-1.8.0-openjdk-devel git wget -y
+
+RUN wget https://packages.erlang-solutions.com/erlang-solutions-1.0-1.noarch.rpm
+RUN rpm -Uvh erlang-solutions-1.0-1.noarch.rpm
+
+RUN yum install esl-erlang -y
+RUN mkdir /opt/elixir
+RUN git clone -b v1.12 --single-branch https://github.com/elixir-lang/elixir.git /opt/elixir
+RUN yum reinstall glibc-common -y
+RUN localedef --no-archive -i en_US -f UTF-8 en_US.UTF-8
+ENV LANG="en_US.UTF-8"
+ENV LC_ALL="en_US.UTF-8"
+
+RUN cd /opt/elixir && make clean install
+
+ENV PATH="$PATH:/opt/elixir/bin"
+
+ENV MIX_ENV=prod
+
+WORKDIR /build
+RUN mix local.hex --force && \
+    mix local.rebar --force
+
+COPY mix.exs mix.lock config/ ./
+COPY apps ./apps
+
+
+RUN mix deps.get --only prod && \
+    mix deps.compile
+
+COPY . .
+
+RUN mix release
+
+CMD ["/bin/sh"]
