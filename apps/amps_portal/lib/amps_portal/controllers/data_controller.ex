@@ -21,9 +21,9 @@ defmodule AmpsPortal.DataController do
         )
 
       user ->
-        qp = conn.query_params
+        qp = conn.query_params()
 
-        qp = Map.put(qp, "filter", %{"recipient" => user.username})
+        qp = Map.put(qp, "filters", Jason.encode!(%{"mailbox" => user.username}))
         IO.inspect(qp)
         conn = Map.put(conn, :query_params, qp)
 
@@ -64,6 +64,29 @@ defmodule AmpsPortal.DataController do
               # end
             end
         end
+    end
+  end
+
+  def get_agent_rules(conn, _params) do
+    case Pow.Plug.current_user(conn) do
+      nil ->
+        send_resp(conn, 403, "Forbidden")
+
+      user ->
+        user = DB.find_one("users", %{"username" => user.username})
+        json(conn, user["rules"])
+    end
+  end
+
+  def delete_rule(conn, %{"id" => id}) do
+    case Pow.Plug.current_user(conn) do
+      nil ->
+        send_resp(conn, 403, "Forbidden")
+
+      user ->
+        DB.delete_from_field("users", nil, user.id, "rules", id)
+
+        json(conn, :ok)
     end
   end
 
