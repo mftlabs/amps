@@ -44,6 +44,7 @@ defmodule AmpsWeb.Router do
 
   scope "/api", AmpsWeb do
     pipe_through([:api, :api_protected])
+    get("/data/export/:collection", DataController, :export_collection)
     get("/users/reset/:id", DataController, :reset_password)
 
     get("/message_events/history/:msgid", UtilController, :history)
@@ -72,6 +73,7 @@ defmodule AmpsWeb.Router do
 
     put("/:collection/:id/:field/:fieldid", DataController, :update_in_field)
     delete("/:collection/:id/:field/:fieldid", DataController, :delete_from_field)
+
     # Your protected API endpoints here
   end
 

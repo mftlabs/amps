@@ -93,10 +93,15 @@ defmodule AmpsWeb.DataController do
     case collection do
       "users" ->
         Map.drop(obj, ["password"])
+        _ ->
+        obj
     end
   end
 
-  def export_collection(collection) do
+  def export_collection(conn, %{
+      "collection" => collection
+    }) do
+    IO.puts("Generating report for:::: #{collection}")
     data = DB.find(collection)
 
     headers =
@@ -158,7 +163,14 @@ defmodule AmpsWeb.DataController do
       |> Elixlsx.write_to_memory(collection)
 
     binary
-    File.write("Test.xlsx", binary)
+    file = File.write("#{collection}.xlsx", binary)
+    contents = File.read!("#{collection}.xlsx")
+    conn
+    |> put_resp_content_type("application/octet-stream")
+    |> put_resp_header("content-disposition", "attachment; filename=\"#{collection}.xlsx\"")
+      |> send_download({:binary, contents}, filename: "#{collection}.xlsx")
+
+
   end
 
   def write_in_workbook(sheet_name, column_headers, contents) do
