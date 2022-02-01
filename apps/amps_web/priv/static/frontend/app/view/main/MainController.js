@@ -1214,7 +1214,12 @@ Ext.define("Amps.view.main.MainController", {
     uploadWindow.show();
   },
 
-  onExportClicked: function () {},
+  onExportClicked: function () {
+    var route = Ext.util.History.currentToken;
+    var tokens = route.split("/");
+    console.log("componentname", route);
+    amfutil.download("/api/data/export/" + route);
+  },
 
   onSearchPanel: function (btn) {
     var treenav = Ext.ComponentQuery.query("#treenavigation")[0];

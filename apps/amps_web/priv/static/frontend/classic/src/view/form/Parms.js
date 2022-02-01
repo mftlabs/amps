@@ -36,7 +36,7 @@ Ext.define("Amps.form.Parms", {
         });
       }
     } else {
-      Object.entries(this.types).forEach((type) => {
+      Object.entries(this.parmtypes).forEach((type) => {
         console.log(type);
         scope.down("#addMenu").insert(type[1]);
       });

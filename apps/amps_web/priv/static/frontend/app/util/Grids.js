@@ -1979,7 +1979,7 @@ Ext.define("Amps.util.Grids", {
       window: { height: 600, width: 600 },
 
       title: "Providers",
-      actionIcons: ["addnewbtn", "searchpanelbtn", "clearfilter", "refreshbtn"],
+      actionIcons: ["addnewbtn", "searchpanelbtn", "clearfilter", "refreshbtn","export"],
       columns: [
         { text: "Name", dataIndex: "name", flex: 1, type: "text" },
         {
@@ -2420,7 +2420,7 @@ Ext.define("Amps.util.Grids", {
       object: "Field",
       window: { height: 600, width: 400 },
       title: "Metadata Fields",
-      actionIcons: ["addnewbtn", "searchpanelbtn", "clearfilter", "refreshbtn"],
+      actionIcons: ["addnewbtn", "searchpanelbtn", "clearfilter", "refreshbtn","export"],
       columns: [
         { text: "Field", dataIndex: "field", flex: 1, type: "text" },
         { text: "Description", dataIndex: "desc", flex: 1, type: "text" },
@@ -2435,7 +2435,7 @@ Ext.define("Amps.util.Grids", {
       window: { height: 600, width: 800 },
       options: ["delete"],
       title: "Routing Rules",
-      actionIcons: ["addnewbtn", "searchpanelbtn", "clearfilter", "refreshbtn"],
+      actionIcons: ["addnewbtn", "searchpanelbtn", "clearfilter", "refreshbtn","export"],
       columns: [
         { text: "Name", dataIndex: "name", flex: 1, type: "text" },
         { text: "Description", dataIndex: "desc", flex: 1, type: "text" },
@@ -2518,7 +2518,7 @@ Ext.define("Amps.util.Grids", {
       window: {
         width: 600,
       },
-      actionIcons: ["addnewbtn", "searchpanelbtn", "clearfilter", "refreshbtn"],
+      actionIcons: ["addnewbtn", "searchpanelbtn", "clearfilter", "refreshbtn","export"],
       options: ["active", "delete"],
       columns: [
         {
@@ -4676,7 +4676,7 @@ Ext.define("Amps.util.Grids", {
         },
       },
       object: "Action",
-      actionIcons: ["addnewbtn", "searchpanelbtn", "clearfilter", "refreshbtn"],
+      actionIcons: ["addnewbtn", "searchpanelbtn", "clearfilter", "refreshbtn","export"],
       columns: [
         { text: "Name", dataIndex: "name", flex: 1, type: "text" },
         { text: "Type", dataIndex: "type", flex: 1, type: "text" },
@@ -4801,7 +4801,7 @@ Ext.define("Amps.util.Grids", {
     topics: () => ({
       title: "Topics",
       object: "Topic",
-      actionIcons: ["addnewbtn", "searchpanelbtn", "clearfilter", "refreshbtn"],
+      actionIcons: ["addnewbtn", "searchpanelbtn", "clearfilter", "refreshbtn","export"],
       options: ["upload", "event", "delete"],
       columns: [
         {
@@ -5163,7 +5163,7 @@ Ext.define("Amps.util.Grids", {
     }),
     queues: () => ({
       title: "Queues",
-      actionIcons: ["addnewbtn", "searchpanelbtn", "clearfilter", "refreshbtn"],
+      actionIcons: ["addnewbtn", "searchpanelbtn", "clearfilter", "refreshbtn","export"],
       options: ["delete"],
       columns: [
         {
@@ -5602,7 +5602,7 @@ Ext.define("Amps.util.Grids", {
         //     },
         //   },
       },
-      actionIcons: ["addnewbtn", "searchpanelbtn", "clearfilter", "refreshbtn"],
+      actionIcons: ["addnewbtn", "searchpanelbtn", "clearfilter", "refreshbtn","export"],
       options: ["active", "delete"],
       columns: [
         {
@@ -5627,7 +5627,7 @@ Ext.define("Amps.util.Grids", {
     }),
     admin: () => ({
       title: "Admin Users",
-      actionIcons: ["addnewbtn", "searchpanelbtn", "clearfilter", "refreshbtn"],
+      actionIcons: ["addnewbtn", "searchpanelbtn", "clearfilter", "refreshbtn","export"],
       columns: [
         { text: "First Name", dataIndex: "firstname", flex: 1, type: "text" },
         { text: "Last Name", dataIndex: "lastname", flex: 1, type: "text" },
