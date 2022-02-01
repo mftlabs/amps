@@ -30,6 +30,7 @@ defmodule AmpsPortal.Router do
     pipe_through(:api)
     resources("/session", SessionController, singleton: true, only: [:create, :delete])
     post("/session/renew", SessionController, :renew)
+    post("/users/reg", UserController, :register)
     get("/users/token/:token", UserController, :parse_user_token)
     post("/users/link/:email", UserController, :send_user_link)
     post("/users/password", UserController, :reset_password)
@@ -42,9 +43,15 @@ defmodule AmpsPortal.Router do
     get("/ufa/sched/:username", UFAController, :get_sched)
     post("/ufa/upload/:username", UFAController, :handle_upload)
     get("/ufa/heartbeat/:username", UFAController, :heartbeat)
+    get("/ufa/ack/:reply", UFAController, :ack)
+
+    get("/ufa/download/:username/:topic", UFAController, :handle_download)
+
     get("/inbox", DataController, :get_messages)
     get("/user", UserController, :get)
     put("/user", UserController, :update)
+    get("/rules", DataController, :get_agent_rules)
+    delete("/rules/:id", DataController, :delete_rule)
   end
 
   # Other scopes may use custom stacks.

@@ -178,4 +178,87 @@ Ext.define("Amps.Utilities", {
       },
     });
   },
+
+  createForm: function (config) {
+    var win = Ext.create("Amps.form.add", config.window);
+    win.loadForm(config.object, config.fields, (form, values) => {
+      if (config.add && config.add.process) {
+        values = config.add.process(form, values);
+      }
+      return values;
+    });
+    win.show();
+  },
+  scanFields: function (fields) {
+    fields = fields.map((field) => {
+      field = ampsutil.scan(field);
+      return field;
+    });
+    return fields;
+  },
+  scan: function (field) {
+    if (field.tooltip) {
+      field = amfutil.tooltip(field);
+    } else if (field.items && field.items.length) {
+      field.items = field.items.map((item) => {
+        return ampsutil.scan(item);
+      });
+    }
+
+    return field;
+  },
+
+  renderFileSize: function fileSize(size) {
+    var i = Math.floor(Math.log(size) / Math.log(1000));
+    return (
+      (size / Math.pow(1000, i)).toFixed(2) * 1 +
+      " " +
+      ["B", "kB", "MB", "GB", "TB"][i]
+    );
+  },
+
+  tooltip: function (field, opts) {
+    return Object.assign(
+      {
+        xtype: "fieldcontainer",
+        row: field.row,
+        layout: {
+          type: "hbox",
+          align: "stretch",
+        },
+        items: [
+          Ext.apply(field, {
+            flex: 1,
+          }),
+          {
+            xtype: "fieldcontainer",
+            layout: "center",
+            width: 20,
+            maxHeight: 50,
+
+            listeners: {
+              afterrender: function (me) {
+                // Register the new tip with an element's ID
+                Ext.tip.QuickTipManager.register({
+                  target: me.getId(), // Target button's ID
+                  text: field.tooltip, // Tip content
+                });
+              },
+              destroy: function (me) {
+                Ext.tip.QuickTipManager.unregister(me.getId());
+              },
+            },
+            items: [
+              {
+                xtype: "component",
+                cls: "x-fa fa-info",
+                itemId: "info-icon",
+              },
+            ],
+          },
+        ],
+      },
+      opts
+    );
+  },
 });

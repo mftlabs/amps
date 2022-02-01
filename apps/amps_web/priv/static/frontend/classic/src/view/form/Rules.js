@@ -11,7 +11,7 @@ Ext.define(
       constructor: function (args) {
         self = this;
         console.log(args);
-        this.callParent(args);
+        this.callParent([args]);
         this.ruleNames = [];
         this.loadRules(args["value"], args["readOnly"]);
         this.setReadOnly(args["readOnly"]);
@@ -90,7 +90,7 @@ Ext.define("Amps.form.Rule", {
   collapsible: true,
   constructor: function (args) {
     console.log(args);
-    this.callParent(args);
+    this.callParent([args]);
     var id;
 
     if (args["id"]) {
@@ -162,7 +162,7 @@ Ext.define("Amps.form.MatchPatterns", {
   title: "Match Patterns",
   collapsible: true,
   constructor: function (args) {
-    this.callParent(args);
+    this.callParent([args]);
     this.name = args["name"];
     var scope = this;
     console.log(args);
@@ -240,7 +240,7 @@ Ext.define("Amps.form.Matchpattern", {
     align: "stretch",
   },
   constructor: function (args) {
-    this.callParent(args);
+    this.callParent([args]);
     this.insert(0, [
       {
         xtype: "fieldcontainer",

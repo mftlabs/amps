@@ -11,7 +11,7 @@ Ext.define("Amps.form.DateTime", {
   fieldLabel: "Start Time",
 
   constructor: function (args) {
-    this.callParent(args);
+    this.callParent([args]);
     this.itemId = args["itemId"];
     console.log(args);
 

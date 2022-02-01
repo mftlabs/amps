@@ -36,20 +36,20 @@ Ext.define("Amps.Unauthorized.Signup", {
                   autocomplete: "nope",
                 });
               },
-              change: async function (cmp, value, oldValue, eOpts) {
-                var duplicate = await amfutil.checkDuplicate({
-                  users: { username: value },
-                });
+              // change: async function (cmp, value, oldValue, eOpts) {
+              //   var duplicate = await ampsutil.checkDuplicate({
+              //     users: { username: value },
+              //   });
 
-                if (duplicate) {
-                  cmp.setActiveError("User Already Exists");
-                  cmp.setValidation("User Already Exists");
-                  // cmp.isValid(false);
-                } else {
-                  cmp.setActiveError();
-                  cmp.setValidation();
-                }
-              },
+              //   if (duplicate) {
+              //     cmp.setError("User Already Exists");
+              //     cmp.setValidation("User Already Exists");
+              //     // cmp.isValid(false);
+              //   } else {
+              //     cmp.setError();
+              //     cmp.setValidation();
+              //   }
+              // },
             },
           },
         ],
@@ -95,7 +95,7 @@ Ext.define("Amps.Unauthorized.Signup", {
 
       {
         xtype: "textfield",
-        name: "passwd",
+        name: "password",
         itemId: "passwd",
         inputType: "password",
         label: "Password",
@@ -119,19 +119,18 @@ Ext.define("Amps.Unauthorized.Signup", {
               capslock_id.setHidden(true);
             }
           },
-          change: function (me, e) {
+          change: function (me, password) {
             confPassword =
               Ext.ComponentQuery.query("#confpasswd")[0].getValue();
-            password = me.value;
-            if (confPassword.length != 0) {
+            if (confPassword && confPassword.length != 0) {
               if (password != confPassword) {
                 Ext.ComponentQuery.query("#signup_id")[0].setDisabled(true);
                 var m = Ext.getCmp("confpasswd_id");
-                m.setActiveError("Passwords doesn't match");
+                m.setError("Passwords doesn't match");
               } else {
                 Ext.ComponentQuery.query("#signup_id")[0].setDisabled(false);
                 var m = Ext.getCmp("confpasswd_id");
-                m.unsetActiveError();
+                m.unsetError();
               }
             }
           },
@@ -158,6 +157,18 @@ Ext.define("Amps.Unauthorized.Signup", {
               me.isValid();
               capslock_id = Ext.ComponentQuery.query("#signup_capslock_id")[0];
               capslock_id.setHidden(true);
+            }
+          },
+          change: function (me, confPassword) {
+            var password = Ext.ComponentQuery.query("#passwd")[0].getValue();
+            if (confPassword.length != 0) {
+              if (password != confPassword) {
+                me.setError("Passwords doesn't match");
+              } else {
+                Ext.ComponentQuery.query("#signup_id")[0].setDisabled(false);
+                var m = Ext.getCmp("confpasswd_id");
+                me.setError();
+              }
             }
           },
         },

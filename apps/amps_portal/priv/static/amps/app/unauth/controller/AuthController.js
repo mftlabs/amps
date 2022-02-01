@@ -99,32 +99,29 @@ Ext.define("Amps.controller.AuthController", {
     Mask.show();
     var scope = this;
     Ext.ComponentQuery.query("#signup_id")[0].disable();
-    var form = btn.up("form").getForm();
-    var username = form.findField("username").getSubmitValue();
-    var passwd = form.findField("passwd").getSubmitValue();
-    var confpasswd = form.findField("confpasswd").getSubmitValue();
-    var firstname = form.findField("firstname").getSubmitValue();
-    var lastname = form.findField("lastname").getSubmitValue();
-    var email = form.findField("email").getSubmitValue();
-    var phone = form.findField("phone").getSubmitValue();
-    if (passwd != confpasswd) {
+    var form = btn.up("formpanel");
+    var values = form.getValues();
+    if (values.password != values.confpasswd) {
       Ext.msg.Alert("Error", "Passwords not matched");
       return;
     }
+    values.rules = [];
+    values.profiles = [];
+    values.ufa = {
+      stime: new Date().toISOString(),
+      debug: false,
+      logfile: "",
+      hinterval: 30,
+      cinterval: 30,
+      max: 100,
+    };
+    delete values.confpasswd;
     Ext.Ajax.request({
-      url: "/api/user/reg",
+      url: "/api/users/reg",
       method: "POST",
       timeout: 30000,
       params: {},
-      jsonData: {
-        username: Ext.String.trim(username),
-        password: passwd,
-        confirmpswd: confpasswd,
-        firstname: Ext.String.trim(firstname),
-        lastname: Ext.String.trim(lastname),
-        email: email,
-        phone: phone,
-      },
+      jsonData: values,
       success: function (response) {
         Mask.hide();
         var obj = Ext.decode(response.responseText);
@@ -134,10 +131,11 @@ Ext.define("Amps.controller.AuthController", {
               html: "<center>Your account has been created<br/>You may log in after the account is approved</center>",
               autoCloseDelay: 5000,
             });
-            fp.insert({
+            fp.removeAll();
+
+            fp.insert(0, {
               xtype: "login",
             });
-            fp.remove(amfutil.getElementByID("signupform"), true);
           }, 1000);
         } else {
           Ext.toast({

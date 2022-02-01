@@ -13,9 +13,9 @@ Ext.define("Amps.controller.FieldController", {
     var config = ampsgrids.grids[tokens[0]]().subgrids[tokens[2]];
 
     var win = Ext.create("Amps.form.add", config.window);
-    win.loadForm(config.object, config.fields, (values, form) => {
+    win.loadForm(config.object, config.fields, (form, values) => {
       if (config.add && config.add.process) {
-        values = config.add.process(values, form);
+        values = config.add.process(form, values);
       }
       return values;
     });

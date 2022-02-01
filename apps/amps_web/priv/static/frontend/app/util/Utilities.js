@@ -12,121 +12,77 @@ function getParm(field) {
   };
 }
 
-// const pageFilters = {
-//   rules: [
-//     {
-//       type: "combo",
-//       field: "action",
-//       label: "Action",
-//       options: [
-//         {
-//           field: "hold",
-//           label: "Hold",
-//         },
-//         {
-//           field: "mailbox",
-//           label: "Mailbox",
-//         },
-//       ],
-//     },
-//     {
-//       type: "checkbox",
-//       field: "ediflag",
-//       label: "Parse Edi",
-//     },
-//     {
-//       type: "checkbox",
-//       field: "scanflag",
-//       label: "Virus Scan",
-//     },
-//     {
-//       type: "combo",
-//       field: "status",
-//       label: "Status",
-//       options: [
-//         {
-//           field: "received",
-//           label: "Received",
-//         },
-//         {
-//           field: "held",
-//           label: "Held",
-//         },
-//         {
-//           field: "warning",
-//           label: "Warning",
-//         },
-//         {
-//           field: "failed",
-//           label: "Failed",
-//         },
-//       ],
-//     },
-//     {
-//       type: "text",
-//       field: "reason",
-//       label: "Reason",
-//     },
-//   ],
-//   accounts: [
-//     {
-//       type: "text",
-//       field: "username",
-//       label: "User Name",
-//     },
-//   ],
-//   agentput: [
-//     {
-//       type: "text",
-//       field: "name",
-//       label: "Rule Name",
-//     },
-//     {
-//       type: "text",
-//       field: "rtype",
-//       label: "Rule Type",
-//     },
-//     {
-//       type: "text",
-//       field: "bucket",
-//       label: "Upload Bucket Name",
-//     },
-//   ],
-//   agentget: [
-//     {
-//       type: "text",
-//       field: "name",
-//       label: "Rule Name",
-//     },
-//     {
-//       type: "text",
-//       field: "rtype",
-//       label: "Rule Type",
-//     },
-//     {
-//       type: "text",
-//       field: "bucket",
-//       label: "Bucket Name",
-//     },
-//   ],
-//   users: [
-//     {
-//       type: "text",
-//       field: "username",
-//       label: "User Name",
-//     },
-//     {
-//       type: "text",
-//       field: "firstname",
-//       label: "First Name",
-//     },
-//     {
-//       type: "text",
-//       field: "lastname",
-//       label: "Last Name",
-//     },
-//   ],
-// };
+Ext.define("Amps.column.Socket", {
+  extend: "Ext.grid.column.Widget",
+  cellFocusable: false,
+  xtype: "socketcolumn",
+  config: null,
+  constructor: function (args) {
+    this.callParent([args]);
+    this.config = args["config"];
+  },
+  widget: {
+    xtype: "socketwidget",
+  },
+  onWidgetAttach: function (col, widget, rec) {
+    console.log("attach");
+    clearInterval(widget.timer);
+    widget.removeAll();
+
+    var config = col.config(rec.data);
+
+    if (config) {
+      widget.load(config.event, config.payload, config.callback);
+    }
+  },
+});
+
+Ext.define("Amps.widget.Socket", {
+  extend: "Ext.container.Container",
+  xtype: "socketwidget",
+  timer: null,
+  style: {
+    background: "transparent",
+  },
+
+  listeners: {
+    beforedestroy: function (scope) {
+      console.log("destroying");
+      clearInterval(scope.timer);
+    },
+  },
+  layout: "fit",
+
+  constructor: function (config) {
+    // It is important to remember to call the Widget superclass constructor
+    // when overriding the constructor in a derived class. This ensures that
+    // the element is initialized from the template, and that initConfig() is
+    // is called.
+    this.callParent([config]);
+  },
+  load: function (event, parms, callback, time) {
+    var scope = this;
+    var data = this._rowContext.record.data;
+    var cb;
+    if (callback) {
+      cb = function (payload) {
+        callback(scope, payload);
+        console.log("fetch");
+      };
+    } else {
+      cb = function (payload) {
+        scope.removeAll();
+
+        scope.insert({
+          xtype: "component",
+          html: payload,
+        });
+      };
+    }
+
+    scope.timer = amfutil.socketLoop(event, parms, cb, time);
+  },
+});
 
 const filterTypes = {
   text: (field) => ({
@@ -759,6 +715,7 @@ Ext.define("Amps.util.Utilities", {
     "refreshbtn",
     "reprocess",
     "reroute",
+    "export",
   ],
 
   from: null,
@@ -1326,6 +1283,22 @@ Ext.define("Amps.util.Utilities", {
     });
   },
 
+  socketLoop: function (event, parms, callback, time = 1000) {
+    function broadcast(data) {
+      amfutil.broadcastEvent(event, parms, (payload) => {
+        callback(payload);
+      });
+    }
+
+    var timer = setInterval(function () {
+      if (Ext.util.History.getToken().split("/")[0] == "monitoring") {
+        broadcast();
+      }
+    }, time);
+    broadcast();
+    return timer;
+  },
+
   tooltip: function (field, opts) {
     return Object.assign(
       {
@@ -1671,18 +1644,23 @@ Ext.define("Amps.util.Utilities", {
   },
 
   compareOpts: function (x, y, val = true) {
-    Object.entries(x).forEach((entry) => {
-      var v = entry[1];
-      if (
-        typeof entry[1] === "object" &&
-        !Array.isArray(entry[1]) &&
-        entry[1] !== null
-      ) {
-        val = amfutil.compareOpts(x[entry[0]], y[entry[0]], val);
-      } else {
-        val = val && y[entry[0]] == x[entry[0]];
-      }
-    });
+    if (x && y) {
+      Object.entries(x).forEach((entry) => {
+        var v = entry[1];
+        if (
+          typeof entry[1] === "object" &&
+          !Array.isArray(entry[1]) &&
+          entry[1] !== null
+        ) {
+          val = amfutil.compareOpts(x[entry[0]], y[entry[0]], val);
+        } else {
+          val = val && y[entry[0]] == x[entry[0]];
+        }
+      });
+    } else {
+      val = false;
+    }
+
     return val;
   },
 
@@ -2437,6 +2415,15 @@ Ext.define("Amps.util.Utilities", {
     });
     e.stopEvent();
     contextMenu.showAt(e.pageX, e.pageY);
+  },
+
+  renderFileSize: function fileSize(size) {
+    var i = Math.floor(Math.log(size) / Math.log(1000));
+    return (
+      (size / Math.pow(1000, i)).toFixed(2) * 1 +
+      " " +
+      ["B", "kB", "MB", "GB", "TB"][i]
+    );
   },
 
   showCurrentTime: function () {

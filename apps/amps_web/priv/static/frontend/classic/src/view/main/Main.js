@@ -144,6 +144,14 @@ Ext.define("Amps.view.main.Main", {
           handler: "onRerouteClicked",
         },
         {
+          xtype: "button",
+          itemId: "export",
+          iconCls: "x-fa fa-download",
+          tooltip: "Export",
+          hidden: true,
+          handler: "onExportClicked",
+        },
+        {
           xtype: "container",
           itemId: "messages",
           hidden: true,

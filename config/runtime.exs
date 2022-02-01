@@ -92,7 +92,7 @@ if config_env() == :prod do
       ],
       backends: [
         %{
-          host: ~r/^admin.#{System.get_env("AMPS_HOST", "localhost")}$/,
+          host: ~r/^#{System.get_env("AMPS_ADMIN_HOST", "admin.localhost")}$/,
           phoenix_endpoint: AmpsWeb.Endpoint
         },
         %{
@@ -108,7 +108,7 @@ if config_env() == :prod do
       # https: [:inet6, port: 4443],
       backends: [
         %{
-          host: ~r/^admin.#{System.get_env("AMPS_HOST", "localhost")}$/,
+          host: ~r/^#{System.get_env("AMPS_ADMIN_HOST", "admin.localhost")}$/,
           phoenix_endpoint: AmpsWeb.Endpoint
         },
         %{
@@ -128,7 +128,7 @@ if config_env() == :prod do
       port: String.to_integer(System.get_env("AMPS_PORT") || "4000")
     ],
     url: [
-      host: "admin." <> System.get_env("AMPS_HOST", "localhost"),
+      host: System.get_env("AMPS_ADMIN_HOST", "localhost"),
       port: System.get_env("AMPS_PORT")
     ],
     authmethod: System.get_env("AMPS_AUTH_METHOD") || "db",

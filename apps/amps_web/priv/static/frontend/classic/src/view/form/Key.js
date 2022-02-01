@@ -11,7 +11,7 @@ Ext.define("Amps.view.form.Key", {
     margin: 5,
   },
   constructor(args) {
-    this.callParent(args);
+    this.callParent([args]);
     var name = args["name"];
     console.log(args);
     this.setHeight(args.height);
@@ -34,7 +34,7 @@ Ext.define("Amps.view.form.Key", {
         // height: 100,
         listeners: {
           change: function (scope, value) {
-            var newValue = value.replace(/C:\\fakepath\\/g, '');
+            var newValue = value.replace(/C:\\fakepath\\/g, "");
             scope.setRawValue(newValue);
             var id = scope.getInputId();
             console.log(id);

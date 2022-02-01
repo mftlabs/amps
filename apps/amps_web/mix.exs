@@ -67,7 +67,8 @@ defmodule AmpsWeb.MixProject do
       {:tesla, git: "https://github.com/teamon/tesla", override: true},
       {:gnat, "~> 1.2"},
       {:x509, "~> 0.8.0"},
-      {:master_proxy, "~> 0.1"}
+      {:master_proxy, "~> 0.1"},
+      {:elixlsx, "~> 0.5.1"}
       # {:uuid, "~> 1.1"}
     ]
   end

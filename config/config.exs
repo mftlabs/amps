@@ -43,12 +43,15 @@ config :esbuild,
 
 config :master_proxy,
   # any Cowboy options are allowed
+  protocol_options: [
+    request_timeout: 10000
+  ],
   http: [:inet6, port: 4080],
   log_requests: false,
   # https: [:inet6, port: 4443],
   backends: [
     %{
-      host: ~r/^admin.#{System.get_env("AMPS_HOST", "localhost")}$/,
+      host: ~r/^#{System.get_env("AMPS_ADMIN_HOST", "admin.localhost")}$/,
       phoenix_endpoint: AmpsWeb.Endpoint
     },
     %{

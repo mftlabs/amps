@@ -11,7 +11,7 @@ Ext.define("Amps.form.ArrayField", {
   fieldTitle: "Field",
 
   constructor: function (args) {
-    this.callParent(args);
+    this.callParent([args]);
     console.log(args);
 
     this.fields = [];
@@ -177,7 +177,7 @@ Ext.define("Amps.form.ArrayField.Field", {
   },
 
   constructor: function (args) {
-    this.callParent(args);
+    this.callParent([args]);
     var name = "field-" + amfutil.makeRandom();
     this.itemId = name;
     this.name = name;

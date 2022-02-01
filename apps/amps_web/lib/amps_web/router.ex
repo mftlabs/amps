@@ -68,10 +68,10 @@ defmodule AmpsWeb.Router do
     get("/:collection/:id/:field", DataController, :get_field)
     put("/:collection/:id/:field", DataController, :update_field)
     post("/:collection/:id/:field", DataController, :add_to_field)
-    get("/:collection/:id/:field/:idx", DataController, :get_in_field)
+    get("/:collection/:id/:field/:fieldid", DataController, :get_in_field)
 
-    put("/:collection/:id/:field/:idx", DataController, :update_in_field)
-    delete("/:collection/:id/:field/:idx", DataController, :delete_from_field)
+    put("/:collection/:id/:field/:fieldid", DataController, :update_in_field)
+    delete("/:collection/:id/:field/:fieldid", DataController, :delete_from_field)
     # Your protected API endpoints here
   end
 

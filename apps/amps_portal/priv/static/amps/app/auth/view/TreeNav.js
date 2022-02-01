@@ -26,6 +26,12 @@ Ext.define("Amps.Authorized.TreeNav", {
           leaf: true,
           iconCls: "x-fa fa-user-circle",
         },
+        {
+          text: "UFA",
+          rowCls: "ufa",
+          leaf: true,
+          iconCls: "x-fa fa-pencil-square-o",
+        },
       ],
     },
   },

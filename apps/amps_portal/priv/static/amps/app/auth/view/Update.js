@@ -180,7 +180,7 @@ Ext.define("Amps.Authorized.Update", {
     this.editing = !this.editing;
   },
   constructor: function (args) {
-    this.callParent(args);
+    this.callParent([args]);
     this.config = args["config"];
     this.record = args["record"];
     var config = this.config;

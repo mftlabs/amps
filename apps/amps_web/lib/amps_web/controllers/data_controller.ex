@@ -13,6 +13,8 @@ defmodule AmpsWeb.DataController do
   alias AmpsWeb.Encryption
   alias Amps.SvcManager
   alias AmpsWeb.ServiceController
+  alias Elixlsx.Workbook
+  alias Elixlsx.Sheet
 
   plug(
     AmpsWeb.EnsureRolePlug,
@@ -76,6 +78,103 @@ defmodule AmpsWeb.DataController do
 
     AmpsEvents.send(msg, %{"output" => topic}, %{})
     json(conn, :ok)
+  end
+
+  # def export(conn, %{"collection" => collection}) do
+  #   headers = ["Name", "Type", "Description"]
+  #   contents = [["one", "two", "three"], ["four", "five", "six"], ["seven", "eight", "nine"]]
+  #   formatted = Enum.map(headers, fn x -> [x, bold: true] end)
+
+  #   write_in_workbook("Services", formatted, contents)
+  #   |> Elixlsx.write_to("hello.xlsx")
+  # end
+
+  def ignore_keys(collection, obj) do
+    case collection do
+      "users" ->
+        Map.drop(obj, ["password"])
+    end
+  end
+
+  def export_collection(collection) do
+    data = DB.find(collection)
+
+    headers =
+      Enum.reduce(Enum.with_index(data), [], fn {obj, idx}, acc ->
+        obj = ignore_keys(collection, obj)
+
+        Enum.reduce(obj, acc, fn {k, v}, acc ->
+          IO.inspect(acc)
+
+          if Enum.member?(acc, k) do
+            acc
+          else
+            if is_map(v) || is_list(v) do
+              if is_map(v) do
+                Enum.reduce(v, acc, fn {mk, _mv}, keys ->
+                  if Enum.member?(keys, Path.join(k, mk)) do
+                    keys
+                  else
+                    keys ++ [Path.join(k, mk)]
+                  end
+                end)
+              else
+                acc
+              end
+            else
+              acc ++ [k]
+            end
+          end
+        end)
+      end)
+
+    IO.inspect(headers)
+
+    contents =
+      Enum.reduce(data, [], fn obj, contents ->
+        contents ++
+          [
+            Enum.reduce(headers, [], fn k, acc ->
+              keys = Path.split(k)
+
+              if Enum.count(keys) == 1 do
+                acc ++ [obj[k]]
+              else
+                acc ++
+                  [
+                    Enum.reduce(keys, obj, fn key, obj ->
+                      obj[key]
+                    end)
+                  ]
+              end
+            end)
+          ]
+      end)
+
+    formatted = Enum.map(headers, fn x -> [x, bold: true] end)
+
+    {:ok, {name, binary}} =
+      write_in_workbook(collection, formatted, contents)
+      |> Elixlsx.write_to_memory(collection)
+
+    binary
+    File.write("Test.xlsx", binary)
+  end
+
+  def write_in_workbook(sheet_name, column_headers, contents) do
+    IO.inspect(column_headers)
+    IO.inspect(contents)
+
+    # formatted_contents = Enum.map(contents, fn x  -> Enum.map(x, fn y -> [y, {:bold, false}] end)  end)
+    formatted_contents = Enum.map(contents, fn x -> Enum.map(x, fn y -> [y] end) end)
+    IO.inspect(formatted_contents)
+    row_data = [column_headers | formatted_contents]
+    IO.inspect(row_data)
+    newsheet = %Sheet{name: sheet_name, rows: row_data}
+    # IO.inspect(newsheet)
+    workbook = %Workbook{sheets: [newsheet]}
+    # IO.inspect(workbook)
+    workbook
   end
 
   def send_event(conn, %{"topic" => topic, "meta" => meta}) do
@@ -404,6 +503,8 @@ defmodule AmpsWeb.DataController do
     Logger.debug("Adding Field")
     body = conn.body_params()
 
+    body = Map.put(body, "_id", AmpsUtil.get_id())
+    IO.inspect(body)
     updated = DB.add_to_field(collection, body, id, field)
 
     case collection do
@@ -441,11 +542,11 @@ defmodule AmpsWeb.DataController do
         "collection" => collection,
         "id" => id,
         "field" => field,
-        "idx" => idx
+        "fieldid" => fieldid
       }) do
     Logger.debug("Getting Field")
     body = conn.body_params()
-    result = DB.get_in_field(collection, id, field, idx)
+    result = DB.get_in_field(collection, id, field, fieldid)
     json(conn, result)
   end
 
@@ -459,11 +560,11 @@ defmodule AmpsWeb.DataController do
         "collection" => collection,
         "id" => id,
         "field" => field,
-        "idx" => idx
+        "fieldid" => fieldid
       }) do
     Logger.debug("Updating Field")
     body = conn.body_params()
-    result = DB.update_in_field(collection, body, id, field, idx)
+    result = DB.update_in_field(collection, body, id, field, fieldid)
 
     case collection do
       "services" ->
@@ -510,12 +611,12 @@ defmodule AmpsWeb.DataController do
         "collection" => collection,
         "id" => id,
         "field" => field,
-        "idx" => idx
+        "fieldid" => fieldid
       }) do
     Logger.debug("Deleting Field")
     body = conn.body_params()
-    item = DB.get_in_field(collection, id, field, idx)
-    result = DB.delete_from_field(collection, body, id, field, idx)
+    item = DB.get_in_field(collection, id, field, fieldid)
+    result = DB.delete_from_field(collection, body, id, field, fieldid)
 
     case collection do
       "services" ->

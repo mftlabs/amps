@@ -1214,6 +1214,8 @@ Ext.define("Amps.view.main.MainController", {
     uploadWindow.show();
   },
 
+  onExportClicked: function () {},
+
   onSearchPanel: function (btn) {
     var treenav = Ext.ComponentQuery.query("#treenavigation")[0];
     treenav.setSelection(0);
@@ -1742,6 +1744,7 @@ Ext.define("Amps.view.main.MainController", {
       },
     });
   },
+
   onLogout() {
     amfutil.logout();
   },

@@ -70,25 +70,19 @@ Ext.define("Amps.Application", {
           xtype: "unauthorized",
         });
       } else {
-        // ampsgrids = Amps.util.Grids;
-        // ampsgrids.getGrids();
-        // ampsgrids.getPages();
-        // var routes = Object.keys(ampsgrids.grids).concat(
-        //   Object.keys(ampsgrids.pages)
-        // );
-        // console.log(route);
-        // console.log(routes);
-        // if (routes.indexOf(tokens[0]) >= 0) {
-        //   console.log("Valid Route");
-        //   if (tokens.length > 2) {
-        //     this.redirectTo(tokens[0] + "/" + tokens[1]);
-        //   } else {
-        //   }
-        // } else {
-        //   this.redirectTo("messages");
-        // }
         ampsuploads = Amps.Authorized.Uploads;
-        this.redirectTo("inbox", { replace: true });
+
+        var routes = Object.keys(Amps.Pages.pages);
+        const tokens = route.split("/");
+        if (routes.indexOf(tokens[0]) >= 0) {
+          console.log("Valid Route");
+          if (tokens.length > 2) {
+            this.redirectTo(tokens[0] + "/" + tokens[1]);
+          } else {
+          }
+        } else {
+          this.redirectTo("inbox", { replace: true });
+        }
 
         Ext.Viewport.add({
           xtype: "authorized",

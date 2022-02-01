@@ -155,17 +155,21 @@ Ext.define("Amps.form.update", {
               values = amfutil.convertNumbers(form, values);
               console.log(values);
               var user = amfutil.get_user();
-              if (this.audit) {
+              console.log(scope);
+              if (scope.audit) {
                 values.modifiedby = user.firstname + " " + user.lastname;
                 values.modified = new Date().toISOString();
               }
 
-              route = route
+              route = scope.route
                 ? route + "/" + scope.record._id
                 : Ext.util.History.getToken();
 
               console.log(route);
               console.log(values);
+              if (route.split("/").length > 2) {
+                values = Object.assign(scope.record, values);
+              }
 
               amfutil.ajaxRequest({
                 headers: {
@@ -542,7 +546,7 @@ Ext.define("Amps.util.UpdateRecordController", {
               //   items: [updateForm],
               //   layout: "fit",
               // });
-              amfutil.redirect(currRoute + "/" + rowIndex);
+              amfutil.redirect(currRoute + "/" + record.data._id);
             },
           });
 

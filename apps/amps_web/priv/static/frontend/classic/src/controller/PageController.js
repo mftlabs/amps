@@ -276,13 +276,11 @@ Ext.define("Amps.controller.PageController", {
 
     mask.show();
     var id;
-    if (tokens.length == 1) {
-      id = rec.data._id;
-    }
+    id = rec.data._id;
     amfutil.ajaxRequest({
       url:
         tokens.length > 1
-          ? "/api/" + route + "/" + rowIndex
+          ? "/api/" + route + "/" + id
           : "/api/" + route + "/" + id,
       headers: {
         Authorization: localStorage.getItem("access_token"),
@@ -430,11 +428,12 @@ Ext.define("Amps.controller.PageController", {
             var rec = grid.getStore().getAt(rowIndex);
             console.log(rowIndex);
             var id = rec.data._id;
+            console.log(rec);
             amfutil.ajaxRequest({
               url:
                 tokens.length == 1
                   ? "/api/" + route + "/" + id
-                  : "/api/" + route + "/" + rowIndex,
+                  : "/api/" + route + "/" + id,
               headers: {
                 Authorization: localStorage.getItem("access_token"),
               },
@@ -1287,7 +1286,13 @@ Ext.define("Amps.window.Uploads", {
                 console.log("Cancel");
                 grid.up("window").cancelUpload(grid, rowIndex);
               },
-              isDisabled: function (view, rowIndex, colIndex, item, record) {
+              isActionDisabled: function (
+                view,
+                rowIndex,
+                colIndex,
+                item,
+                record
+              ) {
                 return !(record.get("status") == "Uploading");
               },
             },

@@ -9,7 +9,7 @@ Ext.define("Amps.panel.Startup", {
   itemId: "wizard",
   defaultListenerScope: true,
   constructor(args) {
-    this.callParent(args);
+    this.callParent([args]);
   },
 
   items: [

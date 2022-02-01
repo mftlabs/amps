@@ -52,6 +52,6 @@ defmodule AmpsWeb.NotificationChannel do
     {stream, consumer} = AmpsUtil.get_names(%{"name" => name, "topic" => topic})
     # IO.inspect("#{stream}, #{consumer}")
     {:ok, info} = Jetstream.API.Consumer.info(:gnat, stream, consumer)
-    {:reply, {:ok, info.num_pending}, socket}
+    {:reply, {:ok, Integer.to_string(info.num_pending)}, socket}
   end
 end
