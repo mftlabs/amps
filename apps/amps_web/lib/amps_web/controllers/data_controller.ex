@@ -93,14 +93,15 @@ defmodule AmpsWeb.DataController do
     case collection do
       "users" ->
         Map.drop(obj, ["password"])
-        _ ->
+
+      _ ->
         obj
     end
   end
 
   def export_collection(conn, %{
-      "collection" => collection
-    }) do
+        "collection" => collection
+      }) do
     IO.puts("Generating report for:::: #{collection}")
     data = DB.find(collection)
 
@@ -162,15 +163,8 @@ defmodule AmpsWeb.DataController do
       write_in_workbook(collection, formatted, contents)
       |> Elixlsx.write_to_memory(collection)
 
-    binary
-    file = File.write("#{collection}.xlsx", binary)
-    contents = File.read!("#{collection}.xlsx")
     conn
-    |> put_resp_content_type("application/octet-stream")
-    |> put_resp_header("content-disposition", "attachment; filename=\"#{collection}.xlsx\"")
-      |> send_download({:binary, contents}, filename: "#{collection}.xlsx")
-
-
+    |> send_download({:binary, binary}, filename: "#{collection}.xlsx")
   end
 
   def write_in_workbook(sheet_name, column_headers, contents) do
@@ -539,6 +533,12 @@ defmodule AmpsWeb.DataController do
               }
             })
 
+            if body["type"] == "download" do
+              body = Map.put(body, "policy", "all")
+              create_config_consumer(body)
+              IO.inspect(body["topic"])
+            end
+
           _ ->
             nil
         end
@@ -659,6 +659,24 @@ defmodule AmpsWeb.DataController do
     end
 
     json(conn, result)
+  end
+
+  def create_config_consumer(body) do
+    {stream, consumer} = AmpsUtil.get_names(%{"name" => body["name"], "topic" => body["topic"]})
+
+    opts =
+      if body["policy"] == "by_start_time" do
+        %{
+          deliver_policy: String.to_atom(body["policy"]),
+          opt_start_time: body["start_time"]
+        }
+      else
+        %{
+          deliver_policy: String.to_atom(body["policy"])
+        }
+      end
+
+    AmpsUtil.create_consumer(stream, consumer, body["topic"], opts)
   end
 
   def create_batch_consumer(body) do

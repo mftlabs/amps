@@ -1217,32 +1217,8 @@ Ext.define("Amps.view.main.MainController", {
   onExportClicked: function () {
     var route = Ext.util.History.currentToken;
     var tokens = route.split("/");
-    console.log('componentname',route);
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', "/api/data/export/"+route)
-    xhr.responseType = 'blob';
-    xhr.setRequestHeader('Authorization', localStorage.getItem("access_token"));
-    xhr.setRequestHeader('Content-Type', 'application/json');
-    xhr.setRequestHeader('Accept', 'application/octet-stream');
-    xhr.setRequestHeader('x-requested-with', "XMLHttpRequest");
-    xhr.onload = function(e) {
-      if (this.status === 200) {
-        var blob = this.response;
-        if(window.navigator.msSaveOrOpenBlob) {
-          window.navigator.msSaveBlob(blob, route+'.xlsx');
-        }
-        else{
-          var downloadLink = window.document.createElement('a');
-          var contentTypeHeader = xhr.getResponseHeader("Content-Type");
-          downloadLink.href = window.URL.createObjectURL(new Blob([blob], { type: contentTypeHeader }));
-          downloadLink.download = route+'.xlsx';
-          document.body.appendChild(downloadLink);
-          downloadLink.click();
-          document.body.removeChild(downloadLink);
-        }
-      }
-    };
-    xhr.send()
+    console.log("componentname", route);
+    amfutil.download("/api/data/export/" + route);
   },
 
   onSearchPanel: function (btn) {
