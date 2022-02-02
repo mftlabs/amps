@@ -167,6 +167,23 @@ defmodule AmpsWeb.DataController do
     |> send_download({:binary, binary}, filename: "#{collection}.xlsx")
   end
 
+  def export_sub_collection(conn, %{
+    "collection" => collection,"id" => id, "field" => field
+  }) do
+    body = conn.body_params()
+    data = DB.find_one(collection, %{"_id" => id})
+    {headers, contents} = get_excel_data(collection, data[field])
+
+    formatted = Enum.map(headers, fn x -> [x, bold: true] end)
+
+    {:ok, {name, binary}} =
+      write_in_workbook(collection, formatted, contents)
+      |> Elixlsx.write_to_memory(collection)
+
+    conn
+    |> send_download({:binary, binary}, filename: "#{collection}_#{field}.xlsx")
+  end
+
   def write_in_workbook(sheet_name, column_headers, contents) do
     IO.inspect(column_headers)
     IO.inspect(contents)

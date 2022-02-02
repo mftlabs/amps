@@ -45,6 +45,7 @@ defmodule AmpsWeb.Router do
   scope "/api", AmpsWeb do
     pipe_through([:api, :api_protected])
     get("/data/export/:collection", DataController, :export_collection)
+    get("/data/export-subitem/:collection/:id/:field", DataController, :export_sub_collection)
     get("/users/reset/:id", DataController, :reset_password)
 
     get("/message_events/history/:msgid", UtilController, :history)

@@ -76,6 +76,8 @@ Ext.define("Amps.controller.FieldController", {
   },
 
   onExportClicked: async function (btn) {
-    console.log("Export");
+    var route = Ext.util.History.currentToken;
+    var tokens = route.split("/");
+    amfutil.download("/api/data/export-subitem/" + route);
   },
 });
