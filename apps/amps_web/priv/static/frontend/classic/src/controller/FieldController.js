@@ -74,4 +74,8 @@ Ext.define("Amps.controller.FieldController", {
     var grid = amfutil.getElementByID(`${tokens[0]}-${tokens[2]}`);
     grid.getStore().clearFilter();
   },
+
+  onExportClicked: async function (btn) {
+    console.log("Export");
+  },
 });

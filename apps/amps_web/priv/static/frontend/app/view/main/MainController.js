@@ -1215,10 +1215,13 @@ Ext.define("Amps.view.main.MainController", {
   },
 
   onExportClicked: function () {
+    var sel = grid.getSelection().map((rec) => rec.data);
+
     var route = Ext.util.History.currentToken;
     var tokens = route.split("/");
     console.log("componentname", route);
     amfutil.download("/api/data/export/" + route);
+    // amfutil.download("/api/data/export/" + route, "POST", { rows: sel });
   },
 
   onSearchPanel: function (btn) {

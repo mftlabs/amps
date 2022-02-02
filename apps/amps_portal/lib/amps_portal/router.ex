@@ -45,7 +45,7 @@ defmodule AmpsPortal.Router do
     get("/ufa/heartbeat/:username", UFAController, :heartbeat)
     get("/ufa/ack/:reply", UFAController, :ack)
 
-    get("/ufa/download/:username/:topic", UFAController, :handle_download)
+    get("/ufa/download/:rule", UFAController, :handle_download)
 
     get("/inbox", DataController, :get_messages)
     get("/user", UserController, :get)

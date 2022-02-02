@@ -99,63 +99,63 @@ defmodule AmpsWeb.DataController do
     end
   end
 
+  def get_excel_data(collection, data) do
+    Enum.reduce(data, {[], []}, fn obj, {headers, contents} ->
+      obj = ignore_keys(collection, obj)
+
+      {content, obj} =
+        Enum.reduce(headers, {[], obj}, fn header, {content, obj} ->
+          splits = Path.split(header)
+
+          if Enum.count(splits) == 1 do
+            {content ++
+               [
+                 obj[header]
+               ], Map.drop(obj, [header])}
+          else
+            {content ++
+               [
+                 Enum.reduce(splits, obj, fn key, obj ->
+                   obj[key]
+                 end)
+               ],
+             pop_in(
+               obj,
+               Enum.reduce(splits, [], fn split, acc ->
+                 acc ++ [split]
+               end)
+             )
+             |> elem(1)}
+          end
+        end)
+
+      {headers, content} =
+        Enum.reduce(obj, {headers, content}, fn {k, v}, {headers, content} ->
+          if is_map(v) || is_list(v) do
+            if is_map(v) do
+              Enum.reduce(v, {headers, content}, fn {mk, mv}, {headers, content} ->
+                k = Path.join(k, mk)
+                {headers ++ [k], content ++ [mv]}
+              end)
+            else
+              {headers, content}
+            end
+          else
+            {headers ++ [k], content ++ [v]}
+          end
+        end)
+
+      {headers, contents ++ [content]}
+    end)
+  end
+
   def export_collection(conn, %{
         "collection" => collection
       }) do
     IO.puts("Generating report for:::: #{collection}")
     data = DB.find(collection)
 
-    headers =
-      Enum.reduce(Enum.with_index(data), [], fn {obj, idx}, acc ->
-        obj = ignore_keys(collection, obj)
-
-        Enum.reduce(obj, acc, fn {k, v}, acc ->
-          IO.inspect(acc)
-
-          if Enum.member?(acc, k) do
-            acc
-          else
-            if is_map(v) || is_list(v) do
-              if is_map(v) do
-                Enum.reduce(v, acc, fn {mk, _mv}, keys ->
-                  if Enum.member?(keys, Path.join(k, mk)) do
-                    keys
-                  else
-                    keys ++ [Path.join(k, mk)]
-                  end
-                end)
-              else
-                acc
-              end
-            else
-              acc ++ [k]
-            end
-          end
-        end)
-      end)
-
-    IO.inspect(headers)
-
-    contents =
-      Enum.reduce(data, [], fn obj, contents ->
-        contents ++
-          [
-            Enum.reduce(headers, [], fn k, acc ->
-              keys = Path.split(k)
-
-              if Enum.count(keys) == 1 do
-                acc ++ [obj[k]]
-              else
-                acc ++
-                  [
-                    Enum.reduce(keys, obj, fn key, obj ->
-                      obj[key]
-                    end)
-                  ]
-              end
-            end)
-          ]
-      end)
+    {headers, contents} = get_excel_data(collection, data)
 
     formatted = Enum.map(headers, fn x -> [x, bold: true] end)
 
@@ -357,11 +357,11 @@ defmodule AmpsWeb.DataController do
   end
 
   def update(conn, %{"collection" => collection, "id" => id}) do
+    old = DB.find_one("actions", %{"_id" => id})
+
     body =
       case collection do
         "actions" ->
-          old = DB.find_one("actions", %{"_id" => id})
-
           case old["type"] do
             "batch" ->
               delete_batch_consumer(old)
@@ -408,9 +408,11 @@ defmodule AmpsWeb.DataController do
         service = DB.find_one("services", %{"_id" => id})
 
         if service["type"] == "subscriber" do
-          {stream, consumer} = AmpsUtil.get_names(body)
-          AmpsUtil.delete_consumer(stream, consumer)
-          AmpsUtil.create_consumer(stream, consumer, service["topic"])
+          if old["topic"] != service["topic"] do
+            {stream, consumer} = AmpsUtil.get_names(body)
+            AmpsUtil.delete_consumer(stream, consumer)
+            AmpsUtil.create_consumer(stream, consumer, service["topic"])
+          end
         end
 
         types = SvcManager.service_types()
@@ -512,6 +514,7 @@ defmodule AmpsWeb.DataController do
     body = Map.put(body, "_id", AmpsUtil.get_id())
     IO.inspect(body)
     updated = DB.add_to_field(collection, body, id, field)
+    IO.inspect(updated)
 
     case collection do
       "services" ->
@@ -534,9 +537,9 @@ defmodule AmpsWeb.DataController do
             })
 
             if body["type"] == "download" do
-              body = Map.put(body, "policy", "all")
+              IO.inspect(body)
+              body = Map.put(body, "name", updated["username"] <> "_" <> body["name"])
               create_config_consumer(body)
-              IO.inspect(body["topic"])
             end
 
           _ ->
@@ -627,6 +630,7 @@ defmodule AmpsWeb.DataController do
       }) do
     Logger.debug("Deleting Field")
     body = conn.body_params()
+    obj = DB.find_one(collection, %{"_id" => id})
     item = DB.get_in_field(collection, id, field, fieldid)
     result = DB.delete_from_field(collection, body, id, field, fieldid)
 
@@ -649,6 +653,11 @@ defmodule AmpsWeb.DataController do
                   DateTime.utc_now() |> DateTime.truncate(:millisecond) |> DateTime.to_iso8601()
               }
             })
+
+            if item["type"] == "download" do
+              item = Map.put(item, "name", obj["username"] <> "_" <> item["name"])
+              delete_config_consumer(item)
+            end
 
           _ ->
             nil
@@ -697,6 +706,11 @@ defmodule AmpsWeb.DataController do
 
       AmpsUtil.create_consumer(stream, consumer, body["input"], opts)
     end
+  end
+
+  def delete_config_consumer(body) do
+    {stream, consumer} = AmpsUtil.get_names(%{"name" => body["name"], "topic" => body["topic"]})
+    AmpsUtil.delete_consumer(stream, consumer)
   end
 
   @spec delete_batch_consumer(nil | maybe_improper_list | map) :: any

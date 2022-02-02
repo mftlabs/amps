@@ -219,6 +219,13 @@ Ext.define("Amps.view.main.Main", {
               tooltip: "Refresh",
               handler: "onRefreshButtonClicked",
             },
+            {
+              xtype: "button",
+              itemId: "export",
+              iconCls: "x-fa fa-download",
+              tooltip: "Export",
+              handler: "onExportClicked",
+            },
           ],
         },
         {

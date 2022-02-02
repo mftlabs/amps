@@ -942,6 +942,7 @@ Ext.define("Amps.util.Utilities", {
 
     amfutil.socket.onError(async function (e) {
       amfutil.socket.disconnect();
+      await amfutil.renew_session();
       console.log(e);
     });
 
@@ -2426,79 +2427,91 @@ Ext.define("Amps.util.Utilities", {
     );
   },
 
-  deliverPolicy(topicfilter) {
+  consumerConfig(topicfilter) {
     return {
       xtype: "fieldset",
       title: "Consumer Config",
       items: [
-        [
-          {
-            xtype: "displayfield",
-            name: "updated",
-            fieldLabel: "Config Updated",
-            submitValue: true,
+        amfutil.infoBlock(
+          'Certain rules, actions, or services require the creation of a topic consumer which determines which subset of events to process. This block allows for the configuration of that subscriber and changing any of these values after creation will result in the creation of a new consumer. (i.e. If the consumer is configured with a Deliver Policy of "All" and 50 messages are consumed, updating the consumer config and leaving the delivery policy of "All" will result in the reprocessing of those messages.)'
+        ),
+        {
+          xtype: "displayfield",
+          name: "updated",
+          itemId: "updated",
+          fieldLabel: "Config Updated",
+          renderer: function (val) {
+            return val ? "True" : "False";
           },
-          amfutil.dynamicCreate(
-            amfutil.combo(
-              "Input Topic",
-              "input",
-              amfutil.createCollectionStore("topics", topicfilter),
-              "topic",
-              "topic",
-              {
-                tooltip: "The data topic from which to batch files.",
-              }
-            ),
-            "topics"
-          ),
-          amfutil.combo(
-            "Deliver Policy",
-            "policy",
-            [
-              { field: "all", label: "All" },
-              { field: "new", label: "New" },
-              { field: "last", label: "Last" },
-              { field: "by_start_time", label: "Start Time" },
-            ],
-            "field",
-            "label",
-            {
-              listeners: amfutil.renderListeners(function (scope, val) {
-                var conts = ["by_start_time"];
-
-                conts.forEach((cont) => {
-                  console.log(cont);
-                  var c = scope.up("fieldset").down("#" + cont);
-                  console.log(c);
-                  c.setHidden(val != cont);
-                  c.setDisabled(val != cont);
-                });
-              }),
-            },
-            amfutil.infoBlock(
-              'When rules are updated or created, a topiccreated a topic con, messages are consumed according to this policy. "All" specifies that all files be consumed starting from the earliest. "New" specifies that all messages after the creation or update of this action be consumed. "Last" specifies that all messages be consumed starting with the most recent. "Start Time" specifies that all messages be consumed starting from the specified start time.'
-            )
-          ),
-          {
-            xtype: "fieldcontainer",
-            itemId: "by_start_time",
-
-            items: [
-              {
-                xtype: "datetime",
-                name: "start_time",
-                fieldLabel: "Start Time",
-                allowBlank: false,
-                tooltip: 'The start time for the "Start Time" deliver policy',
+          update: function () {
+            this.setValue(true);
+          },
+          submitValue: true,
+        },
+        amfutil.dynamicCreate(
+          amfutil.combo("Topic", "topic", null, "topic", "topic", {
+            tooltip: "The data topic from which to batch files.",
+            listeners: {
+              beforerender: async function (scope) {
+                var filter = await topicfilter();
+                var store = amfutil.createCollectionStore("topics", filter);
+                scope.setStore(store);
               },
-            ],
-          },
-        ],
+              change: function (scope, val) {
+                var updated = this.up("fieldset").down("#updated");
+                updated.update();
+              },
+            },
+          }),
+          "topics"
+        ),
+        amfutil.combo(
+          "Deliver Policy",
+          "policy",
+          [
+            { field: "all", label: "All" },
+            { field: "new", label: "New" },
+            { field: "last", label: "Last" },
+            { field: "by_start_time", label: "Start Time" },
+          ],
+          "field",
+          "label",
+          {
+            listeners: amfutil.renderListeners(function (scope, val) {
+              var conts = ["by_start_time"];
+
+              conts.forEach((cont) => {
+                console.log(cont);
+                var c = scope.up("fieldset").down("#" + cont);
+                console.log(c);
+                c.setHidden(val != cont);
+                c.setDisabled(val != cont);
+              });
+            }),
+          }
+        ),
+        {
+          xtype: "fieldcontainer",
+          itemId: "by_start_time",
+
+          items: [
+            {
+              xtype: "datetime",
+              name: "start_time",
+              fieldLabel: "Start Time",
+              allowBlank: false,
+              tooltip: 'The start time for the "Start Time" deliver policy',
+              listeners: {
+                change: function (scope, val) {},
+              },
+            },
+          ],
+        },
       ],
     };
   },
 
-  download: async function (url) {
+  download: async function (url, method = "get", body = {}) {
     var filename;
     var msgbox = Ext.MessageBox.show({
       title: "Please wait",
@@ -2513,6 +2526,8 @@ Ext.define("Amps.util.Utilities", {
       headers: {
         Authorization: localStorage.getItem("access_token"),
       },
+      method: method,
+      body: method.toLowerCase() == "get" ? null : JSON.stringify(body),
     })
       .then(async (response) => {
         if (response.ok) {

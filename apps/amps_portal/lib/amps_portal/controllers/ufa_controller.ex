@@ -3,6 +3,7 @@ defmodule AmpsPortal.UFAController do
   import Argon2
   import Jetstream
   alias Amps.DB
+  require Logger
 
   def get_sched(conn, %{"username" => username}) do
     case Pow.Plug.current_user(conn) do
@@ -42,7 +43,11 @@ defmodule AmpsPortal.UFAController do
                   if is_boolean(v) do
                     Map.put(acc, k, to_string(v))
                   else
-                    Map.put(acc, k, v)
+                    if is_integer(v) do
+                      Map.put(acc, k, Integer.to_string(v))
+                    else
+                      Map.put(acc, k, v)
+                    end
                   end
                 end)
 
@@ -76,36 +81,6 @@ defmodule AmpsPortal.UFAController do
   end
 
   def poll_mailbox(conn, %{"username" => username}) do
-  end
-
-  def handle_download(conn, %{"username" => username}) do
-    receive_message(%{"username" => username, "topic" => "amps.mailbox.#{username}"}, self())
-
-    receive do
-      {:message, message} ->
-        IO.inspect(message)
-        conn = conn |> put_resp_header("amps-message", message.reply_to)
-        message
-
-        msg = Jason.decode!(message.body)["msg"]
-
-        if msg["data"] do
-          send_download(conn, {:binary, msg["data"]}, filename: msg["fname"])
-        else
-          send_download(conn, {:file, msg["fpath"]}, filename: msg["fname"])
-        end
-
-      {:none, nil} ->
-        IO.inspect("none")
-        send_resp(conn, 404, "No Messages")
-    end
-  end
-
-  def ack(conn, %{"reply" => reply}) do
-    IO.inspect(reply)
-    res = Jetstream.ack(%{gnat: Process.whereis(:gnat), reply_to: reply})
-    IO.inspect(res)
-    json(conn, :ok)
   end
 
   def handle_upload(conn, %{
@@ -147,37 +122,82 @@ defmodule AmpsPortal.UFAController do
     json(conn, :ok)
   end
 
-  def receive_message(parms, pid) do
-    parms = %{"name" => parms["username"], "topic" => parms["topic"]}
+  def handle_download(conn, %{"rule" => rule}) do
+    case Pow.Plug.current_user(conn) do
+      nil ->
+        json(
+          conn,
+          nil
+        )
+
+      user ->
+        case receive_message({user, rule}, self()) do
+          {:message, message} ->
+            IO.inspect(message)
+            conn = conn |> put_resp_header("amps-message", message.reply_to)
+            message
+
+            msg = Jason.decode!(message.body)["msg"]
+
+            if msg["data"] do
+              send_download(conn, {:binary, msg["data"]}, filename: msg["fname"])
+            else
+              send_download(conn, {:file, msg["fpath"]}, filename: msg["fname"])
+            end
+
+          {:none, nil} ->
+            IO.inspect("none")
+            send_resp(conn, 404, "No Messages")
+
+          {:error, error} ->
+            send_resp(conn, 408, "Subscriber Timeout")
+        end
+    end
+  end
+
+  def ack(conn, %{"reply" => reply}) do
+    IO.inspect(reply)
+    res = Jetstream.ack(%{gnat: Process.whereis(:gnat), reply_to: reply})
+    IO.inspect(res)
+    json(conn, :ok)
+  end
+
+  def receive_message({user, rule}, pid) do
     listening_topic = "_CON.#{nuid()}"
 
-    {stream, consumer} = {"MAILBOX", parms["name"]}
-    IO.inspect(stream)
-    # AmpsUtil.create_consumer(stream, consumer, parms["topic"])
+    {stream, consumer} = {"MAILBOX", user.username <> "_" <> rule}
 
-    spawn(fn ->
-      con = %{
-        listening_topic: listening_topic,
-        connection_pid: Process.whereis(:gnat),
-        stream_name: stream,
-        consumer_name: consumer
-      }
+    try do
+      pid =
+        Task.async(fn ->
+          con = %{
+            listening_topic: listening_topic,
+            connection_pid: Process.whereis(:gnat),
+            stream_name: stream,
+            consumer_name: consumer
+          }
 
-      sid = subscribe(con, parms)
-      IO.inspect(sid)
+          sid = subscribe(con, %{"name" => consumer})
 
-      case get_message(con, parms, sid) do
-        nil ->
-          send(pid, {:none, nil})
-          sid
+          case get_message(con) do
+            nil ->
+              Gnat.unsub(:gnat, sid)
 
-          Gnat.unsub(self(), sid)
+              {:none, nil}
 
-        msg ->
-          send(pid, {:message, msg})
-          Gnat.unsub(self(), sid)
-      end
-    end)
+            msg ->
+              Gnat.unsub(:gnat, sid)
+
+              {:message, msg}
+          end
+        end)
+
+      Task.await(pid, 2500)
+    catch
+      :exit, _ ->
+        Logger.info("UFA Subscription Timeout")
+        {:error, "timeout"}
+    end
   end
 
   def subscribe(consumer, parms) do
@@ -198,17 +218,18 @@ defmodule AmpsPortal.UFAController do
     sid
   end
 
-  def get_message(state, parms, sid) do
+  def get_message(state) do
     with {:ok,
           %{
-            num_pending: num
+            num_pending: pending,
+            num_redelivered: redelivered
           }} <-
            Jetstream.API.Consumer.info(
              state.connection_pid,
              state.stream_name,
              state.consumer_name
            ) do
-      IO.inspect(num)
+      num = pending + redelivered
 
       case num do
         0 ->
