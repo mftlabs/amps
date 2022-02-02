@@ -250,3 +250,15 @@ Ext.define("Amps.overrides.form.field.Base", {
     return data;
   },
 });
+
+Ext.override(Ext.form.field.Text, {
+  onBlur: function() {
+          var value = this.getValue();
+          if (value != null) {
+              if (String(value).length != String(value).trim().length) {
+                  this.setValue(String(value).trim());
+                  Ext.toast('Leading and trailing spaces are trimmed');
+              }
+          }
+  }
+});
