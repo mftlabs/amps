@@ -855,6 +855,7 @@ Ext.define("Amps.util.Utilities", {
           source: store,
         },
         allowBlank: false,
+        forceSelection: true,
       },
       opts
     );

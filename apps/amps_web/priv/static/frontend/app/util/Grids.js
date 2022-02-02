@@ -2053,6 +2053,7 @@ Ext.define("Amps.util.Grids", {
                   itemId: "host",
                   name: "host",
                   fieldLabel: "Host",
+                  vtype : "ipandhostname",
                 },
                 {
                   xtype: "textfield",
@@ -2060,6 +2061,7 @@ Ext.define("Amps.util.Grids", {
                   itemId: "port",
                   name: "port",
                   fieldLabel: "Port",
+                  maskRe: /[0-9]/,
                 },
               ],
             },
@@ -2197,11 +2199,13 @@ Ext.define("Amps.util.Grids", {
                   xtype: "textfield",
                   name: "host",
                   fieldLabel: "Host",
+                  vtype : "ipandhostname"
                 },
                 {
                   xtype: "numberfield",
                   name: "port",
                   fieldLabel: "Port",
+                  minValue : 1
                 },
               ],
             },
@@ -3051,6 +3055,7 @@ Ext.define("Amps.util.Grids", {
           fieldLabel: "Phone Number",
           tooltip: "The Phone Number of the Customer",
           allowBlank: false,
+          vtype : "phone",
         },
         {
           xtype: "textfield",
@@ -3058,6 +3063,7 @@ Ext.define("Amps.util.Grids", {
           fieldLabel: "Email",
           tooltip: "The Email of the Customer",
           allowBlank: false,
+          vtype : "email",
         },
         amfutil.checkbox("Active", "active", true, {
           tooltip: "Whether this customer is active.",
@@ -3119,11 +3125,11 @@ Ext.define("Amps.util.Grids", {
         }),
         amfutil.text("Phone", "phone", {
           tooltip: "The phone number of the user.",
-          inputType: "phone",
+          inputType: "phone",vtype : "phone",
         }),
         amfutil.text("Email", "email", {
           tooltip: "The Email of the user.",
-          inputType: "email",
+          inputType: "email",vtype : "email",
         }),
         amfutil.check("Approved", "approved", {
           tooltip: "Whether the user is approved",
@@ -3250,18 +3256,21 @@ Ext.define("Amps.util.Grids", {
               name: "hinterval",
               value: "30",
               fieldLabel: "Heartbeat Interval",
+              minValue : 0,
             },
             {
               xtype: "numberfield",
               name: "cinterval",
               value: "30",
               fieldLabel: "Config Interval",
+              minValue : 0,
             },
             {
               xtype: "numberfield",
               name: "max",
               value: "100",
               fieldLabel: "Max Jobs",
+              minValue : 0,
             },
           ],
         },
@@ -3379,6 +3388,7 @@ Ext.define("Amps.util.Grids", {
                   xtype: "textfield",
                   name: "fpoll",
                   itemId: "fpoll",
+                  maskRe: /[0-9]/,
                   fieldLabel: "File Polling Interval(Sec)",
                   allowBlank: false,
                   value: "300",
@@ -3387,6 +3397,7 @@ Ext.define("Amps.util.Grids", {
                   xtype: "textfield",
                   name: "bretry",
                   itemId: "bretry",
+                  maskRe: /[0-9]/,
                   fieldLabel: "Get Failure Retry Wait",
                   value: "5",
                 },
@@ -4179,12 +4190,15 @@ Ext.define("Amps.util.Grids", {
               fieldLabel: "Host",
               allowBlank: false,
               tooltip: "The SFTP Host",
+              vtype : "ipandhostname",
             },
             {
               xtype: "numberfield",
               name: "port",
               fieldLabel: "Port",
               tooltip: "The SFTP Port",
+              minValue: 1,
+              maxValue: 65535,
             },
             {
               xtype: "textfield",
@@ -4605,6 +4619,7 @@ Ext.define("Amps.util.Grids", {
               fieldLabel: "Host",
               tooltip: "The root host for the sharepoint site",
               allowBlank: false,
+              vtype : "ipandhostname",
             },
             {
               xtype: "textfield",
@@ -5382,8 +5397,7 @@ Ext.define("Amps.util.Grids", {
               fieldLabel: "Port",
               tooltip: "The port to run the HTTP Api on",
               allowBlank: false,
-              minValue: 0,
-              maxValue: 65535,
+              minValue: 1,
               listeners: {
                 change: async function (cmp, value, oldValue, eOpts) {
                   await amfutil.portHandler(cmp, value);
@@ -5397,6 +5411,7 @@ Ext.define("Amps.util.Grids", {
               tooltip:
                 "The time in milliseconds the server will wait to receive data before closing the connection",
               fieldLabel: "Idle Timeout (ms)",
+              minValue: 0,
             },
             {
               xtype: "numberfield",
@@ -5405,6 +5420,7 @@ Ext.define("Amps.util.Grids", {
               tooltip:
                 "The time in milliseconds the server will wait for additional requests before closing the connection",
               fieldLabel: "Request Timeout (ms)",
+              minValue: 0,
             },
             {
               xtype: "numberfield",
@@ -5412,6 +5428,7 @@ Ext.define("Amps.util.Grids", {
               allowBlank: false,
               tooltip: "Maximum number of requests allowed per connection",
               fieldLabel: "Max Keep Alive",
+              minValue: 0,
             },
             {
               xtype: "checkbox",
@@ -6351,6 +6368,18 @@ Ext.define("Amps.util.Grids", {
         items: [
           {
             xtype: "workflow",
+          },
+        ],
+      },
+    }),
+    imports: () => ({
+      view: {
+        xtype: "panel",
+        title: "Imports",
+        layout: "fit",
+        items: [
+          {
+           html : "Imports"
           },
         ],
       },
