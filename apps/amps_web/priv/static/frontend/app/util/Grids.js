@@ -3279,6 +3279,16 @@ Ext.define("Amps.util.Grids", {
           fieldLabel: "Customer Name",
           tooltip: "The Name of the Customer",
           allowBlank: false,
+          listeners: {
+            change: async function (cmp, value, oldValue, eOpts) {
+              await amfutil.duplicateHandler(
+                  cmp,
+                  {customers: {name: value}},
+                  "Customer Name Already Exists",
+                  amfutil.nameValidator
+              );
+            },
+          },
         },
         {
           xtype: "textfield",
@@ -3347,6 +3357,16 @@ Ext.define("Amps.util.Grids", {
         ),
         amfutil.text("Username", "username", {
           tooltip: "The username of this user.",
+          listeners:{
+            change: async function (cmp, value, oldValue, eOpts) {
+              await amfutil.duplicateHandler(
+                  cmp,
+                  { users: { username: value } },
+                  "Username Already Exists",
+                  amfutil.nameValidator
+              );
+            },
+          }
         }),
         amfutil.text("First Name", "firstname", {
           tooltip: "The First Name of the user.",
