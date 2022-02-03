@@ -1737,14 +1737,20 @@ Ext.define("Amps.util.Utilities", {
     );
   },
 
-  renderListeners: function (render) {
+  renderListeners: function (render, ar, change) {
     return {
       afterrender: function (scope) {
         var val = scope.getValue();
         render(scope, val);
+        if (ar) {
+          ar(scope, val);
+        }
       },
       change: function (scope, val) {
         render(scope, val);
+        if (change) {
+          change(scope, val);
+        }
       },
     };
   },
@@ -2428,7 +2434,7 @@ Ext.define("Amps.util.Utilities", {
     );
   },
 
-  consumerConfig(topicfilter) {
+  consumerConfig(topicfilter, tooltip) {
     return {
       xtype: "fieldset",
       title: "Consumer Config",
@@ -2451,11 +2457,15 @@ Ext.define("Amps.util.Utilities", {
         },
         amfutil.dynamicCreate(
           amfutil.combo("Topic", "topic", null, "topic", "topic", {
-            tooltip: "The data topic from which to batch files.",
+            tooltip: tooltip,
             listeners: {
               beforerender: async function (scope) {
                 var filter = await topicfilter();
-                var store = amfutil.createCollectionStore("topics", filter);
+                var store = {
+                  type: "chained",
+                  source: amfutil.createCollectionStore("topics", filter),
+                };
+
                 scope.setStore(store);
               },
               change: function (scope, val) {
@@ -2478,17 +2488,24 @@ Ext.define("Amps.util.Utilities", {
           "field",
           "label",
           {
-            listeners: amfutil.renderListeners(function (scope, val) {
-              var conts = ["by_start_time"];
+            listeners: amfutil.renderListeners(
+              function (scope, val) {
+                var conts = ["by_start_time"];
 
-              conts.forEach((cont) => {
-                console.log(cont);
-                var c = scope.up("fieldset").down("#" + cont);
-                console.log(c);
-                c.setHidden(val != cont);
-                c.setDisabled(val != cont);
-              });
-            }),
+                conts.forEach((cont) => {
+                  console.log(cont);
+                  var c = scope.up("fieldset").down("#" + cont);
+                  console.log(c);
+                  c.setHidden(val != cont);
+                  c.setDisabled(val != cont);
+                });
+              },
+              null,
+              function (scope) {
+                var updated = scope.up("fieldset").down("#updated");
+                updated.update();
+              }
+            ),
           }
         ),
         {
@@ -2503,7 +2520,10 @@ Ext.define("Amps.util.Utilities", {
               allowBlank: false,
               tooltip: 'The start time for the "Start Time" deliver policy',
               listeners: {
-                change: function (scope, val) {},
+                change: function (scope, val) {
+                  var updated = scope.up("fieldset").down("#updated");
+                  updated.update();
+                },
               },
             },
           ],
@@ -2526,6 +2546,7 @@ Ext.define("Amps.util.Utilities", {
     await fetch(url, {
       headers: {
         Authorization: localStorage.getItem("access_token"),
+        "Content-Type": "application/json",
       },
       method: method,
       body: method.toLowerCase() == "get" ? null : JSON.stringify(body),

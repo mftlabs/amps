@@ -1215,13 +1215,22 @@ Ext.define("Amps.view.main.MainController", {
   },
 
   onExportClicked: function () {
-    var sel = grid.getSelection().map((rec) => rec.data);
+    var grid = amfutil.getElementByID("main-grid");
 
+    var sel = grid.getSelection().map((rec) => {
+      var data = rec.data;
+      delete data.id;
+      return data;
+    });
     var route = Ext.util.History.currentToken;
     var tokens = route.split("/");
-    console.log("componentname", route);
-    amfutil.download("/api/data/export/" + route);
-    // amfutil.download("/api/data/export/" + route, "POST", { rows: sel });
+    console.log(sel);
+
+    if (sel.length) {
+      amfutil.download("/api/data/export/" + route, "POST", { rows: sel });
+    } else {
+      amfutil.download("/api/data/export/" + route);
+    }
   },
 
   onSearchPanel: function (btn) {

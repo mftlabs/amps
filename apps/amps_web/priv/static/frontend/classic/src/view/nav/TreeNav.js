@@ -18,6 +18,14 @@ Ext.define("Amps.view.nav.TreeNav", {
           cls: "messages",
         },
         {
+          iconCls: "x-fa fa-cog",
+          leaf: true,
+          rowCls: "service_events",
+          text: "Service Events",
+          tooltip: "Service Events",
+          // cls: "messages",
+        },
+        {
           iconCls: "x-fa fa-television",
           leaf: true,
           rowCls: "monitoring",
@@ -145,7 +153,8 @@ Ext.define("Amps.view.nav.TreeNav", {
               text: "Defaults",
             },
           ],
-        },{
+        },
+        {
           iconCls: "x-fa fa-cogs",
           rowCls: "managedata",
           text: "Manage Data",
@@ -158,7 +167,8 @@ Ext.define("Amps.view.nav.TreeNav", {
               text: "Imports",
               tooltip: "Imports",
             },
-          ]},
+          ],
+        },
         {
           iconCls: "x-fa fa-user-secret",
           leaf: true,

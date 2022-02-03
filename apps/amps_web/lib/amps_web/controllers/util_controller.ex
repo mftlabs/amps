@@ -175,7 +175,7 @@ defmodule AmpsWeb.UtilController do
 
       msgs ->
         IO.inspect(msgs)
-        msg = Enum.find(msgs, fn msg -> msg["status"] == "started" end)
+        msg = Enum.at(msgs, 0)
         get_parents(msg, []) ++ msgs ++ get_children(msg, [])
     end
   end

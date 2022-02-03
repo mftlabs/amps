@@ -366,8 +366,8 @@ Ext.define("Amps.Authorized.PageController", {
           "This service is currently running, are you sure you want to delete it?";
       }
     } else if (tokens[0] == "actions") {
-      var rows = await amfutil.getCollectionData("topics", {
-        "rules.action": rec.data.name,
+      var rows = await amfutil.getCollectionData("services", {
+        handler: rec.data._id,
       });
       console.log(rows);
       if (rows.length) {

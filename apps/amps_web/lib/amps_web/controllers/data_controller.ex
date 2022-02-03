@@ -43,8 +43,15 @@ defmodule AmpsWeb.DataController do
   def reset_password(conn, %{"id" => id}) do
     obj = Amps.DB.find_one("users", %{"_id" => id})
     length = 15
-    password = :crypto.strong_rand_bytes(length) |> Base.url_encode64() |> binary_part(0, length)
-    IO.inspect(password)
+
+    symbols = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMOPQRSTUVWXYZ$@~!@#$%^&*'
+
+    symbol_count = Enum.count(symbols)
+
+    password =
+      for _ <- 1..15, into: "", do: <<Enum.at(symbols, :crypto.rand_uniform(0, symbol_count))>>
+
+    # IO.inspect(password)
     %{password_hash: hashed} = add_hash(password)
     # res = PowResetPassword.Plug.update_user_password(conn, %{"password" => hashed})
 
@@ -99,6 +106,55 @@ defmodule AmpsWeb.DataController do
     end
   end
 
+  def import_excel_data(path) do
+    {:ok, tid} = Xlsxir.multi_extract(path, 0)
+    list = Xlsxir.get_list(tid)
+    headers = Enum.at(list, 0)
+    list = List.delete_at(list, 0)
+
+    data =
+      Enum.reduce(list, [], fn item, data ->
+        obj =
+          Enum.reduce(Enum.with_index(item), %{}, fn {val, idx}, obj ->
+            if val != nil do
+              key = Enum.at(headers, idx)
+
+              try do
+                val = Jason.decode!(val)
+
+                Map.put(obj, key, val)
+              rescue
+                e ->
+                  splits = Path.split(key)
+
+                  if Enum.count(splits) == 1 do
+                    Map.put(obj, key, val)
+                  else
+                    keys =
+                      Enum.reduce(splits, [], fn piece, acc ->
+                        acc ++ [piece]
+                      end)
+
+                    IO.inspect(keys)
+
+                    put_in(obj, Enum.map(keys, &Access.key(&1, %{})), val)
+                  end
+              end
+            else
+              obj
+            end
+          end)
+
+        [
+          obj
+          | data
+        ]
+      end)
+
+    Xlsxir.close(tid)
+    data
+  end
+
   def get_excel_data(collection, data) do
     Enum.reduce(data, {[], []}, fn obj, {headers, contents} ->
       obj = ignore_keys(collection, obj)
@@ -108,9 +164,18 @@ defmodule AmpsWeb.DataController do
           splits = Path.split(header)
 
           if Enum.count(splits) == 1 do
+            v = obj[header]
+
+            v =
+              if is_list(v) do
+                Jason.encode!(v)
+              else
+                v
+              end
+
             {content ++
                [
-                 obj[header]
+                 v
                ], Map.drop(obj, [header])}
           else
             {content ++
@@ -138,7 +203,7 @@ defmodule AmpsWeb.DataController do
                 {headers ++ [k], content ++ [mv]}
               end)
             else
-              {headers, content}
+              {headers ++ [k], content ++ [Jason.encode!(v)]}
             end
           else
             {headers ++ [k], content ++ [v]}
@@ -147,6 +212,23 @@ defmodule AmpsWeb.DataController do
 
       {headers, contents ++ [content]}
     end)
+  end
+
+  def import_data(conn, %{"collection" => collection, "file" => file}) do
+    data = import_excel_data(file.path)
+
+    Enum.each(data, fn obj ->
+      id = obj["_id"]
+      obj = Map.drop(obj, ["_id"])
+
+      # Duplicate check
+
+      # Actions on Create
+
+      Amps.Cluster.put(Path.join([collection, "_doc", id]), obj)
+    end)
+
+    #
   end
 
   def export_collection(conn, %{
@@ -168,8 +250,10 @@ defmodule AmpsWeb.DataController do
   end
 
   def export_sub_collection(conn, %{
-    "collection" => collection,"id" => id, "field" => field
-  }) do
+        "collection" => collection,
+        "id" => id,
+        "field" => field
+      }) do
     body = conn.body_params()
     data = DB.find_one(collection, %{"_id" => id})
     {headers, contents} = get_excel_data(collection, data[field])
@@ -184,6 +268,23 @@ defmodule AmpsWeb.DataController do
     |> send_download({:binary, binary}, filename: "#{collection}_#{field}.xlsx")
   end
 
+  def export_selection(conn, %{"collection" => collection}) do
+    body = conn.body_params()
+
+    IO.inspect(body)
+    rows = body["rows"]
+    {headers, contents} = get_excel_data(collection, rows)
+
+    formatted = Enum.map(headers, fn x -> [x, bold: true] end)
+
+    {:ok, {name, binary}} =
+      write_in_workbook(collection, formatted, contents)
+      |> Elixlsx.write_to_memory(collection)
+
+    conn
+    |> send_download({:binary, binary}, filename: "#{collection}_#{Enum.count(rows)}.xlsx")
+  end
+
   def write_in_workbook(sheet_name, column_headers, contents) do
     IO.inspect(column_headers)
     IO.inspect(contents)
@@ -194,6 +295,8 @@ defmodule AmpsWeb.DataController do
     row_data = [column_headers | formatted_contents]
     IO.inspect(row_data)
     newsheet = %Sheet{name: sheet_name, rows: row_data}
+
+    newsheet = Sheet.set_pane_freeze(newsheet, 1, 0)
     # IO.inspect(newsheet)
     workbook = %Workbook{sheets: [newsheet]}
     # IO.inspect(workbook)
@@ -482,6 +585,17 @@ defmodule AmpsWeb.DataController do
           "mailbox" => object["username"]
         })
 
+        rules = object["rules"]
+
+        Enum.each(rules, fn rule ->
+          if rule["type"] == "download" do
+            delete_config_consumer(%{
+              "name" => object["username"] <> "_" <> rule["name"],
+              "topic" => rule["topic"]
+            })
+          end
+        end)
+
       "services" ->
         types = SvcManager.service_types()
 
@@ -527,8 +641,8 @@ defmodule AmpsWeb.DataController do
   def add_to_field(conn, %{"collection" => collection, "id" => id, "field" => field}) do
     Logger.debug("Adding Field")
     body = conn.body_params()
-
-    body = Map.put(body, "_id", AmpsUtil.get_id())
+    fieldid = AmpsUtil.get_id()
+    body = Map.put(body, "_id", fieldid)
     IO.inspect(body)
     updated = DB.add_to_field(collection, body, id, field)
     IO.inspect(updated)
@@ -555,8 +669,10 @@ defmodule AmpsWeb.DataController do
 
             if body["type"] == "download" do
               IO.inspect(body)
-              body = Map.put(body, "name", updated["username"] <> "_" <> body["name"])
-              create_config_consumer(body)
+              config = Map.put(body, "name", updated["username"] <> "_" <> body["name"])
+              create_config_consumer(config)
+              body = Map.put(body, "updated", false)
+              DB.update_in_field(collection, body, id, field, fieldid)
             end
 
           _ ->
@@ -617,6 +733,18 @@ defmodule AmpsWeb.DataController do
                   DateTime.utc_now() |> DateTime.truncate(:millisecond) |> DateTime.to_iso8601()
               }
             })
+
+            if body["type"] == "download" do
+              if body["updated"] do
+                user = DB.find_one(collection, %{"_id" => id})
+
+                config = Map.put(body, "name", user["username"] <> "_" <> body["name"])
+                delete_config_consumer(config)
+                create_config_consumer(config)
+                body = Map.put(body, "updated", false)
+                DB.update_in_field(collection, body, id, field, fieldid)
+              end
+            end
 
           _ ->
             nil

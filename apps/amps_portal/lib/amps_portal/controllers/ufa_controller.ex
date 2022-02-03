@@ -56,6 +56,17 @@ defmodule AmpsPortal.UFAController do
 
           encoded = Jason.encode!(schedule)
 
+          AmpsEvents.send_history(
+            "amps.events.svcs",
+            "service_events",
+            %{
+              "service" => "ufa",
+              "user" => user["username"],
+              "status" => "success",
+              "operation" => "schedule"
+            }
+          )
+
           json(
             conn,
             encoded
@@ -67,17 +78,27 @@ defmodule AmpsPortal.UFAController do
   end
 
   def heartbeat(conn, %{"username" => username}) do
-    AmpsEvents.send_history(
-      "amps.events.svcs",
-      "service_events",
-      %{
-        "status" => "running",
-        "service" => "ufa",
-        "user" => username
-      }
-    )
+    case Pow.Plug.current_user(conn) do
+      nil ->
+        json(
+          conn,
+          nil
+        )
 
-    json(conn, :ok)
+      user ->
+        AmpsEvents.send_history(
+          "amps.events.svcs",
+          "service_events",
+          %{
+            "service" => "ufa",
+            "user" => user.username,
+            "status" => "success",
+            "operation" => "heartbeat"
+          }
+        )
+
+        json(conn, :ok)
+    end
   end
 
   def poll_mailbox(conn, %{"username" => username}) do
@@ -88,38 +109,61 @@ defmodule AmpsPortal.UFAController do
         "file" => file,
         "meta" => meta
       }) do
-    meta = Jason.decode!(meta)
-    msgid = meta["msgid"]
+    case Pow.Plug.current_user(conn) do
+      nil ->
+        json(
+          conn,
+          nil
+        )
 
-    dir = AmpsUtil.tempdir(msgid)
-    fpath = Path.join(dir, msgid)
-    File.cp(file.path, fpath)
-    info = File.stat!(fpath)
-    IO.inspect(info)
+      user ->
+        meta = Jason.decode!(meta)
+        msgid = meta["msgid"]
 
-    msg =
-      Map.merge(
-        meta,
-        %{
-          "fname" => file.filename,
-          "fpath" => fpath,
-          "fsize" => info.size,
-          "service" => "ufa",
-          "user" => username
-        }
-      )
+        dir = AmpsUtil.tempdir(msgid)
+        fpath = Path.join(dir, msgid)
+        File.cp(file.path, fpath)
+        info = File.stat!(fpath)
+        IO.inspect(info)
 
-    AmpsEvents.send(msg, %{"output" => "amps.svcs.ufa." <> username}, %{})
+        msg =
+          Map.merge(
+            meta,
+            %{
+              "fname" => file.filename,
+              "fpath" => fpath,
+              "fsize" => info.size,
+              "service" => "ufa",
+              "user" => username
+            }
+          )
 
-    AmpsEvents.send_history(
-      "amps.events.messages",
-      "message_events",
-      Map.merge(msg, %{
-        "status" => "received"
-      })
-    )
+        topic = "amps.svcs.ufa." <> username
 
-    json(conn, :ok)
+        AmpsEvents.send(msg, %{"output" => topic}, %{})
+
+        AmpsEvents.send_history(
+          "amps.events.messages",
+          "message_events",
+          Map.merge(msg, %{
+            "status" => "received",
+            "output" => topic
+          })
+        )
+
+        AmpsEvents.send_history(
+          "amps.events.svcs",
+          "service_events",
+          Map.merge(msg, %{
+            "service" => "ufa",
+            "user" => user.username,
+            "status" => "success",
+            "operation" => "upload"
+          })
+        )
+
+        json(conn, :ok)
+    end
   end
 
   def handle_download(conn, %{"rule" => rule}) do
@@ -134,10 +178,24 @@ defmodule AmpsPortal.UFAController do
         case receive_message({user, rule}, self()) do
           {:message, message} ->
             IO.inspect(message)
-            conn = conn |> put_resp_header("amps-message", message.reply_to)
-            message
 
             msg = Jason.decode!(message.body)["msg"]
+
+            conn =
+              conn
+              |> put_resp_header("amps-reply", message.reply_to)
+              |> put_resp_header("amps-message", message.body)
+
+            AmpsEvents.send_history(
+              "amps.events.svcs",
+              "service_events",
+              Map.merge(msg, %{
+                "service" => "ufa",
+                "user" => user.username,
+                "status" => "started",
+                "operation" => "download"
+              })
+            )
 
             if msg["data"] do
               send_download(conn, {:binary, msg["data"]}, filename: msg["fname"])
@@ -156,10 +214,35 @@ defmodule AmpsPortal.UFAController do
   end
 
   def ack(conn, %{"reply" => reply}) do
-    IO.inspect(reply)
-    res = Jetstream.ack(%{gnat: Process.whereis(:gnat), reply_to: reply})
-    IO.inspect(res)
-    json(conn, :ok)
+    IO.inspect(conn)
+
+    case Pow.Plug.current_user(conn) do
+      nil ->
+        json(
+          conn,
+          nil
+        )
+
+      user ->
+        IO.inspect(reply)
+        res = Jetstream.ack(%{gnat: Process.whereis(:gnat), reply_to: reply})
+
+        msg = Jason.decode!(get_req_header(conn, "amps-message"))
+
+        AmpsEvents.send_history(
+          "amps.events.svcs",
+          "service_events",
+          Map.merge(msg, %{
+            "service" => "ufa",
+            "user" => user.username,
+            "status" => "completed",
+            "operation" => "download"
+          })
+        )
+
+        IO.inspect(res)
+        json(conn, :ok)
+    end
   end
 
   def receive_message({user, rule}, pid) do
