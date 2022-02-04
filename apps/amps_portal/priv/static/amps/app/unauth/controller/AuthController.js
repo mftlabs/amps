@@ -22,7 +22,7 @@ Ext.define("Amps.controller.AuthController", {
     Mask.show();
     var scope = this;
     btn.disable();
-    var values = btn.up("formpanel").getValues();
+    var values = btn.up("form").getValues();
     console.log(values);
     Ext.Ajax.request({
       url: "/api/session",
@@ -45,7 +45,7 @@ Ext.define("Amps.controller.AuthController", {
           //   "userdetails",
           //   obj.firstname + " " + obj.lastname
           // );
-          var from = ampsutil.from;
+          var from = amfutil.from;
           if (from) {
             from = "#" + from;
           } else {
@@ -99,7 +99,7 @@ Ext.define("Amps.controller.AuthController", {
     Mask.show();
     var scope = this;
     Ext.ComponentQuery.query("#signup_id")[0].disable();
-    var form = btn.up("formpanel");
+    var form = btn.up("form");
     var values = form.getValues();
     if (values.password != values.confpasswd) {
       Ext.msg.Alert("Error", "Passwords not matched");

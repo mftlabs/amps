@@ -1,5 +1,5 @@
 Ext.define("Amps.Unauthorized.Viewport", {
-  extend: "Ext.Container",
+  extend: "Ext.container.Viewport",
   xtype: "unauthorized",
   itemId: "auth-viewport",
   layout: "fit",
@@ -11,21 +11,21 @@ Ext.define("Amps.Unauthorized.Viewport", {
   },
   constructor: function (args) {
     console.log(args);
-    this.callParent(args);
+    this.callParent([args]);
     console.log(args);
-    var ap = this.down("#authpanel");
-    if (args["reset"]) {
-      ap.removeAll();
-      ap.insert(0, {
-        xtype: "reset",
-        username: args["reset"].username,
-        token: args["reset"].token,
-      });
-      var clean_uri =
-        location.protocol + "//" + location.host + location.pathname;
+    // var ap = this.down("#authpanel");
+    // if (args["reset"]) {
+    //   ap.removeAll();
+    //   ap.insert(0, {
+    //     xtype: "reset",
+    //     username: args["reset"].username,
+    //     token: args["reset"].token,
+    //   });
+    //   var clean_uri =
+    //     location.protocol + "//" + location.host + location.pathname;
 
-      window.history.replaceState({}, document.title, clean_uri);
-    }
+    //   window.history.replaceState({}, document.title, clean_uri);
+    // }
   },
   items: [
     {
@@ -35,8 +35,9 @@ Ext.define("Amps.Unauthorized.Viewport", {
         {
           xtype: "panel",
           itemId: "authpanel",
-          width: 500,
           items: [{ xtype: "login" }],
+          // layout: "center",
+
           buttons: [
             {
               xtype: "button",

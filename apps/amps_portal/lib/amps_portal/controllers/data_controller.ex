@@ -36,6 +36,72 @@ defmodule AmpsPortal.DataController do
     end
   end
 
+  def get_messages(conn, _params) do
+    # if vault_collection(collection) do
+    #   data = VaultData.get_rows("amps/" <> collection)
+    #   IO.inspect(data)
+
+    #   json(
+    #     conn,
+    #     data
+    #   )
+    # else
+    case Pow.Plug.current_user(conn) do
+      nil ->
+        json(
+          conn,
+          %{success: false, count: 0, rows: []}
+        )
+
+      user ->
+        qp = conn.query_params()
+
+        qp = Map.put(qp, "filters", Jason.encode!(%{"mailbox" => user.username}))
+        IO.inspect(qp)
+        conn = Map.put(conn, :query_params, qp)
+
+        data = DB.get_rows(conn, %{"collection" => "mailbox"})
+
+        json(
+          conn,
+          data
+        )
+    end
+  end
+
+  def duplicate(conn, _params) do
+    body = conn.body_params()
+
+    duplicate =
+      Enum.reduce(body, true, fn clause, acc ->
+        acc && DB.find_one("users", clause) != nil
+      end)
+
+    json(conn, duplicate)
+  end
+
+  def get_mailbox_topics(conn, _params) do
+    case Pow.Plug.current_user(conn) do
+      nil ->
+        json(
+          conn,
+          %{success: false, count: 0, rows: []}
+        )
+
+      user ->
+        topics =
+          DB.find("topics", %{
+            "type" => "mailbox",
+            "topic" => %{"$regex" => "amps.mailbox.#{user.username}.*"}
+          })
+
+        json(
+          conn,
+          topics
+        )
+    end
+  end
+
   def get_message(conn, %{"msgid" => msgid}) do
     case Pow.Plug.current_user(conn) do
       nil ->
@@ -64,17 +130,6 @@ defmodule AmpsPortal.DataController do
               # end
             end
         end
-    end
-  end
-
-  def get_agent_rules(conn, _params) do
-    case Pow.Plug.current_user(conn) do
-      nil ->
-        send_resp(conn, 403, "Forbidden")
-
-      user ->
-        user = DB.find_one("users", %{"username" => user.username})
-        json(conn, user["rules"])
     end
   end
 

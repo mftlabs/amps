@@ -328,4 +328,150 @@ defmodule AmpsPortal.UFAController do
   end
 
   defp nuid(), do: :crypto.strong_rand_bytes(12) |> Base.encode64()
+
+  def get_agent_config(conn, _params) do
+    case Pow.Plug.current_user(conn) do
+      nil ->
+        json(
+          conn,
+          nil
+        )
+
+      user ->
+        user = Amps.DB.find_one("users", %{"_id" => user.id})
+        # _host = Application.fetch_env!(:amps_portal, AmpsWeb.Endpoint)[:url]
+
+        json(conn, user["ufa"])
+        # json(conn, :ok)
+    end
+  end
+
+  def put_agent_config(conn, _params) do
+    case Pow.Plug.current_user(conn) do
+      nil ->
+        json(
+          conn,
+          nil
+        )
+
+      user ->
+        body = conn.body_params()
+        Amps.DB.find_one_and_update("users", %{"_id" => user.id}, %{"ufa" => body})
+
+        json(conn, :ok)
+    end
+  end
+
+  def get_agent(conn, _params) do
+    case Pow.Plug.current_user(conn) do
+      nil ->
+        json(
+          conn,
+          nil
+        )
+
+      user ->
+        user = Amps.DB.find_one("users", %{"_id" => user.id})
+        # _host = Application.fetch_env!(:amps_portal, AmpsWeb.Endpoint)[:url]
+
+        agentdir = Application.app_dir(:amps_portal, "priv/agents")
+        query = conn.query_params()
+        os = query["os"]
+        arch = query["arch"]
+        host = query["host"]
+        {:ok, agentfolder} = Temp.mkdir()
+
+        agent =
+          case os do
+            "linux" ->
+              case arch do
+                "32" ->
+                  "386"
+
+                "64" ->
+                  "amd64"
+              end
+
+            "darwin" ->
+              "universal"
+
+            "windows" ->
+              case arch do
+                "32" ->
+                  "386"
+
+                "64" ->
+                  "amd64"
+              end
+          end
+
+        fname =
+          if os == "windows" do
+            "ufa_agent.exe"
+          else
+            "ufa_agent"
+          end
+
+        File.copy(Path.join([agentdir, os, agent]), Path.join(agentfolder, fname))
+
+        conf =
+          File.read!(Path.join(agentdir, "conf"))
+          |> String.replace("{UFA_URL}", host)
+
+        # IO.inspect(script)
+
+        IO.inspect(File.write(Path.join(agentfolder, "conf"), conf))
+
+        IO.inspect(File.ls(agentfolder))
+
+        # case os do
+        #   "linux" ->
+
+        #   "windows" ->
+        #     IO.inspect(File.cp_r("./agents/windows", agentfolder))
+
+        #     script =
+        #       File.read!(Path.join(agentfolder, "run.bat"))
+        #       |> String.replace("{ACCOUNT}", account["username"])
+        #       |> String.replace("{KEY}", account["username"])
+        #       |> String.replace(
+        #         "{CRED}",
+        #         AmpsWeb.Encryption.decrypt(account["aws_secret_access_key"])
+        #       )
+        #       |> String.replace("{HOST}", host)
+
+        #     IO.inspect(script)
+        #     IO.inspect(File.write(Path.join(agentfolder, "run.bat"), script))
+
+        #     IO.inspect(File.ls(agentfolder))
+
+        #   "mac" ->
+        #     {"run.sh", "mac_" <> arch <> "_agent"}
+        # end
+
+        zipname = user["username"] <> "_agent.zip"
+
+        files = File.ls!(agentfolder) |> Enum.map(&String.to_charlist/1)
+
+        {:ok, zippath} = Temp.mkdir()
+        zippath = Path.join(zippath, zipname)
+        {:ok, zip} = :zip.create(zippath, files, cwd: agentfolder)
+
+        IO.inspect(zip)
+
+        send_download(conn, {:file, zip}, disposition: :attachment)
+        # json(conn, :ok)
+    end
+  end
+
+  def get_agent_rules(conn, _params) do
+    case Pow.Plug.current_user(conn) do
+      nil ->
+        send_resp(conn, 403, "Forbidden")
+
+      user ->
+        user = DB.find_one("users", %{"username" => user.username})
+        json(conn, user["rules"])
+    end
+  end
 end

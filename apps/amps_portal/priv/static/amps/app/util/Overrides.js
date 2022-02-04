@@ -32,7 +32,7 @@ Ext.override(Ext.data.Store, {
     var store = this;
     console.log("exception");
     if (response.status == 401) {
-      await ampsutil.renew_session();
+      await amfutil.renew_session();
       proxy.setHeaders({
         Authorization: localStorage.getItem("access_token"),
       });

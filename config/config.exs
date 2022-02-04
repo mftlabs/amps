@@ -22,11 +22,11 @@ config :amps_portal, AmpsPortal.Endpoint,
 # Configure esbuild (the version is required)
 config :esbuild,
   version: "0.12.18",
-  # amps_portal: [
-  #   args: ~w(js/app.js --bundle --target=es2016 --outdir=../priv/static/assets),
-  #   cd: Path.expand("../apps/amps_portal/assets", __DIR__),
-  #   env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
-  # ],
+  amps_portal: [
+    args: ~w(js/app.js --bundle --target=es2016 --outdir=../priv/static/assets),
+    cd: Path.expand("../apps/amps_portal/assets", __DIR__),
+    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
+  ],
   amps_web: [
     args: ~w(js/app.js --bundle --target=es2016 --outdir=../priv/static/assets),
     cd: Path.expand("../apps/amps_web/assets", __DIR__),

@@ -3,14 +3,13 @@ Ext.define("Amps.Authorized.NavBar", {
   xtype: "navbar",
   controller: "menu",
 
-  layout: "vbox",
+  layout: { type: "vbox", align: "stretch" },
   items: [
     {
       xtype: "button",
-      ui: "action",
       iconCls: "x-fa fa-bars",
       handler: "toggleNavType",
-      style: "box-shadow: none; background: #fafafa;",
+      // style: "box-shadow: none; background: #fafafa;",
       // cls: "button_class",
     },
     {
@@ -31,23 +30,23 @@ Ext.define("Amps.Authorized.NavBar", {
       height: 50,
       xtype: "container",
       layout: "center",
-      style: {
-        background: "#fafafa",
-      },
-      defaults: {
-        margin: "5",
-      },
+      // style: {
+      //   background: "#fafafa",
+      // },
+      // defaults: {
+      //   margin: "5",
+      // },
       layout: "fit",
       items: [
         {
           xtype: "button",
-          ui: "action",
+          // ui: "action",
           itemId: "usermenu",
           iconCls: "x-fa fa-user",
           text: "User",
           listeners: {
-            initialize: async function (btn) {
-              var user = await ampsutil.userInfo();
+            beforerender: async function (btn) {
+              var user = await amfutil.userInfo();
               console.log(user);
               if (user) {
                 btn.setText(user.firstname + " " + user.lastname);

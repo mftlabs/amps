@@ -38,6 +38,7 @@ defmodule AmpsPortal.Router do
 
   scope "/api", AmpsPortal do
     pipe_through([:api, :api_protected])
+    post("/duplicate", DataController, :duplicate)
     get("/msg/:msgid", DataController, :get_message)
     delete("/msg/:msgid", DataController, :delete_message)
     get("/ufa/sched/:username", UFAController, :get_sched)
@@ -46,11 +47,17 @@ defmodule AmpsPortal.Router do
     get("/ufa/ack/:reply", UFAController, :ack)
 
     get("/ufa/download/:rule", UFAController, :handle_download)
+    get("/ufa/agent", UFAController, :get_agent)
 
     get("/inbox", DataController, :get_messages)
     get("/user", UserController, :get)
     put("/user", UserController, :update)
-    get("/rules", DataController, :get_agent_rules)
+    get("/rules", UFAController, :get_agent_rules)
+    get("/ufa/config", UFAController, :get_agent_config)
+    put("/ufa/config", UFAController, :put_agent_config)
+
+    get("/topics/mailbox", DataController, :get_mailbox_topics)
+
     delete("/rules/:id", DataController, :delete_rule)
   end
 

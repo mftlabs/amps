@@ -1,6 +1,6 @@
 Ext.define("Amps.Authorized.Viewport", {
   xtype: "authorized",
-  extend: "Ext.Container",
+  extend: "Ext.container.Viewport",
   style: {
     backgroundColor: "white",
   },
@@ -21,51 +21,32 @@ Ext.define("Amps.Authorized.Viewport", {
       xtype: "container",
       height: 75,
       padding: 15,
-      layout: "hbox",
+      layout: "border",
       style: {
-        backgroundColor: "var(--background-color)",
+        backgroundColor: "var(--main-color)",
       },
       items: [
         {
           xtype: "container",
-          width: 250,
-          layout: { type: "vbox", pack: "center" },
+          layout: "center",
+          region: "west",
+          width: 100,
+          style: {
+            color: "white",
+            "font-size": 36,
+            "font-weight": "500",
+          },
           items: [
             {
-              xtype: "container",
-              layout: { type: "hbox", pack: "start" },
-
-              items: [
-                {
-                  html: `<div >AMPortal</div>`,
-                  style: {
-                    fontSize: "3rem",
-                  },
-                },
-              ],
+              xtype: "component",
+              html: `<i>AMP</i>ortal`,
             },
           ],
         },
         {
           xtype: "container",
+          region: "center",
           flex: 1,
-        },
-        {
-          xtype: "container",
-          width: 250,
-          layout: { type: "vbox", pack: "center" },
-          items: [
-            {
-              xtype: "container",
-              layout: { type: "hbox", pack: "end" },
-
-              items: [
-                {
-                  html: "AMPortal",
-                },
-              ],
-            },
-          ],
         },
       ],
     },
@@ -97,9 +78,10 @@ Ext.define("Amps.Authorized.Viewport", {
           itemId: "mainpage",
 
           style: {
-            "margin-left": "5",
-            "margin-right": "5",
-            "margin-bottom": "5",
+            // "margin-left": "5",
+            // "margin-right": "5",
+            // "margin-bottom": "5",
+            margin: 5,
             "box-shadow":
               "rgba(67, 71, 85, 0.27) 0px 0px 0.25em, rgba(90, 125, 188, 0.05) 0px 0.25em 1em",
           },
@@ -110,40 +92,39 @@ Ext.define("Amps.Authorized.Viewport", {
           itemId: "actionbar",
           layout: { type: "vbox", align: "stretch" },
           style: {
-            backgroundColor: "var(--background-color)",
+            backgroundColor: "var(--main-color)",
             "box-shadow":
               "rgba(67, 71, 85, 0.27) 0px 0px 0.25em, rgba(90, 125, 188, 0.05) 0px 0.25em 1em",
           },
           defaults: {
             height: 50,
+            // margin: 2,
           },
         },
       ],
     },
     {
       xtype: "container",
-      height: 35,
-      layout: "hbox",
+      height: 50,
+      layout: {
+        type: "hbox",
+        align: "stretch",
+      },
       style: {
-        backgroundColor: "#fafafa",
+        backgroundColor: "var(--main-color)",
       },
       items: [
         {
           xtype: "container",
+          layout: "center",
+          width: 300,
           style: {
-            "margin-left": 10,
+            color: "white",
           },
-          layout: { type: "vbox", pack: "center" },
           items: [
             {
-              xtype: "container",
-              layout: { type: "hbox", pack: "start" },
-
-              items: [
-                {
-                  html: `© 2021 Agile Data Inc, All rights are reserved.`,
-                },
-              ],
+              xtype: "component",
+              html: `© 2021 Agile Data Inc, All rights are reserved.`,
             },
           ],
         },
@@ -153,20 +134,17 @@ Ext.define("Amps.Authorized.Viewport", {
         },
         {
           xtype: "container",
+          width: 200,
           style: {
-            "margin-right": 10,
+            color: "white",
+            "text-align": "right",
           },
-          layout: { type: "vbox", pack: "center" },
+          layout: "center",
+
           items: [
             {
-              xtype: "container",
-              layout: { type: "hbox", pack: "end" },
-
-              items: [
-                {
-                  html: "Designed By Agile Data Inc.",
-                },
-              ],
+              xtype: "component",
+              html: `Designed by Agile Data Inc.`,
             },
           ],
         },

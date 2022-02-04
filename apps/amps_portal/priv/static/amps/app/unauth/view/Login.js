@@ -4,17 +4,19 @@ Ext.define("Amps.Unauthorized.Login", {
   xtype: "login",
   controller: "auth",
   itemId: "loginform",
-  // padding: 10,
   title: "AMPortal Login",
+  layout: "center",
   items: {
-    xtype: "formpanel",
+    xtype: "form",
     reference: "form",
+    padding: 10,
+
     items: [
       {
         xtype: "textfield",
         name: "username",
         itemId: "username",
-        label: "User name",
+        fieldLabel: "User name",
         maskRe: /[^\^ ]/,
         allowBlank: false,
         validateOnBlur: true,
@@ -31,7 +33,7 @@ Ext.define("Amps.Unauthorized.Login", {
         name: "password",
         itemId: "passwd",
         inputType: "password",
-        label: "Password",
+        fieldLabel: "Password",
         allowBlank: false,
         enableKeyEvents: true,
         listeners: {
@@ -68,7 +70,6 @@ Ext.define("Amps.Unauthorized.Login", {
       {
         text: "Login",
         formBind: true,
-        cls: "button_class",
         flex: 1,
         itemId: "loginbtn",
         handler: "onLoginClick",
@@ -76,7 +77,6 @@ Ext.define("Amps.Unauthorized.Login", {
       {
         text: "Signup Instead",
         flex: 1,
-        cls: "button_class",
         itemId: "signup_btn_id",
         handler: "onSignupInstead",
       },

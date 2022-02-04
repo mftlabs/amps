@@ -3,34 +3,24 @@
  * calls Ext.application(). This is the ideal place to handle application launch and
  * initialization details.
  */
+var allow_enterkey = true;
 
 Ext.define("Amps.Application", {
   extend: "Ext.app.Application",
 
   name: "Amps",
+  style: "background-color: #32404e;",
 
-  // quickTips: false,
-  // platformConfig: {
-  //   desktop: {
-  //     quickTips: true,
-  //   },
-  // },
-  // defaultToken: "home",
-  // onAppUpdate: function () {
-  //   Ext.Msg.confirm(
-  //     "Application Update",
-  //     "This application has an update, reload?",
-  //     function (choice) {
-  //       if (choice === "yes") {
-  //         window.location.reload();
-  //       }
-  //     }
-  //   );
-  // },
+  quickTips: false,
+  platformConfig: {
+    desktop: {
+      quickTips: true,
+    },
+  },
   launch: async function () {
-    ampsutil = Amps.Utilities;
+    amfutil = Amps.Utilities;
 
-    console.log(ampsutil);
+    console.log(amfutil);
     console.log("launch");
     var route = Ext.util.History.getToken();
     console.log(route);
@@ -38,7 +28,7 @@ Ext.define("Amps.Application", {
       // var query = window.location.search.substring(0);
       const urlParams = new URLSearchParams(window.location.search);
       var token = urlParams.get("token");
-      var resp = await ampsutil.ajaxRequest({
+      var resp = await amfutil.ajaxRequest({
         method: "GET",
         url: "api/users/token/" + token,
       });
@@ -84,10 +74,22 @@ Ext.define("Amps.Application", {
           this.redirectTo("inbox", { replace: true });
         }
 
-        Ext.Viewport.add({
+        Ext.create({
           xtype: "authorized",
         });
       }
     }
+  },
+  // defaultToken: "home",
+  onAppUpdate: function () {
+    Ext.Msg.confirm(
+      "Application Update",
+      "This application has an update, reload?",
+      function (choice) {
+        if (choice === "yes") {
+          window.location.reload();
+        }
+      }
+    );
   },
 });

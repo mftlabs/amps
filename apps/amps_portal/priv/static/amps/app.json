@@ -3,8 +3,6 @@
   "namespace": "Amps",
   "version": "1.0.0.0",
   "framework": "ext",
-  "toolkit": "modern",
-  "theme": "theme-material",
 
   /**
    * The list of required packages (with optional versions; default is "latest").
@@ -20,7 +18,7 @@
   /**
    * The relative path to the application's markup file (html, jsp, asp, etc.).
    */
-  "indexHtmlPath": "index.html.heex",
+  "indexHtmlPath": "./index.html",
 
   /**
    * Comma-separated string with the paths of directories or files to search. Any classes
@@ -28,7 +26,7 @@
    * to "Ext.require". The "app.dir" variable below is expanded to the path where the
    * application resides (the same folder in which this file is located).
    */
-  "classpath": ["app"],
+  "classpath": ["app", "${toolkit.name}/src"],
 
   /**
    * Comma-separated string with the paths of directories or files to search. Any classes
@@ -37,7 +35,7 @@
    * that override will in fact only be included in the build if the target class specified
    * in the "override" property is also included.
    */
-  "overrides": ["overrides"],
+  "overrides": ["overrides", "${toolkit.name}/overrides"],
 
   /**
    * Fashion build configuration properties.
@@ -81,11 +79,6 @@
      *
      */
 
-    "generated": {
-      "var": "sass/save.scss",
-      "src": "sass/save"
-    },
-
     /**
      * Comma-separated list of files or folders containing extra Sass. These
      * files are automatically included in the Sass compilation. By default this
@@ -105,7 +98,7 @@
      *      | application     |
      *      +-----------------+
      */
-    "etc": ["sass/etc/all.scss"],
+    "etc": ["sass/etc/all.scss", "${toolkit.name}/sass/etc/all.scss"],
 
     /**
      * Comma-separated list of folders containing Sass variable definitions
@@ -127,7 +120,12 @@
      * The "sass/var/all.scss" file is always included at the start of the var
      * block before any files associated with JavaScript classes.
      */
-    "var": ["sass/var/all.scss", "sass/var"],
+    "var": [
+      "sass/var/all.scss",
+      "sass/var",
+      "${toolkit.name}/sass/var/all.scss",
+      "${toolkit.name}/sass/var"
+    ],
 
     /**
      * Comma-separated list of folders containing Sass rule files.
@@ -145,7 +143,7 @@
      *      | application     |
      *      +-----------------+
      */
-    "src": ["sass/src"]
+    "src": ["sass/src", "${toolkit.name}/sass/src"]
   },
 
   /**
@@ -191,13 +189,34 @@
    */
   "js": [
     {
-      "path": "${framework.dir}/build/ext-modern-all-debug.js"
-    },
-    {
       "path": "app.js",
       "bundle": true
     }
   ],
+
+  /**
+   * Settings specific to classic toolkit builds.
+   */
+  "classic": {
+    "js": [
+      // Remove this entry to individually load sources from the framework.
+      {
+        "path": "${framework.dir}/build/ext-all-rtl-debug.js"
+      }
+    ]
+  },
+
+  /**
+   * Settings specific to modern toolkit builds.
+   */
+  "modern": {
+    "js": [
+      // Remove this entry to individually load sources from the framework.
+      {
+        "path": "${framework.dir}/build/ext-modern-all-debug.js"
+      }
+    ]
+  },
 
   /**
    * List of all CSS assets in the right inclusion order.
@@ -321,6 +340,8 @@
   "bootstrap": {
     "base": "${app.dir}",
 
+    "manifest": "${build.id}.json",
+
     "microloader": "bootstrap.js",
     "css": "bootstrap.css"
   },
@@ -373,8 +394,15 @@
 
   "output": {
     "base": "${workspace.build.dir}/${build.environment}/${app.name}",
+    "page": "index.html",
+    "manifest": "${build.id}.json",
+    "js": "${build.id}/app.js",
     "appCache": {
       "enable": false
+    },
+    "resources": {
+      "path": "${build.id}/resources",
+      "shared": "resources"
     }
   },
 
@@ -396,7 +424,7 @@
 
   "cache": {
     "enable": false,
-    "deltas": true
+    "deltas": "${build.id}/deltas"
   },
 
   /**
@@ -426,6 +454,12 @@
     {
       "path": "resources",
       "output": "shared"
+    },
+    {
+      "path": "${toolkit.name}/resources"
+    },
+    {
+      "path": "${build.id}/resources"
     }
   ],
 
@@ -435,9 +469,7 @@
    * deltas between updates.
    */
 
-  "archivePath": "archive",
-
-  "slicer": null,
+  "archivePath": "archive/${build.id}",
 
   /**
    * Build Profiles. This object's properties are each a "build profile". You can
@@ -446,7 +478,43 @@
    * selecting the desired build profile by setting "Ext.manifest" to one of these
    * names.
    *
+   *     "builds": {
+   *         "classic": {
+   *             "toolkit": "classic",
+   *             "theme": "theme-neptune"
+   *         },
+   *
+   *         "modern": {
+   *             "toolkit": "modern",
+   *             "theme": "theme-neptune"
+   *         }
+   *     }
+   *
    */
+
+  "builds": {
+    "classic": {
+      "toolkit": "classic",
+      "theme": "theme-triton",
+      "sass": {
+        "generated": {
+          "var": "classic/sass/save.scss",
+          "src": "classic/sass/save"
+        }
+      }
+    }
+
+    // "modern": {
+    //     "toolkit": "modern",
+    //     "theme": "theme-material",
+    //     "sass": {
+    //         "generated": {
+    //             "var": "modern/sass/save.scss",
+    //             "src": "modern/sass/save"
+    //         }
+    //     }
+    // }
+  },
 
   /**
    * File / directory name patttern to ignore when copying to the builds. Must be a
@@ -458,5 +526,5 @@
    * Uniquely generated id for this application, used as prefix for localStorage keys.
    * Normally you should never change this value.
    */
-  "id": "7d2e763c-e1a2-4e03-b0cb-64c55d2ef14a"
+  "id": "a8f954d1-154d-4c24-b591-b3577e24fed8"
 }

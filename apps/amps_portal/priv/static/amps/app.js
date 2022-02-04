@@ -1,5 +1,6 @@
 /*
- * This call registers your application to be launched when the browser is ready.
+ * This file launches the application by asking Ext JS to create
+ * and launch() the Application class.
  */
 Ext.application({
   extend: "Amps.Application",
@@ -11,4 +12,6 @@ Ext.application({
     // so that application classes do not need to require each other.
     "Amps.*",
   ],
+
+  // The name of the initial view to create.
 });

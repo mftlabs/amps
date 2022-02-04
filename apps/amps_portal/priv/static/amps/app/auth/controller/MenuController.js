@@ -79,7 +79,7 @@ Ext.define("Amps.controller.MenuController", {
   },
 
   onLogout: function () {
-    ampsutil.logout();
+    amfutil.logout();
   },
 
   showUploads: function () {
@@ -261,7 +261,7 @@ Ext.define("Amps.form.Parm.Bool", {
         {
           xtype: "textfield",
           flex: 1,
-          label: "Field",
+          fieldLabel: "Field",
           isFormField: false,
 
           listeners: {
@@ -276,7 +276,7 @@ Ext.define("Amps.form.Parm.Bool", {
         },
         {
           xtype: "checkbox",
-          label: "Value",
+          fieldLabel: "Value",
           isFormField: false,
 
           inputValue: true,
@@ -290,7 +290,7 @@ Ext.define("Amps.form.Parm.Bool", {
 
         // {
         //   xtype: "textfield",
-        //   label: "Value",
+        //   fieldLabel: "Value",
         //   flex: 1,
         //   name: "value",
         //   listeners: {
@@ -344,7 +344,7 @@ Ext.define("Amps.form.Parm.String", {
         {
           xtype: "textfield",
           flex: 1,
-          label: "Field",
+          fieldLabel: "Field",
           isFormField: false,
 
           // name: "field",
@@ -361,7 +361,7 @@ Ext.define("Amps.form.Parm.String", {
 
         {
           xtype: "textfield",
-          label: "Value",
+          fieldLabel: "Value",
           flex: 1,
           // name: "value",
           isFormField: false,
@@ -405,7 +405,7 @@ Ext.define("Amps.form.Parm.Number", {
         {
           xtype: "textfield",
           flex: 1,
-          label: "Field",
+          fieldLabel: "Field",
           // name: "field",
           listeners: {
             change: "onDefaultChange",
@@ -421,7 +421,7 @@ Ext.define("Amps.form.Parm.Number", {
 
         {
           xtype: "numberfield",
-          label: "Value",
+          fieldLabel: "Value",
           flex: 1,
           // name: "value",
           listeners: {
