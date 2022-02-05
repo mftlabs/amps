@@ -3394,7 +3394,7 @@ Ext.define("Amps.util.Grids", {
           values.rules = [];
           values.ufa = {
             stime: new Date().toISOString(),
-            debug: false,
+            debug: true,
             logfile: "",
             hinterval: 30,
             cinterval: 30,
@@ -3541,8 +3541,8 @@ Ext.define("Amps.util.Grids", {
           ],
           types: {
             upload: {
-              type: "download",
-              name: "Download",
+              type: "upload",
+              name: "Upload",
               fields: [
                 {
                   xtype: "textfield",
@@ -3578,12 +3578,7 @@ Ext.define("Amps.util.Grids", {
                   itemId: "fmatch",
                   name: "fmatch",
                   fieldLabel: "File Match Pattern",
-                },
-                {
-                  xtype: "textfield",
-                  name: "format",
-                  fieldLabel: "Upload Format",
-                  itemId: "bpath",
+                  value: "./uploads/*",
                 },
                 {
                   // Fieldset in Column 1 - collapsible via toggle button
@@ -3665,6 +3660,7 @@ Ext.define("Amps.util.Grids", {
                   name: "folder",
                   itemId: "folder",
                   fieldLabel: "Download Path",
+                  value: "./downloads",
                   allowBlank: false,
                   tooltip: "The path to store the file",
                 },
