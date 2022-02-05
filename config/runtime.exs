@@ -125,10 +125,10 @@ if config_env() == :prod do
       # See the documentation on https://hexdocs.pm/plug_cowboy/Plug.Cowboy.html
       # for details about using IPv6 vs IPv4 and loopback vs public addresses.
       ip: {0, 0, 0, 0, 0, 0, 0, 0},
-      port: String.to_integer(System.get_env("AMPS_PORT") || "4000")
+      port: String.to_integer(System.get_env("AMPS_PORT") || "4080")
     ],
     url: [
-      host: System.get_env("AMPS_ADMIN_HOST", "localhost"),
+      host: System.get_env("AMPS_ADMIN_HOST", "admin.localhost"),
       port: System.get_env("AMPS_PORT")
     ],
     authmethod: System.get_env("AMPS_AUTH_METHOD") || "db",

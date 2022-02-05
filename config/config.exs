@@ -81,11 +81,10 @@ config :amps_web,
 
 # Configures the endpoint
 config :amps_web, AmpsWeb.Endpoint,
-  url: [host: "localhost"],
   render_errors: [view: AmpsWeb.ErrorView, accepts: ~w(html json), layout: false],
   pubsub_server: Amps.PubSub,
   live_view: [signing_salt: "kl+/cr/G"],
-  url: [host: System.get_env("AMPS_HOST_URL", "localhost")],
+  url: [host: System.get_env("AMPS_ADMIN_HOST", "admin.localhost")],
   http: [
     port: System.get_env("AMPS_HOST_PORT", "4000"),
     protocol_options: [idle_timeout: 5_000_000]

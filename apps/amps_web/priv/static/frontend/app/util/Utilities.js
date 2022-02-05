@@ -937,7 +937,7 @@ Ext.define("Amps.util.Utilities", {
   },
   updateChannel: async function () {
     if (amfutil.socketPromise) {
-      return amfutil.socketPromise;
+      await amfutil.socketPromise;
     } else {
       amfutil.socketPromise = new Promise(function (resolve, reject) {
         if (amfutil.socket) {
@@ -972,7 +972,7 @@ Ext.define("Amps.util.Utilities", {
           resolve();
         });
       });
-      return amfutil.socketPromise;
+      await amfutil.socketPromise;
     }
   },
   providercallback: function (params, scope) {
