@@ -567,7 +567,7 @@ Ext.define("Amps.window.Workflow", {
                         },
                         style: {
                           "border-style": "solid",
-                          borderColor: "#5fa2dd",
+                          borderColor: "var(--main-color)",
                         },
                         currStep: configure ? null : currStep,
                         listeners: {
@@ -752,8 +752,8 @@ Ext.define("Amps.window.Workflow", {
               // form.down("#steps").insert(steps);
             },
             // style: {
-            //   // background: "#5fa2dd",
-            //   "border-left": "5px solid #5fa2dd",
+            //   // background: "var(--main-color)",
+            //   "border-left": "5px solid var(--main-color)",
             // },
 
             items: [],
@@ -863,7 +863,7 @@ Ext.define("Amps.container.Workflow.Step", {
       c.insert({
         xtype: "component",
         style: {
-          background: "#5fa2dd",
+          background: "var(--main-color)",
           padding: 10,
           color: "white",
           "font-weight": 400,
@@ -1007,7 +1007,7 @@ Ext.define("Amps.container.Workflow.Step", {
             {
               xtype: "component",
               style: {
-                background: "#5fa2dd",
+                background: "var(--main-color)",
                 padding: 10,
                 color: "white",
                 "font-weight": 400,
@@ -1206,7 +1206,7 @@ Ext.define("Amps.container.Workflow.Step", {
       },
       // style: {
       //   "border-style": "solid",
-      //   borderColor: "#5fa2dd",
+      //   borderColor: "var(--main-color)",
       // },
     },
     {
@@ -3282,10 +3282,10 @@ Ext.define("Amps.util.Grids", {
           listeners: {
             change: async function (cmp, value, oldValue, eOpts) {
               await amfutil.duplicateHandler(
-                  cmp,
-                  {customers: {name: value}},
-                  "Customer Name Already Exists",
-                  amfutil.nameValidator
+                cmp,
+                { customers: { name: value } },
+                "Customer Name Already Exists",
+                amfutil.nameValidator
               );
             },
           },
@@ -3357,16 +3357,16 @@ Ext.define("Amps.util.Grids", {
         ),
         amfutil.text("Username", "username", {
           tooltip: "The username of this user.",
-          listeners:{
+          listeners: {
             change: async function (cmp, value, oldValue, eOpts) {
               await amfutil.duplicateHandler(
-                  cmp,
-                  { users: { username: value } },
-                  "Username Already Exists",
-                  amfutil.nameValidator
+                cmp,
+                { users: { username: value } },
+                "Username Already Exists",
+                amfutil.nameValidator
               );
             },
-          }
+          },
         }),
         amfutil.text("First Name", "firstname", {
           tooltip: "The First Name of the user.",
@@ -3670,7 +3670,7 @@ Ext.define("Amps.util.Grids", {
                 },
                 {
                   xtype: "numberfield",
-                  maxValue: 50,
+                  // maxValue: 200,
                   minValue: 1,
                   value: 20,
                   allowBlank: false,
@@ -3820,6 +3820,7 @@ Ext.define("Amps.util.Grids", {
               }
               return values;
             },
+            readOnly: ["name"],
           },
           transform: function (record) {
             console.log(record);

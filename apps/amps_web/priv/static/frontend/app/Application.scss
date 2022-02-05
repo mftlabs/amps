@@ -8,3 +8,26 @@ $enable-font-awesome: dynamic(true);
   box-shadow: rgba(60, 64, 67, 0.3) 0px 1px 2px 0px,
     rgba(60, 64, 67, 0.15) 0px 1px 3px 1px;
 }
+:root {
+  --main-color: #385cac;
+}
+$base-color: dynamic(#385cac);
+$selected-color: dynamic(#264077);
+$hover-color: dynamic(#3558a3);
+$form-label-font-weight: 550;
+// @include treelist-ui(
+//   $ui: "navigation",
+//   $background-color: $base-color,
+//   $item-text-icon-gap: 20,
+//   $item-text-color: white,
+//   $item-text-over-color: white,
+//   $item-text-font-size: 18px,
+//   $item-icon-color: white,
+//   $row-indicator-selected-over-color: $hover-color,
+//   $row-over-background-color: $hover-color,
+//   $row-selected-background-color: $selected-color,
+//   $toolstrip-background-color: $base-color,
+//   $tool-selected-color: white,
+//   $tool-selected-background-color: $base-color,
+//   $tool-indicator-selected-color: $selected-color
+// );

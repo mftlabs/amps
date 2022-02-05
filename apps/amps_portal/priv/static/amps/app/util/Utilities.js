@@ -920,53 +920,56 @@ Ext.define("Amps.Utilities", {
     };
   },
 
-  infoBlock(message) {
-    return {
-      xtype: "container",
-      layout: "fit",
-      padding: 5,
-      items: [
-        {
-          xtype: "container",
+  infoBlock(message, opts) {
+    return Ext.apply(
+      {
+        xtype: "container",
+        layout: "fit",
+        padding: 5,
+        items: [
+          {
+            xtype: "container",
 
-          style: {
-            background: "var(--main-color)",
-            color: "white",
-          },
-          layout: {
-            type: "hbox",
-            align: "stretch",
-          },
-          items: [
-            {
-              xtype: "container",
-              layout: "center",
-              width: 35,
-              items: [
-                {
-                  xtype: "component",
-                  cls: "x-fa fa-info-circle",
-                },
-              ],
+            style: {
+              background: "var(--main-color)",
+              color: "white",
             },
-
-            {
-              xtype: "component",
-              padding: 5,
-
-              flex: 1,
-              autoEl: "div",
-              style: {
-                "font-size": ".8rem",
-                "font-weight": 400,
+            layout: {
+              type: "hbox",
+              align: "stretch",
+            },
+            items: [
+              {
+                xtype: "container",
+                layout: "center",
+                width: 35,
+                items: [
+                  {
+                    xtype: "component",
+                    cls: "x-fa fa-info-circle",
+                  },
+                ],
               },
 
-              html: message,
-            },
-          ],
-        },
-      ],
-    };
+              {
+                xtype: "component",
+                padding: 5,
+
+                flex: 1,
+                autoEl: "div",
+                style: {
+                  "font-size": ".8rem",
+                  "font-weight": 400,
+                },
+
+                html: message,
+              },
+            ],
+          },
+        ],
+      },
+      opts
+    );
   },
 
   createHistoryStore: function (msgid, opts = {}) {
@@ -1083,7 +1086,6 @@ Ext.define("Amps.Utilities", {
               load: function (data) {
                 console.log(data);
               },
-              exception: amfutil.refresh_on_failure,
             },
           },
           autoLoad: true,
@@ -1874,7 +1876,7 @@ Ext.define("Amps.Utilities", {
           store: store,
           allowBlank: false,
           listeners: {
-            change: function () {
+            change: function (scope) {
               var updated = scope.up("fieldset").down("#updated");
               updated.update();
             },
@@ -1887,6 +1889,12 @@ Ext.define("Amps.Utilities", {
           allowBlank: false,
           valueField: "field",
           displayField: "label",
+          store: [
+            { field: "all", label: "All" },
+            { field: "new", label: "New" },
+            { field: "last", label: "Last" },
+            { field: "by_start_time", label: "Start Time" },
+          ],
           listeners: amfutil.renderListeners(
             function (scope, val) {
               var conts = ["by_start_time"];

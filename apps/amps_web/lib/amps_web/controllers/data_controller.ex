@@ -589,10 +589,7 @@ defmodule AmpsWeb.DataController do
 
         Enum.each(rules, fn rule ->
           if rule["type"] == "download" do
-            delete_config_consumer(%{
-              "name" => object["username"] <> "_" <> rule["name"],
-              "topic" => rule["topic"]
-            })
+            AmpsPortal.Util.agent_rule_deletion(object, rule)
           end
         end)
 
@@ -641,10 +638,10 @@ defmodule AmpsWeb.DataController do
   def add_to_field(conn, %{"collection" => collection, "id" => id, "field" => field}) do
     Logger.debug("Adding Field")
     body = conn.body_params()
-    fieldid = AmpsUtil.get_id()
-    body = Map.put(body, "_id", fieldid)
+
     IO.inspect(body)
-    updated = DB.add_to_field(collection, body, id, field)
+    fieldid = DB.add_to_field(collection, body, id, field)
+    updated = DB.find_one(collection, %{"_id" => id})
     IO.inspect(updated)
 
     case collection do
@@ -660,20 +657,8 @@ defmodule AmpsWeb.DataController do
       "users" ->
         case field do
           "rules" ->
-            DB.find_one_and_update("users", %{"_id" => id}, %{
-              "ufa" => %{
-                "stime" =>
-                  DateTime.utc_now() |> DateTime.truncate(:millisecond) |> DateTime.to_iso8601()
-              }
-            })
-
-            if body["type"] == "download" do
-              IO.inspect(body)
-              config = Map.put(body, "name", updated["username"] <> "_" <> body["name"])
-              create_config_consumer(config)
-              body = Map.put(body, "updated", false)
-              DB.update_in_field(collection, body, id, field, fieldid)
-            end
+            body = Map.put(body, "_id", fieldid)
+            AmpsPortal.Util.agent_rule_creation(updated, body)
 
           _ ->
             nil
@@ -727,24 +712,7 @@ defmodule AmpsWeb.DataController do
       "users" ->
         case field do
           "rules" ->
-            DB.find_one_and_update("users", %{"_id" => id}, %{
-              "ufa" => %{
-                "stime" =>
-                  DateTime.utc_now() |> DateTime.truncate(:millisecond) |> DateTime.to_iso8601()
-              }
-            })
-
-            if body["type"] == "download" do
-              if body["updated"] do
-                user = DB.find_one(collection, %{"_id" => id})
-
-                config = Map.put(body, "name", user["username"] <> "_" <> body["name"])
-                delete_config_consumer(config)
-                create_config_consumer(config)
-                body = Map.put(body, "updated", false)
-                DB.update_in_field(collection, body, id, field, fieldid)
-              end
-            end
+            AmpsPortal.Util.agent_rule_update(id, body)
 
           _ ->
             nil
@@ -792,17 +760,7 @@ defmodule AmpsWeb.DataController do
       "users" ->
         case field do
           "rules" ->
-            DB.find_one_and_update("users", %{"_id" => id}, %{
-              "ufa" => %{
-                "stime" =>
-                  DateTime.utc_now() |> DateTime.truncate(:millisecond) |> DateTime.to_iso8601()
-              }
-            })
-
-            if item["type"] == "download" do
-              item = Map.put(item, "name", obj["username"] <> "_" <> item["name"])
-              delete_config_consumer(item)
-            end
+            AmpsPortal.Util.agent_rule_deletion(obj, item)
 
           _ ->
             nil
@@ -813,24 +771,6 @@ defmodule AmpsWeb.DataController do
     end
 
     json(conn, result)
-  end
-
-  def create_config_consumer(body) do
-    {stream, consumer} = AmpsUtil.get_names(%{"name" => body["name"], "topic" => body["topic"]})
-
-    opts =
-      if body["policy"] == "by_start_time" do
-        %{
-          deliver_policy: String.to_atom(body["policy"]),
-          opt_start_time: body["start_time"]
-        }
-      else
-        %{
-          deliver_policy: String.to_atom(body["policy"])
-        }
-      end
-
-    AmpsUtil.create_consumer(stream, consumer, body["topic"], opts)
   end
 
   def create_batch_consumer(body) do
@@ -853,12 +793,6 @@ defmodule AmpsWeb.DataController do
     end
   end
 
-  def delete_config_consumer(body) do
-    {stream, consumer} = AmpsUtil.get_names(%{"name" => body["name"], "topic" => body["topic"]})
-    AmpsUtil.delete_consumer(stream, consumer)
-  end
-
-  @spec delete_batch_consumer(nil | maybe_improper_list | map) :: any
   def delete_batch_consumer(body) do
     if body["inputtype"] == "topic" do
       {stream, consumer} = AmpsUtil.get_names(%{"name" => body["name"], "topic" => body["input"]})

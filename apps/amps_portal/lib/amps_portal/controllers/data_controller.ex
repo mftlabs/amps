@@ -72,10 +72,7 @@ defmodule AmpsPortal.DataController do
   def duplicate(conn, _params) do
     body = conn.body_params()
 
-    duplicate =
-      Enum.reduce(body, true, fn clause, acc ->
-        acc && DB.find_one("users", clause) != nil
-      end)
+    duplicate = DB.find_one("users", body) != nil
 
     json(conn, duplicate)
   end
@@ -130,18 +127,6 @@ defmodule AmpsPortal.DataController do
               # end
             end
         end
-    end
-  end
-
-  def delete_rule(conn, %{"id" => id}) do
-    case Pow.Plug.current_user(conn) do
-      nil ->
-        send_resp(conn, 403, "Forbidden")
-
-      user ->
-        DB.delete_from_field("users", nil, user.id, "rules", id)
-
-        json(conn, :ok)
     end
   end
 

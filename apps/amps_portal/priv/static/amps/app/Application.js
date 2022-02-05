@@ -93,3 +93,23 @@ Ext.define("Amps.Application", {
     );
   },
 });
+
+Ext.override(Ext.data.Store, {
+  constructor: function (config) {
+    this.callParent([config]);
+    var store = this;
+    this.proxy.setListeners({
+      exception: async function (proxy, response, options, eOpts) {
+        console.log("exception");
+        if (response.status == 401) {
+          await amfutil.renew_session();
+          proxy.setHeaders({
+            Authorization: localStorage.getItem("access_token"),
+          });
+          store.reload();
+        }
+      },
+    });
+    // this.proxy.on("exception", this.onProxyException, this);
+  },
+});

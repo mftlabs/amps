@@ -25,7 +25,6 @@ Ext.define("Amps.column.Socket", {
     xtype: "socketwidget",
   },
   onWidgetAttach: function (col, widget, rec) {
-    console.log("attach");
     clearInterval(widget.timer);
     widget.removeAll();
 
@@ -67,7 +66,6 @@ Ext.define("Amps.widget.Socket", {
     if (callback) {
       cb = function (payload) {
         callback(scope, payload);
-        console.log("fetch");
       };
     } else {
       cb = function (payload) {
@@ -609,6 +607,8 @@ Ext.define("Amps.util.Utilities", {
   extend: "Ext.app.ViewController",
   singleton: true,
   renewPromise: null,
+  socketPromise: null,
+
   channel: null,
   socket: null,
   stores: [],
@@ -918,6 +918,9 @@ Ext.define("Amps.util.Utilities", {
     message,
     callback = (payload) => console.log(payload)
   ) {
+    if (amfutil.socketPromise) {
+      return;
+    }
     if (event == "update") {
       amfutil.stores
         .filter((store) => store.config.collection == message.page)
@@ -928,32 +931,49 @@ Ext.define("Amps.util.Utilities", {
       .receive("ok", (payload) => callback(payload))
       .receive("error", (err) => console.log("phoenix errored", err))
       .receive("timeout", async () => {
+        await amfutil.updateChannel();
         console.log("timed out pushing");
       });
   },
   updateChannel: async function () {
-    if (amfutil.socket) {
-      amfutil.socket.disconnect();
+    if (amfutil.socketPromise) {
+      return amfutil.socketPromise;
+    } else {
+      amfutil.socketPromise = new Promise(function (resolve, reject) {
+        if (amfutil.socket) {
+          amfutil.socket.disconnect();
+          delete amfutil.socket;
+        }
+        var token = localStorage.getItem("access_token");
+        console.log(token);
+        amfutil.socket = new window.pSocket("/socket", {
+          params: { token: token },
+        });
+        amfutil.socket.connect();
+
+        amfutil.socket.onError(async function (e) {
+          console.log(e);
+
+          amfutil.socket.disconnect();
+          amfutil.socketPromise = null;
+
+          await amfutil.renew_session();
+
+          reject();
+        });
+
+        amfutil.socket.onOpen(async function () {
+          var channel = amfutil.socket.channel("notifications");
+
+          amfutil.channel = channel;
+
+          amfutil.channelHandlers(channel);
+          amfutil.socketPromise = null;
+          resolve();
+        });
+      });
+      return amfutil.socketPromise;
     }
-    var token = localStorage.getItem("access_token");
-    console.log(token);
-    amfutil.socket = new window.pSocket("/socket", {
-      params: { token: token },
-    });
-
-    amfutil.socket.onError(async function (e) {
-      amfutil.socket.disconnect();
-      await amfutil.renew_session();
-      console.log(e);
-    });
-
-    amfutil.socket.connect();
-
-    var channel = amfutil.socket.channel("notifications");
-
-    amfutil.channel = channel;
-
-    amfutil.channelHandlers(channel);
   },
   providercallback: function (params, scope) {
     var session_params = localStorage.getItem("session_params");
@@ -1768,7 +1788,7 @@ Ext.define("Amps.util.Utilities", {
           method: "POST",
           timeout: 30000,
           params: {},
-          success: function (response) {
+          success: async function (response) {
             //console.log(response);
             var obj = Ext.decode(response.responseText);
             console.log(obj);
@@ -1776,7 +1796,7 @@ Ext.define("Amps.util.Utilities", {
               var token = obj.data.access_token;
               localStorage.setItem("access_token", token);
               localStorage.setItem("renewal_token", obj.data.renewal_token);
-              amfutil.updateChannel();
+              await amfutil.updateChannel();
             } else {
               Ext.Msg.show({
                 title: "Unauthorized or Expired Session",

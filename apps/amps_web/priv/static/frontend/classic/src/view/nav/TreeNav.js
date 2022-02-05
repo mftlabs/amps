@@ -154,21 +154,21 @@ Ext.define("Amps.view.nav.TreeNav", {
             },
           ],
         },
-        {
-          iconCls: "x-fa fa-cogs",
-          rowCls: "managedata",
-          text: "Manage Data",
-          expanded: true,
-          children: [
-            {
-              iconCls: "x-fa fa-cloud-upload",
-              leaf: true,
-              rowCls: "imports",
-              text: "Imports",
-              tooltip: "Imports",
-            },
-          ],
-        },
+        // {
+        //   iconCls: "x-fa fa-cogs",
+        //   rowCls: "managedata",
+        //   text: "Manage Data",
+        //   expanded: true,
+        //   children: [
+        //     {
+        //       iconCls: "x-fa fa-cloud-upload",
+        //       leaf: true,
+        //       rowCls: "imports",
+        //       text: "Imports",
+        //       tooltip: "Imports",
+        //     },
+        //   ],
+        // },
         {
           iconCls: "x-fa fa-user-secret",
           leaf: true,

@@ -57,8 +57,11 @@ defmodule AmpsPortal.Router do
     put("/ufa/config", UFAController, :put_agent_config)
 
     get("/topics/mailbox", DataController, :get_mailbox_topics)
+    post("/rules", UFAController, :create_agent_rule)
+    put("/rules/:id", UFAController, :update_agent_rule)
+    get("/rules/:id", UFAController, :get_agent_rule)
 
-    delete("/rules/:id", DataController, :delete_rule)
+    delete("/rules/:id", UFAController, :delete_agent_rule)
   end
 
   # Other scopes may use custom stacks.

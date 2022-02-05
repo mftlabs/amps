@@ -48,7 +48,7 @@ Ext.define("Amps.view.main.Main", {
     },
     {
       xtype: "container",
-      width: 5,
+      width: 3,
       region: "west",
     },
     {
@@ -77,7 +77,7 @@ Ext.define("Amps.view.main.Main", {
     },
     {
       xtype: "container",
-      width: 5,
+      width: 3,
       region: "east",
     },
     {

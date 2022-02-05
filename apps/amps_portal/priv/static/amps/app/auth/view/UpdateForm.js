@@ -26,29 +26,51 @@ Ext.define("Amps.form.update", {
   },
 
   convertFields: function (fields) {
-    return fields.map((field) => {
-      var f = Object.assign({}, field);
+    if (this.editing) {
+      if (this.config.update && this.config.update.readOnly) {
+        return fields.map((field) => {
+          var f = Object.assign({}, field);
 
-      if (f.xtype == "radiogroup") {
-        f.xtype = "displayfield";
-        if (f.value) {
-          f.value = f.value[f.name];
-        }
-      } else if (f.xtype == "button") {
-        f.disabled = true;
-      } else if (f.xtype == "displayfield") {
-        f.displaying = true;
+          if (this.config.update.readOnly.indexOf(f.name) >= 0) {
+            f.xtype = "displayfield";
+            f.submitValue = true;
+          } else {
+            if (f.items && f.items.length) {
+              f.items = this.convertFields(f.items);
+              // f.items =
+            }
+          }
+
+          return f;
+        });
       } else {
-        f.readOnly = true;
-        f.forceSelection = false;
-        if (f.items && f.items.length) {
-          f.items = this.convertFields(f.items);
-          // f.items =
-        }
+        return fields;
       }
+    } else {
+      return fields.map((field) => {
+        var f = Object.assign({}, field);
 
-      return f;
-    });
+        if (f.xtype == "radiogroup") {
+          f.xtype = "displayfield";
+          if (f.value) {
+            f.value = f.value[f.name];
+          }
+        } else if (f.xtype == "button") {
+          f.disabled = true;
+        } else if (f.xtype == "displayfield") {
+          f.displaying = true;
+        } else {
+          f.readOnly = true;
+          f.forceSelection = false;
+          if (f.items && f.items.length) {
+            f.items = this.convertFields(f.items);
+            // f.items =
+          }
+        }
+
+        return f;
+      });
+    }
   },
 
   setValue: async function (field) {
@@ -131,7 +153,7 @@ Ext.define("Amps.form.update", {
     }
     if (this.editing) {
       console.log(this.fields);
-      this.insert(0, this.fields);
+      this.insert(0, this.convertFields(this.fields));
 
       bcont.insert(0, [
         {
@@ -139,7 +161,7 @@ Ext.define("Amps.form.update", {
           itemId: "addaccount",
           formBind: true,
           listeners: {
-            click: function (btn) {
+            click: async function (btn) {
               var form = btn.up("form").getForm();
               var values = form.getValues();
               var mask = new Ext.LoadMask({
@@ -152,7 +174,7 @@ Ext.define("Amps.form.update", {
               console.log(values);
               values = amfutil.convertNumbers(form, values);
               console.log(values);
-              var user = amfutil.get_user();
+              var user = await amfutil.userInfo();
               console.log(scope);
               if (scope.audit) {
                 values.modifiedby = user.firstname + " " + user.lastname;

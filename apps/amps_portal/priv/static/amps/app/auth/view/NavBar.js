@@ -71,15 +71,15 @@ Ext.define("Amps.Authorized.NavBar", {
                   : []
               )
               .concat([
-                {
-                  text: "Uploads",
+                // {
+                //   text: "Uploads",
 
-                  iconCls: "x-fa fa-upload",
-                  handler: function () {
-                    console.log(ampsuploads);
-                    ampsuploads.show();
-                  },
-                },
+                //   iconCls: "x-fa fa-upload",
+                //   handler: function () {
+                //     console.log(ampsuploads);
+                //     ampsuploads.show();
+                //   },
+                // },
                 {
                   text: "Logout",
 

@@ -15,6 +15,7 @@ $enable-font-awesome: dynamic(true);
 $base-color: dynamic(rgb(0, 43, 68));
 $selected-color: dynamic(rgb(0, 0, 0));
 $hover-color: dynamic(rgb(0, 69, 104));
+$form-label-font-weight: 500;
 
 @include treelist-ui(
   $ui: "navigation",

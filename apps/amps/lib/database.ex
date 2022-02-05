@@ -155,6 +155,9 @@ defmodule Amps.DB do
   end
 
   def add_to_field(collection, body, id, field) do
+    fieldid = AmpsUtil.get_id()
+    body = Map.put(body, "_id", fieldid)
+
     case db() do
       "pg" ->
         Postgres.add_to_field(collection, body, id, field)
@@ -165,6 +168,8 @@ defmodule Amps.DB do
       "es" ->
         Elastic.add_to_field(collection, body, id, field)
     end
+
+    fieldid
   end
 
   def get_in_field(collection, id, field, idx) do

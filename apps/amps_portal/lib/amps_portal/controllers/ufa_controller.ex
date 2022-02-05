@@ -8,10 +8,7 @@ defmodule AmpsPortal.UFAController do
   def get_sched(conn, %{"username" => username}) do
     case Pow.Plug.current_user(conn) do
       nil ->
-        json(
-          conn,
-          nil
-        )
+        send_resp(conn, 403, "Forbidden")
 
       user ->
         if user.username == username do
@@ -80,10 +77,7 @@ defmodule AmpsPortal.UFAController do
   def heartbeat(conn, %{"username" => username}) do
     case Pow.Plug.current_user(conn) do
       nil ->
-        json(
-          conn,
-          nil
-        )
+        send_resp(conn, 403, "Forbidden")
 
       user ->
         AmpsEvents.send_history(
@@ -111,10 +105,7 @@ defmodule AmpsPortal.UFAController do
       }) do
     case Pow.Plug.current_user(conn) do
       nil ->
-        json(
-          conn,
-          nil
-        )
+        send_resp(conn, 403, "Forbidden")
 
       user ->
         meta = Jason.decode!(meta)
@@ -169,10 +160,7 @@ defmodule AmpsPortal.UFAController do
   def handle_download(conn, %{"rule" => rule}) do
     case Pow.Plug.current_user(conn) do
       nil ->
-        json(
-          conn,
-          nil
-        )
+        send_resp(conn, 403, "Forbidden")
 
       user ->
         case receive_message({user, rule}, self()) do
@@ -218,10 +206,7 @@ defmodule AmpsPortal.UFAController do
 
     case Pow.Plug.current_user(conn) do
       nil ->
-        json(
-          conn,
-          nil
-        )
+        send_resp(conn, 403, "Forbidden")
 
       user ->
         IO.inspect(reply)
@@ -332,10 +317,7 @@ defmodule AmpsPortal.UFAController do
   def get_agent_config(conn, _params) do
     case Pow.Plug.current_user(conn) do
       nil ->
-        json(
-          conn,
-          nil
-        )
+        send_resp(conn, 403, "Forbidden")
 
       user ->
         user = Amps.DB.find_one("users", %{"_id" => user.id})
@@ -349,10 +331,7 @@ defmodule AmpsPortal.UFAController do
   def put_agent_config(conn, _params) do
     case Pow.Plug.current_user(conn) do
       nil ->
-        json(
-          conn,
-          nil
-        )
+        send_resp(conn, 403, "Forbidden")
 
       user ->
         body = conn.body_params()
@@ -365,10 +344,7 @@ defmodule AmpsPortal.UFAController do
   def get_agent(conn, _params) do
     case Pow.Plug.current_user(conn) do
       nil ->
-        json(
-          conn,
-          nil
-        )
+        send_resp(conn, 403, "Forbidden")
 
       user ->
         user = Amps.DB.find_one("users", %{"_id" => user.id})
@@ -472,6 +448,66 @@ defmodule AmpsPortal.UFAController do
       user ->
         user = DB.find_one("users", %{"username" => user.username})
         json(conn, user["rules"])
+    end
+  end
+
+  def create_agent_rule(conn, _params) do
+    case Pow.Plug.current_user(conn) do
+      nil ->
+        send_resp(conn, 403, "Forbidden")
+
+      user ->
+        body = conn.body_params()
+        fieldid = DB.add_to_field("users", body, user.id, "rules")
+        user = DB.find_one("users", %{"_id" => user.id})
+        rule = Map.put(body, "_id", fieldid)
+        AmpsPortal.Util.agent_rule_creation(user, rule)
+
+        json(conn, :ok)
+    end
+  end
+
+  def update_agent_rule(conn, %{"id" => id}) do
+    case Pow.Plug.current_user(conn) do
+      nil ->
+        send_resp(conn, 403, "Forbidden")
+
+      user ->
+        body = conn.body_params()
+        body = Map.put(body, "_id", id)
+        DB.update_in_field("users", body, user.id, "rules", id)
+        rule = DB.get_in_field("users", user.id, "rules", id)
+        AmpsPortal.Util.agent_rule_update(user.id, rule)
+
+        json(conn, :ok)
+    end
+  end
+
+  def get_agent_rule(conn, %{"id" => id}) do
+    case Pow.Plug.current_user(conn) do
+      nil ->
+        send_resp(conn, 403, "Forbidden")
+
+      user ->
+        rule = DB.get_in_field("users", user.id, "rules", id)
+
+        json(conn, rule)
+    end
+  end
+
+  def delete_agent_rule(conn, %{"id" => id}) do
+    case Pow.Plug.current_user(conn) do
+      nil ->
+        send_resp(conn, 403, "Forbidden")
+
+      user ->
+        IO.inspect(user)
+        rule = DB.get_in_field("users", user.id, "rules", id)
+        DB.delete_from_field("users", nil, user.id, "rules", id)
+        user = DB.find_one("users", %{"_id" => user.id})
+
+        AmpsPortal.Util.agent_rule_deletion(user, rule)
+        json(conn, :ok)
     end
   end
 end
