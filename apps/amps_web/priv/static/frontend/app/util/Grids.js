@@ -17,17 +17,40 @@ Ext.define("Amps.form.RuleGrid", {
         reader: "array",
       },
     });
-    var grid = {
+    var grid = Ext.create({
       xtype: "grid",
       sortableColumns: false,
       title: "Rules",
       itemId: "rules",
       store: gridstore,
+      reloadRules: function () {
+        var gridstore = this.getStore();
+        Promise.all([amfutil.getCollectionData("rules")]).then((values) => {
+          var rules = values[0];
+          var ids = gridstore.data.items.map((rec) => rec.data._id);
+
+          console.log(ids);
+          console.log(rules);
+
+          console.log(gridstore);
+          var filtered = [];
+
+          ids.forEach((id) => {
+            var rule = rules.find((rule) => rule._id == id);
+            if (rule) {
+              filtered.push(rule);
+            }
+          });
+
+          gridstore.loadData(filtered);
+          grid.setLoading(false);
+        });
+      },
       listeners: {
         dblclick: {
           element: "body", //bind to the underlying body property on the panel
-          fn: function (grid, rowIndex, e, obj) {
-            var record = grid.record.data;
+          fn: function (e) {
+            var record = e.record.data;
             var config = ampsgrids.grids["rules"]();
             var fields = config.fields;
             if (config.update && config.update.fields) {
@@ -46,6 +69,12 @@ Ext.define("Amps.form.RuleGrid", {
               modal: true,
               layout: "fit",
               items: [myForm],
+              listeners: {
+                hide: function () {
+                  console.log(grid);
+                  grid.reloadRules();
+                },
+              },
             });
 
             win.show();
@@ -180,22 +209,17 @@ Ext.define("Amps.form.RuleGrid", {
               },
             },
           },
-    };
+    });
 
     this.setReadOnly(args["readOnly"]);
 
     this.insert(grid);
 
     if (args["value"]) {
-      var store = amfutil.createCollectionStore(
-        "rules",
-        {},
-        { autoLoad: true }
-      );
-
-      function setValues() {
+      grid.setLoading(true);
+      Promise.all([amfutil.getCollectionData("rules")]).then((values) => {
+        var rules = values[0];
         var ids = args["value"];
-        var rules = store.getData().items;
 
         console.log(ids);
         console.log(rules);
@@ -204,23 +228,15 @@ Ext.define("Amps.form.RuleGrid", {
         var filtered = [];
 
         ids.forEach((id) => {
-          var rule = rules.find((rule) => rule.data._id == id);
+          var rule = rules.find((rule) => rule._id == id);
           if (rule) {
-            delete rule.data.id;
-            filtered.push(rule.data);
+            filtered.push(rule);
           }
         });
 
         gridstore.loadData(filtered);
-      }
-
-      if (store.isLoaded()) {
-        setValues();
-      } else {
-        store.on("load", function () {
-          setValues();
-        });
-      }
+        grid.setLoading(false);
+      });
     }
 
     this.initField();

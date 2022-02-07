@@ -27,7 +27,7 @@ Ext.define("Amps.view.nav.Header", {
       flex: 1,
       style:
         "padding-top:24px;font-weight:600;font-size:24px;text-align:center;",
-      html: "AMPS Dashboard",
+      html: "AMPS Console",
     },
     {
       xtype: "container",

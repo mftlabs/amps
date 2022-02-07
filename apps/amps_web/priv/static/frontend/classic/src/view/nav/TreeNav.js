@@ -48,6 +48,7 @@ Ext.define("Amps.view.nav.TreeNav", {
           rowCls: "onboarding",
           text: "Onboarding",
           expanded: true,
+          selectable: false,
           children: [
             {
               iconCls: "x-fa fa-id-card-o",
@@ -70,6 +71,8 @@ Ext.define("Amps.view.nav.TreeNav", {
           iconCls: "x-fa fa-cogs",
           rowCls: "configuration",
           text: "Configuration",
+          selectable: false,
+
           expanded: true,
           children: [
             {

@@ -16,7 +16,11 @@ Ext.define("Amps.view.nav.MainMenu", {
       xtype: "button",
       iconCls: "x-fa fa-bars",
       handler: "toggleNavType",
-      style: "box-shadow: none;",
+      style: {
+        "box-shadow": "none",
+        border: "none",
+        // background: "var(--secondary-color)",
+      },
       // cls: "button_class",
     },
     {
@@ -24,7 +28,7 @@ Ext.define("Amps.view.nav.MainMenu", {
       xtype: "container",
       scrollable: true,
       style: {
-        background: "#32404e",
+        background: "var(--secondary-color)",
       },
       items: [
         {

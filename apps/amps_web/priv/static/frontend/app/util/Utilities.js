@@ -1192,7 +1192,7 @@ Ext.define("Amps.util.Utilities", {
   getCollectionData: async function (collection, filters = {}) {
     console.log(filters);
     var resp = await amfutil.ajaxRequest({
-      url: "/api/" + collection,
+      url: "/api/store/" + collection,
       method: "GET",
       timeout: 60000,
       params: { filters: JSON.stringify(filters ? filters : {}) },

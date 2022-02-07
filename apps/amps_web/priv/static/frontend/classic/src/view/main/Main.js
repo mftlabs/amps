@@ -108,7 +108,6 @@ Ext.define("Amps.view.main.Main", {
           handler: "onSearchPanel",
           tooltip: "Filter Records",
           hidden: true,
-          style: "font-weight:bold;color:red;",
         },
         {
           xtype: "button",
@@ -202,7 +201,6 @@ Ext.define("Amps.view.main.Main", {
               iconCls: "x-fa fa-search",
               handler: "onSearchPanel",
               tooltip: "Filter Records",
-              style: "font-weight:bold;color:red;",
             },
             {
               xtype: "button",
@@ -241,14 +239,12 @@ Ext.define("Amps.view.main.Main", {
               tooltip: "Add New",
               handler: "onAddNewButtonClicked",
             },
-            { xtype: "tbfill" },
             {
               xtype: "button",
               itemId: "searchpanelbtn",
               iconCls: "x-fa fa-search",
               handler: "onSearchPanel",
               tooltip: "Filter Records",
-              style: "font-weight:bold;color:red;",
             },
             {
               xtype: "button",
