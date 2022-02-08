@@ -1145,6 +1145,40 @@ Ext.define("Amps.controller.PageController", {
     console.log(record);
     amfutil.reprocess(grid, record.msgid);
   },
+
+  downloadExcelFormat: function () {
+    var name = amfutil.getElementByID("type_import").getValue();
+    var type = amfutil.getElementByID("action_type").getValue();
+    headers = amfutil.getHeaders(name)
+    var Head_values = this.uniques(headers['headers']);
+    if (Object.keys(headers['types']).length != 0 ) {
+        type_headers = headers["types"][type]
+       var Head_values =  Head_values.concat(this.uniques(type_headers));
+    }
+    amfutil.download("/api/data/import_sample_template_download/" +name,"post",{"headers":Head_values.join(","),"type":type});
+  },
+
+  uniques: function (arr) {
+    var a = [];
+    for (var i=0, l=arr.length; i<l; i++)
+        if (a.indexOf(arr[i]) === -1 && arr[i] !== '')
+            a.push(arr[i]);
+    return a;
+},
+  
+
+onImportClear: function () {
+    console.log("onImportClear");
+    amfutil.getElementByID('sample_format').setHidden(true)
+    amfutil.getElementByID("type_import").setRawValue("");
+    amfutil.getElementByID("action_type").setRawValue("");
+    amfutil.getElementByID("action_type").setHidden(true)
+    Ext.ComponentQuery.query('#action_type')[0].allowBlank = true;
+    field = Ext.ComponentQuery.query('#action_type')[0];
+    field.validateValue(field.getValue());
+    amfutil.getElementByID('action_type').labelEl.removeCls('x-form-required-field');
+
+  },
 });
 
 Ext.define("Amps.window.Uploads", {

@@ -49,6 +49,8 @@ defmodule AmpsWeb.Router do
     post("/data/export/:collection", DataController, :export_selection)
 
     get("/data/export-subitem/:collection/:id/:field", DataController, :export_sub_collection)
+    post("/data/import_sample_template_download/:collection", DataController, :sample_template_download)
+
     get("/users/reset/:id", DataController, :reset_password)
 
     get("/message_events/history/:msgid", UtilController, :history)

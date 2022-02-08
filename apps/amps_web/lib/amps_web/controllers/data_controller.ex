@@ -218,6 +218,8 @@ defmodule AmpsWeb.DataController do
       case collection do
         "users" ->
           ["username"]
+        "customers" ->
+            ["name"]
 
         _ ->
           ["name"]
@@ -251,6 +253,20 @@ defmodule AmpsWeb.DataController do
   def validation_check(collection, obj) do
     true
   end
+
+
+  def sample_template_download(conn, %{
+      "collection" => collection }) do
+    body = conn.body_params()
+    header = body["headers"]
+    formatted = Enum.map(String.split(header,","), fn x -> [x, bold: true] end)
+    {:ok, {name, binary}} =
+      write_in_workbook(collection, formatted, %{})
+      |> Elixlsx.write_to_memory(collection)
+    conn
+    |> send_download({:binary, binary}, filename: "#{collection}.xlsx")
+  end
+
 
   def import_data(conn, %{"collection" => collection, "file" => file}) do
     data = import_excel_data(file.path)

@@ -1518,6 +1518,7 @@ Ext.define("Amps.container.Imports", {
       items: [
         {
           xtype: "form",
+          itemId :"importform",
           items: [
             {
               xtype: "combobox",
@@ -1567,18 +1568,44 @@ Ext.define("Amps.container.Imports", {
               listeners: {
                 change: function (obj) {
                   amfutil.getElementByID("sample_format").setHidden(false);
-                },
+                  headers = amfutil.getHeaders(obj.value)
+                    if (Object.keys(headers['types']).length != 0 ) {
+                        amfutil.getElementByID("action_type").setRawValue('');
+                        amfutil.getElementByID("action_type").setHidden(false);
+                        Ext.ComponentQuery.query('#action_type')[0].allowBlank = false;
+                        field = Ext.ComponentQuery.query('#action_type')[0];
+                        field.validateValue(field.getValue());
+                        amfutil.getElementByID('action_type').labelEl.addCls('x-form-required-field');
+                        type_store = []
+                        for (i = 0 ;i < Object.keys(headers['types']).length;i++) {
+                            type_store.push({"label":Object.keys(headers['types'])[i],"field":Object.keys(headers['types'])[i]})
+                        }
+                        amfutil.getElementByID("action_type").setStore(type_store)
+                    } else {
+                        amfutil.getElementByID("action_type").setRawValue('');
+                        Ext.ComponentQuery.query('#action_type')[0].allowBlank = true;
+                        field = Ext.ComponentQuery.query('#action_type')[0];
+                        field.validateValue(field.getValue());
+                        amfutil.getElementByID('action_type').labelEl.removeCls('x-form-required-field');
+                      amfutil.getElementByID("action_type").setHidden(true); 
+                      amfutil.getElementByID("action_type").getStore().removeAll();
+                    }
+                  },
               },
+            },{
+              xtype: "combobox",
+              name: "collection",
+              fieldLabel: "Select type",
+              displayField: "label",
+              valueField: "field",
+              itemId: "action_type",
+              allowBlank: true,
+              width: 600,
+              hidden : true,
+              labelWidth: 200,
+              mode: 'local',
+              forceSelection: true,
             },
-            // {
-            //   xtype: "textfield",
-            //   name: "import_documentname",
-            //   fieldLabel: "Resource Tags",
-            //   itemId: "import_documentname",
-            //   width: 600,
-            //   labelWidth: 200,
-            //   //allowBlank: false
-            // },
             {
               xtype: "container",
               layout: "hbox",
