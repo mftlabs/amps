@@ -1496,6 +1496,176 @@ Ext.define("Amps.container.Workflow", {
     },
   ],
 });
+Ext.define("Amps.container.Imports", {
+  extend: "Ext.tab.Panel",
+  xtype: "imports",
+  scrollable: true,
+  row: {
+    xtype: "container",
+    layout: { type: "hbox" },
+  },
+  constructor: function (args) {
+    this.callParent([args]);
+  },
+  items: [
+    {
+      xtype: "panel",
+      title: "Imports",
+      padding: 10,
+      layout: {
+        type: "vbox",
+      },
+      items: [
+        {
+          xtype: "form",
+          items: [
+            {
+              xtype: "combobox",
+              name: "collection",
+              fieldLabel: "Select Import type",
+              store: [
+                {
+                  label: "Customers",
+                  field: "customers",
+                },
+                {
+                  label: "Users",
+                  field: "users",
+                },
+                {
+                  label: "Actions",
+                  field: "actions",
+                },
+                {
+                  label: "Admin",
+                  field: "admin",
+                },
+                {
+                  label: "Providers",
+                  field: "providers",
+                },
+                {
+                  label: "Rules",
+                  field: "rules",
+                },
+                {
+                  label: "Scheduler",
+                  field: "scheduler",
+                },
+                {
+                  label: "Topics",
+                  field: "topics",
+                },
+              ],
+              displayField: "label",
+              valueField: "field",
+              itemId: "type_import",
+              allowBlank: false,
+              width: 600,
+              labelWidth: 200,
+              forceSelection: true,
+              listeners: {
+                change: function (obj) {
+                  amfutil.getElementByID("sample_format").setHidden(false);
+                },
+              },
+            },
+            // {
+            //   xtype: "textfield",
+            //   name: "import_documentname",
+            //   fieldLabel: "Resource Tags",
+            //   itemId: "import_documentname",
+            //   width: 600,
+            //   labelWidth: 200,
+            //   //allowBlank: false
+            // },
+            {
+              xtype: "container",
+              layout: "hbox",
+              width: 700,
+              items: [
+                {
+                  xtype: "filefield",
+                  name: "file",
+                  itemId: "file_upload_import",
+                  fieldLabel: "Import Excel File",
+                  allowBlank: false,
+                  buttonText: "Select File...",
+                  width: 600,
+                  labelWidth: 200,
+                  accept: ".xlsx",
+                  blankText: "Supports only .xlsx file format",
+                  listeners: {
+                    change: function (fld, value) {
+                      var newValue = value.replace(/C:\\fakepath\\/g, "");
+                      fld.setRawValue(newValue);
+                    },
+                  },
+                },
+                {
+                  xtype: "button",
+                  iconCls: "x-fa fa-question-circle",
+                  tooltip: "Click here to get sample excel format",
+                  padding: 0,
+                  hidden: true,
+                  itemId: "sample_format",
+                  margin: { top: 5, left: 10 },
+                  handler: "downloadExcelFormat",
+                },
+              ],
+            },
+          ],
+          buttons: [
+            {
+              xtype: "container",
+              layout: "hbox",
+              margin: { bottom: 10 },
+              items: [
+                {
+                  xtype: "button",
+                  text: "Import Data",
+                  cls: "button_class",
+                  formBind: true,
+                  margin: { right: 10 },
+                  itemId: "importdata",
+                  handler: function () {
+                    var form = this.up("form").getForm();
+                    var values = form.getValues();
+                    var filefield = form.findField("file");
+
+                    var collection = values.collection;
+                    var file = filefield.extractFileInput().files[0];
+                    console.log(collection);
+                    console.log(file);
+
+                    amfuploads.handleUpload(
+                      encodeURI("api/data/import/" + collection),
+                      file,
+                      false
+                    );
+
+                    // var files = fields.items[1]
+                  },
+                },
+                {
+                  xtype: "button",
+                  text: "Clear",
+                  cls: "button_class",
+                  itemId: "cancel_report_message_activity_btn",
+                  handler: "onImportClear",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+
+      listeners: {
+        render: function (scope) {},
+      },
+    },
+  ],
+});
 
 Ext.define("Amps.panel.Wizard", {
   xtype: "wizard",
@@ -3339,7 +3509,17 @@ Ext.define("Amps.util.Grids", {
         "export",
       ],
       columns: [
-        { text: "Customer", dataIndex: "customer", flex: 1, type: "text" },
+        {
+          text: "Customer",
+          dataIndex: "customer",
+          flex: 1,
+          type: "combo",
+          searchOpts: {
+            store: amfutil.createCollectionStore("customers"),
+            displayField: "name",
+            valueField: "name",
+          },
+        },
         { text: "User Name", dataIndex: "username", flex: 1, type: "text" },
 
         { text: "First Name", dataIndex: "firstname", flex: 1, type: "text" },
@@ -6658,7 +6838,7 @@ Ext.define("Amps.util.Grids", {
         layout: "fit",
         items: [
           {
-            html: "Imports",
+            xtype: "imports",
           },
         ],
       },

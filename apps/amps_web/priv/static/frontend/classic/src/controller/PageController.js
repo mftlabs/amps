@@ -923,7 +923,6 @@ Ext.define("Amps.controller.PageController", {
                   amfuploads.handleUpload(
                     encodeURI("api/upload/" + topic),
                     file,
-                    topic,
                     meta
                   );
 
@@ -1161,14 +1160,16 @@ Ext.define("Amps.window.Uploads", {
     this.down("grid").setStore(this.uploads);
   },
 
-  handleUpload: async function (url, file, topic, metadata) {
+  handleUpload: async function (url, file, metadata = false) {
     await amfutil.renew_session();
     var scope = this;
     var data = new FormData();
     console.log(url);
 
     data.append("file", file);
-    data.append("meta", JSON.stringify(metadata));
+    if (metadata) {
+      data.append("meta", JSON.stringify(metadata));
+    }
 
     let request = new XMLHttpRequest();
     request.open("POST", url);
@@ -1221,7 +1222,6 @@ Ext.define("Amps.window.Uploads", {
       id: id,
       progress: 0,
       fname: file.name,
-      topic: topic,
       request: request,
       status: "Uploading",
     });

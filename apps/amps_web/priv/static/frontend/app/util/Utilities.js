@@ -98,15 +98,20 @@ const filterTypes = {
     allowBlank: false,
     forceSelection: true,
   }),
-  combo: (field) => ({
-    xtype: "combobox",
-    fieldLabel: field.text,
-    name: field.dataIndex,
-    displayField: "label",
-    valueField: "field",
-    store: field.options,
-    emptyText: "Filter by " + field.text,
-  }),
+  combo: (field, opts) => {
+    return Object.assign(
+      {
+        xtype: "combobox",
+        fieldLabel: field.text,
+        name: field.dataIndex,
+        displayField: "label",
+        valueField: "field",
+        store: field.options,
+        emptyText: "Filter by " + field.text,
+      },
+      opts
+    );
+  },
 
   date: (field) =>
     new Ext.form.FieldSet({
@@ -1189,6 +1194,36 @@ Ext.define("Amps.util.Utilities", {
     }
   },
 
+  getHeaders: function (collection) {
+    var config = ampsgrids.grids[collection]();
+    var headers = [];
+    if (config.fields) {
+      amfutil.searchFields(config.fields, function (field) {
+        if (field.name != null) {
+          console.log(field.name);
+          headers.push(field.name);
+        }
+        return field;
+      });
+    }
+    var types = {};
+    if (config.types) {
+      Object.entries(config.types).forEach((entry) => {
+        var typeconfig = entry[1];
+        var typeheaders = [];
+        amfutil.searchFields(typeconfig.fields, function (field) {
+          if (field.name != null) {
+            console.log(field.name);
+            typeheaders.push(field.name);
+          }
+          return field;
+        });
+        types[entry[0]] = typeheaders;
+      });
+    }
+    return { headers: headers, types: types };
+  },
+
   getCollectionData: async function (collection, filters = {}) {
     console.log(filters);
     var resp = await amfutil.ajaxRequest({
@@ -1254,7 +1289,10 @@ Ext.define("Amps.util.Utilities", {
   },
 
   search: function (field, func) {
+    console.log(field);
+
     field = func(field);
+    console.log(field);
     if (field.items && field.items.length) {
       field.items = field.items.map((item) => {
         return amfutil.search(item, func);
@@ -2260,7 +2298,11 @@ Ext.define("Amps.util.Utilities", {
       page.subgrids[field].columns &&
       page.subgrids[field].columns.map((field) => {
         if (field.type) {
-          return filterTypes[field.type](field);
+          if (field.searchOpts) {
+            return filterTypes[field.type](field, field.searchOpts);
+          } else {
+            return filterTypes[field.type](field);
+          }
         } else {
           return;
         }
@@ -2352,7 +2394,11 @@ Ext.define("Amps.util.Utilities", {
       page.columns &&
       page.columns.map((field) => {
         if (field.type) {
-          return filterTypes[field.type](field);
+          if (field.searchOpts) {
+            return filterTypes[field.type](field, field.searchOpts);
+          } else {
+            return filterTypes[field.type](field);
+          }
         } else {
           return;
         }

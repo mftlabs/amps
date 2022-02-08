@@ -12,6 +12,7 @@ defmodule AmpsWeb.DataController do
   alias Amps.DB
   alias AmpsWeb.Encryption
   alias Amps.SvcManager
+  alias AmpsWeb.Util
   alias AmpsWeb.ServiceController
   alias Elixlsx.Workbook
   alias Elixlsx.Sheet
@@ -135,8 +136,6 @@ defmodule AmpsWeb.DataController do
                         acc ++ [piece]
                       end)
 
-                    IO.inspect(keys)
-
                     put_in(obj, Enum.map(keys, &Access.key(&1, %{})), val)
                   end
               end
@@ -214,21 +213,100 @@ defmodule AmpsWeb.DataController do
     end)
   end
 
+  def duplicate_keys(collection, id) do
+    keys =
+      case collection do
+        "users" ->
+          ["username"]
+
+        _ ->
+          ["name"]
+      end
+
+    keys ++
+      if id do
+        ["_id"]
+      else
+        []
+      end
+  end
+
+  def duplicate_check(collection, obj, has_id) do
+    filter = %{
+      "bool" => %{
+        "should" =>
+          Enum.reduce(duplicate_keys(collection, has_id), [], fn key, acc ->
+            [%{"match" => %{key => obj[key]}} | acc]
+          end)
+      }
+    }
+
+    IO.inspect(filter)
+
+    res = DB.find_one(collection, filter)
+    IO.inspect(res)
+    res
+  end
+
+  def validation_check(collection, obj) do
+    true
+  end
+
   def import_data(conn, %{"collection" => collection, "file" => file}) do
     data = import_excel_data(file.path)
 
-    Enum.each(data, fn obj ->
-      id = obj["_id"]
-      obj = Map.drop(obj, ["_id"])
+    IO.inspect(data)
 
-      # Duplicate check
+    status =
+      Enum.reduce(data, %{"success" => [], "failed" => []}, fn obj, acc ->
+        {duplicate, has_id} =
+          if Map.has_key?(obj, "_id") do
+            case duplicate_check(collection, obj, true) do
+              nil ->
+                IO.inspect("Duplicate Not Found")
+                {false, true}
 
-      # Actions on Create
+              _ ->
+                IO.inspect("Duplicate Found")
+                {true, true}
+            end
+          else
+            case duplicate_check(collection, obj, false) do
+              nil ->
+                IO.inspect("Duplicate Not Found")
+                {false, false}
 
-      Amps.Cluster.put(Path.join([collection, "_doc", id]), obj)
-    end)
+              _ ->
+                IO.inspect("Duplicate Found")
+                {true, false}
+            end
+          end
 
-    #
+        if duplicate do
+          Map.put(acc, "failed", acc["failed"] ++ [obj])
+        else
+          Map.put(acc, "success", acc["success"] ++ [obj])
+        end
+
+        # valid = validation_check(collection, obj)
+
+        # if !duplicate && valid do
+        #   if has_id do
+        #     id = obj["_id"]
+        #     obj = Map.drop(obj, ["_id"])
+
+        #     # Duplicate check
+
+        #     # Actions on Create
+
+        #     Amps.Cluster.put(Path.join([collection, "_doc", id]), obj)
+        #   else
+        #     DB.insert(collection, obj)
+        #   end
+        # end
+      end)
+
+    json(conn, status)
   end
 
   def export_collection(conn, %{
@@ -381,38 +459,7 @@ defmodule AmpsWeb.DataController do
   end
 
   def create(conn, %{"collection" => collection}) do
-    body =
-      case collection do
-        "users" ->
-          body = conn.body_params()
-
-          body = Map.put(body, "password", nil)
-
-          # DB.insert("mailbox_auth", %{
-          #   mailbox: body["username"],
-          #   password: body["password"],
-          #   active: true
-          # })
-
-          # account = S3.Minio.create_account(conn.body_params())
-          # S3.create_schedule(account)
-          # account
-          body
-
-        # VaultDatabase.vault_store_key(conn.body_params(), collection, "account", "cred")
-        "services" ->
-          body = conn.body_params()
-
-          if body["type"] == "subscriber" do
-            {stream, consumer} = AmpsUtil.get_names(body)
-            AmpsUtil.create_consumer(stream, consumer, body["topic"])
-          end
-
-          body
-
-        _ ->
-          conn.body_params()
-      end
+    body = Util.before_create(collection, conn.body_params())
 
     {:ok, res} =
       if vault_collection(collection) do
@@ -421,29 +468,7 @@ defmodule AmpsWeb.DataController do
         DB.insert(collection, body)
       end
 
-    case collection do
-      "services" ->
-        types = SvcManager.service_types()
-
-        if Map.has_key?(types, String.to_atom(body["type"])) do
-          Amps.SvcManager.load_service(body["name"])
-        end
-
-      "scheduler" ->
-        Amps.Scheduler.load(body["name"])
-
-      "actions" ->
-        body = conn.body_params()
-
-        if body["type"] == "batch" do
-          create_batch_consumer(body)
-        end
-
-        body
-
-      _ ->
-        nil
-    end
+    Util.after_create(collection, body)
 
     IO.inspect(res)
     json(conn, res)
@@ -484,7 +509,7 @@ defmodule AmpsWeb.DataController do
         "actions" ->
           case old["type"] do
             "batch" ->
-              delete_batch_consumer(old)
+              Util.delete_batch_consumer(old)
               conn.body_params()
 
             _ ->
@@ -555,7 +580,7 @@ defmodule AmpsWeb.DataController do
         action = DB.find_one("actions", %{"_id" => id})
 
         if body["type"] == "batch" do
-          create_batch_consumer(body)
+          Util.create_batch_consumer(body)
         end
 
       "scheduler" ->
@@ -607,7 +632,7 @@ defmodule AmpsWeb.DataController do
 
       "actions" ->
         if object["type"] == "batch" do
-          delete_batch_consumer(object)
+          Util.delete_batch_consumer(object)
         end
 
       _ ->
@@ -644,29 +669,7 @@ defmodule AmpsWeb.DataController do
     updated = DB.find_one(collection, %{"_id" => id})
     IO.inspect(updated)
 
-    case collection do
-      "services" ->
-        case field do
-          "defaults" ->
-            Application.put_env(:amps, String.to_atom(body["field"]), body["value"])
-
-          _ ->
-            nil
-        end
-
-      "users" ->
-        case field do
-          "rules" ->
-            body = Map.put(body, "_id", fieldid)
-            AmpsPortal.Util.agent_rule_creation(updated, body)
-
-          _ ->
-            nil
-        end
-
-      _ ->
-        nil
-    end
+    Util.after_field_create(collection, id, field, fieldid, updated)
 
     json(conn, updated)
   end
@@ -771,34 +774,6 @@ defmodule AmpsWeb.DataController do
     end
 
     json(conn, result)
-  end
-
-  def create_batch_consumer(body) do
-    if body["inputtype"] == "topic" do
-      {stream, consumer} = AmpsUtil.get_names(%{"name" => body["name"], "topic" => body["input"]})
-
-      opts =
-        if body["policy"] == "by_start_time" do
-          %{
-            deliver_policy: String.to_atom(body["policy"]),
-            opt_start_time: body["start_time"]
-          }
-        else
-          %{
-            deliver_policy: String.to_atom(body["policy"])
-          }
-        end
-
-      AmpsUtil.create_consumer(stream, consumer, body["input"], opts)
-    end
-  end
-
-  def delete_batch_consumer(body) do
-    if body["inputtype"] == "topic" do
-      {stream, consumer} = AmpsUtil.get_names(%{"name" => body["name"], "topic" => body["input"]})
-
-      AmpsUtil.delete_consumer(stream, consumer)
-    end
   end
 
   def vault_collection(collection) do

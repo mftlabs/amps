@@ -963,9 +963,14 @@ defmodule Amps.DB do
         search
         |> format_search()
         |> Enum.reduce([], fn {k, v}, acc ->
+          IO.inspect(v)
+
           filter =
             case k do
               "exists" ->
+                %{k => v}
+
+              "bool" ->
                 %{k => v}
 
               _ ->
