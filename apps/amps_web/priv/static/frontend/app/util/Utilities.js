@@ -1194,8 +1194,23 @@ Ext.define("Amps.util.Utilities", {
     }
   },
 
+  getAllHeaders: function () {
+    var headers = {};
+    Object.entries(ampsgrids.grids).forEach((grid) => {
+      var h = amfutil.getHeaders(grid[0]);
+      if (h) {
+        headers[grid[0]] = h;
+      }
+    });
+    return JSON.stringify(headers);
+  },
+
   getHeaders: function (collection) {
     var config = ampsgrids.grids[collection]();
+    return amfutil.getFromConfig(config);
+  },
+
+  getFromConfig: function (config) {
     var headers = [];
     if (config.fields) {
       amfutil.searchFields(config.fields, function (field) {
@@ -1205,23 +1220,54 @@ Ext.define("Amps.util.Utilities", {
         }
         return field;
       });
-    }
-    var types = {};
-    if (config.types) {
-      Object.entries(config.types).forEach((entry) => {
-        var typeconfig = entry[1];
-        var typeheaders = [];
-        amfutil.searchFields(typeconfig.fields, function (field) {
-          if (field.name != null) {
-            console.log(field.name);
-            typeheaders.push(field.name);
-          }
-          return field;
+      var types = {};
+
+      if (config.types) {
+        Object.entries(config.types).forEach((entry) => {
+          var typeconfig = entry[1];
+          var typeheaders = [];
+          amfutil.searchFields(typeconfig.fields, function (field) {
+            if (field.name != null) {
+              console.log(field.name);
+              typeheaders.push(field.name);
+            }
+            return field;
+          });
+          types[entry[0]] = amfutil.uniques(typeheaders);
         });
-        types[entry[0]] = typeheaders;
-      });
+      }
+      var subgrids = {};
+
+      if (config.subgrids) {
+        Object.entries(config.subgrids).forEach((s) => {
+          var cf = s[1];
+          if (!cf.grid) {
+            amfutil.searchFields(cf.fields, function (field) {
+              if (field.name != null) {
+                console.log(field.name);
+                headers.push(s[0] + "/" + field.name);
+              }
+              return field;
+            });
+          } else {
+            subgrids[s[0]] = amfutil.getFromConfig(cf);
+          }
+        });
+      }
+
+      return {
+        headers: amfutil.uniques(headers),
+        types: Object.keys(types).length === 0 ? null : types,
+        subgrids: Object.keys(subgrids).length === 0 ? null : subgrids,
+      };
     }
-    return { headers: headers, types: types };
+  },
+
+  uniques: function (arr) {
+    var a = [];
+    for (var i = 0, l = arr.length; i < l; i++)
+      if (a.indexOf(arr[i]) === -1 && arr[i] !== "") a.push(arr[i]);
+    return a;
   },
 
   getCollectionData: async function (collection, filters = {}) {

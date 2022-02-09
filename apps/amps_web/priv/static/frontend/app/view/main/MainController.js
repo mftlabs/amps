@@ -687,7 +687,7 @@ Ext.define("Amps.view.main.MainController", {
           xtype: "textfield",
           tooltip: "The First Name of this user",
 
-          name: "firstname",
+          name: "given_name",
           itemId: "given_name",
           fieldLabel: "Given Name",
           vtype: "textbox",
@@ -707,7 +707,7 @@ Ext.define("Amps.view.main.MainController", {
         },
         {
           xtype: "textfield",
-          name: "lastname",
+          name: "surname",
           itemId: "surname",
           fieldLabel: "Last Name",
           tooltip: "The last name of the user",

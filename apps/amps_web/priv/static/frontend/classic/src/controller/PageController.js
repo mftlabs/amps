@@ -1145,6 +1145,41 @@ Ext.define("Amps.controller.PageController", {
     console.log(record);
     amfutil.reprocess(grid, record.msgid);
   },
+
+  downloadExcelFormat: function (scope) {
+    var values = scope.up("form").getValues();
+    var type = values.type;
+    if (type) {
+      if (type == "collection") {
+        if (values.collection) {
+          amfutil.download("/api/data/import/sample/" + values.collection);
+        } else {
+          Ext.toast("Select a collection");
+        }
+      } else {
+        if (values.collection) {
+          if (values.field) {
+            amfutil.download(
+              "/api/data/import/sample/" +
+                values.collection +
+                "/" +
+                values.field
+            );
+          } else {
+            Ext.toast("Select a field");
+          }
+        } else {
+          Ext.toast("Select a collection");
+        }
+      }
+    } else {
+      Ext.toast("Select a type");
+    }
+  },
+
+  onImportClear: function (scope) {
+    scope.up("form").reset();
+  },
 });
 
 Ext.define("Amps.window.Uploads", {
@@ -1161,77 +1196,80 @@ Ext.define("Amps.window.Uploads", {
   },
 
   handleUpload: async function (url, file, metadata = false) {
-    await amfutil.renew_session();
-    var scope = this;
-    var data = new FormData();
-    console.log(url);
+    return new Promise(async (resolve, reject) => {
+      await amfutil.renew_session();
+      var scope = this;
+      var data = new FormData();
+      console.log(url);
 
-    data.append("file", file);
-    if (metadata) {
-      data.append("meta", JSON.stringify(metadata));
-    }
-
-    let request = new XMLHttpRequest();
-    request.open("POST", url);
-    request.setRequestHeader(
-      "Authorization",
-      localStorage.getItem("access_token")
-    );
-
-    var id = Math.floor(Math.random() * Date.now());
-    console.log(id);
-    // upload progress event
-    var startTime = new Date();
-
-    request.upload.addEventListener("progress", function (e) {
-      // upload progress as percentage
-      var endTime = new Date();
-      var timeDiff = endTime - startTime;
-      if (timeDiff > 500) {
-        let progress = e.loaded / e.total;
-        var idx = scope.uploads.findIndex((item) => item.id == id);
-        if (progress > 0.99) {
-          progress = 0.99;
-        }
-        scope.uploads[idx].progress = progress;
-        console.log(scope.uploads[idx]);
-        startTime = new Date();
-        scope.update();
+      data.append("file", file);
+      if (metadata) {
+        data.append("meta", JSON.stringify(metadata));
       }
-    });
 
-    // request finished event
-    request.addEventListener("load", function (e) {
-      console.log(request.status);
-      console.log(request.response);
-      var idx = scope.uploads.findIndex((item) => item.id == id);
-      scope.uploads[idx].progress = 1;
+      let request = new XMLHttpRequest();
+      request.open("POST", url);
+      request.setRequestHeader(
+        "Authorization",
+        localStorage.getItem("access_token")
+      );
 
-      scope.uploads[idx].status = "Uploaded";
+      var id = Math.floor(Math.random() * Date.now());
+      console.log(id);
+      // upload progress event
+      var startTime = new Date();
+
+      request.upload.addEventListener("progress", function (e) {
+        // upload progress as percentage
+        var endTime = new Date();
+        var timeDiff = endTime - startTime;
+        if (timeDiff > 500) {
+          let progress = e.loaded / e.total;
+          var idx = scope.uploads.findIndex((item) => item.id == id);
+          if (progress > 0.99) {
+            progress = 0.99;
+          }
+          scope.uploads[idx].progress = progress;
+          console.log(scope.uploads[idx]);
+          startTime = new Date();
+          scope.update();
+        }
+      });
+
+      // request finished event
+      request.addEventListener("load", function (e) {
+        console.log(request.status);
+        console.log(request.response);
+        resolve(request.response);
+        var idx = scope.uploads.findIndex((item) => item.id == id);
+        scope.uploads[idx].progress = 1;
+
+        scope.uploads[idx].status = "Uploaded";
+        scope.update();
+      });
+
+      request.addEventListener("abort", function (e) {
+        var idx = scope.uploads.findIndex((item) => item.id == id);
+
+        scope.uploads[idx].status = "Aborted";
+        scope.update();
+      });
+
+      scope.uploads.push({
+        id: id,
+        progress: 0,
+        fname: file.name,
+        request: request,
+        status: "Uploading",
+      });
+
+      console.log(data);
+      // send POST request to server
+      request.send(data);
+
+      scope.show();
       scope.update();
     });
-
-    request.addEventListener("abort", function (e) {
-      var idx = scope.uploads.findIndex((item) => item.id == id);
-
-      scope.uploads[idx].status = "Aborted";
-      scope.update();
-    });
-
-    scope.uploads.push({
-      id: id,
-      progress: 0,
-      fname: file.name,
-      request: request,
-      status: "Uploading",
-    });
-
-    console.log(data);
-    // send POST request to server
-    request.send(data);
-
-    scope.show();
-    scope.update();
   },
 
   removeUpload: function (id) {
