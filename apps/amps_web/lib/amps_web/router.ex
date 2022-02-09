@@ -46,10 +46,23 @@ defmodule AmpsWeb.Router do
     pipe_through([:api, :api_protected])
     get("/data/export/:collection", DataController, :export_collection)
     post("/data/import/:collection", DataController, :import_data)
+    post("/data/import/:collection/:entity/:field", DataController, :import_field_data)
+
     post("/data/export/:collection", DataController, :export_selection)
 
     get("/data/export-subitem/:collection/:id/:field", DataController, :export_sub_collection)
-    post("/data/import_sample_template_download/:collection", DataController, :sample_template_download)
+
+    get(
+      "/data/import/sample/:collection",
+      DataController,
+      :sample_template_download
+    )
+
+    get(
+      "/data/import/sample/:collection/:field",
+      DataController,
+      :sample_field_template_download
+    )
 
     get("/users/reset/:id", DataController, :reset_password)
 

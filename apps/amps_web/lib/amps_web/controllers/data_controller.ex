@@ -108,122 +108,164 @@ defmodule AmpsWeb.DataController do
   end
 
   def import_excel_data(path) do
-    {:ok, tid} = Xlsxir.multi_extract(path, 0)
-    list = Xlsxir.get_list(tid)
-    headers = Enum.at(list, 0)
-    list = List.delete_at(list, 0)
+    tables = Xlsxir.multi_extract(path)
 
     data =
-      Enum.reduce(list, [], fn item, data ->
-        obj =
-          Enum.reduce(Enum.with_index(item), %{}, fn {val, idx}, obj ->
-            if val != nil do
-              key = Enum.at(headers, idx)
+      Enum.reduce(tables, [], fn {:ok, tid}, acc ->
+        list = Xlsxir.get_list(tid)
+        headers = Enum.at(list, 0)
+        list = List.delete_at(list, 0)
 
-              try do
-                val = Jason.decode!(val)
+        data =
+          Enum.reduce(list, [], fn item, data ->
+            obj =
+              Enum.reduce(Enum.with_index(item), %{}, fn {val, idx}, obj ->
+                if val != nil do
+                  key = Enum.at(headers, idx)
 
-                Map.put(obj, key, val)
-              rescue
-                e ->
-                  splits = Path.split(key)
+                  try do
+                    val = Jason.decode!(val)
 
-                  if Enum.count(splits) == 1 do
                     Map.put(obj, key, val)
-                  else
-                    keys =
-                      Enum.reduce(splits, [], fn piece, acc ->
-                        acc ++ [piece]
-                      end)
+                  rescue
+                    e ->
+                      splits = Path.split(key)
 
-                    put_in(obj, Enum.map(keys, &Access.key(&1, %{})), val)
+                      if Enum.count(splits) == 1 do
+                        Map.put(obj, key, val)
+                      else
+                        keys =
+                          Enum.reduce(splits, [], fn piece, acc ->
+                            acc ++ [piece]
+                          end)
+
+                        put_in(obj, Enum.map(keys, &Access.key(&1, %{})), val)
+                      end
                   end
-              end
-            else
+                else
+                  obj
+                end
+              end)
+
+            [
               obj
-            end
+              | data
+            ]
           end)
 
-        [
-          obj
-          | data
-        ]
+        Xlsxir.close(tid)
+        acc ++ data
       end)
 
-    Xlsxir.close(tid)
     data
   end
 
-  def get_excel_data(collection, data) do
-    Enum.reduce(data, {[], []}, fn obj, {headers, contents} ->
-      obj = ignore_keys(collection, obj)
+  def get_excel_data(collection, data, field \\ nil) do
+    config = AmpsWeb.Util.headers(collection)
 
-      {content, obj} =
-        Enum.reduce(headers, {[], obj}, fn header, {content, obj} ->
-          splits = Path.split(header)
+    config =
+      if field do
+        config["subgrids"][field]
+      else
+        config
+      end
 
-          if Enum.count(splits) == 1 do
-            v = obj[header]
+    if config["types"] do
+      headers = ["_id" | config["headers"]]
 
-            v =
-              if is_list(v) do
-                Jason.encode!(v)
-              else
-                v
-              end
+      types =
+        Enum.reduce(data, %{}, fn obj, acc ->
+          type = obj["type"]
 
-            {content ++
-               [
-                 v
-               ], Map.drop(obj, [header])}
+          if type == nil || type == "history" do
+            acc
           else
-            {content ++
-               [
-                 Enum.reduce(splits, obj, fn key, obj ->
-                   obj[key]
-                 end)
-               ],
-             pop_in(
-               obj,
-               Enum.reduce(splits, [], fn split, acc ->
-                 acc ++ [split]
-               end)
-             )
-             |> elem(1)}
-          end
-        end)
+            theaders = headers ++ config["types"][obj["type"]]
 
-      {headers, content} =
-        Enum.reduce(obj, {headers, content}, fn {k, v}, {headers, content} ->
-          if is_map(v) || is_list(v) do
-            if is_map(v) do
-              Enum.reduce(v, {headers, content}, fn {mk, mv}, {headers, content} ->
-                k = Path.join(k, mk)
-                {headers ++ [k], content ++ [mv]}
-              end)
+            content = get_content(theaders, obj)
+
+            if Map.has_key?(acc, type) do
+              Map.put(acc, type, acc[type] ++ [content])
             else
-              {headers ++ [k], content ++ [Jason.encode!(v)]}
+              Map.put(acc, type, [content])
             end
-          else
-            {headers ++ [k], content ++ [v]}
           end
         end)
 
-      {headers, contents ++ [content]}
+      Enum.reduce(types, [], fn {type, content}, acc ->
+        [create_sheet(type, headers ++ config["types"][type], content) | acc]
+      end)
+    else
+      headers = ["_id" | config["headers"]]
+
+      rows =
+        Enum.reduce(data, [], fn obj, acc ->
+          acc ++ [get_content(headers, obj)]
+        end)
+
+      [create_sheet(collection, headers, rows)]
+    end
+  end
+
+  def get_content(headers, obj) do
+    Enum.reduce(headers, [], fn header, content ->
+      splits = String.split(header, "/")
+
+      if Enum.count(splits) == 1 do
+        v = obj[header]
+
+        v =
+          if is_list(v) || is_map(v) do
+            Jason.encode!(v)
+          else
+            v
+          end
+
+        content ++ [v]
+      else
+        v =
+          Enum.reduce(splits, obj, fn key, obj ->
+            obj[key]
+          end)
+
+        content ++
+          []
+      end
     end)
   end
 
-  def duplicate_keys(collection, id) do
+  def create_sheet(name, headers, contents) do
+    formatted_contents = Enum.map(contents, fn x -> Enum.map(x, fn y -> [y] end) end)
+    IO.inspect(formatted_contents)
+    headers |> Enum.map(fn x -> [x, bold: true] end)
+    row_data = [headers | formatted_contents]
+    IO.inspect(row_data)
+    newsheet = %Sheet{name: name, rows: row_data}
+  end
+
+  def duplicate_keys(collection, id, field \\ nil) do
+    IO.inspect(collection)
+
     keys =
       case collection do
         "users" ->
-          ["username"]
+          if field do
+            case field do
+              "rules" ->
+                ["name"]
+            end
+          else
+            ["username"]
+          end
+
         "customers" ->
-            ["name"]
+          ["name"]
 
         _ ->
           ["name"]
       end
+
+    IO.inspect(keys)
 
     keys ++
       if id do
@@ -250,23 +292,74 @@ defmodule AmpsWeb.DataController do
     res
   end
 
+  def duplicate_field_check(collection, id, obj, has_id, field) do
+    filter = %{
+      "bool" => %{
+        "should" =>
+          Enum.reduce(duplicate_keys(collection, has_id, field), [], fn key, acc ->
+            [%{"match" => %{(field <> "." <> key) => obj[key]}} | acc]
+          end)
+      },
+      "_id" => id
+    }
+
+    IO.inspect(filter)
+
+    res = DB.find_one(collection, filter)
+    IO.inspect(res)
+    res
+  end
+
   def validation_check(collection, obj) do
     true
   end
 
-
   def sample_template_download(conn, %{
-      "collection" => collection }) do
-    body = conn.body_params()
-    header = body["headers"]
-    formatted = Enum.map(String.split(header,","), fn x -> [x, bold: true] end)
-    {:ok, {name, binary}} =
-      write_in_workbook(collection, formatted, %{})
-      |> Elixlsx.write_to_memory(collection)
+        "collection" => collection
+      }) do
+    data = AmpsWeb.Util.headers(collection)
+    IO.inspect(data)
+    sheets = create_sample_sheets(collection, data)
+
+    {:ok, {name, binary}} = Elixlsx.write_to_memory(%Workbook{sheets: sheets}, collection)
+
     conn
-    |> send_download({:binary, binary}, filename: "#{collection}.xlsx")
+    |> send_download({:binary, binary}, filename: "#{collection}_template.xlsx")
   end
 
+  def sample_field_template_download(conn, %{
+        "collection" => collection,
+        "field" => field
+      }) do
+    data = AmpsWeb.Util.headers(collection, field)
+
+    sheets = create_sample_sheets(collection, data)
+
+    {:ok, {name, binary}} = Elixlsx.write_to_memory(%Workbook{sheets: sheets}, collection)
+
+    conn
+    |> send_download({:binary, binary}, filename: "#{collection}_#{field}_template.xlsx")
+  end
+
+  def create_sample_sheets(collection, data) do
+    case data["types"] do
+      nil ->
+        headers =
+          data["headers"]
+          |> Enum.map(fn x -> [x, bold: true] end)
+
+        [%Sheet{name: collection, rows: [headers]} |> Sheet.set_pane_freeze(1, 0)]
+
+      _ ->
+        Enum.reduce(data["types"], [], fn {k, v}, acc ->
+          headers =
+            (data["headers"] ++ v)
+            |> Enum.map(fn x -> [x, bold: true] end)
+
+          [%Sheet{name: k, rows: [headers]} |> Sheet.set_pane_freeze(1, 0) | acc]
+        end)
+    end
+  end
 
   def import_data(conn, %{"collection" => collection, "file" => file}) do
     data = import_excel_data(file.path)
@@ -325,18 +418,78 @@ defmodule AmpsWeb.DataController do
     json(conn, status)
   end
 
+  def import_field_data(conn, %{
+        "collection" => collection,
+        "entity" => id,
+        "field" => field,
+        "file" => file
+      }) do
+    data = import_excel_data(file.path)
+
+    IO.inspect(data)
+
+    status =
+      Enum.reduce(data, %{"success" => [], "failed" => []}, fn obj, acc ->
+        {duplicate, has_id} =
+          if Map.has_key?(obj, "_id") do
+            case duplicate_field_check(collection, id, obj, true, field) do
+              nil ->
+                IO.inspect("Duplicate Not Found")
+                {false, true}
+
+              _ ->
+                IO.inspect("Duplicate Found")
+                {true, true}
+            end
+          else
+            case duplicate_field_check(collection, id, obj, false, field) do
+              nil ->
+                IO.inspect("Duplicate Not Found")
+                {false, false}
+
+              _ ->
+                IO.inspect("Duplicate Found")
+                {true, false}
+            end
+          end
+
+        if duplicate do
+          Map.put(acc, "failed", acc["failed"] ++ [obj])
+        else
+          Map.put(acc, "success", acc["success"] ++ [obj])
+        end
+
+        # valid = validation_check(collection, obj)
+
+        # if !duplicate && valid do
+        #   if has_id do
+        #     id = obj["_id"]
+        #     obj = Map.drop(obj, ["_id"])
+
+        #     # Duplicate check
+
+        #     # Actions on Create
+
+        #     Amps.Cluster.put(Path.join([collection, "_doc", id]), obj)
+        #   else
+        #     DB.insert(collection, obj)
+        #   end
+        # end
+      end)
+
+    json(conn, status)
+  end
+
   def export_collection(conn, %{
         "collection" => collection
       }) do
     IO.puts("Generating report for:::: #{collection}")
     data = DB.find(collection)
 
-    {headers, contents} = get_excel_data(collection, data)
-
-    formatted = Enum.map(headers, fn x -> [x, bold: true] end)
+    sheets = get_excel_data(collection, data)
 
     {:ok, {name, binary}} =
-      write_in_workbook(collection, formatted, contents)
+      %Workbook{sheets: sheets}
       |> Elixlsx.write_to_memory(collection)
 
     conn
@@ -350,12 +503,10 @@ defmodule AmpsWeb.DataController do
       }) do
     body = conn.body_params()
     data = DB.find_one(collection, %{"_id" => id})
-    {headers, contents} = get_excel_data(collection, data[field])
-
-    formatted = Enum.map(headers, fn x -> [x, bold: true] end)
+    sheets = get_excel_data(collection, data[field], field)
 
     {:ok, {name, binary}} =
-      write_in_workbook(collection, formatted, contents)
+      %Workbook{sheets: sheets}
       |> Elixlsx.write_to_memory(collection)
 
     conn
@@ -367,12 +518,10 @@ defmodule AmpsWeb.DataController do
 
     IO.inspect(body)
     rows = body["rows"]
-    {headers, contents} = get_excel_data(collection, rows)
-
-    formatted = Enum.map(headers, fn x -> [x, bold: true] end)
+    sheets = get_excel_data(collection, rows)
 
     {:ok, {name, binary}} =
-      write_in_workbook(collection, formatted, contents)
+      %Workbook{sheets: sheets}
       |> Elixlsx.write_to_memory(collection)
 
     conn
@@ -685,7 +834,7 @@ defmodule AmpsWeb.DataController do
     updated = DB.find_one(collection, %{"_id" => id})
     IO.inspect(updated)
 
-    Util.after_field_create(collection, id, field, fieldid, updated)
+    Util.after_field_create(collection, id, field, fieldid, body, updated)
 
     json(conn, updated)
   end
