@@ -2562,12 +2562,23 @@ Ext.define("Amps.util.Grids", {
         "export",
       ],
       columns: [
-        { text: "Name", dataIndex: "name", flex: 1, type: "text" },
+        { text: "Name", dataIndex: "name", flex: 1, type: "combo",
+          searchOpts: {
+            store: amfutil.createCollectionStore("providers"),
+            displayField: "name",
+            valueField: "name",
+          },
+        },
         {
           text: "Type",
           dataIndex: "type",
           flex: 1,
-          type: "text",
+          type: "combo",
+          searchOpts: {
+            store: amfutil.createCollectionStore("providers"),
+            displayField: "type",
+            valueField: "type",
+          },
         },
       ],
       types: {
@@ -3034,14 +3045,25 @@ Ext.define("Amps.util.Grids", {
         "export",
       ],
       columns: [
-        { text: "Name", dataIndex: "name", flex: 1, type: "text" },
+        { text: "Name", dataIndex: "name", flex: 1, type: "combo",
+          searchOpts: {
+            store: amfutil.createCollectionStore("rules"),
+            displayField: "name",
+            valueField: "name",
+          },
+        },
         { text: "Description", dataIndex: "desc", flex: 1, type: "text" },
 
         {
           text: "Output Topic",
           dataIndex: "output",
           flex: 1,
-          type: "text",
+          type: "combo",
+          searchOpts: {
+            store: amfutil.createCollectionStore("rules"),
+            displayField: "output",
+            valueField: "output",
+          },
         },
       ],
       fields: [
@@ -3129,7 +3151,12 @@ Ext.define("Amps.util.Grids", {
           dataIndex: "name",
           flex: 1,
           value: "true",
-          type: "text",
+          type: "combo",
+          searchOpts: {
+            store: amfutil.createCollectionStore("scheduler"),
+            displayField: "name",
+            valueField: "name",
+          },
         },
         {
           text: "Type",
@@ -3671,7 +3698,13 @@ Ext.define("Amps.util.Grids", {
         "export",
       ],
       columns: [
-        { text: "Name", dataIndex: "name", flex: 1, type: "text" },
+        { text: "Name", dataIndex: "name", flex: 1, type: "combo",
+          searchOpts: {
+            store: amfutil.createCollectionStore("customers"),
+            displayField: "name",
+            valueField: "name",
+          },
+        },
         {
           text: "Phone Number",
           dataIndex: "phone",
@@ -3743,7 +3776,13 @@ Ext.define("Amps.util.Grids", {
             valueField: "name",
           },
         },
-        { text: "User Name", dataIndex: "username", flex: 1, type: "text" },
+        { text: "User Name", dataIndex: "username", flex: 1, type: "combo",
+          searchOpts: {
+            store: amfutil.createCollectionStore("users"),
+            displayField: "username",
+            valueField: "username",
+          },
+        },
 
         { text: "First Name", dataIndex: "firstname", flex: 1, type: "text" },
         { text: "Last Name", dataIndex: "lastname", flex: 1, type: "text" },
@@ -5409,8 +5448,20 @@ Ext.define("Amps.util.Grids", {
         "export",
       ],
       columns: [
-        { text: "Name", dataIndex: "name", flex: 1, type: "text" },
-        { text: "Type", dataIndex: "type", flex: 1, type: "text" },
+        { text: "Name", dataIndex: "name", flex: 1, type: "combo",
+          searchOpts: {
+            store: amfutil.createCollectionStore("actions"),
+            displayField: "name",
+            valueField: "name",
+          },
+        },
+        { text: "Type", dataIndex: "type", flex: 1, type: "combo",
+          searchOpts: {
+            store: amfutil.createCollectionStore("actions"),
+            displayField: "type",
+            valueField: "type",
+          },
+        },
       ],
       fields: [
         {
@@ -5545,7 +5596,12 @@ Ext.define("Amps.util.Grids", {
           text: "Topic",
           dataIndex: "topic",
           flex: 1,
-          type: "text",
+          type: "combo",
+          searchOpts: {
+            store: amfutil.createCollectionStore("topics"),
+            displayField: "topic",
+            valueField: "topic",
+          },
         },
         // {
         //   text: "Type",
@@ -6488,7 +6544,12 @@ Ext.define("Amps.util.Grids", {
           text: "Name",
           dataIndex: "name",
           flex: 1,
-          type: "text",
+          type: "combo",
+          searchOpts: {
+            store: amfutil.createCollectionStore("keys"),
+            displayField: "name",
+            valueField: "name",
+          },
         },
         {
           text: "Username",
@@ -6507,7 +6568,12 @@ Ext.define("Amps.util.Grids", {
           text: "Type",
           dataIndex: "type",
           flex: 1,
-          type: "text",
+          type: "combo",
+          searchOpts: {
+            store: amfutil.createCollectionStore("keys"),
+            displayField: "type",
+            valueField: "type",
+          },
         },
       ],
     }),
