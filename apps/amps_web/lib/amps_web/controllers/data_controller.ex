@@ -109,7 +109,17 @@ defmodule AmpsWeb.DataController do
 
   def import_excel_data(path) do
     tables = Xlsxir.multi_extract(path)
-
+    headers  =
+      Enum.reduce(tables, [], fn {:ok, tid}, acc ->
+      list = Xlsxir.get_list(tid)
+      headers = Enum.at(list, 0)
+      IO.inspect("Headers")
+      IO.inspect(headers)
+      headers
+      end
+    )
+    IO.inspect("Headers")
+        IO.inspect(headers)
     data =
       Enum.reduce(tables, [], fn {:ok, tid}, acc ->
         list = Xlsxir.get_list(tid)
@@ -157,7 +167,7 @@ defmodule AmpsWeb.DataController do
         acc ++ data
       end)
 
-    data
+    %{"data" => data,"headers" => headers}
   end
 
   def get_excel_data(collection, data, field \\ nil) do
@@ -258,9 +268,6 @@ defmodule AmpsWeb.DataController do
             ["username"]
           end
 
-        "customers" ->
-          ["name"]
-
         _ ->
           ["name"]
       end
@@ -310,8 +317,14 @@ defmodule AmpsWeb.DataController do
     res
   end
 
-  def validation_check(collection, obj) do
-    true
+  def validation_check(collection, sourceheaders) do
+    data = AmpsWeb.Util.headers(collection)
+    IO.inspect("data")
+    IO.inspect(data["headers"])
+    IO.inspect("s headers")
+    IO.inspect(sourceheaders)
+    IO.inspect(Enum.sort(sourceheaders) == Enum.sort(data["headers"]))
+    Enum.sort(sourceheaders) == Enum.sort(data["headers"])
   end
 
   def sample_template_download(conn, %{
@@ -363,59 +376,62 @@ defmodule AmpsWeb.DataController do
 
   def import_data(conn, %{"collection" => collection, "file" => file}) do
     data = import_excel_data(file.path)
+    valid = validation_check(collection, data["headers"])
+    if valid do
+      status =
+        Enum.reduce(data["data"], %{"success" => [], "failed" => [],"is-valid-imports" => true}, fn obj, acc ->
+          {duplicate, has_id} =
+            if Map.has_key?(obj, "_id") do
+              case duplicate_check(collection, obj, true) do
+                nil ->
+                  IO.inspect("Duplicate Not Found")
+                  {false, true}
 
-    IO.inspect(data)
+                _ ->
+                  IO.inspect("Duplicate Found")
+                  {true, true}
+              end
+            else
+              case duplicate_check(collection, obj, false) do
+                nil ->
+                  IO.inspect("Duplicate Not Found")
+                  {false, false}
 
-    status =
-      Enum.reduce(data, %{"success" => [], "failed" => []}, fn obj, acc ->
-        {duplicate, has_id} =
-          if Map.has_key?(obj, "_id") do
-            case duplicate_check(collection, obj, true) do
-              nil ->
-                IO.inspect("Duplicate Not Found")
-                {false, true}
-
-              _ ->
-                IO.inspect("Duplicate Found")
-                {true, true}
+                _ ->
+                  IO.inspect("Duplicate Found")
+                  {true, false}
+              end
             end
-          else
-            case duplicate_check(collection, obj, false) do
-              nil ->
-                IO.inspect("Duplicate Not Found")
-                {false, false}
 
-              _ ->
-                IO.inspect("Duplicate Found")
-                {true, false}
+          if !duplicate do
+            if has_id do
+              id = obj["_id"]
+              obj = Map.drop(obj, ["_id"])
+
+              # Duplicate check
+
+              # Actions on Create
+
+              Amps.Cluster.put(Path.join([collection, "_doc", id]), obj)
+            else
+              DB.insert(collection, obj)
             end
           end
 
-        if duplicate do
-          Map.put(acc, "failed", acc["failed"] ++ [obj])
-        else
-          Map.put(acc, "success", acc["success"] ++ [obj])
-        end
+          if duplicate do
+            Map.put(obj , "Reason" , "Duplicate Record")
+           # IO.inspect("Duplicte recore #{obj}")
+            Map.put(acc, "failed", acc["failed"] ++ [obj])
+          else
+            Map.put(acc, "success", acc["success"] ++ [obj])
+          end
+        end)
+      IO.inspect(status)
+      json(conn, status)
+    else
+      json(conn, %{"success" => [], "failed" => [],"is-valid-imports" => false})
+    end
 
-        # valid = validation_check(collection, obj)
-
-        # if !duplicate && valid do
-        #   if has_id do
-        #     id = obj["_id"]
-        #     obj = Map.drop(obj, ["_id"])
-
-        #     # Duplicate check
-
-        #     # Actions on Create
-
-        #     Amps.Cluster.put(Path.join([collection, "_doc", id]), obj)
-        #   else
-        #     DB.insert(collection, obj)
-        #   end
-        # end
-      end)
-
-    json(conn, status)
   end
 
   def import_field_data(conn, %{
@@ -425,59 +441,61 @@ defmodule AmpsWeb.DataController do
         "file" => file
       }) do
     data = import_excel_data(file.path)
+    valid = validation_check(collection, data["headers"])
+    if valid do
+      status =
+        Enum.reduce(data["data"], %{"success" => [], "failed" => [],"is-valid-imports" => true}, fn obj, acc ->
+          {duplicate, has_id} =
+            if Map.has_key?(obj, "_id") do
+              case duplicate_field_check(collection, id, obj, true, field) do
+                nil ->
+                  IO.inspect("Duplicate Not Found")
+                  {false, true}
 
-    IO.inspect(data)
+                _ ->
+                  IO.inspect("Duplicate Found")
+                  {true, true}
+              end
+            else
+              case duplicate_field_check(collection, id, obj, false, field) do
+                nil ->
+                  IO.inspect("Duplicate Not Found")
+                  {false, false}
 
-    status =
-      Enum.reduce(data, %{"success" => [], "failed" => []}, fn obj, acc ->
-        {duplicate, has_id} =
-          if Map.has_key?(obj, "_id") do
-            case duplicate_field_check(collection, id, obj, true, field) do
-              nil ->
-                IO.inspect("Duplicate Not Found")
-                {false, true}
-
-              _ ->
-                IO.inspect("Duplicate Found")
-                {true, true}
+                _ ->
+                  IO.inspect("Duplicate Found")
+                  {true, false}
+              end
             end
+
+          if duplicate do
+            Map.put(obj , "Reason" , "Duplicate Record")
+          #  IO.inspect("Duplicte recore #{obj}")
+            Map.put(acc, "failed", acc["failed"] ++ [obj])
           else
-            case duplicate_field_check(collection, id, obj, false, field) do
-              nil ->
-                IO.inspect("Duplicate Not Found")
-                {false, false}
-
-              _ ->
-                IO.inspect("Duplicate Found")
-                {true, false}
-            end
+            Map.put(acc, "success", acc["success"] ++ [obj])
           end
 
-        if duplicate do
-          Map.put(acc, "failed", acc["failed"] ++ [obj])
-        else
-          Map.put(acc, "success", acc["success"] ++ [obj])
-        end
+          if !duplicate do
+            if has_id do
+              id = obj["_id"]
+              obj = Map.drop(obj, ["_id"])
 
-        # valid = validation_check(collection, obj)
+              # Duplicate check
 
-        # if !duplicate && valid do
-        #   if has_id do
-        #     id = obj["_id"]
-        #     obj = Map.drop(obj, ["_id"])
+              # Actions on Create
 
-        #     # Duplicate check
+              Amps.Cluster.put(Path.join([collection, "_doc", id]), obj)
+            else
+              DB.insert(collection, obj)
+            end
+          end
+        end)
 
-        #     # Actions on Create
-
-        #     Amps.Cluster.put(Path.join([collection, "_doc", id]), obj)
-        #   else
-        #     DB.insert(collection, obj)
-        #   end
-        # end
-      end)
-
-    json(conn, status)
+      json(conn, status)
+    else
+      json(conn, %{"success" => [], "failed" => [],"is-valid-imports" => true})
+    end
   end
 
   def export_collection(conn, %{

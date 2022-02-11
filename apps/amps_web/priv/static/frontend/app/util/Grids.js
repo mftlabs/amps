@@ -1721,7 +1721,7 @@ Ext.define("Amps.container.Imports", {
                   xtype: "filefield",
                   flex: 1,
                   name: "file",
-                  itemId: "file_upload_import",
+                 // itemId: "file_upload_import",
                   fieldLabel: "Import Excel File",
                   allowBlank: false,
                   buttonText: "Select File...",
@@ -1792,77 +1792,79 @@ Ext.define("Amps.container.Imports", {
             var imports = scope.up("imports");
 
             console.log(data);
-            console.log(imports.grid);
-            var config;
-
-            if (type == "collection") {
-              config = ampsgrids.grids[collection]();
-            } else {
-              config = ampsgrids.grids[collection]().subgrids[values.field];
+            if (data["is-valid-imports"] == false) {
+              Ext.toast("Invalid Import Please check import Excel file")
+            } else if (data["is-valid-imports"] == true) {
+              var config;
+              if (type == "collection") {
+                config = ampsgrids.grids[collection]();
+              } else {
+                config = ampsgrids.grids[collection]().subgrids[values.field];
+              }
+              console.log(config);
+              var grid = {
+                xtype: "tabpanel",
+                title: "Results",
+                items: [
+                  {
+                    xtype: "grid",
+                    title: "Success",
+                    store: data.success,
+                    tbar: [
+                      {
+                        xtype: "container",
+                        layout: "hbox",
+                        defaults: {
+                          flex: 1,
+                        },
+                        items: [
+                          {
+                            xtype: "displayfield",
+                            fieldLabel: "Count",
+                            value: data.success.length,
+                          },
+                        ],
+                      },
+                    ],
+                    columns: config.columns,
+                    bbar: {
+                      xtype: "pagingtoolbar",
+                      displayInfo: true,
+                    },
+                  },
+                  {
+                    xtype: "grid",
+                    title: "Failed",
+                    store: data.failed,
+                    tbar: [
+                      {
+                        xtype: "container",
+                        layout: "hbox",
+                        defaults: {
+                          flex: 1,
+                        },
+                        items: [
+                          {
+                            xtype: "displayfield",
+                            fieldLabel: "Count",
+                            value: data.failed.length,
+                          },
+                        ],
+                      },
+                    ],
+                    columns: config.columns,
+                    bbar: {
+                      xtype: "pagingtoolbar",
+                      displayInfo: true,
+                    },
+                  },
+                ],
+              };
+              var gc = amfutil.getElementByID("gridcont");
+              gc.removeAll();
+              gc.insert(grid);
             }
-
-            console.log(config);
-            var grid = {
-              xtype: "tabpanel",
-              title: "Results",
-              items: [
-                {
-                  xtype: "grid",
-                  title: "Success",
-                  store: data.success,
-                  tbar: [
-                    {
-                      xtype: "container",
-                      layout: "hbox",
-                      defaults: {
-                        flex: 1,
-                      },
-                      items: [
-                        {
-                          xtype: "displayfield",
-                          fieldLabel: "Count",
-                          value: data.success.length,
-                        },
-                      ],
-                    },
-                  ],
-                  columns: config.columns,
-                  bbar: {
-                    xtype: "pagingtoolbar",
-                    displayInfo: true,
-                  },
-                },
-                {
-                  xtype: "grid",
-                  title: "Failed",
-                  store: data.failed,
-                  tbar: [
-                    {
-                      xtype: "container",
-                      layout: "hbox",
-                      defaults: {
-                        flex: 1,
-                      },
-                      items: [
-                        {
-                          xtype: "displayfield",
-                          fieldLabel: "Count",
-                          value: data.failed.length,
-                        },
-                      ],
-                    },
-                  ],
-                  columns: config.columns,
-                  bbar: {
-                    xtype: "pagingtoolbar",
-                    displayInfo: true,
-                  },
-                },
-              ],
-            };
-            var gc = amfutil.getElementByID("gridcont");
-            gc.removeAll();
-            gc.insert(grid);
+         
           },
         },
         {
