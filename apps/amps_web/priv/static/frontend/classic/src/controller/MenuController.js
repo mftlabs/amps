@@ -100,6 +100,14 @@ Ext.define("Amps.controller.MenuController", {
     amfutil.logout();
   },
 
+  onChangePassword: function() {
+    user = JSON.parse(localStorage.getItem("user"))
+    console.log(user)
+    id= user["id"]
+    console.log(id)
+    amfutil.changePasswordAdmin(id);
+  },
+
   showUploads: function () {
     console.log("Uploads");
     amfuploads.show();

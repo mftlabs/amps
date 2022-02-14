@@ -1621,7 +1621,7 @@ Ext.define("Amps.container.Imports", {
   conts: [],
   win: new Ext.window.Window({
     title: "Load Data",
-    width: 700,
+    width: 900,
     height: 500,
     padding: 10,
     closeAction: "method-hide",
@@ -6871,7 +6871,8 @@ Ext.define("Amps.util.Grids", {
           type: "checkbox",
         },
       ],
-      options: ["approve"],
+   //   options: ["approve","resetAdmin","changePassAdmin"],
+      options: ["approve","resetAdmin"],
     }),
     keys: () => ({
       title: "Keys",

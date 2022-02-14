@@ -65,6 +65,8 @@ defmodule AmpsWeb.Router do
     )
 
     get("/users/reset/:id", DataController, :reset_password)
+    get("/admin/reset/:id", DataController, :reset_admin_password)
+    post("/admin/changepassword/:id", DataController, :change_admin_password)
 
     get("/message_events/history/:msgid", UtilController, :history)
     get("/message_events/download/:msgid", DataController, :download)

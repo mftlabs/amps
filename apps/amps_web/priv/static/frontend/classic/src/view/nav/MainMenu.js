@@ -92,6 +92,11 @@ Ext.define("Amps.view.nav.MainMenu", {
                   handler: "showUploads",
                 },
                 {
+                  text: "Change Password",
+                  iconCls: "x-fa fa-key",
+                  handler: "onChangePassword",
+                },
+                {
                   text: "Logout",
 
                   iconCls: "x-fa fa-sign-out",
