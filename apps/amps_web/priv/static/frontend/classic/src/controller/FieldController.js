@@ -8,8 +8,6 @@ Ext.define("Amps.controller.FieldController", {
 
   onAddNewButtonClicked: function (btn) {
     var tokens = Ext.util.History.getToken().split("/");
-    var record = amfutil.getElementByID(tokens[0] + "-" + tokens[2]).record;
-    console.log(record);
     var config = ampsgrids.grids[tokens[0]]().subgrids[tokens[2]];
 
     var win = Ext.create("Amps.form.add", config.window);
@@ -19,7 +17,15 @@ Ext.define("Amps.controller.FieldController", {
       }
       return values;
     });
+
     win.show();
+
+    // amfutil.getById(tokens[0], tokens[1]).then((item) => {
+    //   id = item._id;
+    //   win.down("form").entity = id;
+    //   win.show();
+    // });
+
     // ampsgrids.grids[tokens[0]].subgrids[tokens[2]].create(btn, record);
   },
 

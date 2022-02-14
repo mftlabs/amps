@@ -41,6 +41,56 @@ defmodule AmpsWeb.DataController do
 
   plug(AmpsWeb.AuditPlug)
 
+  def change_admin_password(conn, %{"id" => id}) do
+    body = conn.body_params()
+    password = body["password"]
+    user = DB.find_one("admin", %{"_id" => id})
+
+    case Application.get_env(:amps_web, AmpsWeb.Endpoint)[:authmethod] do
+      "vault" ->
+        VaultDatabase.update_vault_password(user["username"], password)
+
+      "db" ->
+        %{password_hash: hashed} = add_hash(password)
+        Map.put(user, "password", hashed)
+
+        DB.find_one_and_update("admin", %{"_id" => id}, %{
+          "password" => hashed
+        })
+    end
+
+    json(conn, :ok)
+  end
+
+  def reset_admin_password(conn, %{"id" => id}) do
+    obj = Amps.DB.find_one("users", %{"_id" => id})
+    length = 15
+
+    symbols = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMOPQRSTUVWXYZ$@~!@#$%^&*'
+
+    symbol_count = Enum.count(symbols)
+
+    password =
+      for _ <- 1..15, into: "", do: <<Enum.at(symbols, :crypto.rand_uniform(0, symbol_count))>>
+
+    # IO.inspect(password)
+    # res = PowResetPassword.Plug.update_user_password(conn, %{"password" => hashed})
+
+    case Application.get_env(:amps_web, AmpsWeb.Endpoint)[:authmethod] do
+      "vault" ->
+        VaultDatabase.update_vault_password(obj["username"], password)
+
+      "db" ->
+        %{password_hash: hashed} = add_hash(password)
+
+        DB.find_one_and_update("admin", %{"_id" => id}, %{
+          "password" => hashed
+        })
+    end
+
+    json(conn, %{success: %{password: password}})
+  end
+
   def reset_password(conn, %{"id" => id}) do
     obj = Amps.DB.find_one("users", %{"_id" => id})
     length = 15
@@ -157,7 +207,7 @@ defmodule AmpsWeb.DataController do
         acc ++ data
       end)
 
-    data
+    Enum.reverse(data)
   end
 
   def get_excel_data(collection, data, field \\ nil) do
@@ -243,77 +293,6 @@ defmodule AmpsWeb.DataController do
     newsheet = %Sheet{name: name, rows: row_data}
   end
 
-  def duplicate_keys(collection, id, field \\ nil) do
-    IO.inspect(collection)
-
-    keys =
-      case collection do
-        "users" ->
-          if field do
-            case field do
-              "rules" ->
-                ["name"]
-            end
-          else
-            ["username"]
-          end
-
-        "customers" ->
-          ["name"]
-
-        _ ->
-          ["name"]
-      end
-
-    IO.inspect(keys)
-
-    keys ++
-      if id do
-        ["_id"]
-      else
-        []
-      end
-  end
-
-  def duplicate_check(collection, obj, has_id) do
-    filter = %{
-      "bool" => %{
-        "should" =>
-          Enum.reduce(duplicate_keys(collection, has_id), [], fn key, acc ->
-            [%{"match" => %{key => obj[key]}} | acc]
-          end)
-      }
-    }
-
-    IO.inspect(filter)
-
-    res = DB.find_one(collection, filter)
-    IO.inspect(res)
-    res
-  end
-
-  def duplicate_field_check(collection, id, obj, has_id, field) do
-    filter = %{
-      "bool" => %{
-        "should" =>
-          Enum.reduce(duplicate_keys(collection, has_id, field), [], fn key, acc ->
-            [%{"match" => %{(field <> "." <> key) => obj[key]}} | acc]
-          end)
-      },
-      "_id" => id
-    }
-
-    IO.inspect(filter)
-
-    res = DB.find_one(collection, filter)
-    IO.inspect(res)
-    res
-  end
-
-  def validation_check(collection, obj) do
-    true
-  end
-
   def sample_template_download(conn, %{
         "collection" => collection
       }) do
@@ -363,121 +342,7 @@ defmodule AmpsWeb.DataController do
 
   def import_data(conn, %{"collection" => collection, "file" => file}) do
     data = import_excel_data(file.path)
-
-    IO.inspect(data)
-
-    status =
-      Enum.reduce(data, %{"success" => [], "failed" => []}, fn obj, acc ->
-        {duplicate, has_id} =
-          if Map.has_key?(obj, "_id") do
-            case duplicate_check(collection, obj, true) do
-              nil ->
-                IO.inspect("Duplicate Not Found")
-                {false, true}
-
-              _ ->
-                IO.inspect("Duplicate Found")
-                {true, true}
-            end
-          else
-            case duplicate_check(collection, obj, false) do
-              nil ->
-                IO.inspect("Duplicate Not Found")
-                {false, false}
-
-              _ ->
-                IO.inspect("Duplicate Found")
-                {true, false}
-            end
-          end
-
-        if duplicate do
-          Map.put(acc, "failed", acc["failed"] ++ [obj])
-        else
-          Map.put(acc, "success", acc["success"] ++ [obj])
-        end
-
-        # valid = validation_check(collection, obj)
-
-        # if !duplicate && valid do
-        #   if has_id do
-        #     id = obj["_id"]
-        #     obj = Map.drop(obj, ["_id"])
-
-        #     # Duplicate check
-
-        #     # Actions on Create
-
-        #     Amps.Cluster.put(Path.join([collection, "_doc", id]), obj)
-        #   else
-        #     DB.insert(collection, obj)
-        #   end
-        # end
-      end)
-
-    json(conn, status)
-  end
-
-  def import_field_data(conn, %{
-        "collection" => collection,
-        "entity" => id,
-        "field" => field,
-        "file" => file
-      }) do
-    data = import_excel_data(file.path)
-
-    IO.inspect(data)
-
-    status =
-      Enum.reduce(data, %{"success" => [], "failed" => []}, fn obj, acc ->
-        {duplicate, has_id} =
-          if Map.has_key?(obj, "_id") do
-            case duplicate_field_check(collection, id, obj, true, field) do
-              nil ->
-                IO.inspect("Duplicate Not Found")
-                {false, true}
-
-              _ ->
-                IO.inspect("Duplicate Found")
-                {true, true}
-            end
-          else
-            case duplicate_field_check(collection, id, obj, false, field) do
-              nil ->
-                IO.inspect("Duplicate Not Found")
-                {false, false}
-
-              _ ->
-                IO.inspect("Duplicate Found")
-                {true, false}
-            end
-          end
-
-        if duplicate do
-          Map.put(acc, "failed", acc["failed"] ++ [obj])
-        else
-          Map.put(acc, "success", acc["success"] ++ [obj])
-        end
-
-        # valid = validation_check(collection, obj)
-
-        # if !duplicate && valid do
-        #   if has_id do
-        #     id = obj["_id"]
-        #     obj = Map.drop(obj, ["_id"])
-
-        #     # Duplicate check
-
-        #     # Actions on Create
-
-        #     Amps.Cluster.put(Path.join([collection, "_doc", id]), obj)
-        #   else
-        #     DB.insert(collection, obj)
-        #   end
-        # end
-      end)
-
-    json(conn, status)
+    json(conn, data)
   end
 
   def export_collection(conn, %{
@@ -679,23 +544,6 @@ defmodule AmpsWeb.DataController do
 
             _ ->
               conn.body_params()
-          end
-
-        "users" ->
-          case Application.get_env(:amps_web, AmpsWeb.Endpoint)[:authmethod] do
-            "vault" ->
-              VaultDatabase.update_vault_password(conn.body_params())
-
-            "db" ->
-              body = conn.body_params()
-
-              if body["password"] != nil && body["password"] != "" do
-                password = body["password"]
-                %{password_hash: hashed} = add_hash(password)
-                Map.put(body, "password", hashed)
-              else
-                body
-              end
           end
 
         _ ->

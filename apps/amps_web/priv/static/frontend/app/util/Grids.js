@@ -679,7 +679,7 @@ Ext.define("Amps.window.Workflow", {
                                   ic.addCls("fa-circle");
                                 },
                                 style: {
-                                  color: "grey",
+                                  color: "white",
                                 },
                                 items: [
                                   {
@@ -1173,7 +1173,7 @@ Ext.define("Amps.container.Workflow.Step", {
                         fields.concat(config.update.fields);
                       }
 
-                      var myForm = Ext.create("Amps.form.update");
+                      var myForm = Ext.create("Amps.form.add");
                       myForm.loadForm(config, action, false, "services");
 
                       var form = this.up("form");
@@ -1497,396 +1497,777 @@ Ext.define("Amps.container.Workflow", {
   ],
 });
 Ext.define("Amps.container.Imports", {
-  extend: "Ext.panel.Panel",
+  extend: "Ext.grid.Panel",
   xtype: "imports",
-  scrollable: true,
+  title: "Imports",
+  sortableColumns: false,
+  invalids: 0,
   constructor: function (args) {
     this.callParent([args]);
   },
-  padding: 10,
-  layout: {
-    type: "vbox",
-    align: "stretch",
+
+  listeners: {
+    reconfigure: async function () {
+      console.log("Reconfigured");
+      var progress = amfutil.getElementByID("progress");
+      var num = 0;
+      var length = this.widgets.length;
+
+      for (var widget of this.widgets) {
+        await new Promise((resolve) => setTimeout(resolve, 25));
+        await widget.promise();
+        num++;
+        progress.updateProgress(num / length);
+      }
+      amfutil.getElementByID("import").setDisabled(false);
+      if (this.importing) {
+        this.importRecords();
+      } else {
+        this.invalids = 0;
+
+        this.setLoading(false);
+      }
+    },
   },
-  items: [
-    {
-      xtype: "form",
-      itemId: "importform",
-      layout: {
-        type: "hbox",
-        align: "stretch",
+  loadRecords: function () {
+    this.setLoading(true);
+
+    var old = this.data;
+    this.data = this.data.filter((n) => n);
+
+    this.conts = [];
+    this.widgets = [];
+    var curr;
+
+    if (this.invalids == this.data.length) {
+      this.importing = false;
+      curr = this.data.slice(0, 25);
+    } else {
+      curr = this.data.slice(this.invalids, this.invalids + 25);
+    }
+
+    var store = Ext.create("Ext.data.Store", {
+      autoLoad: true,
+      data: curr,
+      proxy: {
+        type: "memory",
+        reader: {
+          type: "json",
+        },
       },
-      items: [
-        {
-          xtype: "container",
-          flex: 2,
-          layout: {
-            type: "vbox",
-            align: "stretch",
+    });
+    this.setStore(store);
+
+    amfutil
+      .getElementByID("showing")
+      .setHtml(`Showing ${curr.length} of ${this.data.length}`);
+  },
+  importRecords: async function () {
+    this.setLoading(true);
+    this.importing = true;
+
+    var grid = this;
+    var items = this.conts;
+
+    var invalids = grid.invalids;
+
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i];
+      await item.win.duplicateCheck();
+      var valid = item.win.down("form").isValid();
+      if (valid) {
+        var form = item.win.down("form");
+        var values = form.process(form, form.getValues());
+
+        var user = amfutil.get_user();
+
+        values.createdby = user.firstname + " " + user.lastname;
+        values.created = new Date().toISOString();
+
+        values.modifiedby = user.firstname + " " + user.lastname;
+        values.modified = new Date().toISOString();
+
+        await amfutil.ajaxRequest({
+          headers: {
+            Authorization: localStorage.getItem("access_token"),
           },
-          margin: { right: 10 },
-          items: [
-            {
-              xtype: "radiogroup",
-              name: "type",
-              fieldLabel: "Import Type",
-              items: [
-                {
-                  boxLabel: "Main Field",
-                  inputValue: "collection",
-                  name: "type",
-                },
-                {
-                  boxLabel: "Sub Field",
-                  inputValue: "field",
-                  name: "type",
-                },
-              ],
-              listeners: {
-                change: function (scope, val) {
-                  var entity = amfutil.getElementByID("combocontainer");
-                  if (val.type == "collection") {
-                    entity.setActiveItem(0);
-                  } else {
-                    entity.setActiveItem(1);
-                  }
-
-                  entity.setDisabled(false);
-                },
-              },
-              displayField: "label",
-              valueField: "field",
-              allowBlank: false,
-              width: 600,
-              labelWidth: 200,
-              forceSelection: true,
+          url: "api/" + grid.route,
+          method: "POST",
+          timeout: 60000,
+          params: {},
+          jsonData: values,
+          success: function (response) {
+            grid.data[invalids + i] = null;
+            amfutil.getElementByID("number").increment();
+            delete item;
+            // grid.getStore().reload();
+          },
+          failure: function (response) {
+            mask.hide();
+            btn.setDisabled(false);
+            amfutil.onFailure(
+              `Failed to Create ${form.config.object}`,
+              response
+            );
+          },
+        });
+      } else {
+        this.invalids++;
+      }
+    }
+    // this.importing = false;
+    grid.loadRecords();
+  },
+  conts: [],
+  win: new Ext.window.Window({
+    title: "Load Data",
+    width: 700,
+    height: 500,
+    padding: 10,
+    closeAction: "method-hide",
+    items: [
+      {
+        xtype: "form",
+        itemId: "importform",
+        layout: {
+          type: "hbox",
+          align: "stretch",
+        },
+        items: [
+          {
+            xtype: "container",
+            flex: 2,
+            layout: {
+              type: "vbox",
+              align: "stretch",
             },
-            {
-              itemId: "combocontainer",
-              xtype: "fieldcontainer",
-              disabled: true,
-              layout: "card",
-              flex: 1,
-              items: [
-                {
-                  xtype: "combobox",
+            margin: { right: 10 },
+            items: [
+              {
+                xtype: "radiogroup",
+                name: "type",
+                fieldLabel: "Import Type",
+                items: [
+                  {
+                    boxLabel: "Main Field",
+                    inputValue: "collection",
+                    name: "type",
+                  },
+                  {
+                    boxLabel: "Sub Field",
+                    inputValue: "field",
+                    name: "type",
+                  },
+                ],
+                listeners: {
+                  change: function (scope, val) {
+                    var entity = amfutil.getElementByID("combocontainer");
+                    if (val.type == "collection") {
+                      entity.setActiveItem(0);
+                    } else {
+                      entity.setActiveItem(1);
+                    }
 
-                  name: "collection",
-                  fieldLabel: "Collection",
-
-                  displayField: "title",
-                  valueField: "field",
-                  allowBlank: false,
-                  labelWidth: 200,
-                  forceSelection: true,
-                  listeners: {
-                    beforerender: function (scope) {
-                      scope.setStore(
-                        Object.entries(ampsgrids.grids)
-                          .map((grid) =>
-                            Object.assign({ field: grid[0] }, grid[1]())
-                          )
-                          .filter(
-                            (grid) =>
-                              grid.fields != null && grid.title != "Keys"
-                          )
-                      );
-                    },
-                    beforeactivate: function (scope) {
-                      scope.setDisabled(false);
-                    },
-                    beforedeactivate: function (scope) {
-                      scope.setDisabled(true);
-                    },
+                    entity.setDisabled(false);
                   },
                 },
-                {
-                  xtype: "fieldcontainer",
-                  layout: {
-                    type: "hbox",
-                    // align: "stretch",
-                  },
+                displayField: "label",
+                valueField: "field",
+                allowBlank: false,
+                width: 600,
+                labelWidth: 200,
+                forceSelection: true,
+              },
+              {
+                itemId: "combocontainer",
+                xtype: "fieldcontainer",
+                disabled: true,
+                layout: "card",
+                flex: 1,
+                items: [
+                  {
+                    xtype: "combobox",
 
-                  listeners: {
-                    afterrender: function (scope) {
-                      scope.setDisabled(true);
-                    },
-                    beforeactivate: function (scope) {
-                      scope.setDisabled(false);
-                      scope.down("#collection").setDisabled(false);
-                    },
-                    beforedeactivate: function (scope) {
-                      console.log(scope);
-                      scope.setDisabled(true);
-                    },
-                  },
+                    name: "collection",
+                    fieldLabel: "Collection",
 
-                  items: [
-                    {
-                      xtype: "combobox",
-                      name: "collection",
-                      flex: 1,
-                      fieldLabel: "Collection",
-                      disabled: true,
-                      itemId: "collection",
-                      displayField: "title",
-                      valueField: "field",
-                      allowBlank: false,
-                      forceSelection: true,
-                      listeners: {
-                        beforerender: function (scope) {
-                          var fields = Object.entries(ampsgrids.grids)
+                    displayField: "title",
+                    valueField: "field",
+                    allowBlank: false,
+                    labelWidth: 200,
+                    forceSelection: true,
+                    listeners: {
+                      beforerender: function (scope) {
+                        scope.setStore(
+                          Object.entries(ampsgrids.grids)
                             .map((grid) =>
                               Object.assign({ field: grid[0] }, grid[1]())
                             )
-                            .filter((grid) => {
-                              console.log(grid);
-                              if (grid.subgrids) {
-                                return Object.values(grid.subgrids).find(
-                                  (subgrid) => subgrid.grid == true
-                                );
-                              } else {
-                                return false;
-                              }
-                            });
-                          scope.setStore(fields);
-                        },
-                        change: function (scope, val) {
-                          var data = scope.getSelectedRecord().data;
-                          var sgs = [];
-                          Object.entries(data.subgrids).forEach((sg) => {
-                            if (sg[1].grid) {
-                              var conf = Object.assign({ field: sg[0] }, sg[1]);
-                              sgs.push(conf);
-                            }
-                          });
-                          var item = amfutil.getElementByID("item");
-                          console.log(sgs);
-                          item.setStore(sgs);
-                          item.setDisabled(false);
-
-                          var entity = amfutil.getElementByID("entity");
-                          entity.setDisabled(false);
-
-                          entity.removeAll();
-
-                          entity.insert(0, {
-                            xtype: "combobox",
-                            name: "entity",
-                            flex: 1,
-                            fieldLabel: "Entity",
-                            itemId: "entity",
-                            store: amfutil.createCollectionStore(val),
-                            displayField: data.displayField,
-                            valueField: "_id",
-                            allowBlank: false,
-                            forceSelection: true,
-                          });
-                        },
+                            .filter(
+                              (grid) =>
+                                grid.fields != null && grid.title != "Keys"
+                            )
+                        );
+                      },
+                      beforeactivate: function (scope) {
+                        scope.setDisabled(false);
+                      },
+                      beforedeactivate: function (scope) {
+                        scope.setDisabled(true);
                       },
                     },
-                    {
-                      xtype: "combobox",
-                      name: "field",
-                      flex: 1,
-                      disabled: true,
-                      fieldLabel: "Field",
-                      margin: { left: 5 },
-
-                      itemId: "item",
-                      displayField: "title",
-                      valueField: "field",
-                      allowBlank: false,
-                      forceSelection: true,
+                  },
+                  {
+                    xtype: "fieldcontainer",
+                    layout: {
+                      type: "hbox",
+                      // align: "stretch",
                     },
-                    {
-                      margin: { left: 5 },
 
-                      xtype: "fieldcontainer",
-                      flex: 1,
-                      itemId: "entity",
+                    listeners: {
+                      afterrender: function (scope) {
+                        scope.setDisabled(true);
+                      },
+                      beforeactivate: function (scope) {
+                        scope.setDisabled(false);
+                        scope.down("#collection").setDisabled(false);
+                      },
+                      beforedeactivate: function (scope) {
+                        console.log(scope);
+                        scope.setDisabled(true);
+                      },
                     },
-                  ],
-                },
-              ],
-            },
-            {
-              xtype: "container",
-              layout: {
-                type: "hbox",
-                align: "stretch",
+
+                    items: [
+                      {
+                        xtype: "combobox",
+                        name: "collection",
+                        flex: 1,
+                        fieldLabel: "Collection",
+                        disabled: true,
+                        itemId: "collection",
+                        displayField: "title",
+                        valueField: "field",
+                        allowBlank: false,
+                        forceSelection: true,
+                        listeners: {
+                          beforerender: function (scope) {
+                            var fields = Object.entries(ampsgrids.grids)
+                              .map((grid) =>
+                                Object.assign({ field: grid[0] }, grid[1]())
+                              )
+                              .filter((grid) => {
+                                console.log(grid);
+                                if (grid.subgrids) {
+                                  return Object.values(grid.subgrids).find(
+                                    (subgrid) => subgrid.grid == true
+                                  );
+                                } else {
+                                  return false;
+                                }
+                              });
+                            scope.setStore(fields);
+                          },
+                          change: function (scope, val) {
+                            var data = scope.getSelectedRecord().data;
+                            var sgs = [];
+                            Object.entries(data.subgrids).forEach((sg) => {
+                              if (sg[1].grid) {
+                                var conf = Object.assign(
+                                  { field: sg[0] },
+                                  sg[1]
+                                );
+                                sgs.push(conf);
+                              }
+                            });
+                            var item = amfutil.getElementByID("item");
+                            console.log(sgs);
+                            item.setStore(sgs);
+                            item.setDisabled(false);
+
+                            var entity = amfutil.getElementByID("entity");
+                            entity.setDisabled(false);
+
+                            entity.removeAll();
+
+                            entity.insert(0, {
+                              xtype: "combobox",
+                              name: "entity",
+                              flex: 1,
+                              fieldLabel: "Entity",
+                              itemId: "entity",
+                              store: amfutil.createCollectionStore(val),
+                              displayField: data.displayField,
+                              valueField: "_id",
+                              allowBlank: false,
+                              forceSelection: true,
+                            });
+                          },
+                        },
+                      },
+                      {
+                        xtype: "combobox",
+                        name: "field",
+                        flex: 1,
+                        disabled: true,
+                        fieldLabel: "Field",
+                        margin: { left: 5 },
+
+                        itemId: "item",
+                        displayField: "title",
+                        valueField: "field",
+                        allowBlank: false,
+                        forceSelection: true,
+                      },
+                      {
+                        margin: { left: 5 },
+
+                        xtype: "fieldcontainer",
+                        flex: 1,
+                        itemId: "entity",
+                      },
+                    ],
+                  },
+                ],
               },
-              items: [
-                {
-                  xtype: "filefield",
-                  flex: 1,
-                  name: "file",
-                  itemId: "file_upload_import",
-                  fieldLabel: "Import Excel File",
-                  allowBlank: false,
-                  buttonText: "Select File...",
-                  labelWidth: 200,
-                  accept: ".xlsx",
-                  blankText: "Supports only .xlsx file format",
-                  listeners: {
-                    change: function (fld, value) {
-                      var newValue = value.replace(/C:\\fakepath\\/g, "");
-                      fld.setRawValue(newValue);
+              {
+                xtype: "container",
+                layout: {
+                  type: "hbox",
+                  align: "stretch",
+                },
+                items: [
+                  {
+                    xtype: "filefield",
+                    flex: 1,
+                    name: "file",
+                    itemId: "file_upload_import",
+                    fieldLabel: "Import Excel File",
+                    allowBlank: false,
+                    buttonText: "Select File...",
+                    labelWidth: 200,
+                    accept: ".xlsx",
+                    blankText: "Supports only .xlsx file format",
+                    listeners: {
+                      change: function (fld, value) {
+                        var newValue = value.replace(/C:\\fakepath\\/g, "");
+                        fld.setRawValue(newValue);
+                      },
                     },
                   },
-                },
-                {
-                  xtype: "button",
-                  iconCls: "x-fa fa-question-circle",
-                  tooltip: "Click here to get sample excel format",
-                  margin: { left: 5 },
-                  itemId: "sample_format",
-                  handler: "downloadExcelFormat",
-                },
-              ],
-            },
-          ],
-        },
-      ],
-      buttons: [
-        {
-          xtype: "button",
-          flex: 1,
-          text: "Import Data",
-          formBind: true,
-          itemId: "importdata",
-          handler: async function (scope) {
-            var form = this.up("form").getForm();
-            var values = form.getValues();
-            console.log(values);
-            var filefield = form.findField("file");
+                  {
+                    xtype: "button",
+                    iconCls: "x-fa fa-question-circle",
+                    tooltip: "Click here to get sample excel format",
+                    margin: { left: 5 },
+                    itemId: "sample_format",
+                    handler: function (scope) {
+                      var values = scope.up("form").getValues();
+                      var type = values.type;
+                      if (type) {
+                        if (type == "collection") {
+                          if (values.collection) {
+                            amfutil.download(
+                              "/api/data/import/sample/" + values.collection
+                            );
+                          } else {
+                            Ext.toast("Select a collection");
+                          }
+                        } else {
+                          if (values.collection) {
+                            if (values.field) {
+                              amfutil.download(
+                                "/api/data/import/sample/" +
+                                  values.collection +
+                                  "/" +
+                                  values.field
+                              );
+                            } else {
+                              Ext.toast("Select a field");
+                            }
+                          } else {
+                            Ext.toast("Select a collection");
+                          }
+                        }
+                      } else {
+                        Ext.toast("Select a type");
+                      }
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+        buttons: [
+          {
+            xtype: "button",
+            text: "Load Data",
+            formBind: true,
+            itemId: "importdata",
+            handler: async function (scope) {
+              scope.up("window").close();
+              var form = this.up("form").getForm();
+              var values = form.getValues();
+              console.log(values);
+              var filefield = form.findField("file");
 
-            var collection = values.collection;
-            var file = filefield.extractFileInput().files[0];
-            console.log(collection);
-            console.log(file);
-            var resp;
-            var type = values.type;
-            if (type == "collection") {
+              var collection = values.collection;
+              var file = filefield.extractFileInput().files[0];
+              console.log(collection);
+              console.log(file);
+              var resp;
+              var type = values.type;
               resp = await amfuploads.handleUpload(
                 encodeURI("api/data/import/" + collection),
                 file,
+                false,
                 false
               );
-            } else {
-              resp = await amfuploads.handleUpload(
-                encodeURI(
-                  "api/data/import/" +
-                    collection +
-                    "/" +
-                    values.entity +
-                    "/" +
-                    values.field
-                ),
-                file,
-                false
-              );
-            }
 
-            var data = JSON.parse(resp);
-            var imports = scope.up("imports");
+              var grid = amfutil.getElementByID("resultgrid");
+              grid.setLoading(true);
+              var data = JSON.parse(resp);
+              grid.data = data;
+              grid.widgets = [];
+              grid.conts = [];
+              var config;
 
-            console.log(data);
-            console.log(imports.grid);
-            var config;
+              if (type == "collection") {
+                grid.route = collection;
+                config = ampsgrids.grids[collection]();
+              } else {
+                config = ampsgrids.grids[collection]().subgrids[values.field];
 
-            if (type == "collection") {
-              config = ampsgrids.grids[collection]();
-            } else {
-              config = ampsgrids.grids[collection]().subgrids[values.field];
-            }
+                grid.route = [collection, values.entity, values.field].join(
+                  "/"
+                );
+              }
 
-            console.log(config);
-            var grid = {
-              xtype: "tabpanel",
-              title: "Results",
-              items: [
-                {
-                  xtype: "grid",
-                  title: "Success",
-                  store: data.success,
-                  tbar: [
-                    {
-                      xtype: "container",
-                      layout: "hbox",
-                      defaults: {
-                        flex: 1,
-                      },
-                      items: [
-                        {
-                          xtype: "displayfield",
-                          fieldLabel: "Count",
-                          value: data.success.length,
-                        },
-                      ],
+              amfutil.getElementByID("number").reset();
+
+              amfutil.getElementByID("import").setDisabled(true);
+
+              function load() {
+                var columns = config.columns.concat({
+                  xtype: "widgetcolumn",
+                  text: "Valid",
+                  width: 350,
+                  selectable: false,
+                  focusable: false,
+                  widget: {
+                    xtype: "container",
+                    width: 300,
+                    // width: 150,
+
+                    // layout: "center",
+
+                    load: function (rec) {
+                      var record = rec.data;
+                      var promise = function validity() {
+                        return new Promise(async (resolve, reject) => {
+                          var myForm = Ext.create("Amps.form.config");
+
+                          await myForm.loadForm(
+                            config,
+                            record,
+                            false,
+                            false,
+                            false
+                          );
+
+                          if (type != "collection") {
+                            myForm.entity = values.entity;
+                          }
+
+                          var win = Ext.create("Ext.window.Window", {
+                            title: "Edit Data",
+                            modal: true,
+                            width: 600,
+                            height: 600,
+                            closeAction: "method-hide",
+                            duplicateCheck: async function () {
+                              var refs =
+                                this.down("form").query("field[duplicate]");
+                              var promises = refs.map((ref) => ref.check());
+                              await Promise.all(promises);
+                            },
+                            setValid: function (valid) {
+                              this.down("#valid").setValid(valid);
+                            },
+                            items: [
+                              {
+                                xtype: "container",
+                                padding: 10,
+                                itemId: "valid",
+                                style: {
+                                  color: "white",
+                                },
+                                layout: "center",
+                                setValid: function (valid) {
+                                  var text = this.down("#text");
+                                  var icon = this.down("#icon");
+                                  if (valid) {
+                                    text.setHtml("Valid");
+                                    icon.removeCls("fa-times");
+                                    icon.addCls("fa-check");
+                                    this.setStyle({
+                                      background: "#039487",
+                                    });
+                                  } else {
+                                    text.setHtml("Invalid");
+                                    icon.removeCls("fa-check");
+                                    icon.addCls("fa-times");
+                                    this.setStyle({
+                                      background: "#8b0000",
+                                    });
+                                  }
+                                },
+
+                                items: [
+                                  {
+                                    xtype: "container",
+                                    width: 100,
+                                    layout: "hbox",
+                                    items: [
+                                      {
+                                        xtype: "container",
+                                        layout: "center",
+                                        flex: 1,
+
+                                        items: [
+                                          {
+                                            itemId: "icon",
+                                            cls: "x-fa",
+                                            xtype: "component",
+                                          },
+                                        ],
+                                      },
+                                      {
+                                        xtype: "container",
+                                        layout: "center",
+                                        flex: 3,
+
+                                        items: [
+                                          {
+                                            itemId: "text",
+                                            xtype: "component",
+                                            html: "Status",
+                                            style: {
+                                              "font-weight": 500,
+                                            },
+                                          },
+                                        ],
+                                      },
+                                    ],
+                                  },
+                                ],
+                              },
+                              myForm,
+                            ],
+                          });
+                          var cont = Ext.create({
+                            xtype: "container",
+                            // layout: "center",
+                            layout: {
+                              type: "hbox",
+                              align: "stretch",
+                            },
+                            record: rec,
+                            win: win,
+                            imported: false,
+                            setValid: function (valid) {
+                              this.down("#valid").setValid(valid);
+                            },
+                            defaults: {
+                              margin: 2,
+                            },
+                            items: [
+                              {
+                                xtype: "container",
+                                width: 75,
+                                itemId: "valid",
+                                padding: { left: 5 },
+                                style: {
+                                  color: "white",
+                                },
+                                layout: "center",
+                                setValid: function (valid) {
+                                  var text = this.down("#text");
+                                  var icon = this.down("#icon");
+                                  if (valid) {
+                                    text.setHtml("Valid");
+                                    icon.removeCls("fa-times");
+                                    icon.addCls("fa-check");
+                                    this.setStyle({
+                                      background: "#039487",
+                                    });
+                                  } else {
+                                    text.setHtml("Invalid");
+                                    icon.removeCls("fa-check");
+                                    icon.addCls("fa-times");
+                                    this.setStyle({
+                                      background: "#8b0000",
+                                    });
+                                  }
+                                },
+
+                                items: [
+                                  {
+                                    xtype: "container",
+                                    width: 75,
+                                    layout: "hbox",
+                                    items: [
+                                      {
+                                        xtype: "container",
+                                        layout: "center",
+                                        flex: 1,
+
+                                        items: [
+                                          {
+                                            itemId: "icon",
+                                            cls: "x-fa",
+                                            xtype: "component",
+                                          },
+                                        ],
+                                      },
+                                      {
+                                        xtype: "container",
+                                        layout: "center",
+                                        flex: 3,
+
+                                        items: [
+                                          {
+                                            itemId: "text",
+                                            xtype: "component",
+                                            html: "Status",
+                                            style: {
+                                              "font-weight": 500,
+                                            },
+                                          },
+                                        ],
+                                      },
+                                    ],
+                                  },
+                                ],
+                              },
+                              {
+                                width: 100,
+                                xtype: "button",
+                                itemId: "edit",
+                                scale: "small",
+                                iconCls: "x-fa fa-pencil",
+                                style: {
+                                  "font-size": ".75rem",
+                                },
+                                text: "Edit",
+                                handler: function (scope) {
+                                  var win = scope.up("container").win;
+                                  win.duplicateCheck();
+                                  win.show();
+                                },
+                              },
+                            ],
+                          });
+                          myForm.setListeners({
+                            validitychange: function (scope, valid) {
+                              cont.setValid(valid);
+                              win.setValid(valid);
+                            },
+                          });
+                          await win.duplicateCheck();
+                          this.removeAll();
+                          this.insert(cont);
+                          grid.conts.push(cont);
+                          var valid = myForm.isValid();
+                          cont.setValid(valid);
+                          win.setValid(valid);
+
+                          resolve();
+                        });
+                      };
+                      this.promise = promise;
                     },
-                  ],
-                  columns: config.columns,
-                  bbar: {
-                    xtype: "pagingtoolbar",
-                    displayInfo: true,
                   },
-                },
-                {
-                  xtype: "grid",
-                  title: "Failed",
-                  store: data.failed,
-                  tbar: [
-                    {
-                      xtype: "container",
-                      layout: "hbox",
-                      defaults: {
-                        flex: 1,
-                      },
-                      items: [
-                        {
-                          xtype: "displayfield",
-                          fieldLabel: "Count",
-                          value: data.failed.length,
-                        },
-                      ],
-                    },
-                  ],
-                  columns: config.columns,
-                  bbar: {
-                    xtype: "pagingtoolbar",
-                    displayInfo: true,
+                  onWidgetAttach: function (col, widget, rec) {
+                    grid.widgets.push(widget);
+
+                    widget.load(rec);
                   },
-                },
-              ],
-            };
-            var gc = amfutil.getElementByID("gridcont");
-            gc.removeAll();
-            gc.insert(grid);
+                });
+
+                grid.reconfigure(null, columns);
+
+                grid.loadRecords();
+                // grid.setLoading(false);
+              }
+              load();
+            },
           },
-        },
-        {
-          xtype: "button",
-          flex: 1,
-
-          text: "Clear",
-          itemId: "cancel_report_message_activity_btn",
-          handler: "onImportClear",
-        },
-      ],
+          {
+            xtype: "button",
+            text: "Clear",
+            itemId: "cancel_report_message_activity_btn",
+            handler: "onImportClear",
+          },
+        ],
+      },
+    ],
+  }),
+  scrollable: true,
+  tbar: [
+    {
+      xtype: "button",
+      text: "Load Data",
+      iconCls: "x-fa fa-upload",
+      handler: function () {
+        var grid = amfutil.getElementByID("resultgrid");
+        grid.win.show();
+      },
     },
     {
-      xtype: "container",
-      itemId: "gridcont",
-      flex: 1,
-      layout: "fit",
-      items: [],
+      xtype: "button",
+      text: "Import Valid Entries",
+      itemId: "import",
+      iconCls: "x-fa fa-save",
+      disabled: true,
+      handler: async function () {
+        var grid = amfutil.getElementByID("resultgrid");
+        // grid.setLoading(true);
+        grid.importRecords();
+      },
     },
+    {
+      xtype: "progressbar",
+      itemId: "progress",
+      width: 250,
+    },
+    {
+      itemId: "number",
+      xtype: "component",
+      reset: function () {
+        this.setHtml("Imported: 0");
+      },
+      increment: function () {
+        var html = this.getEl().dom.innerHTML;
+        var num = html.replace("Imported: ", "");
+        var num = parseInt(num);
+        num++;
+        this.setHtml("Imported: " + num.toString());
+      },
+      html: "Imported: 0",
+    },
+    {
+      itemId: "showing",
+      xtype: "component",
+      html: "Showing 0 of 0",
+    },
+    // {
+    //   xtype: "component",
+    //   html: "Grid data reflects imported data - changes made in the edit form will not reflect in the grid.",
+    // },
   ],
-
-  listeners: {
-    render: function (scope) {},
-  },
+  itemId: "resultgrid",
 });
 
 Ext.define("Amps.panel.Wizard", {
@@ -2562,7 +2943,11 @@ Ext.define("Amps.util.Grids", {
         "export",
       ],
       columns: [
-        { text: "Name", dataIndex: "name", flex: 1, type: "combo",
+        {
+          text: "Name",
+          dataIndex: "name",
+          flex: 1,
+          type: "combo",
           searchOpts: {
             store: amfutil.createCollectionStore("providers"),
             displayField: "name",
@@ -3045,7 +3430,11 @@ Ext.define("Amps.util.Grids", {
         "export",
       ],
       columns: [
-        { text: "Name", dataIndex: "name", flex: 1, type: "combo",
+        {
+          text: "Name",
+          dataIndex: "name",
+          flex: 1,
+          type: "combo",
           searchOpts: {
             store: amfutil.createCollectionStore("rules"),
             displayField: "name",
@@ -3698,7 +4087,11 @@ Ext.define("Amps.util.Grids", {
         "export",
       ],
       columns: [
-        { text: "Name", dataIndex: "name", flex: 1, type: "combo",
+        {
+          text: "Name",
+          dataIndex: "name",
+          flex: 1,
+          type: "combo",
           searchOpts: {
             store: amfutil.createCollectionStore("customers"),
             displayField: "name",
@@ -3776,7 +4169,11 @@ Ext.define("Amps.util.Grids", {
             valueField: "name",
           },
         },
-        { text: "User Name", dataIndex: "username", flex: 1, type: "combo",
+        {
+          text: "User Name",
+          dataIndex: "username",
+          flex: 1,
+          type: "combo",
           searchOpts: {
             store: amfutil.createCollectionStore("users"),
             displayField: "username",
@@ -3813,19 +4210,21 @@ Ext.define("Amps.util.Grids", {
           ),
           "customers"
         ),
-        amfutil.text("Username", "username", {
-          tooltip: "The username of this user.",
-          listeners: {
-            change: async function (cmp, value, oldValue, eOpts) {
-              await amfutil.duplicateHandler(
-                cmp,
-                { users: { username: value } },
-                "Username Already Exists",
-                amfutil.nameValidator
-              );
-            },
-          },
-        }),
+        amfutil.duplicateValidation(
+          amfutil.text("Username", "username", {
+            tooltip: "The username of this user.",
+          }),
+          async function (cmp, value, oldValue, eOpts) {
+            var clauses = { username: value };
+
+            await amfutil.duplicateHandler(
+              cmp,
+              { users: amfutil.duplicateIdCheck(clauses, cmp) },
+              "Username Already Exists",
+              amfutil.nameValidator
+            );
+          }
+        ),
         amfutil.text("First Name", "firstname", {
           tooltip: "The First Name of the user.",
         }),
@@ -3860,6 +4259,9 @@ Ext.define("Amps.util.Grids", {
           };
           return values;
         },
+      },
+      update: {
+        readOnly: ["username"],
       },
       subgrids: {
         // profiles: {
@@ -4176,29 +4578,24 @@ Ext.define("Amps.util.Grids", {
             },
           },
           fields: [
-            {
-              xtype: "textfield",
-              name: "name",
-              fieldLabel: "Rule Name",
-              allowBlank: false,
-              listeners: {
-                beforerender: async function (scope) {
-                  var tokens = Ext.util.History.getToken().split("/");
-                  var item = await amfutil.getById("users", tokens[1]);
-                  var username = item.username;
-                  scope.setListeners({
-                    change: async function (cmp, value, oldValue, eOpts) {
-                      await amfutil.duplicateHandler(
-                        cmp,
-                        { users: { "rules.name": value, username: username } },
-                        "Agent Rule Already Exists",
-                        amfutil.nameValidator
-                      );
-                    },
-                  });
-                },
+            amfutil.duplicateValidation(
+              {
+                xtype: "textfield",
+                name: "name",
+                fieldLabel: "Rule Name",
+                allowBlank: false,
               },
-            },
+              async function (cmp, value, oldValue, eOpts) {
+                var form = cmp.up("form");
+                id = form.entity;
+                await amfutil.duplicateHandler(
+                  cmp,
+                  { users: { "rules.name": value, _id: id } },
+                  "Agent Rule Already Exists",
+                  amfutil.nameValidator
+                );
+              }
+            ),
             {
               name: "type",
               fieldLabel: "Rule Type",
@@ -4279,7 +4676,9 @@ Ext.define("Amps.util.Grids", {
           transform: function (record) {
             console.log(record);
             if (record.fmeta) {
-              record.fmeta = JSON.parse(record.fmeta);
+              try {
+                record.fmeta = JSON.parse(record.fmeta);
+              } catch (e) {}
             }
             return record;
           },
@@ -5448,39 +5847,36 @@ Ext.define("Amps.util.Grids", {
         "export",
       ],
       columns: [
-        { text: "Name", dataIndex: "name", flex: 1, type: "combo",
-          searchOpts: {
-            store: amfutil.createCollectionStore("actions"),
-            displayField: "name",
-            valueField: "name",
-          },
+        {
+          text: "Name",
+          dataIndex: "name",
+          flex: 1,
+          type: "text",
         },
-        { text: "Type", dataIndex: "type", flex: 1, type: "combo",
-          searchOpts: {
-            store: amfutil.createCollectionStore("actions"),
-            displayField: "type",
-            valueField: "type",
-          },
+        {
+          text: "Type",
+          dataIndex: "type",
+          flex: 1,
+          type: "text",
         },
       ],
       fields: [
-        {
-          xtype: "textfield",
-          name: "name",
-          fieldLabel: "Name",
-          tooltip: "Unique Action Name",
-          allowBlank: false,
-          listeners: {
-            change: async function (cmp, value, oldValue, eOpts) {
-              await amfutil.duplicateHandler(
-                cmp,
-                { actions: { name: value } },
-                "Service Already Exists",
-                amfutil.nameValidator
-              );
-            },
+        amfutil.duplicateValidation(
+          {
+            xtype: "textfield",
+            name: "name",
+            fieldLabel: "Name",
+            tooltip: "Unique Action Name",
           },
-        },
+          async function (cmp, value) {
+            await amfutil.duplicateHandler(
+              cmp,
+              { actions: amfutil.duplicateIdCheck({ name: value }, cmp) },
+              "Action Already Exists",
+              amfutil.nameValidator
+            );
+          }
+        ),
         {
           xtype: "textfield",
           name: "desc",
@@ -5489,6 +5885,9 @@ Ext.define("Amps.util.Grids", {
 
           allowBlank: false,
         },
+        // amfutil.checkbox("Active", "active", true, {
+        //   tooltip: "Whether this action is active.",
+        // }),
         amfutil.localCombo("Action Type", "type", null, "field", "label", {
           listeners: {
             beforerender: function (scope) {
@@ -5577,6 +5976,7 @@ Ext.define("Amps.util.Grids", {
 
           return values;
         },
+        readOnly: ["name"],
       },
       options: ["active", "delete"],
     }),
@@ -7122,8 +7522,7 @@ Ext.define("Amps.util.Grids", {
     }),
     imports: () => ({
       view: {
-        xtype: "panel",
-        title: "Imports",
+        xtype: "container",
         layout: "fit",
         items: [
           {

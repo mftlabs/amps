@@ -883,13 +883,13 @@ Ext.define("Amps.Pages", {
 
       return {
         actionbar: [
-          // {
-          //   xtype: "button",
-          //   iconCls: "x-fa fa-search",
-          //   handler: function () {
-          //     store.reload();
-          //   },
-          // },
+          {
+            xtype: "button",
+            iconCls: "x-fa fa-search",
+            handler: function () {
+              store.reload();
+            },
+          },
           {
             xtype: "button",
             iconCls: "x-fa fa-refresh",

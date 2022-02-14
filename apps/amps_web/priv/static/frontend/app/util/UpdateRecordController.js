@@ -509,7 +509,14 @@ Ext.define("Amps.util.UpdateRecordController", {
           });
 
           grid.setListeners({
-            rowdblclick: function (grid, record, element, rowIndex, e, eOpts) {
+            rowdblclick: async function (
+              grid,
+              record,
+              element,
+              rowIndex,
+              e,
+              eOpts
+            ) {
               console.log(rowIndex);
               console.log(route);
               // amfutil.hideAllButtons();
@@ -544,6 +551,10 @@ Ext.define("Amps.util.UpdateRecordController", {
 
               var updateForm = Ext.create("Amps.form.update");
               updateForm.loadForm(config, record.data);
+              var tokens = currRoute.split("/");
+              var item = await amfutil.getById(tokens[0], tokens[1]);
+              id = item._id;
+              updateForm.entity = id;
               console.log(config.types);
               console.log(gridinfo);
               var win = Ext.create("Ext.window.Window", {

@@ -4,7 +4,7 @@ defmodule AmpsWeb.Util do
   def headers(collection, field \\ nil) do
     headers = %{
       "actions" => %{
-        "headers" => ["name", "desc", "type"],
+        "headers" => ["name", "desc", "active", "type"],
         "subgrids" => nil,
         "types" => %{
           "batch" => [

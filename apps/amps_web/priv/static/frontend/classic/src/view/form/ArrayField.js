@@ -12,7 +12,6 @@ Ext.define("Amps.form.ArrayField", {
 
   constructor: function (args) {
     this.callParent([args]);
-    console.log(args);
 
     this.fields = [];
 
@@ -24,8 +23,6 @@ Ext.define("Amps.form.ArrayField", {
     } else {
       this.setTitle("ArrayField");
     }
-
-    console.log(this);
 
     this.name = args["name"];
 
@@ -74,15 +71,11 @@ Ext.define("Amps.form.ArrayField", {
   },
 
   getValue: function () {
-    console.log(this);
     var val = [];
     this.fields.forEach((field) => {
       var f = amfutil.getElementByID(field);
-      console.log(f);
-      console.log(f.getValue());
       val.push(f.getValue());
     });
-    console.log(JSON.stringify(val));
     return JSON.stringify(val);
   },
 
@@ -185,7 +178,6 @@ Ext.define("Amps.form.ArrayField.Field", {
     this.deregister = function () {
       args.deregister(name);
     };
-    console.log(args);
     this.fields = args["fields"];
     this.insertFields(args["fields"]);
     // console.log(scope.down("#addMenu"));
@@ -195,19 +187,16 @@ Ext.define("Amps.form.ArrayField.Field", {
 
   getValue: function () {
     var scope = this;
-    console.log(scope);
     var data = {};
-    console.log(this.fields);
     this.fields.forEach((field) => {
       var cmp = amfutil.getElementByID(scope.name + "-" + field.name);
       data[cmp.name] = cmp.getValue();
-      console.log(cmp);
+      // console.log(cmp);
     });
     return data;
   },
 
   convert: function (v) {
-    console.log(v);
     return v;
   },
 
@@ -228,7 +217,6 @@ Ext.define("Amps.form.ArrayField.Field", {
 
     for (var i = 0; i < fields.length; i++) {
       var ref = this.name + "-" + fields[i].name;
-      console.log(ref);
       var field = Object.assign({ id: ref, isFormField: false }, fields[i]);
       items.push(field);
       if (items.length == 2) {
@@ -244,11 +232,9 @@ Ext.define("Amps.form.ArrayField.Field", {
   },
 
   setReadOnly: function (readOnly) {
-    console.log(readOnly);
     var buttons = Ext.ComponentQuery.query("#fieldbutton");
     // var fi = Ext.ComponentQuery.query("fields");
 
-    console.log(buttons);
     if (readOnly) {
       buttons.forEach((b) => {
         console.log(b);

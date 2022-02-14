@@ -7,7 +7,50 @@ Ext.define("Amps.form.add", {
   scrollable: true,
   // resizable: false,
   layout: "fit",
-  loadForm: function (item, fields, process = (form, val) => val, request) {
+
+  setValue: async function (field) {
+    var f = await Object.assign({}, field);
+    // console.log(f);
+    var config = this.config;
+    var record = this.record;
+    var scope = this;
+    // console.log(f);
+    f.value = record[f.name];
+
+    if (f.xtype == "radiogroup") {
+      f.value = {};
+      f.value[f.name] = record[f.name];
+    } else {
+      if (f.items && f.items.length) {
+        f.items = await Promise.all(
+          f.items.map(async (item) => {
+            return scope.setValue(item);
+          })
+        );
+      }
+    }
+
+    return f;
+  },
+
+  setValues: async function (fields) {
+    var scope = this;
+
+    console.log(fields);
+    fields = await Promise.all(
+      fields.map(async function (field) {
+        return scope.setValue(field);
+      })
+    );
+    return fields;
+  },
+
+  loadForm: function (
+    item,
+    fields,
+    process = (form, val) => val,
+    request = false
+  ) {
     this.item = item;
     this.title = "Create " + item;
     this.process = process;

@@ -409,7 +409,7 @@ Ext.define("Amps.controller.PageController", {
       if (rows.length) {
         deletable = false;
         msg =
-          "This action can't be deleted, it is in use by one or more rules.";
+          "This action can't be deleted, it is in use by one or more subscribers.";
         title = "Error: Action in Use.";
       }
     }
@@ -479,6 +479,7 @@ Ext.define("Amps.controller.PageController", {
       });
     }
   },
+  resetAdminPassword: async function () {},
 
   resetPassword: async function (grid, rowIndex, colIndex, e) {
     var record = grid.getStore().getAt(rowIndex);
@@ -1195,10 +1196,11 @@ Ext.define("Amps.window.Uploads", {
     this.down("grid").setStore(this.uploads);
   },
 
-  handleUpload: async function (url, file, metadata = false) {
+  handleUpload: async function (url, file, metadata = false, show = true) {
+    var scope = this;
+
     return new Promise(async (resolve, reject) => {
       await amfutil.renew_session();
-      var scope = this;
       var data = new FormData();
       console.log(url);
 
@@ -1221,6 +1223,7 @@ Ext.define("Amps.window.Uploads", {
 
       request.upload.addEventListener("progress", function (e) {
         // upload progress as percentage
+        console.log(e);
         var endTime = new Date();
         var timeDiff = endTime - startTime;
         if (timeDiff > 500) {
@@ -1240,12 +1243,12 @@ Ext.define("Amps.window.Uploads", {
       request.addEventListener("load", function (e) {
         console.log(request.status);
         console.log(request.response);
-        resolve(request.response);
         var idx = scope.uploads.findIndex((item) => item.id == id);
         scope.uploads[idx].progress = 1;
 
         scope.uploads[idx].status = "Uploaded";
         scope.update();
+        resolve(request.response);
       });
 
       request.addEventListener("abort", function (e) {
@@ -1266,8 +1269,9 @@ Ext.define("Amps.window.Uploads", {
       console.log(data);
       // send POST request to server
       request.send(data);
-
-      scope.show();
+      if (show) {
+        scope.show();
+      }
       scope.update();
     });
   },

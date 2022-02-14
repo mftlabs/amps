@@ -625,7 +625,7 @@ Ext.define("Amps.util.Utilities", {
       itemId: "approve",
       handler: "approveUser",
       getClass: function (v, meta, record) {
-        console.log(record);
+        // console.log(record);
         var style;
         if (record.data.approved) {
           style = "active";
@@ -689,6 +689,13 @@ Ext.define("Amps.util.Utilities", {
       itemId: "resetPassword",
       tooltip: "Click here to reset user password",
       handler: "resetPassword",
+    },
+    resetAdmin: {
+      name: "link",
+      iconCls: "x-fa fa-key actionicon",
+      itemId: "resetPassword",
+      tooltip: "Click here to reset user password",
+      handler: "resetAdminPassword",
     },
     upload: {
       name: "upload",
@@ -1860,53 +1867,66 @@ Ext.define("Amps.util.Utilities", {
   },
 
   renew_session: async function () {
-    if (amfutil.renewPromise) {
-      await amfutil.renewPromise;
+    console.log(localStorage.getItem("renewing"));
+    if (localStorage.getItem("renewing")) {
+      new Promise(function (resolve, reject) {
+        setTimeout(function () {
+          if (!localStorage.getItem("renewing")) {
+            resolve();
+          }
+        }, 250);
+      });
     } else {
-      amfutil.renewPromise = new Promise(function (resolve, reject) {
-        Ext.Ajax.request({
-          url: "/api/session/renew",
-          headers: {
-            Authorization: localStorage.getItem("renewal_token"),
-          },
-          method: "POST",
-          timeout: 30000,
-          params: {},
-          success: async function (response) {
-            //console.log(response);
-            var obj = Ext.decode(response.responseText);
-            console.log(obj);
-            if (obj.data) {
-              var token = obj.data.access_token;
-              localStorage.setItem("access_token", token);
-              localStorage.setItem("renewal_token", obj.data.renewal_token);
-              await amfutil.updateChannel();
-            } else {
+      if (amfutil.renewPromise) {
+        await amfutil.renewPromise;
+      } else {
+        localStorage.setItem("renewing", "true");
+        amfutil.renewPromise = new Promise(function (resolve, reject) {
+          Ext.Ajax.request({
+            url: "/api/session/renew",
+            headers: {
+              Authorization: localStorage.getItem("renewal_token"),
+            },
+            method: "POST",
+            timeout: 30000,
+            params: {},
+            success: async function (response) {
+              //console.log(response);
+              var obj = Ext.decode(response.responseText);
+              console.log(obj);
+              if (obj.data) {
+                var token = obj.data.access_token;
+                localStorage.setItem("access_token", token);
+                localStorage.setItem("renewal_token", obj.data.renewal_token);
+                await amfutil.updateChannel();
+                localStorage.removeItem("renewing");
+              } else {
+                Ext.Msg.show({
+                  title: "Unauthorized or Expired Session",
+                  message:
+                    "Your session has expired or is no longer authorized, you will be redirected to Login.",
+                });
+                amfutil.logout();
+              }
+              amfutil.renewPromise = null;
+
+              resolve();
+            },
+            failure: function (response) {
               Ext.Msg.show({
                 title: "Unauthorized or Expired Session",
                 message:
                   "Your session has expired or is no longer authorized, you will be redirected to Login.",
               });
               amfutil.logout();
-            }
-            amfutil.renewPromise = null;
+              amfutil.renewPromise = null;
 
-            resolve();
-          },
-          failure: function (response) {
-            Ext.Msg.show({
-              title: "Unauthorized or Expired Session",
-              message:
-                "Your session has expired or is no longer authorized, you will be redirected to Login.",
-            });
-            amfutil.logout();
-            amfutil.renewPromise = null;
-
-            reject();
-          },
+              reject();
+            },
+          });
         });
-      });
-      await amfutil.renewPromise;
+        await amfutil.renewPromise;
+      }
     }
   },
 
@@ -1920,28 +1940,90 @@ Ext.define("Amps.util.Utilities", {
     }
   },
 
-  duplicateHandler: async function (cmp, value, message, validator) {
-    var duplicate = await amfutil.checkDuplicate(value);
+  duplicateValidation: function (config, check) {
+    return Ext.apply(config, {
+      validator: function (val) {
+        // check(this, val);
+        return this.validCheck;
+      },
+      check: async function () {
+        await check(this, this.getValue());
+      },
+      duplicate: true,
+      listeners: amfutil.duplicateListeners(check),
+    });
+  },
 
-    if (duplicate) {
-      cmp.setActiveError(message);
-      cmp.setValidation(message);
-      // cmp.isValid(false);
-    } else {
-      if (validator) {
-        var invalid = validator(cmp.getValue());
-        if (invalid) {
-          cmp.setActiveError(invalid);
-          cmp.setValidation(invalid);
-        } else {
-          cmp.setActiveError();
-          cmp.setValidation();
-        }
-      } else {
-        cmp.setActiveError();
-        cmp.setValidation();
-      }
+  duplicateIdCheck: function (clauses, cmp) {
+    var form = cmp.up("form");
+    if (form.record && form.record._id) {
+      clauses["bool"] = {
+        must_not: {
+          match: { _id: form.record._id },
+        },
+      };
     }
+    return clauses;
+  },
+
+  duplicateListeners: function (check, ar, change) {
+    return {
+      afterrender: async function (scope) {
+        var val = scope.getValue();
+        await check(scope, val);
+        if (ar) {
+          ar(scope, val);
+        }
+      },
+      change: async function (scope, val) {
+        await check(scope, val);
+        if (change) {
+          change(scope, val);
+        }
+      },
+    };
+  },
+
+  duplicateHandler: async function (cmp, value, message, validator) {
+    return new Promise(async (resolve, reject) => {
+      var duplicate = await amfutil.checkDuplicate(value);
+
+      if (duplicate) {
+        // cmp.markInvalid(message);
+        // cmp.setActiveError(message);
+
+        // cmp.setValidation(message);
+        cmp.validCheck = message;
+        // cmp.isValid(false);
+      } else {
+        if (validator) {
+          var invalid = validator(cmp.getValue());
+          if (invalid) {
+            // cmp.markInvalid(invalid);
+            // cmp.setActiveError(invalid);
+
+            // cmp.setValidation(invalid);
+            cmp.validCheck = invalid;
+          } else {
+            // cmp.clearInvalid();
+            // cmp.unsetActiveError();
+
+            // cmp.setValidation();
+            cmp.validCheck = true;
+          }
+        } else {
+          // cmp.clearInvalid();
+          // cmp.unsetActiveError();
+
+          // cmp.setValidation();
+          cmp.validCheck = true;
+        }
+      }
+
+      cmp.validate();
+
+      resolve();
+    });
   },
 
   processTypes: function (collection, form, values) {
@@ -2573,6 +2655,7 @@ Ext.define("Amps.util.Utilities", {
             listeners: {
               beforerender: async function (scope) {
                 var filter = await topicfilter();
+                console.log(filter);
                 var store = {
                   type: "chained",
                   source: amfutil.createCollectionStore("topics", filter),
