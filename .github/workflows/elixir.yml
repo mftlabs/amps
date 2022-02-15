@@ -16,6 +16,8 @@ jobs:
     - uses: actions/checkout@v2
     - name: Run docker containers
       run: source ./env  && export curdir=$PWD && cd docker && docker-compose -f docker-compose.dev.yml up -d && docker ps -a && cd $curdir
+    - name: Verify docker containers
+      run: docker-compose logs -f opensearch-node1
     - name: Set up Elixir
       uses: erlef/setup-beam@988e02bfe678367a02564f65ca2e37726dc0268f
       with:
@@ -34,6 +36,6 @@ jobs:
     - name: Verify opensearch
       run: netstat -an|grep 9200
     - name: Run curl command to check opensearch connectivity
-      run: curl -v -XGET "http://opensearch-node1:9200/users/_search"
+      run: curl -v  "http://localhost:9200"
     - name: Run tests
       run: source ./env && (netstat -an|grep 8200) && (netstat -an|grep 9200) && printenv && mix test
