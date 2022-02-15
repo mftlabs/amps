@@ -26,9 +26,9 @@ defmodule AmpsWeb.Router do
 
   scope "/api", AmpsWeb do
     pipe_through(:api)
-    get("/ampstest",UtilController,:execute_test)
     get("/startup", UtilController, :initialized)
     post("/startup", UtilController, :startup)
+    get("/ampstest", UtilController, :execute_test)
 
     resources("/session", SessionController, singleton: true, only: [:create, :delete])
     post("/session/renew", SessionController, :renew)
