@@ -42,8 +42,12 @@ jobs:
         key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
         restore-keys: ${{ runner.os }}-mix-
     - name: Install dependencies
-      run: mix deps.get && mix phx.digest
+      run: mix deps.get && mix assets.deploy
     - name: Run tests
       run: mix test
     - name: Build
       run: export $(cat env | xargs) && mix release
+    - name: Zip Build
+      uses: montudor/action-zip@v1
+      with:
+        args: zip -r build.zip ./_build/prod/rel/amps
