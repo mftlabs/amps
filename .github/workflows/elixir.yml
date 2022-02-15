@@ -34,4 +34,4 @@ jobs:
     - name: Verify opensearch
       run: netstat -an|grep 9200
     - name: Run tests
-      run: source ./env && (netstat -an|grep 8200) && (netstat -an|9200) && mix test
+      run: source ./env && (netstat -an|grep 8200) && (netstat -an|grep 9200) && printenv && mix test
