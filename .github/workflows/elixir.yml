@@ -15,7 +15,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Run docker containers
-      run: export curdir=$PWD && cd docker && docker-compose -f docker-compose.dev.yml up -d && docker ps -a && cd $curdir
+      run: export curdir=$PWD && cd docker && docker-compose -f docker-compose.dev.yml up && docker ps -a && cd $curdir
     - name: Test OpenSearch
       uses: nev7n/wait_for_response@v1
       with:
