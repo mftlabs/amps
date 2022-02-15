@@ -21,7 +21,7 @@ jobs:
       with:
         url: 'http://localhost:9200/'
         responseCode: 200
-        timeout: 2000
+        timeout: 30000
         interval: 500
     # - name: Set up Elixir
     #   uses: erlef/setup-beam@988e02bfe678367a02564f65ca2e37726dc0268f
