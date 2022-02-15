@@ -16,8 +16,6 @@ jobs:
     - uses: actions/checkout@v2
     - name: Run docker containers
       run: export curdir=$PWD && cd docker && docker-compose -f docker-compose.dev.yml up -d && docker ps -a && cd $curdir
-    - name: Verify docker containers
-      run: export curdir=$PWD && cd docker && docker-compose logs -f opensearch-node1 && cd $curdir
     - name: Set up Elixir
       uses: erlef/setup-beam@988e02bfe678367a02564f65ca2e37726dc0268f
       with:
