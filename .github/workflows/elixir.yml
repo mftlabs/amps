@@ -23,11 +23,11 @@ jobs:
         responseCode: 200
         timeout: 30000
         interval: 500
-    - name: Test OpenSearch
+    - name: Test Vault
       uses: nev7n/wait_for_response@v1
       with:
         url: 'http://localhost:8200/v1/sys/health'
-        responseCode: 200
+        responseCode: 501
         timeout: 30000
         interval: 500
     - name: Set up Elixir
