@@ -27,9 +27,7 @@ jobs:
         path: deps
         key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
         restore-keys: ${{ runner.os }}-mix-
-    - name: Run docker containers
-      run: source ./env  && export curdir=$PWD && cd docker && docker-compose -f docker-compose.dev.yml up -d && docker ps -a && cd $curdir
     - name: Install dependencies
-      run: sleep 60 && mix deps.get && mix phx.digest
+      run: mix deps.get && mix phx.digest
     - name: Run tests
-      run: source ./env && mix test
+      run: source ./env && sleep 60 && mix test
