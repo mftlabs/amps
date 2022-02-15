@@ -46,9 +46,9 @@ defmodule AmpsPortal.Endpoint do
   plug(Plug.Telemetry, event_prefix: [:phoenix, :endpoint])
 
   plug(Plug.Parsers,
-    parsers: [:urlencoded, :multipart, :json],
+    parsers: [:urlencoded, Amps.Multipart, :json],
     pass: ["*/*"],
-    length: 1_073_741_824,
+    length: 26_843_545_600,
     json_decoder: Phoenix.json_library()
   )
 

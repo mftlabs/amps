@@ -479,7 +479,96 @@ Ext.define("Amps.controller.PageController", {
       });
     }
   },
-  resetAdminPassword: async function () {},
+  onChangeAdminPassword: async function (grid, rowIndex, colIndex, e) {
+    var record = grid.getStore().getAt(rowIndex);
+    console.log(record);
+    amfutil.changePasswordAdmin(record.data._id);
+  },
+
+  resetAdminPassword: async function (grid, rowIndex, colIndex, e) {
+    var record = grid.getStore().getAt(rowIndex);
+
+    var win = new Ext.window.Window({
+      title: "Confirm Password Reset",
+      width: 400,
+      height: 300,
+      layout: {
+        type: "vbox",
+        align: "stretch",
+      },
+      padding: 25,
+      items: [
+        {
+          flex: 1,
+          layout: "center",
+          xtype: "container",
+          items: [
+            {
+              xtype: "button",
+              text: "Reset Password",
+              scale: "large",
+              handler: async function (scope) {
+                var win = scope.up("window");
+                win.setLoading(true);
+                var resp = await amfutil.ajaxRequest({
+                  method: "GET",
+                  url: "/api/admin/reset/" + record.data._id,
+                  failure: function () {
+                    Ext.toast("Couldn't reset password");
+                  },
+                });
+                var data = Ext.decode(resp.responseText);
+                var items = [
+                  {
+                    xtype: "component",
+                    autoEl: "h3",
+                    style: {
+                      "text-align": "center",
+                    },
+                    html: "Password Successfully Reset",
+                  },
+
+                  {
+                    xtype: "container",
+                    layout: "center",
+                    items: [
+                      {
+                        xtype: "button",
+                        text: "Copy Password",
+                        handler: function (btn) {
+                          navigator.clipboard
+                            .writeText(data.success.password)
+                            .then(
+                              function () {
+                                console.log(
+                                  "Async: Copying to clipboard was successful!"
+                                );
+                                Ext.toast("Copied to clipboard");
+                              },
+                              function (err) {
+                                console.error(
+                                  "Async: Could not copy text: ",
+                                  err
+                                );
+                              }
+                            );
+                        },
+                      },
+                    ],
+                  },
+                ];
+
+                win.removeAll();
+                win.insert(0, items);
+                win.setLoading(false);
+              },
+            },
+          ],
+        },
+      ],
+    });
+    win.show();
+  },
 
   resetPassword: async function (grid, rowIndex, colIndex, e) {
     var record = grid.getStore().getAt(rowIndex);
@@ -1248,7 +1337,7 @@ Ext.define("Amps.window.Uploads", {
 
         scope.uploads[idx].status = "Uploaded";
         scope.update();
-        resolve(request.response);
+        resolve(request);
       });
 
       request.addEventListener("abort", function (e) {

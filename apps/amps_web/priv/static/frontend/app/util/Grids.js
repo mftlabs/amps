@@ -1497,724 +1497,14 @@ Ext.define("Amps.container.Workflow", {
   ],
 });
 Ext.define("Amps.container.Imports", {
-  extend: "Ext.grid.Panel",
+  extend: "Ext.panel.Panel",
   xtype: "imports",
   title: "Imports",
-  sortableColumns: false,
-  invalids: 0,
+  itemId: "imports",
+  layout: "card",
   constructor: function (args) {
     this.callParent([args]);
   },
-
-  listeners: {
-    reconfigure: async function () {
-      console.log("Reconfigured");
-      var progress = amfutil.getElementByID("progress");
-      var num = 0;
-      var length = this.widgets.length;
-
-      for (var widget of this.widgets) {
-        await new Promise((resolve) => setTimeout(resolve, 25));
-        await widget.promise();
-        num++;
-        progress.updateProgress(num / length);
-      }
-      amfutil.getElementByID("import").setDisabled(false);
-      if (this.importing) {
-        this.importRecords();
-      } else {
-        this.invalids = 0;
-
-        this.setLoading(false);
-      }
-    },
-  },
-  loadRecords: function () {
-    this.setLoading(true);
-
-    var old = this.data;
-    this.data = this.data.filter((n) => n);
-
-    this.conts = [];
-    this.widgets = [];
-    var curr;
-
-    if (this.invalids == this.data.length) {
-      this.importing = false;
-      curr = this.data.slice(0, 25);
-    } else {
-      curr = this.data.slice(this.invalids, this.invalids + 25);
-    }
-
-    var store = Ext.create("Ext.data.Store", {
-      autoLoad: true,
-      data: curr,
-      proxy: {
-        type: "memory",
-        reader: {
-          type: "json",
-        },
-      },
-    });
-    this.setStore(store);
-
-    amfutil
-      .getElementByID("showing")
-      .setHtml(`Showing ${curr.length} of ${this.data.length}`);
-  },
-  importRecords: async function () {
-    this.setLoading(true);
-    this.importing = true;
-
-    var grid = this;
-    var items = this.conts;
-
-    var invalids = grid.invalids;
-
-    for (var i = 0; i < items.length; i++) {
-      var item = items[i];
-      await item.win.duplicateCheck();
-      var valid = item.win.down("form").isValid();
-      if (valid) {
-        var form = item.win.down("form");
-        var values = form.process(form, form.getValues());
-
-        var user = amfutil.get_user();
-
-        values.createdby = user.firstname + " " + user.lastname;
-        values.created = new Date().toISOString();
-
-        values.modifiedby = user.firstname + " " + user.lastname;
-        values.modified = new Date().toISOString();
-
-        await amfutil.ajaxRequest({
-          headers: {
-            Authorization: localStorage.getItem("access_token"),
-          },
-          url: "api/" + grid.route,
-          method: "POST",
-          timeout: 60000,
-          params: {},
-          jsonData: values,
-          success: function (response) {
-            grid.data[invalids + i] = null;
-            amfutil.getElementByID("number").increment();
-            delete item;
-            // grid.getStore().reload();
-          },
-          failure: function (response) {
-            mask.hide();
-            btn.setDisabled(false);
-            amfutil.onFailure(
-              `Failed to Create ${form.config.object}`,
-              response
-            );
-          },
-        });
-      } else {
-        this.invalids++;
-      }
-    }
-    // this.importing = false;
-    grid.loadRecords();
-  },
-  conts: [],
-  win: new Ext.window.Window({
-    title: "Load Data",
-    width: 700,
-    height: 500,
-    padding: 10,
-    closeAction: "method-hide",
-    items: [
-      {
-        xtype: "form",
-        itemId: "importform",
-        layout: {
-          type: "hbox",
-          align: "stretch",
-        },
-        items: [
-          {
-            xtype: "container",
-            flex: 2,
-            layout: {
-              type: "vbox",
-              align: "stretch",
-            },
-            margin: { right: 10 },
-            items: [
-              {
-                xtype: "radiogroup",
-                name: "type",
-                fieldLabel: "Import Type",
-                items: [
-                  {
-                    boxLabel: "Main Field",
-                    inputValue: "collection",
-                    name: "type",
-                  },
-                  {
-                    boxLabel: "Sub Field",
-                    inputValue: "field",
-                    name: "type",
-                  },
-                ],
-                listeners: {
-                  change: function (scope, val) {
-                    var entity = amfutil.getElementByID("combocontainer");
-                    if (val.type == "collection") {
-                      entity.setActiveItem(0);
-                    } else {
-                      entity.setActiveItem(1);
-                    }
-
-                    entity.setDisabled(false);
-                  },
-                },
-                displayField: "label",
-                valueField: "field",
-                allowBlank: false,
-                width: 600,
-                labelWidth: 200,
-                forceSelection: true,
-              },
-              {
-                itemId: "combocontainer",
-                xtype: "fieldcontainer",
-                disabled: true,
-                layout: "card",
-                flex: 1,
-                items: [
-                  {
-                    xtype: "combobox",
-
-                    name: "collection",
-                    fieldLabel: "Collection",
-
-                    displayField: "title",
-                    valueField: "field",
-                    allowBlank: false,
-                    labelWidth: 200,
-                    forceSelection: true,
-                    listeners: {
-                      beforerender: function (scope) {
-                        scope.setStore(
-                          Object.entries(ampsgrids.grids)
-                            .map((grid) =>
-                              Object.assign({ field: grid[0] }, grid[1]())
-                            )
-                            .filter(
-                              (grid) =>
-                                grid.fields != null && grid.title != "Keys"
-                            )
-                        );
-                      },
-                      beforeactivate: function (scope) {
-                        scope.setDisabled(false);
-                      },
-                      beforedeactivate: function (scope) {
-                        scope.setDisabled(true);
-                      },
-                    },
-                  },
-                  {
-                    xtype: "fieldcontainer",
-                    layout: {
-                      type: "hbox",
-                      // align: "stretch",
-                    },
-
-                    listeners: {
-                      afterrender: function (scope) {
-                        scope.setDisabled(true);
-                      },
-                      beforeactivate: function (scope) {
-                        scope.setDisabled(false);
-                        scope.down("#collection").setDisabled(false);
-                      },
-                      beforedeactivate: function (scope) {
-                        console.log(scope);
-                        scope.setDisabled(true);
-                      },
-                    },
-
-                    items: [
-                      {
-                        xtype: "combobox",
-                        name: "collection",
-                        flex: 1,
-                        fieldLabel: "Collection",
-                        disabled: true,
-                        itemId: "collection",
-                        displayField: "title",
-                        valueField: "field",
-                        allowBlank: false,
-                        forceSelection: true,
-                        listeners: {
-                          beforerender: function (scope) {
-                            var fields = Object.entries(ampsgrids.grids)
-                              .map((grid) =>
-                                Object.assign({ field: grid[0] }, grid[1]())
-                              )
-                              .filter((grid) => {
-                                console.log(grid);
-                                if (grid.subgrids) {
-                                  return Object.values(grid.subgrids).find(
-                                    (subgrid) => subgrid.grid == true
-                                  );
-                                } else {
-                                  return false;
-                                }
-                              });
-                            scope.setStore(fields);
-                          },
-                          change: function (scope, val) {
-                            var data = scope.getSelectedRecord().data;
-                            var sgs = [];
-                            Object.entries(data.subgrids).forEach((sg) => {
-                              if (sg[1].grid) {
-                                var conf = Object.assign(
-                                  { field: sg[0] },
-                                  sg[1]
-                                );
-                                sgs.push(conf);
-                              }
-                            });
-                            var item = amfutil.getElementByID("item");
-                            console.log(sgs);
-                            item.setStore(sgs);
-                            item.setDisabled(false);
-
-                            var entity = amfutil.getElementByID("entity");
-                            entity.setDisabled(false);
-
-                            entity.removeAll();
-
-                            entity.insert(0, {
-                              xtype: "combobox",
-                              name: "entity",
-                              flex: 1,
-                              fieldLabel: "Entity",
-                              itemId: "entity",
-                              store: amfutil.createCollectionStore(val),
-                              displayField: data.displayField,
-                              valueField: "_id",
-                              allowBlank: false,
-                              forceSelection: true,
-                            });
-                          },
-                        },
-                      },
-                      {
-                        xtype: "combobox",
-                        name: "field",
-                        flex: 1,
-                        disabled: true,
-                        fieldLabel: "Field",
-                        margin: { left: 5 },
-
-                        itemId: "item",
-                        displayField: "title",
-                        valueField: "field",
-                        allowBlank: false,
-                        forceSelection: true,
-                      },
-                      {
-                        margin: { left: 5 },
-
-                        xtype: "fieldcontainer",
-                        flex: 1,
-                        itemId: "entity",
-                      },
-                    ],
-                  },
-                ],
-              },
-              {
-                xtype: "container",
-                layout: {
-                  type: "hbox",
-                  align: "stretch",
-                },
-                items: [
-                  {
-                    xtype: "filefield",
-                    flex: 1,
-                    name: "file",
-                    itemId: "file_upload_import",
-                    fieldLabel: "Import Excel File",
-                    allowBlank: false,
-                    buttonText: "Select File...",
-                    labelWidth: 200,
-                    accept: ".xlsx",
-                    blankText: "Supports only .xlsx file format",
-                    listeners: {
-                      change: function (fld, value) {
-                        var newValue = value.replace(/C:\\fakepath\\/g, "");
-                        fld.setRawValue(newValue);
-                      },
-                    },
-                  },
-                  {
-                    xtype: "button",
-                    iconCls: "x-fa fa-question-circle",
-                    tooltip: "Click here to get sample excel format",
-                    margin: { left: 5 },
-                    itemId: "sample_format",
-                    handler: function (scope) {
-                      var values = scope.up("form").getValues();
-                      var type = values.type;
-                      if (type) {
-                        if (type == "collection") {
-                          if (values.collection) {
-                            amfutil.download(
-                              "/api/data/import/sample/" + values.collection
-                            );
-                          } else {
-                            Ext.toast("Select a collection");
-                          }
-                        } else {
-                          if (values.collection) {
-                            if (values.field) {
-                              amfutil.download(
-                                "/api/data/import/sample/" +
-                                  values.collection +
-                                  "/" +
-                                  values.field
-                              );
-                            } else {
-                              Ext.toast("Select a field");
-                            }
-                          } else {
-                            Ext.toast("Select a collection");
-                          }
-                        }
-                      } else {
-                        Ext.toast("Select a type");
-                      }
-                    },
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-        buttons: [
-          {
-            xtype: "button",
-            text: "Load Data",
-            formBind: true,
-            itemId: "importdata",
-            handler: async function (scope) {
-              scope.up("window").close();
-              var form = this.up("form").getForm();
-              var values = form.getValues();
-              console.log(values);
-              var filefield = form.findField("file");
-
-              var collection = values.collection;
-              var file = filefield.extractFileInput().files[0];
-              console.log(collection);
-              console.log(file);
-              var resp;
-              var type = values.type;
-              resp = await amfuploads.handleUpload(
-                encodeURI("api/data/import/" + collection),
-                file,
-                false,
-                false
-              );
-
-              var grid = amfutil.getElementByID("resultgrid");
-              grid.setLoading(true);
-              var data = JSON.parse(resp);
-              grid.data = data;
-              grid.widgets = [];
-              grid.conts = [];
-              var config;
-
-              if (type == "collection") {
-                grid.route = collection;
-                config = ampsgrids.grids[collection]();
-              } else {
-                config = ampsgrids.grids[collection]().subgrids[values.field];
-
-                grid.route = [collection, values.entity, values.field].join(
-                  "/"
-                );
-              }
-
-              amfutil.getElementByID("number").reset();
-
-              amfutil.getElementByID("import").setDisabled(true);
-
-              function load() {
-                var columns = config.columns.concat({
-                  xtype: "widgetcolumn",
-                  text: "Valid",
-                  width: 350,
-                  selectable: false,
-                  focusable: false,
-                  widget: {
-                    xtype: "container",
-                    width: 300,
-                    // width: 150,
-
-                    // layout: "center",
-
-                    load: function (rec) {
-                      var record = rec.data;
-                      var promise = function validity() {
-                        return new Promise(async (resolve, reject) => {
-                          var myForm = Ext.create("Amps.form.config");
-
-                          await myForm.loadForm(
-                            config,
-                            record,
-                            false,
-                            false,
-                            false
-                          );
-
-                          if (type != "collection") {
-                            myForm.entity = values.entity;
-                          }
-
-                          var win = Ext.create("Ext.window.Window", {
-                            title: "Edit Data",
-                            modal: true,
-                            width: 600,
-                            height: 600,
-                            closeAction: "method-hide",
-                            duplicateCheck: async function () {
-                              var refs =
-                                this.down("form").query("field[duplicate]");
-                              var promises = refs.map((ref) => ref.check());
-                              await Promise.all(promises);
-                            },
-                            setValid: function (valid) {
-                              this.down("#valid").setValid(valid);
-                            },
-                            items: [
-                              {
-                                xtype: "container",
-                                padding: 10,
-                                itemId: "valid",
-                                style: {
-                                  color: "white",
-                                },
-                                layout: "center",
-                                setValid: function (valid) {
-                                  var text = this.down("#text");
-                                  var icon = this.down("#icon");
-                                  if (valid) {
-                                    text.setHtml("Valid");
-                                    icon.removeCls("fa-times");
-                                    icon.addCls("fa-check");
-                                    this.setStyle({
-                                      background: "#039487",
-                                    });
-                                  } else {
-                                    text.setHtml("Invalid");
-                                    icon.removeCls("fa-check");
-                                    icon.addCls("fa-times");
-                                    this.setStyle({
-                                      background: "#8b0000",
-                                    });
-                                  }
-                                },
-
-                                items: [
-                                  {
-                                    xtype: "container",
-                                    width: 100,
-                                    layout: "hbox",
-                                    items: [
-                                      {
-                                        xtype: "container",
-                                        layout: "center",
-                                        flex: 1,
-
-                                        items: [
-                                          {
-                                            itemId: "icon",
-                                            cls: "x-fa",
-                                            xtype: "component",
-                                          },
-                                        ],
-                                      },
-                                      {
-                                        xtype: "container",
-                                        layout: "center",
-                                        flex: 3,
-
-                                        items: [
-                                          {
-                                            itemId: "text",
-                                            xtype: "component",
-                                            html: "Status",
-                                            style: {
-                                              "font-weight": 500,
-                                            },
-                                          },
-                                        ],
-                                      },
-                                    ],
-                                  },
-                                ],
-                              },
-                              myForm,
-                            ],
-                          });
-                          var cont = Ext.create({
-                            xtype: "container",
-                            // layout: "center",
-                            layout: {
-                              type: "hbox",
-                              align: "stretch",
-                            },
-                            record: rec,
-                            win: win,
-                            imported: false,
-                            setValid: function (valid) {
-                              this.down("#valid").setValid(valid);
-                            },
-                            defaults: {
-                              margin: 2,
-                            },
-                            items: [
-                              {
-                                xtype: "container",
-                                width: 75,
-                                itemId: "valid",
-                                padding: { left: 5 },
-                                style: {
-                                  color: "white",
-                                },
-                                layout: "center",
-                                setValid: function (valid) {
-                                  var text = this.down("#text");
-                                  var icon = this.down("#icon");
-                                  if (valid) {
-                                    text.setHtml("Valid");
-                                    icon.removeCls("fa-times");
-                                    icon.addCls("fa-check");
-                                    this.setStyle({
-                                      background: "#039487",
-                                    });
-                                  } else {
-                                    text.setHtml("Invalid");
-                                    icon.removeCls("fa-check");
-                                    icon.addCls("fa-times");
-                                    this.setStyle({
-                                      background: "#8b0000",
-                                    });
-                                  }
-                                },
-
-                                items: [
-                                  {
-                                    xtype: "container",
-                                    width: 75,
-                                    layout: "hbox",
-                                    items: [
-                                      {
-                                        xtype: "container",
-                                        layout: "center",
-                                        flex: 1,
-
-                                        items: [
-                                          {
-                                            itemId: "icon",
-                                            cls: "x-fa",
-                                            xtype: "component",
-                                          },
-                                        ],
-                                      },
-                                      {
-                                        xtype: "container",
-                                        layout: "center",
-                                        flex: 3,
-
-                                        items: [
-                                          {
-                                            itemId: "text",
-                                            xtype: "component",
-                                            html: "Status",
-                                            style: {
-                                              "font-weight": 500,
-                                            },
-                                          },
-                                        ],
-                                      },
-                                    ],
-                                  },
-                                ],
-                              },
-                              {
-                                width: 100,
-                                xtype: "button",
-                                itemId: "edit",
-                                scale: "small",
-                                iconCls: "x-fa fa-pencil",
-                                style: {
-                                  "font-size": ".75rem",
-                                },
-                                text: "Edit",
-                                handler: function (scope) {
-                                  var win = scope.up("container").win;
-                                  win.duplicateCheck();
-                                  win.show();
-                                },
-                              },
-                            ],
-                          });
-                          myForm.setListeners({
-                            validitychange: function (scope, valid) {
-                              cont.setValid(valid);
-                              win.setValid(valid);
-                            },
-                          });
-                          await win.duplicateCheck();
-                          this.removeAll();
-                          this.insert(cont);
-                          grid.conts.push(cont);
-                          var valid = myForm.isValid();
-                          cont.setValid(valid);
-                          win.setValid(valid);
-
-                          resolve();
-                        });
-                      };
-                      this.promise = promise;
-                    },
-                  },
-                  onWidgetAttach: function (col, widget, rec) {
-                    grid.widgets.push(widget);
-
-                    widget.load(rec);
-                  },
-                });
-
-                grid.reconfigure(null, columns);
-
-                grid.loadRecords();
-                // grid.setLoading(false);
-              }
-              load();
-            },
-          },
-          {
-            xtype: "button",
-            text: "Clear",
-            itemId: "cancel_report_message_activity_btn",
-            handler: "onImportClear",
-          },
-        ],
-      },
-    ],
-  }),
-  scrollable: true,
   tbar: [
     {
       xtype: "button",
@@ -2262,12 +1552,748 @@ Ext.define("Amps.container.Imports", {
       xtype: "component",
       html: "Showing 0 of 0",
     },
+
     // {
     //   xtype: "component",
     //   html: "Grid data reflects imported data - changes made in the edit form will not reflect in the grid.",
     // },
   ],
-  itemId: "resultgrid",
+  items: [
+    {
+      xtype: "grid",
+      itemId: "resultgrid",
+      sortableColumns: false,
+      invalids: 0,
+
+      listeners: {
+        reconfigure: async function () {
+          var progress = amfutil.getElementByID("progress");
+          var num = 0;
+          var length = this.widgets.length;
+
+          if (this.widgets) {
+            this.up("imports").setActiveItem(1);
+          }
+
+          for (var widget of this.widgets) {
+            await new Promise((resolve) => setTimeout(resolve, 25));
+            await widget.promise();
+            num++;
+            progress.updateProgress(num / length);
+          }
+          amfutil.getElementByID("import").setDisabled(false);
+          if (this.importing) {
+            this.importRecords();
+          } else {
+            this.invalids = 0;
+            this.up("imports").setActiveItem(0);
+          }
+          console.log("show");
+        },
+      },
+      loadRecords: function () {
+        var old = this.data;
+        this.data = this.data.filter((n) => n);
+
+        this.conts = [];
+        this.widgets = [];
+        var curr;
+
+        if (this.invalids == this.data.length) {
+          this.importing = false;
+          curr = this.data.slice(0, 25);
+        } else {
+          curr = this.data.slice(this.invalids, this.invalids + 25);
+        }
+
+        var store = Ext.create("Ext.data.Store", {
+          autoLoad: true,
+          data: curr,
+          proxy: {
+            type: "memory",
+            reader: {
+              type: "json",
+            },
+          },
+        });
+        this.setStore(store);
+        if (this.data.length > 0) {
+          this.up("imports").setActiveItem(1);
+        } else {
+          this.up("imports").setActiveItem(0);
+        }
+
+        amfutil
+          .getElementByID("showing")
+          .setHtml(`Showing ${curr.length} of ${this.data.length}`);
+      },
+      importRecords: async function () {
+        this.setLoading(true);
+        this.up("imports").setActiveItem(1);
+
+        this.importing = true;
+
+        var grid = this;
+        var items = this.conts;
+
+        var invalids = grid.invalids;
+
+        for (var i = 0; i < items.length; i++) {
+          var item = items[i];
+          await item.win.duplicateCheck();
+          var valid = item.win.down("form").isValid();
+          if (valid) {
+            var form = item.win.down("form");
+            var values = form.process(form, form.getValues());
+
+            var user = amfutil.get_user();
+
+            values.createdby = user.firstname + " " + user.lastname;
+            values.created = new Date().toISOString();
+
+            values.modifiedby = user.firstname + " " + user.lastname;
+            values.modified = new Date().toISOString();
+
+            await amfutil.ajaxRequest({
+              headers: {
+                Authorization: localStorage.getItem("access_token"),
+              },
+              url: "api/" + grid.route,
+              method: "POST",
+              timeout: 60000,
+              params: {},
+              jsonData: values,
+              success: function (response) {
+                grid.data[invalids + i] = null;
+                amfutil.getElementByID("number").increment();
+                delete item;
+                // grid.getStore().reload();
+              },
+              failure: function (response) {
+                mask.hide();
+                btn.setDisabled(false);
+                amfutil.onFailure(
+                  `Failed to Create ${form.config.object}`,
+                  response
+                );
+              },
+            });
+          } else {
+            this.invalids++;
+          }
+        }
+        this.setLoading(false);
+        this.up("imports").setActiveItem(0);
+
+        // this.importing = false;
+        grid.loadRecords();
+      },
+      conts: [],
+      win: new Ext.window.Window({
+        title: "Load Data",
+        width: 600,
+        height: 500,
+        padding: 10,
+        closeAction: "method-hide",
+        layout: "fit",
+        items: [
+          {
+            xtype: "form",
+            itemId: "importform",
+            flex: 1,
+            layout: {
+              type: "vbox",
+              align: "stretch",
+            },
+            items: [
+              {
+                xtype: "container",
+                flex: 2,
+                layout: {
+                  type: "vbox",
+                  align: "stretch",
+                },
+                margin: { right: 10 },
+                items: [
+                  {
+                    xtype: "radiogroup",
+                    name: "type",
+                    fieldLabel: "Import Type",
+                    items: [
+                      {
+                        boxLabel: "Main Field",
+                        inputValue: "collection",
+                        name: "type",
+                      },
+                      {
+                        boxLabel: "Sub Field",
+                        inputValue: "field",
+                        name: "type",
+                      },
+                    ],
+                    listeners: {
+                      change: function (scope, val) {
+                        var entity = amfutil.getElementByID("combocontainer");
+                        if (val.type == "collection") {
+                          entity.setActiveItem(0);
+                        } else {
+                          entity.setActiveItem(1);
+                        }
+
+                        entity.setDisabled(false);
+                      },
+                    },
+                    displayField: "label",
+                    valueField: "field",
+                    allowBlank: false,
+                    width: 600,
+                    labelWidth: 200,
+                    forceSelection: true,
+                  },
+                  {
+                    itemId: "combocontainer",
+                    xtype: "fieldcontainer",
+                    disabled: true,
+                    layout: "card",
+                    items: [
+                      {
+                        xtype: "combobox",
+
+                        name: "collection",
+                        fieldLabel: "Collection",
+
+                        displayField: "title",
+                        valueField: "field",
+                        allowBlank: false,
+                        labelWidth: 200,
+                        forceSelection: true,
+                        listeners: {
+                          beforerender: function (scope) {
+                            scope.setStore(
+                              Object.entries(ampsgrids.grids)
+                                .map((grid) =>
+                                  Object.assign({ field: grid[0] }, grid[1]())
+                                )
+                                .filter(
+                                  (grid) =>
+                                    grid.fields != null && grid.title != "Keys"
+                                )
+                            );
+                          },
+                          beforeactivate: function (scope) {
+                            scope.setDisabled(false);
+                          },
+                          beforedeactivate: function (scope) {
+                            scope.setDisabled(true);
+                          },
+                        },
+                      },
+                      {
+                        xtype: "fieldcontainer",
+                        layout: {
+                          type: "vbox",
+                          align: "stretch",
+                        },
+                        defaults: {
+                          labelWidth: 200,
+                        },
+
+                        listeners: {
+                          afterrender: function (scope) {
+                            scope.setDisabled(true);
+                          },
+                          beforeactivate: function (scope) {
+                            scope.setDisabled(false);
+                            scope.down("#collection").setDisabled(false);
+                          },
+                          beforedeactivate: function (scope) {
+                            console.log(scope);
+                            scope.setDisabled(true);
+                          },
+                        },
+
+                        items: [
+                          {
+                            xtype: "combobox",
+                            name: "collection",
+                            flex: 1,
+                            fieldLabel: "Collection",
+                            disabled: true,
+                            itemId: "collection",
+                            displayField: "title",
+                            valueField: "field",
+                            allowBlank: false,
+                            forceSelection: true,
+                            listeners: {
+                              beforerender: function (scope) {
+                                var fields = Object.entries(ampsgrids.grids)
+                                  .map((grid) =>
+                                    Object.assign({ field: grid[0] }, grid[1]())
+                                  )
+                                  .filter((grid) => {
+                                    console.log(grid);
+                                    if (grid.subgrids) {
+                                      return Object.values(grid.subgrids).find(
+                                        (subgrid) => subgrid.grid == true
+                                      );
+                                    } else {
+                                      return false;
+                                    }
+                                  });
+                                scope.setStore(fields);
+                              },
+                              change: function (scope, val) {
+                                var data = scope.getSelectedRecord().data;
+                                var sgs = [];
+                                Object.entries(data.subgrids).forEach((sg) => {
+                                  if (sg[1].grid) {
+                                    var conf = Object.assign(
+                                      { field: sg[0] },
+                                      sg[1]
+                                    );
+                                    sgs.push(conf);
+                                  }
+                                });
+                                var item = amfutil.getElementByID("item");
+                                console.log(sgs);
+                                item.setStore(sgs);
+                                item.setDisabled(false);
+
+                                var entitycont =
+                                  amfutil.getElementByID("entitycont");
+                                entitycont.setDisabled(false);
+
+                                entitycont.removeAll();
+
+                                entitycont.insert(0, {
+                                  xtype: "combobox",
+                                  name: "entity",
+                                  flex: 1,
+                                  labelWidth: 200,
+                                  fieldLabel: "Entity",
+                                  itemId: "entity",
+                                  store: amfutil.createCollectionStore(val),
+                                  displayField: data.displayField,
+                                  valueField: "_id",
+                                  allowBlank: false,
+                                  forceSelection: true,
+                                });
+                              },
+                            },
+                          },
+                          {
+                            xtype: "combobox",
+                            name: "field",
+                            flex: 1,
+                            disabled: true,
+                            fieldLabel: "Field",
+
+                            itemId: "item",
+                            displayField: "title",
+                            valueField: "field",
+                            allowBlank: false,
+                            forceSelection: true,
+                          },
+                          {
+                            xtype: "fieldcontainer",
+                            itemId: "entitycont",
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                  {
+                    xtype: "container",
+                    layout: {
+                      type: "hbox",
+                      align: "stretch",
+                    },
+                    items: [
+                      {
+                        xtype: "filefield",
+                        flex: 1,
+                        name: "file",
+                        itemId: "file_upload_import",
+                        fieldLabel: "Import Excel File",
+                        allowBlank: false,
+                        buttonText: "Select File...",
+                        labelWidth: 200,
+                        accept: ".xlsx",
+                        blankText: "Supports only .xlsx file format",
+                        listeners: {
+                          change: function (fld, value) {
+                            var newValue = value.replace(/C:\\fakepath\\/g, "");
+                            fld.setRawValue(newValue);
+                          },
+                        },
+                      },
+                      {
+                        xtype: "button",
+                        iconCls: "x-fa fa-question-circle",
+                        tooltip: "Click here to get sample excel format",
+                        margin: { left: 5 },
+                        itemId: "sample_format",
+                        handler: function (scope) {
+                          var values = scope.up("form").getValues();
+                          var type = values.type;
+                          if (type) {
+                            if (type == "collection") {
+                              if (values.collection) {
+                                amfutil.download(
+                                  "/api/data/import/sample/" + values.collection
+                                );
+                              } else {
+                                Ext.toast("Select a collection");
+                              }
+                            } else {
+                              if (values.collection) {
+                                if (values.field) {
+                                  amfutil.download(
+                                    "/api/data/import/sample/" +
+                                      values.collection +
+                                      "/" +
+                                      values.field
+                                  );
+                                } else {
+                                  Ext.toast("Select a field");
+                                }
+                              } else {
+                                Ext.toast("Select a collection");
+                              }
+                            }
+                          } else {
+                            Ext.toast("Select a type");
+                          }
+                        },
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+            buttons: [
+              {
+                xtype: "button",
+                text: "Load Data",
+                formBind: true,
+                itemId: "importdata",
+                handler: async function (scope) {
+                  var imports = amfutil.getElementByID("imports");
+                  console.log(imports);
+                  var grid = amfutil.getElementByID("resultgrid");
+                  imports.setActiveItem(1);
+                  scope.up("window").close();
+                  var form = this.up("form").getForm();
+                  var values = form.getValues();
+                  console.log(values);
+                  var filefield = form.findField("file");
+
+                  var collection = values.collection;
+                  var file = filefield.extractFileInput().files[0];
+                  console.log(collection);
+                  console.log(file);
+                  var type = values.type;
+                  var req = await amfuploads.handleUpload(
+                    encodeURI("api/data/import/" + collection),
+                    file,
+                    false,
+                    false
+                  );
+
+                  var resp = req.response;
+                  var status = req.status;
+
+                  if (status == 500) {
+                    Ext.toast("Error Parsing Excel File");
+                    imports.setActiveItem(0);
+                  } else {
+                    var data = JSON.parse(resp);
+                    grid.data = data;
+                    grid.widgets = [];
+                    grid.conts = [];
+                    var config;
+                    var entity;
+
+                    if (type == "collection") {
+                      grid.route = collection;
+                      config = ampsgrids.grids[collection]();
+                      entity = null;
+                    } else {
+                      config =
+                        ampsgrids.grids[collection]().subgrids[values.field];
+                      var combo = amfutil.getElementByID("entity");
+                      entity = combo.getSelection().data;
+
+                      grid.route = [
+                        collection,
+                        values.entity,
+                        values.field,
+                      ].join("/");
+                    }
+
+                    amfutil.getElementByID("number").reset();
+
+                    amfutil.getElementByID("import").setDisabled(true);
+
+                    function load() {
+                      var columns = config.columns.concat({
+                        xtype: "widgetcolumn",
+                        text: "Valid",
+                        width: 100,
+                        selectable: false,
+                        focusable: false,
+                        widget: {
+                          xtype: "container",
+                          width: 300,
+                          // width: 150,
+
+                          // layout: "center",
+
+                          load: function (rec) {
+                            var record = rec.data;
+                            var promise = function validity() {
+                              return new Promise(async (resolve, reject) => {
+                                var myForm = Ext.create("Amps.form.config", {
+                                  entity: entity ? entity : null,
+                                });
+
+                                await myForm.loadForm(
+                                  config,
+                                  record,
+                                  false,
+                                  false,
+                                  false
+                                );
+                                var win = Ext.create("Ext.window.Window", {
+                                  title: "Edit Data",
+                                  modal: true,
+                                  width: 600,
+                                  height: 600,
+                                  closeAction: "method-hide",
+                                  duplicateCheck: async function () {
+                                    var refs =
+                                      this.down("form").query(
+                                        "field[duplicate]"
+                                      );
+                                    var promises = refs.map((ref) =>
+                                      ref.check()
+                                    );
+                                    await Promise.all(promises);
+                                  },
+                                  setValid: function (valid) {
+                                    this.down("#valid").setValid(valid);
+                                  },
+                                  items: [
+                                    {
+                                      xtype: "container",
+                                      padding: 10,
+                                      itemId: "valid",
+                                      style: {
+                                        color: "white",
+                                      },
+                                      layout: "center",
+                                      setValid: function (valid) {
+                                        var text = this.down("#text");
+                                        var icon = this.down("#icon");
+                                        if (valid) {
+                                          text.setHtml("Valid");
+                                          icon.removeCls("fa-times");
+                                          icon.addCls("fa-check");
+                                          this.setStyle({
+                                            background: "#039487",
+                                          });
+                                        } else {
+                                          text.setHtml("Invalid");
+                                          icon.removeCls("fa-check");
+                                          icon.addCls("fa-times");
+                                          this.setStyle({
+                                            background: "#8b0000",
+                                          });
+                                        }
+                                      },
+
+                                      items: [
+                                        {
+                                          xtype: "container",
+                                          width: 100,
+                                          layout: "hbox",
+                                          items: [
+                                            {
+                                              xtype: "container",
+                                              layout: "center",
+                                              flex: 1,
+
+                                              items: [
+                                                {
+                                                  itemId: "icon",
+                                                  cls: "x-fa",
+                                                  xtype: "component",
+                                                },
+                                              ],
+                                            },
+                                            {
+                                              xtype: "container",
+                                              layout: "center",
+                                              flex: 3,
+
+                                              items: [
+                                                {
+                                                  itemId: "text",
+                                                  xtype: "component",
+                                                  html: "Status",
+                                                  style: {
+                                                    "font-weight": 500,
+                                                  },
+                                                },
+                                              ],
+                                            },
+                                          ],
+                                        },
+                                      ],
+                                    },
+                                    myForm,
+                                  ],
+                                });
+                                var cont = Ext.create({
+                                  xtype: "container",
+                                  // layout: "center",
+                                  layout: {
+                                    type: "hbox",
+                                    align: "stretch",
+                                  },
+                                  record: rec,
+                                  win: win,
+                                  imported: false,
+                                  setValid: function (valid) {
+                                    this.down("#valid").setValid(valid);
+                                  },
+                                  items: [
+                                    {
+                                      xtype: "container",
+                                      itemId: "valid",
+                                      width: 50,
+                                      style: {
+                                        color: "white",
+                                      },
+                                      layout: "center",
+                                      setValid: function (valid) {
+                                        var icon = this.down("#icon");
+                                        if (valid) {
+                                          icon.removeCls("fa-times");
+                                          icon.addCls("fa-check");
+                                          this.setStyle({
+                                            background: "#039487",
+                                          });
+                                        } else {
+                                          icon.removeCls("fa-check");
+                                          icon.addCls("fa-times");
+                                          this.setStyle({
+                                            background: "#8b0000",
+                                          });
+                                        }
+                                      },
+
+                                      items: [
+                                        {
+                                          xtype: "container",
+                                          layout: "hbox",
+                                          items: [
+                                            {
+                                              xtype: "container",
+                                              layout: "center",
+                                              flex: 1,
+
+                                              items: [
+                                                {
+                                                  itemId: "icon",
+                                                  cls: "x-fa",
+                                                  xtype: "component",
+                                                },
+                                              ],
+                                            },
+                                          ],
+                                        },
+                                      ],
+                                    },
+                                    {
+                                      xtype: "button",
+                                      itemId: "edit",
+                                      scale: "small",
+                                      iconCls: "x-fa fa-pencil",
+                                      style: {
+                                        "font-size": ".75rem",
+                                      },
+                                      handler: function (scope) {
+                                        var win = scope.up("container").win;
+                                        win.duplicateCheck();
+                                        win.show();
+                                      },
+                                    },
+                                  ],
+                                });
+                                myForm.setListeners({
+                                  validitychange: function (scope, valid) {
+                                    cont.setValid(valid);
+                                    win.setValid(valid);
+                                  },
+                                });
+                                await win.duplicateCheck();
+                                this.removeAll();
+                                this.insert(cont);
+                                grid.conts.push(cont);
+                                var valid = myForm.isValid();
+                                cont.setValid(valid);
+                                win.setValid(valid);
+
+                                resolve();
+                              });
+                            };
+                            this.promise = promise;
+                          },
+                        },
+                        onWidgetAttach: function (col, widget, rec) {
+                          grid.widgets.push(widget);
+
+                          widget.load(rec);
+                        },
+                      });
+
+                      grid.reconfigure(null, columns);
+
+                      grid.loadRecords();
+                      // grid.setLoading(false);
+                    }
+                    load();
+                  }
+                },
+              },
+              {
+                xtype: "button",
+                text: "Clear",
+                itemId: "cancel_report_message_activity_btn",
+                handler: "onImportClear",
+              },
+            ],
+          },
+        ],
+      }),
+      scrollable: true,
+    },
+    {
+      xtype: "container",
+      layout: "center",
+      items: [
+        {
+          xtype: "component",
+          style: {
+            width: "min-content",
+            "font-size": "2rem",
+          },
+          html: `<div class="x-fa fa-refresh fa-spin"`,
+        },
+      ],
+    },
+  ],
 });
 
 Ext.define("Amps.panel.Wizard", {
@@ -4509,11 +4535,12 @@ Ext.define("Amps.util.Grids", {
                   fieldLabel: "Get Failure Retry Wait",
                   value: "5",
                 },
-                amfutil.consumerConfig(async function () {
-                  var tokens = Ext.util.History.getToken().split("/");
-                  var item = await amfutil.getById("users", tokens[1]);
-                  var username = item.username;
-                  return { topic: { $regex: `amps.mailbox.${username}.*` } };
+                amfutil.consumerConfig(async function (scope) {
+                  var item = scope.up("form").entity;
+                  console.log(item);
+                  return {
+                    topic: { $regex: `amps.mailbox.${item.username}.*` },
+                  };
                 }, "The user mailbox topic from which to consume files"),
                 {
                   xtype: "textfield",
@@ -4540,7 +4567,6 @@ Ext.define("Amps.util.Grids", {
                 //   itemId: "ackmode",
                 //   allowBlank: false,
                 //   name: "ackmode",
-
                 //   columns: 3,
                 //   width: 400,
                 //   items: [
@@ -4583,14 +4609,13 @@ Ext.define("Amps.util.Grids", {
                 xtype: "textfield",
                 name: "name",
                 fieldLabel: "Rule Name",
-                allowBlank: false,
               },
               async function (cmp, value, oldValue, eOpts) {
                 var form = cmp.up("form");
-                id = form.entity;
+                console.log(form);
                 await amfutil.duplicateHandler(
                   cmp,
-                  { users: { "rules.name": value, _id: id } },
+                  { users: { "rules.name": value, _id: form.entity._id } },
                   "Agent Rule Already Exists",
                   amfutil.nameValidator
                 );
@@ -6871,7 +6896,8 @@ Ext.define("Amps.util.Grids", {
           type: "checkbox",
         },
       ],
-      options: ["approve"],
+      //   options: ["approve","resetAdmin","changePassAdmin"],
+      options: ["approve", "resetAdmin"],
     }),
     keys: () => ({
       title: "Keys",

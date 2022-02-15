@@ -697,6 +697,15 @@ Ext.define("Amps.util.Utilities", {
       tooltip: "Click here to reset user password",
       handler: "resetAdminPassword",
     },
+    changePassAdmin: {
+      xtype: "button",
+      name: "changepassword",
+      iconCls: "x-fa fa-refresh actionicon",
+      itemId: "changePassword",
+      tooltip: "Click here to change user password",
+      handler: "onChangeAdminPassword",
+      style: "cursor:pointer;",
+    },
     upload: {
       name: "upload",
       iconCls: "x-fa fa-upload actionicon",
@@ -753,6 +762,191 @@ Ext.define("Amps.util.Utilities", {
         console.log("fail");
       },
     });
+  },
+
+  changePasswordAdmin: function (id) {
+    var changePasswordWindow = new Ext.window.Window({
+      title: "Change Password",
+      modal: true,
+      scrollable: true,
+      resizable: false,
+      width: 600,
+      height: 250,
+      layout: "fit",
+      items: [
+        {
+          xtype: "form",
+          defaults: {
+            padding: 5,
+            labelWidth: 140,
+          },
+          scrollable: true,
+          items: [
+            {
+              xtype: "textfield",
+              name: "oldpassword",
+              fieldLabel: "Old Password",
+              inputType: "password",
+              allowBlank: false,
+              maskRe: /[^\^ ]/,
+              //vtype: "passwordCheck",
+              itemId: "oldpassword",
+              enableKeyEvents: true,
+              width: 550,
+              listeners: {
+                afterrender: function (cmp) {
+                  cmp.inputEl.set({
+                    autocomplete: "old-password",
+                  });
+                },
+                keypress: function (me, e) {
+                  var charCode = e.getCharCode();
+                  if (!e.shiftKey && charCode >= 65 && charCode <= 90) {
+                    capslock_id =
+                      Ext.ComponentQuery.query("#user_capslock_id")[0];
+                    capslock_id.setHidden(false);
+                  } else {
+                    me.isValid();
+                    capslock_id =
+                      Ext.ComponentQuery.query("#user_capslock_id")[0];
+                    capslock_id.setHidden(true);
+                  }
+                },
+              },
+            },
+            {
+              xtype: "textfield",
+              name: "password",
+              fieldLabel: "Password",
+              inputType: "password",
+              allowBlank: false,
+              maskRe: /[^\^ ]/,
+              vtype: "passwordCheck",
+              itemId: "password",
+              enableKeyEvents: true,
+              width: 550,
+              listeners: {
+                afterrender: function (cmp) {
+                  cmp.inputEl.set({
+                    autocomplete: "new-password",
+                  });
+                },
+                keypress: function (me, e) {
+                  var charCode = e.getCharCode();
+                  if (!e.shiftKey && charCode >= 65 && charCode <= 90) {
+                    capslock_id =
+                      Ext.ComponentQuery.query("#user_capslock_id")[0];
+                    capslock_id.setHidden(false);
+                  } else {
+                    me.isValid();
+                    capslock_id =
+                      Ext.ComponentQuery.query("#user_capslock_id")[0];
+                    capslock_id.setHidden(true);
+                  }
+                },
+                change: function (me, e) {
+                  confPassword = amfutil
+                    .getElementByID("confirmpwd")
+                    .getValue();
+                  password = me.value;
+                  if (confPassword.length != 0) {
+                    if (password != confPassword) {
+                      //amfutil.getElementByID('confpasswd').focus();
+                      var m = Ext.getCmp("confpasswd_id");
+                      m.setActiveError("Passwords doesn't match");
+                    } else {
+                      var m = Ext.getCmp("confpasswd_id");
+                      m.unsetActiveError();
+                    }
+                  }
+                },
+              },
+            },
+            {
+              xtype: "textfield",
+              name: "confirmpwd",
+              fieldLabel: "Confirm Password",
+              inputType: "password",
+              maskRe: /[^\^ ]/,
+              id: "confpasswd_id",
+              allowBlank: false,
+              vtype: "ChangepasswordMatch",
+              itemId: "confirmpwd",
+              enableKeyEvents: true,
+              width: 550,
+              listeners: {
+                keypress: function (me, e) {
+                  var charCode = e.getCharCode();
+                  if (!e.shiftKey && charCode >= 65 && charCode <= 90) {
+                    capslock_id =
+                      Ext.ComponentQuery.query("#user_capslock_id")[0];
+                    capslock_id.setHidden(false);
+                  } else {
+                    me.isValid();
+                    capslock_id =
+                      Ext.ComponentQuery.query("#user_capslock_id")[0];
+                    capslock_id.setHidden(true);
+                  }
+                },
+              },
+            },
+            {
+              html: '<p style="color:red;font-weight:600;margin-left:168px;"><i class="fa fa-exclamation-triangle" aria-hidden="true"></i>Caps lock is on</p>',
+              itemId: "user_capslock_id",
+              hidden: true,
+            },
+          ],
+
+          buttons: [
+            {
+              text: "Change",
+              formBind: true,
+              handler: function () {
+                var win = this.up("window");
+                win.setLoading(true);
+                password = amfutil.getElementByID("password").getValue();
+                oldpassword = amfutil.getElementByID("oldpassword").getValue();
+                confirmpwd = amfutil.getElementByID("confirmpwd").getValue();
+                if (password == oldpassword) {
+                  win.setLoading(false);
+                  Ext.toast("Old password & new password con't same");
+                } else {
+                  console.log(id, password);
+                  amfutil.ajaxRequest({
+                    url: "api/admin/changepassword/" + id,
+                    method: "post",
+                    jsonData: {
+                      password: password,
+                      oldpassword: oldpassword,
+                    },
+                    success: function () {
+                      changePasswordWindow.close();
+                      Ext.toast("Password changed successfully");
+                      //   grid.getStore().reload();
+                    },
+                    failure: function () {
+                      win.setLoading(false);
+                      Ext.toast("Change password failed");
+                    },
+                  });
+                }
+              },
+            },
+            {
+              text: "Cancel",
+              cls: "button_class",
+              itemId: "cancel",
+              listeners: {
+                click: function (btn) {
+                  changePasswordWindow.close();
+                },
+              },
+            },
+          ],
+        },
+      ],
+    });
+    changePasswordWindow.show();
   },
 
   check_redirect: function (scope) {
@@ -1868,65 +2062,56 @@ Ext.define("Amps.util.Utilities", {
 
   renew_session: async function () {
     console.log(localStorage.getItem("renewing"));
-    if (localStorage.getItem("renewing")) {
-      new Promise(function (resolve, reject) {
-        setTimeout(function () {
-          if (!localStorage.getItem("renewing")) {
-            resolve();
-          }
-        }, 250);
-      });
-    } else {
-      if (amfutil.renewPromise) {
-        await amfutil.renewPromise;
-      } else {
-        localStorage.setItem("renewing", "true");
-        amfutil.renewPromise = new Promise(function (resolve, reject) {
-          Ext.Ajax.request({
-            url: "/api/session/renew",
-            headers: {
-              Authorization: localStorage.getItem("renewal_token"),
-            },
-            method: "POST",
-            timeout: 30000,
-            params: {},
-            success: async function (response) {
-              //console.log(response);
-              var obj = Ext.decode(response.responseText);
-              console.log(obj);
-              if (obj.data) {
-                var token = obj.data.access_token;
-                localStorage.setItem("access_token", token);
-                localStorage.setItem("renewal_token", obj.data.renewal_token);
-                await amfutil.updateChannel();
-                localStorage.removeItem("renewing");
-              } else {
-                Ext.Msg.show({
-                  title: "Unauthorized or Expired Session",
-                  message:
-                    "Your session has expired or is no longer authorized, you will be redirected to Login.",
-                });
-                amfutil.logout();
-              }
-              amfutil.renewPromise = null;
 
-              resolve();
-            },
-            failure: function (response) {
+    if (amfutil.renewPromise) {
+      await amfutil.renewPromise;
+    } else {
+      localStorage.setItem("renewing", "true");
+      amfutil.renewPromise = new Promise(function (resolve, reject) {
+        Ext.Ajax.request({
+          url: "/api/session/renew",
+          headers: {
+            Authorization: localStorage.getItem("renewal_token"),
+          },
+          method: "POST",
+          timeout: 30000,
+          params: {},
+          success: async function (response) {
+            //console.log(response);
+            var obj = Ext.decode(response.responseText);
+            console.log(obj);
+            if (obj.data) {
+              var token = obj.data.access_token;
+              localStorage.setItem("access_token", token);
+              localStorage.setItem("renewal_token", obj.data.renewal_token);
+              await amfutil.updateChannel();
+              localStorage.removeItem("renewing");
+            } else {
               Ext.Msg.show({
                 title: "Unauthorized or Expired Session",
                 message:
                   "Your session has expired or is no longer authorized, you will be redirected to Login.",
               });
               amfutil.logout();
-              amfutil.renewPromise = null;
+            }
+            amfutil.renewPromise = null;
 
-              reject();
-            },
-          });
+            resolve();
+          },
+          failure: function (response) {
+            Ext.Msg.show({
+              title: "Unauthorized or Expired Session",
+              message:
+                "Your session has expired or is no longer authorized, you will be redirected to Login.",
+            });
+            amfutil.logout();
+            amfutil.renewPromise = null;
+
+            reject();
+          },
         });
-        await amfutil.renewPromise;
-      }
+      });
+      await amfutil.renewPromise;
     }
   },
 
@@ -1941,17 +2126,19 @@ Ext.define("Amps.util.Utilities", {
   },
 
   duplicateValidation: function (config, check) {
-    return Ext.apply(config, {
+    var obj = Object.assign(config, {
       validator: function (val) {
         // check(this, val);
         return this.validCheck;
       },
+      validCheck: true,
       check: async function () {
         await check(this, this.getValue());
       },
       duplicate: true,
       listeners: amfutil.duplicateListeners(check),
     });
+    return obj;
   },
 
   duplicateIdCheck: function (clauses, cmp) {
@@ -1970,16 +2157,16 @@ Ext.define("Amps.util.Utilities", {
     return {
       afterrender: async function (scope) {
         var val = scope.getValue();
-        await check(scope, val);
         if (ar) {
           ar(scope, val);
         }
+        check(scope, val);
       },
       change: async function (scope, val) {
-        await check(scope, val);
         if (change) {
           change(scope, val);
         }
+        check(scope, val);
       },
     };
   },
@@ -2654,7 +2841,7 @@ Ext.define("Amps.util.Utilities", {
             tooltip: tooltip,
             listeners: {
               beforerender: async function (scope) {
-                var filter = await topicfilter();
+                var filter = await topicfilter(scope);
                 console.log(filter);
                 var store = {
                   type: "chained",

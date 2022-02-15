@@ -232,7 +232,16 @@ Ext.define("Amps.override.form.field.VTypes", {
     }
     return value == password.getValue();
   },
+
+  
+
+ChangepasswordMatch: function (value, field) {
+  var password = field.up("form").down("#" + "password");
+  return value == password.getValue();
+},
+
 });
+
 
 Ext.define("Amps.overrides.form.field.Base", {
   override: "Ext.form.field.Base",
