@@ -19,10 +19,10 @@ jobs:
     - name: Test OpenSearch
       uses: nev7n/wait_for_response@v1
       with:
-      url: 'http://localhost:9200/'
-      responseCode: 200
-      timeout: 2000
-      interval: 500
+        url: 'http://localhost:9200/'
+        responseCode: 200
+        timeout: 2000
+        interval: 500
     # - name: Set up Elixir
     #   uses: erlef/setup-beam@988e02bfe678367a02564f65ca2e37726dc0268f
     #   with:
