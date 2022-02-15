@@ -29,5 +29,9 @@ jobs:
         restore-keys: ${{ runner.os }}-mix-
     - name: Install dependencies
       run: mix deps.get && mix phx.digest
+    - name: Verify vault
+      run: netstat -an|grep 8200
+    - name: Verify opensearch
+      run: netstat -an|grep 9200
     - name: Run tests
       run: source ./env && sleep 60 && mix test
