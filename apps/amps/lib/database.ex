@@ -921,6 +921,8 @@ defmodule Amps.DB do
 
         nil ->
           nil
+        _ ->
+          nil
       end
     end
 
