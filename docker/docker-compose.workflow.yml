@@ -1,0 +1,69 @@
+version: "3.9"
+
+services:
+  vault:
+    image: vault
+    ports:
+      - "8200:8200"
+    cap_add:
+      - IPC_LOCK
+    entrypoint: vault server -config=/vault/config/vault.json
+  nats:
+    image: nats
+    command: "--cluster nats://0.0.0.0:6222 -m 8222 --name=nats --cluster_name=amps  --routes=nats://nats1:6222,nats://nats2:6222 -js"
+
+    ports:
+      - "8222:8222"
+      - "4222:4222"
+  nats1:
+    image: nats
+    command: "--cluster nats://0.0.0.0:6222 -m 8222 --name=nats1 --cluster_name=amps  --routes=nats://nats:6222,nats://nats2:6222 -js"
+    depends_on: ["nats"]
+  nats2:
+    image: nats
+    command: "--cluster nats://0.0.0.0:6222 -m 8222 --name=nats2 --cluster_name=amps --routes=nats://nats:6222,nats://nats1:6222 -js"
+    depends_on: ["nats"]
+  opensearch-node1:
+    image: opensearchproject/opensearch:1.2.4
+    container_name: opensearch-node1
+    environment:
+      - cluster.name=opensearch-cluster
+      - node.name=opensearch-node1
+      - "HTTP_CORS_ENABLED=true"
+      - "HTTP_CORS_ALLOW-ORIGIN=https://app.elasticvue.com"
+      - bootstrap.memory_lock=true # along with the memlock settings below, disables swapping
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
+      - "DISABLE_INSTALL_DEMO_CONFIG=true" # disables execution of install_demo_configuration.sh bundled with security plugin, which installs demo certificates and security configurations to OpenSearch
+      - "DISABLE_SECURITY_PLUGIN=true" # disables security plugin entirely in OpenSearch by setting plugins.security.disabled: true in opensearch.yml
+      - "discovery.type=single-node" # disables bootstrap checks that are enabled when network.host is set to a non-loopback address
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536 # maximum number of open files for the OpenSearch user, set to at least 65536 on modern systems
+        hard: 65536
+
+    ports:
+      - 9200:9200
+      - 9600:9600 # required for Performance Analyzer
+    networks:
+      - opensearch-net
+
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:1.2.0
+    container_name: opensearch-dashboards
+    depends_on: ["opensearch-node1"]
+
+    ports:
+      - 5601:5601
+    expose:
+      - "5601"
+    environment:
+      - 'OPENSEARCH_HOSTS=["http://opensearch-node1:9200"]'
+      - "DISABLE_SECURITY_DASHBOARDS_PLUGIN=true" # disables security dashboards plugin in OpenSearch Dashboards
+    networks:
+      - opensearch-net
+
+networks:
+  opensearch-net:
