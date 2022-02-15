@@ -15,7 +15,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Run docker containers
-      run: source ./env  && export curdir=$PWD && cd docker && docker-compose -f docker-compose.dev.yml up -d && docker ps -a && cd $curdir
+      run: export curdir=$PWD && cd docker && docker-compose -f docker-compose.dev.yml up -d && docker ps -a && cd $curdir
     - name: Verify docker containers
       run: export curdir=$PWD && cd docker && docker-compose logs -f opensearch-node1 && cd $curdir
     - name: Set up Elixir
@@ -35,7 +35,7 @@ jobs:
       run: netstat -an|grep 8200
     - name: Verify opensearch
       run: netstat -an|grep 9200
-    - name: Run curl command to check opensearch connectivity
-      run: curl -v  "http://localhost:9200"
     - name: Run tests
-      run: source ./env && (netstat -an|grep 8200) && (netstat -an|grep 9200) && printenv && mix test
+      run: (netstat -an|grep 8200) && (netstat -an|grep 9200) && mix test
+    - name: Build
+      run: export $(cat env | xargs) && mix release
