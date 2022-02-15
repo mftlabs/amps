@@ -80,6 +80,11 @@ defmodule AmpsWeb.Vault do
               },
               BSON.ObjectId.encode!(body["_id"])
             )
+            _ ->
+              Amps.DB.insert("services", %{
+                "name" => "vault",
+                "keys" => AmpsWeb.Encryption.encrypt(Jason.encode!(keys))
+              })
         end
 
         # IO.inspect(File.write("keys/keys.json", Jason.encode!(keys), [:binary]))
