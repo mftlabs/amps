@@ -1,6 +1,6 @@
 export SECRET_KEY_BASE=FZecDq8oIf+th6OcXfXYy5Y0cZi3QEsVIQsJ/qua2D0nrmE5qw/EDNtWN3j8KBBs
 export AMPS_AUTH_METHOD=db
-export AMPS_OPENSEARCH_ADDR=http://localhost:9200
+export AMPS_OPENSEARCH_ADDR=http://opensearch-node1:9200
 export AMPS_VAULT_ADDR=http://localhost:8200
 export AMPS_NATS_HOST=localhost
 export AMPS_NATS_PORT=4222
