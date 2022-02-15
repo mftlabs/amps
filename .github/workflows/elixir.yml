@@ -15,7 +15,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Run docker containers
-      run: export curdir=$PWD && cd docker && docker-compose -f docker-compose.workflow.yml up && docker ps -a && cd $curdir
+      run: export curdir=$PWD && cd docker && docker-compose -f docker-compose.workflow.yml up -d && docker ps -a && cd $curdir
     - name: Test OpenSearch
       uses: nev7n/wait_for_response@v1
       with:
@@ -23,24 +23,24 @@ jobs:
         responseCode: 200
         timeout: 30000
         interval: 500
-    # - name: Set up Elixir
-    #   uses: erlef/setup-beam@988e02bfe678367a02564f65ca2e37726dc0268f
-    #   with:
-    #     elixir-version: '1.12.3' # Define the elixir version [required]
-    #     otp-version: '24.1' # Define the OTP version [required]
-    # - name: Restore dependencies cache
-    #   uses: actions/cache@v2
-    #   with:
-    #     path: deps
-    #     key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
-    #     restore-keys: ${{ runner.os }}-mix-
-    # - name: Install dependencies
-    #   run: mix deps.get && mix phx.digest
-    # - name: Verify vault
-    #   run: netstat -an|grep 8200
-    # - name: Verify opensearch
-    #   run: netstat -an|grep 9200
-    # - name: Run tests
-    #   run: (netstat -an|grep 8200) && (netstat -an|grep 9200) && mix test
-    # - name: Build
-    #   run: export $(cat env | xargs) && mix release
+    - name: Set up Elixir
+      uses: erlef/setup-beam@988e02bfe678367a02564f65ca2e37726dc0268f
+      with:
+        elixir-version: '1.12.3' # Define the elixir version [required]
+        otp-version: '24.1' # Define the OTP version [required]
+    - name: Restore dependencies cache
+      uses: actions/cache@v2
+      with:
+        path: deps
+        key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+        restore-keys: ${{ runner.os }}-mix-
+    - name: Install dependencies
+      run: mix deps.get && mix phx.digest
+    - name: Verify vault
+      run: netstat -an|grep 8200
+    - name: Verify opensearch
+      run: netstat -an|grep 9200
+    - name: Run tests
+      run: (netstat -an|grep 8200) && (netstat -an|grep 9200) && mix test
+    - name: Build
+      run: export $(cat env | xargs) && mix release
