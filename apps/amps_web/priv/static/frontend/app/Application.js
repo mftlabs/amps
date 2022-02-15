@@ -24,16 +24,16 @@ Ext.define("Amps.Application", {
     amfutil = Amps.util.Utilities;
     amfuploads = Amps.window.Uploads;
 
-    window.addEventListener("beforeunload", function (e) {
-      // the absence of a returnValue property on the event will guarantee the browser unload happens
-      if (amfuploads.hasPending()) {
-        console.log("stop");
-        e.preventDefault();
-        e.returnValue = "Your files have not finished uploadeding...";
-      } else {
-        delete e["returnValue"];
-      }
-    });
+    // window.addEventListener("beforeunload", function (e) {
+    //   // the absence of a returnValue property on the event will guarantee the browser unload happens
+    //   if (amfuploads.hasPending()) {
+    //     console.log("stop");
+    //     e.preventDefault();
+    //     e.returnValue = "Your files have not finished uploadeding...";
+    //   } else {
+    //     delete e["returnValue"];
+    //   }
+    // });
 
     window.onbeforeunload = function () {};
 

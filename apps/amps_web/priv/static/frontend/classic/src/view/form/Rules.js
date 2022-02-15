@@ -11,7 +11,7 @@ Ext.define(
       constructor: function (args) {
         self = this;
         console.log(args);
-        this.callParent(args);
+        this.callParent([args]);
         this.ruleNames = [];
         this.loadRules(args["value"], args["readOnly"]);
         this.setReadOnly(args["readOnly"]);
@@ -90,7 +90,7 @@ Ext.define("Amps.form.Rule", {
   collapsible: true,
   constructor: function (args) {
     console.log(args);
-    this.callParent(args);
+    this.callParent([args]);
     var id;
 
     if (args["id"]) {
@@ -162,12 +162,16 @@ Ext.define("Amps.form.MatchPatterns", {
   title: "Match Patterns",
   collapsible: true,
   constructor: function (args) {
-    this.callParent(args);
+    this.callParent([args]);
     this.name = args["name"];
     var scope = this;
     console.log(args);
     if (args["patterns"]) {
       this.loadPatterns(args["patterns"], args["readOnly"]);
+    }
+
+    if (args["value"]) {
+      this.loadPatterns(args["value"], args["readOnly"]);
     }
 
     this.setReadOnly(args["readOnly"]);
@@ -236,7 +240,7 @@ Ext.define("Amps.form.Matchpattern", {
     align: "stretch",
   },
   constructor: function (args) {
-    this.callParent(args);
+    this.callParent([args]);
     this.insert(0, [
       {
         xtype: "fieldcontainer",
@@ -253,7 +257,8 @@ Ext.define("Amps.form.Matchpattern", {
                   xtype: "combobox",
                   fieldLabel: "Field",
                   allowBlank: false,
-                  displayField: "description",
+                  isFormField: false,
+                  displayField: "desc",
                   tooltip: "The Metadata Field to match on",
                   valueField: "field",
                   flex: 1,
@@ -261,7 +266,7 @@ Ext.define("Amps.form.Matchpattern", {
                   listeners: {
                     change: "onChange",
                   },
-                  store: [],
+                  store: amfutil.createCollectionStore("fields"),
                   itemId: "field",
                 },
                 {
@@ -275,6 +280,8 @@ Ext.define("Amps.form.Matchpattern", {
               amfutil.tooltip(
                 {
                   xtype: "checkbox",
+                  isFormField: false,
+
                   fieldLabel: "Regex",
                   tooltip: "Whether to match using regex",
 
@@ -283,6 +290,9 @@ Ext.define("Amps.form.Matchpattern", {
                   flex: 1,
                   name: "regex",
                   listeners: {
+                    render: function (scope) {
+                      scope.setValue(false);
+                    },
                     change: "onRegexChange",
                   },
                   itemId: "regex",
@@ -304,6 +314,8 @@ Ext.define("Amps.form.Matchpattern", {
                 {
                   xtype: "textfield",
                   fieldLabel: "Pattern",
+                  isFormField: false,
+
                   name: "pattern",
                   tooltip:
                     "The pattern to match against the specified metadata field value",
@@ -323,30 +335,44 @@ Ext.define("Amps.form.Matchpattern", {
                 xtype: "splitter",
                 tabIndex: -1,
               },
-              amfutil.tooltip(
-                {
-                  validateOnChange: true,
-                  xtype: "textfield",
-                  fieldLabel: "Testcase",
-                  tooltip: "A field to test a potential metadata value",
-                  name: "test",
-                  flex: 1,
-                  listeners: {
-                    change: "onTestChange",
-                  },
-                  itemId: "test",
+              {
+                xtype: "container",
+                layout: {
+                  type: "vbox",
+                  align: "stretch",
                 },
-                {
-                  flex: 1,
-                }
-              ),
+                flex: 1,
+                items: [
+                  amfutil.tooltip({
+                    validateOnChange: true,
+                    xtype: "textfield",
+                    fieldLabel: "Testcase",
+                    isFormField: false,
+                    readOnly: args["readOnly"],
+                    tooltip: "A field to test a potential metadata value",
+                    name: "test",
+                    flex: 1,
+                    listeners: {
+                      change: "onTestChange",
+                    },
+                    itemId: "test",
+                  }),
+                  {
+                    xtype: "container",
+                    layout: "center",
+                    items: [
+                      {
+                        xtype: "component",
+                        hidden: true,
+                        style: { "font-size": "1rem" },
+
+                        itemId: "message_view",
+                      },
+                    ],
+                  },
+                ],
+              },
             ],
-          },
-          {
-            xtype: "container",
-            height: 30,
-            hidden: true,
-            itemId: "message_view",
           },
         ],
       },

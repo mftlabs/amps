@@ -63,7 +63,7 @@ Ext.define("Amps.Authorized.PageController", {
     var route = Ext.util.History.currentToken;
     var tokens = route.split("/");
     var routes = Object.keys(Amps.Pages.pages);
-    var treenav = ampsutil.getElementByID("treenav");
+    var treenav = amfutil.getElementByID("treenav");
     newSelection = treenav.getStore().findRecord("rowCls", tokens[0]);
     if (routes.indexOf(tokens[0]) >= 0) {
       treenav.setSelection(newSelection);
@@ -78,11 +78,11 @@ Ext.define("Amps.Authorized.PageController", {
     console.log(route);
 
     var config = await Amps.Pages.pages[route]();
-    var main = ampsutil.getElementByID("mainpage");
+    var main = amfutil.getElementByID("mainpage");
     main.removeAll();
     main.insert(0, config.view);
 
-    var actionbar = ampsutil.getElementByID("actionbar");
+    var actionbar = amfutil.getElementByID("actionbar");
     actionbar.removeAll();
 
     if (config.actionbar) {
@@ -366,8 +366,8 @@ Ext.define("Amps.Authorized.PageController", {
           "This service is currently running, are you sure you want to delete it?";
       }
     } else if (tokens[0] == "actions") {
-      var rows = await amfutil.getCollectionData("topics", {
-        "rules.action": rec.data.name,
+      var rows = await amfutil.getCollectionData("services", {
+        handler: rec.data._id,
       });
       console.log(rows);
       if (rows.length) {

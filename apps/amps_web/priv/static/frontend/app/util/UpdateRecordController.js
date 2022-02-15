@@ -9,6 +9,8 @@ Ext.define("Amps.form.update", {
   defaults: {
     labelWidth: 175,
   },
+  entity: null,
+  resizable: true,
   bodyPadding: 25,
   height: 500,
   scrollable: true,
@@ -26,29 +28,51 @@ Ext.define("Amps.form.update", {
   },
 
   convertFields: function (fields) {
-    return fields.map((field) => {
-      var f = Object.assign({}, field);
+    if (this.editing) {
+      if (this.config.update && this.config.update.readOnly) {
+        return fields.map((field) => {
+          var f = Object.assign({}, field);
 
-      if (f.xtype == "radiogroup") {
-        f.xtype = "displayfield";
-        if (f.value) {
-          f.value = f.value[f.name];
-        }
-      } else if (f.xtype == "button") {
-        f.disabled = true;
-      } else if (f.xtype == "displayfield") {
-        f.displaying = true;
+          if (this.config.update.readOnly.indexOf(f.name) >= 0) {
+            f.xtype = "displayfield";
+            f.submitValue = true;
+          } else {
+            if (f.items && f.items.length) {
+              f.items = this.convertFields(f.items);
+              // f.items =
+            }
+          }
+
+          return f;
+        });
       } else {
-        f.readOnly = true;
-        f.forceSelection = false;
-        if (f.items && f.items.length) {
-          f.items = this.convertFields(f.items);
-          // f.items =
-        }
+        return fields;
       }
+    } else {
+      return fields.map((field) => {
+        var f = Object.assign({}, field);
 
-      return f;
-    });
+        if (f.xtype == "radiogroup") {
+          f.xtype = "displayfield";
+          if (f.value) {
+            f.value = f.value[f.name];
+          }
+        } else if (f.xtype == "button") {
+          f.disabled = true;
+        } else if (f.xtype == "displayfield") {
+          f.displaying = true;
+        } else {
+          f.readOnly = true;
+          f.forceSelection = false;
+          if (f.items && f.items.length) {
+            f.items = this.convertFields(f.items);
+            // f.items =
+          }
+        }
+
+        return f;
+      });
+    }
   },
 
   setValue: async function (field) {
@@ -131,7 +155,7 @@ Ext.define("Amps.form.update", {
     }
     if (this.editing) {
       console.log(this.fields);
-      this.insert(0, this.fields);
+      this.insert(0, this.convertFields(this.fields));
 
       bcont.insert(0, [
         {
@@ -153,18 +177,23 @@ Ext.define("Amps.form.update", {
               console.log(values);
               values = amfutil.convertNumbers(form, values);
               console.log(values);
+              delete values.id;
               var user = amfutil.get_user();
-              if (this.audit) {
+              console.log(scope);
+              if (scope.audit) {
                 values.modifiedby = user.firstname + " " + user.lastname;
                 values.modified = new Date().toISOString();
               }
 
-              route = route
+              route = scope.route
                 ? route + "/" + scope.record._id
                 : Ext.util.History.getToken();
 
               console.log(route);
               console.log(values);
+              if (route.split("/").length > 2) {
+                values = Object.assign(scope.record, values);
+              }
 
               amfutil.ajaxRequest({
                 headers: {
@@ -245,7 +274,13 @@ Ext.define("Amps.form.update", {
     }
     this.editing = !this.editing;
   },
-  loadForm: function (config, record, title, route = false, audit = true) {
+  loadForm: async function (
+    config,
+    record,
+    title,
+    route = false,
+    audit = true
+  ) {
     this.config = config;
     this.record = record;
     if (config.transform) {
@@ -312,7 +347,7 @@ Ext.define("Amps.form.update", {
 
     this.editing = false;
     // fields.forEach((field) => {
-    this.edit();
+    await this.edit();
     console.log(this.fields);
   },
   dockedItems: [
@@ -482,7 +517,14 @@ Ext.define("Amps.util.UpdateRecordController", {
           });
 
           grid.setListeners({
-            rowdblclick: function (grid, record, element, rowIndex, e, eOpts) {
+            rowdblclick: async function (
+              grid,
+              record,
+              element,
+              rowIndex,
+              e,
+              eOpts
+            ) {
               console.log(rowIndex);
               console.log(route);
               // amfutil.hideAllButtons();
@@ -514,9 +556,13 @@ Ext.define("Amps.util.UpdateRecordController", {
               if (config.update && config.update.fields) {
                 fields.concat(config.update.fields);
               }
+              var tokens = currRoute.split("/");
 
-              var updateForm = Ext.create("Amps.form.update");
+              var updateForm = Ext.create("Amps.form.update", {
+                entity: record,
+              });
               updateForm.loadForm(config, record.data);
+
               console.log(config.types);
               console.log(gridinfo);
               var win = Ext.create("Ext.window.Window", {
@@ -541,7 +587,7 @@ Ext.define("Amps.util.UpdateRecordController", {
               //   items: [updateForm],
               //   layout: "fit",
               // });
-              amfutil.redirect(currRoute + "/" + rowIndex);
+              amfutil.redirect(currRoute + "/" + record.data._id);
             },
           });
 
@@ -1406,93 +1452,16 @@ Ext.define("Amps.util.UpdateRecordController", {
               capslock_id = Ext.ComponentQuery.query("#user_capslock_id")[0];
               capslock_id.setHidden(true);
             },
-          },
-          width: 550,
-        },
-        {
-          xtype: "textfield",
-          name: "password",
-          fieldLabel: "Password",
-          inputType: "password",
-          allowBlank: true,
-          maskRe: /[^\^ ]/,
-          vtype: "passwordCheck",
-          itemId: "password",
-          enableKeyEvents: true,
-          width: 550,
-          listeners: {
-            afterrender: function (cmp) {
-              cmp.inputEl.set({
-                autocomplete: "new-password",
-              });
-            },
-            keypress: function (me, e) {
-              var charCode = e.getCharCode();
-              if (!e.shiftKey && charCode >= 65 && charCode <= 90) {
-                capslock_id = Ext.ComponentQuery.query("#user_capslock_id")[0];
-                capslock_id.setHidden(false);
-              } else {
-                me.isValid();
-                capslock_id = Ext.ComponentQuery.query("#user_capslock_id")[0];
-                capslock_id.setHidden(true);
-              }
-            },
-            change: function (me, e) {
-              confPassword = amfutil.getElementByID("confirmpwd").getValue();
-              password = me.value;
-              if (confPassword.length != 0) {
-                if (password != confPassword) {
-                  amfutil.getElementByID("addaccount").setDisabled(true);
-                  //amfutil.getElementByID('confpasswd').focus();
-                  var m = Ext.getCmp("confpasswd_id");
-                  m.setActiveError("Passwords doesn't match");
-                } else {
-                  if (
-                    amfutil.getElementByID("username").isValid() === true &&
-                    amfutil.getElementByID("given_name").isValid() === true &&
-                    amfutil.getElementByID("surname").isValid() === true &&
-                    amfutil.getElementByID("email").isValid() === true &&
-                    amfutil.getElementByID("phone_number").isValid() === true
-                  ) {
-                    amfutil.getElementByID("addaccount").setDisabled(false);
-                  }
-                  var m = Ext.getCmp("confpasswd_id");
-                  m.unsetActiveError();
-                }
-              }
+            change: async function (cmp) {
+              await amfutil.duplicateHandler(
+                cmp,
+                { admin: { username: value } },
+                "Admin User Already Exists",
+                amfutil.nameValidator
+              );
             },
           },
-        },
-        {
-          xtype: "textfield",
-          name: "confirmpwd",
-          fieldLabel: "Confirm Password",
-          inputType: "password",
-          maskRe: /[^\^ ]/,
-          id: "confpasswd_id",
-          allowBlank: true,
-          vtype: "passwordMatch",
-          itemId: "confirmpwd",
-          enableKeyEvents: true,
           width: 550,
-          listeners: {
-            keypress: function (me, e) {
-              var charCode = e.getCharCode();
-              if (!e.shiftKey && charCode >= 65 && charCode <= 90) {
-                capslock_id = Ext.ComponentQuery.query("#user_capslock_id")[0];
-                capslock_id.setHidden(false);
-              } else {
-                me.isValid();
-                capslock_id = Ext.ComponentQuery.query("#user_capslock_id")[0];
-                capslock_id.setHidden(true);
-              }
-            },
-          },
-        },
-        {
-          html: '<p style="color:red;font-weight:600;margin-left:168px;"><i class="fa fa-exclamation-triangle" aria-hidden="true"></i>Caps lock is on</p>',
-          itemId: "user_capslock_id",
-          hidden: true,
         },
         {
           xtype: "textfield",
@@ -1504,16 +1473,6 @@ Ext.define("Amps.util.UpdateRecordController", {
           vtypeText: "Please enter a valid given name",
           allowBlank: false,
           width: 550,
-          listeners: {
-            blur: function (field) {
-              capslock_id = Ext.ComponentQuery.query("#user_capslock_id")[0];
-              capslock_id.setHidden(true);
-            },
-            change: function (field) {
-              capslock_id = Ext.ComponentQuery.query("#user_capslock_id")[0];
-              capslock_id.setHidden(true);
-            },
-          },
         },
         {
           xtype: "textfield",
@@ -1525,12 +1484,6 @@ Ext.define("Amps.util.UpdateRecordController", {
           value: record["lastname"],
           vtypeText: "Please enter a valid surname",
           width: 550,
-          listeners: {
-            blur: function (field) {
-              capslock_id = Ext.ComponentQuery.query("#user_capslock_id")[0];
-              capslock_id.setHidden(true);
-            },
-          },
         },
         {
           xtype: "textfield",
@@ -1541,12 +1494,6 @@ Ext.define("Amps.util.UpdateRecordController", {
           value: record["email"],
           allowBlank: false,
           width: 550,
-          listeners: {
-            blur: function (field) {
-              capslock_id = Ext.ComponentQuery.query("#user_capslock_id")[0];
-              capslock_id.setHidden(true);
-            },
-          },
         },
         {
           xtype: "textfield",
@@ -1557,12 +1504,6 @@ Ext.define("Amps.util.UpdateRecordController", {
           itemId: "phone_number",
           vtype: "phone",
           width: 550,
-          listeners: {
-            blur: function (field) {
-              capslock_id = Ext.ComponentQuery.query("#user_capslock_id")[0];
-              capslock_id.setHidden(true);
-            },
-          },
         },
         {
           xtype: "combobox",
@@ -1573,12 +1514,6 @@ Ext.define("Amps.util.UpdateRecordController", {
           itemId: "role",
           store: ["Admin", "Guest"],
           width: 550,
-          listeners: {
-            blur: function (field) {
-              capslock_id = Ext.ComponentQuery.query("#user_capslock_id")[0];
-              capslock_id.setHidden(true);
-            },
-          },
         },
         {
           xtype: "checkbox",
@@ -1601,7 +1536,6 @@ Ext.define("Amps.util.UpdateRecordController", {
             click: function (btn) {
               var form = btn.up("form").getForm();
               var username = form.findField("username").getSubmitValue();
-              var password = form.findField("password").getSubmitValue();
               var given_name = form.findField("given_name").getSubmitValue();
               var surname = form.findField("surname").getSubmitValue();
               var email = form.findField("email").getSubmitValue();
@@ -1629,10 +1563,6 @@ Ext.define("Amps.util.UpdateRecordController", {
                 approved: approved,
                 role: role,
               };
-
-              if (password) {
-                user["password"] = password;
-              }
 
               amfutil.ajaxRequest({
                 headers: {

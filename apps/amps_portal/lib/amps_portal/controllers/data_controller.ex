@@ -21,9 +21,9 @@ defmodule AmpsPortal.DataController do
         )
 
       user ->
-        qp = conn.query_params
+        qp = conn.query_params()
 
-        qp = Map.put(qp, "filter", %{"recipient" => user.username})
+        qp = Map.put(qp, "filters", Jason.encode!(%{"mailbox" => user.username}))
         IO.inspect(qp)
         conn = Map.put(conn, :query_params, qp)
 
@@ -32,6 +32,69 @@ defmodule AmpsPortal.DataController do
         json(
           conn,
           data
+        )
+    end
+  end
+
+  def get_messages(conn, _params) do
+    # if vault_collection(collection) do
+    #   data = VaultData.get_rows("amps/" <> collection)
+    #   IO.inspect(data)
+
+    #   json(
+    #     conn,
+    #     data
+    #   )
+    # else
+    case Pow.Plug.current_user(conn) do
+      nil ->
+        json(
+          conn,
+          %{success: false, count: 0, rows: []}
+        )
+
+      user ->
+        qp = conn.query_params()
+
+        qp = Map.put(qp, "filters", Jason.encode!(%{"mailbox" => user.username}))
+        IO.inspect(qp)
+        conn = Map.put(conn, :query_params, qp)
+
+        data = DB.get_rows(conn, %{"collection" => "mailbox"})
+
+        json(
+          conn,
+          data
+        )
+    end
+  end
+
+  def duplicate(conn, _params) do
+    body = conn.body_params()
+
+    duplicate = DB.find_one("users", body) != nil
+
+    json(conn, duplicate)
+  end
+
+  def get_mailbox_topics(conn, _params) do
+    case Pow.Plug.current_user(conn) do
+      nil ->
+        json(
+          conn,
+          %{success: false, count: 0, rows: []}
+        )
+
+      user ->
+        topics =
+          DB.find("topics", %{
+            "type" => "mailbox",
+            "topic" => %{"$regex" => "amps.mailbox.#{user.username}.*"}
+          })
+
+        json(
+          conn,
+          topics
         )
     end
   end

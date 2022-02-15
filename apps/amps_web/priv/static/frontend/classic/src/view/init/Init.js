@@ -9,7 +9,7 @@ Ext.define("Amps.panel.Startup", {
   itemId: "wizard",
   defaultListenerScope: true,
   constructor(args) {
-    this.callParent(args);
+    this.callParent([args]);
   },
 
   items: [
@@ -234,21 +234,25 @@ Ext.define("Amps.panel.Startup", {
               xtype: "textfield",
               name: "storage_root",
               fieldLabel: "Permanent Storage Path",
+              value: "/amps/data",
             },
             {
               xtype: "textfield",
               name: "storage_temp",
               fieldLabel: "Temp Path",
+              value: "/amps/tmp",
             },
             {
               xtype: "textfield",
               name: "storage_logs",
               fieldLabel: "Logs Path",
+              value: "/amps/logs",
             },
             {
               xtype: "textfield",
               name: "python_path",
-              fieldLabel: "Python Module Path",
+              fieldLabel: "Script Module Path",
+              value: "/amps/modules",
             },
           ],
         },

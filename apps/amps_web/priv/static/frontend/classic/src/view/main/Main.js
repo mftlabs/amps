@@ -48,7 +48,7 @@ Ext.define("Amps.view.main.Main", {
     },
     {
       xtype: "container",
-      width: 5,
+      width: 3,
       region: "west",
     },
     {
@@ -77,7 +77,7 @@ Ext.define("Amps.view.main.Main", {
     },
     {
       xtype: "container",
-      width: 5,
+      width: 3,
       region: "east",
     },
     {
@@ -108,7 +108,6 @@ Ext.define("Amps.view.main.Main", {
           handler: "onSearchPanel",
           tooltip: "Filter Records",
           hidden: true,
-          style: "font-weight:bold;color:red;",
         },
         {
           xtype: "button",
@@ -134,6 +133,22 @@ Ext.define("Amps.view.main.Main", {
           tooltip: "Reprocess",
           hidden: true,
           handler: "onReprocessClicked",
+        },
+        {
+          xtype: "button",
+          itemId: "reroute",
+          iconCls: "x-fa fa-random",
+          tooltip: "Reroute",
+          hidden: true,
+          handler: "onRerouteClicked",
+        },
+        {
+          xtype: "button",
+          itemId: "export",
+          iconCls: "x-fa fa-download",
+          tooltip: "Export",
+          hidden: true,
+          handler: "onExportClicked",
         },
         {
           xtype: "container",
@@ -186,7 +201,6 @@ Ext.define("Amps.view.main.Main", {
               iconCls: "x-fa fa-search",
               handler: "onSearchPanel",
               tooltip: "Filter Records",
-              style: "font-weight:bold;color:red;",
             },
             {
               xtype: "button",
@@ -203,6 +217,13 @@ Ext.define("Amps.view.main.Main", {
               tooltip: "Refresh",
               handler: "onRefreshButtonClicked",
             },
+            {
+              xtype: "button",
+              itemId: "export",
+              iconCls: "x-fa fa-download",
+              tooltip: "Export",
+              handler: "onExportClicked",
+            },
           ],
         },
         {
@@ -218,14 +239,12 @@ Ext.define("Amps.view.main.Main", {
               tooltip: "Add New",
               handler: "onAddNewButtonClicked",
             },
-            { xtype: "tbfill" },
             {
               xtype: "button",
               itemId: "searchpanelbtn",
               iconCls: "x-fa fa-search",
               handler: "onSearchPanel",
               tooltip: "Filter Records",
-              style: "font-weight:bold;color:red;",
             },
             {
               xtype: "button",

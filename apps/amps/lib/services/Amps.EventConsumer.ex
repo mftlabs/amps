@@ -166,7 +166,8 @@ defmodule Amps.PullConsumer do
           AmpsEvents.send_history("amps.events.action", "message_events", msg, %{
             "status" => "started",
             "topic" => parms["topic"],
-            "action" => actparms["name"]
+            "action" => actparms["name"],
+            "subscriber" => name
           })
 
           IO.puts("action parms #{inspect(actparms)}")
@@ -181,7 +182,8 @@ defmodule Amps.PullConsumer do
               AmpsEvents.send_history("amps.events.action", "message_events", msg, %{
                 "topic" => parms["topic"],
                 "status" => "completed",
-                "action" => actparms["name"]
+                "action" => actparms["name"],
+                "subscriber" => name
               })
           end
         rescue

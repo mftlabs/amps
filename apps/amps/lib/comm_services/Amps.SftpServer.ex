@@ -303,10 +303,12 @@ defmodule Amps.SftpHandler do
       # check result
       _result = :file.close(io_device)
       user = to_string(state[:user])
+      opt = state[:options]
+      service = opt["name"]
 
       msg = %{
         "mailbox" => user,
-        "service" => "sftpd",
+        "service" => service,
         "msgid" => state[:msgid],
         "fsize" => state[:fsize],
         "fpath" => state[:fpath],
@@ -319,9 +321,6 @@ defmodule Amps.SftpHandler do
 
       IO.inspect(state)
 
-      opt = state[:options]
-      IO.inspect(opt)
-      service = opt["name"]
       user = state[:user]
       topic = "amps.svcs.#{service}.#{user}"
       IO.inspect(state)

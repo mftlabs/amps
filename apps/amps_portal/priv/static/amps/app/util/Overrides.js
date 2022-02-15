@@ -22,21 +22,3 @@ Ext.define("Override.route.Route", {
 //     return parseInt(val);
 //   },
 // });
-
-Ext.override(Ext.data.Store, {
-  constructor: function (config) {
-    this.callParent([config]);
-    this.proxy.on("exception", this.onProxyException, this);
-  },
-  onProxyException: async function (proxy, response, options, eOpts) {
-    var store = this;
-    console.log("exception");
-    if (response.status == 401) {
-      await ampsutil.renew_session();
-      proxy.setHeaders({
-        Authorization: localStorage.getItem("access_token"),
-      });
-      store.reload();
-    }
-  },
-});

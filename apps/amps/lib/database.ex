@@ -155,6 +155,9 @@ defmodule Amps.DB do
   end
 
   def add_to_field(collection, body, id, field) do
+    fieldid = AmpsUtil.get_id()
+    body = Map.put(body, "_id", fieldid)
+
     case db() do
       "pg" ->
         Postgres.add_to_field(collection, body, id, field)
@@ -165,6 +168,8 @@ defmodule Amps.DB do
       "es" ->
         Elastic.add_to_field(collection, body, id, field)
     end
+
+    fieldid
   end
 
   def get_in_field(collection, id, field, idx) do
@@ -874,7 +879,8 @@ defmodule Amps.DB do
         query: filters,
         sort: sort,
         from: from,
-        size: size
+        size: size,
+        track_total_hits: true
       }
 
       query(collection, query)
@@ -897,9 +903,6 @@ defmodule Amps.DB do
     end
 
     def find_one(collection, clauses, opts \\ %{}) do
-      IO.inspect(collection)
-      IO.inspect(clauses)
-
       case query(
              collection,
              Map.merge(
@@ -960,9 +963,14 @@ defmodule Amps.DB do
         search
         |> format_search()
         |> Enum.reduce([], fn {k, v}, acc ->
+          IO.inspect(v)
+
           filter =
             case k do
               "exists" ->
+                %{k => v}
+
+              "bool" ->
                 %{k => v}
 
               _ ->
@@ -1143,7 +1151,7 @@ defmodule Amps.DB do
       )
     end
 
-    def get_in_field(collection, id, field, idx) do
+    def get_in_field(collection, id, field, fieldid) do
       item =
         find_one(
           collection,
@@ -1152,17 +1160,34 @@ defmodule Amps.DB do
         )
 
       IO.inspect(item[field])
-      Enum.at(item[field], String.to_integer(idx))
+
+      Enum.find_value(item[field], fn obj ->
+        if obj["_id"] == fieldid do
+          obj
+        end
+      end)
+
+      # Enum.at(item[field], String.to_integer(idx))
     end
 
     @spec update_in_field(any, any, any, any, any) :: any
-    def update_in_field(collection, body, id, field, idx) do
+    def update_in_field(collection, body, id, field, fieldid) do
       {:ok, result} =
         Amps.Cluster.post(
           path(collection) <> "/_update_by_query",
           %{
             "script" => %{
-              "inline" => "ctx._source.#{field}.set(#{idx}, params.body)",
+              "inline" => "
+              for (obj in ctx._source.#{field}) {
+                if (obj._id.equals(\"#{fieldid}\")) {
+                  ctx._source.#{field}.set(ctx._source.#{field}.indexOf(obj), params.body);
+                  break;
+                }
+              }
+
+
+
+              ",
               "params" => %{"body" => body}
             },
             "query" => convert_search(%{"_id" => id})
@@ -1175,13 +1200,20 @@ defmodule Amps.DB do
       find_one(collection, %{"_id" => id})
     end
 
-    def delete_from_field(collection, body, id, field, idx) do
+    def delete_from_field(collection, body, id, field, fieldid) do
       {:ok, result} =
         Amps.Cluster.post(
           path(collection) <> "/_update_by_query",
           %{
             "script" => %{
-              "inline" => "ctx._source.#{field}.remove(#{idx})"
+              "inline" => "
+              for (obj in ctx._source.#{field}) {
+                if (obj._id.equals(\"#{fieldid}\")) {
+                  ctx._source.#{field}.remove(ctx._source.#{field}.indexOf(obj));
+                  break;
+                }
+              }
+              "
             },
             "query" => convert_search(%{"_id" => id})
           },
@@ -1189,6 +1221,8 @@ defmodule Amps.DB do
             "refresh" => true
           }
         )
+
+      IO.inspect(result)
 
       find_one(
         collection,

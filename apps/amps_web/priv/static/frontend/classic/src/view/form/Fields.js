@@ -11,9 +11,15 @@ Ext.define("Amps.form.DateTime", {
   fieldLabel: "Start Time",
 
   constructor: function (args) {
-    this.callParent(args);
+    this.callParent([args]);
     this.itemId = args["itemId"];
     console.log(args);
+
+    // this.arrayfields = args["arrayfields"];
+    // this.fieldTitle = args["fieldTitle"];
+
+    var date = this.down("#date");
+    var time = this.down("#time");
 
     // this.arrayfields = args["arrayfields"];
     // this.fieldTitle = args["fieldTitle"];
@@ -36,9 +42,27 @@ Ext.define("Amps.form.DateTime", {
 
     if (args["value"]) {
       var value = args["value"];
+      var d = new Date(value);
+
+      date.setValue(d);
+      var t =
+        (d.getHours() < 10 ? "0" : "") +
+        d.getHours() +
+        ":" +
+        (d.getMinutes() < 10 ? "0" : "") +
+        d.getMinutes() +
+        ":" +
+        (d.getSeconds() < 10 ? "0" : "") +
+        d.getSeconds();
+      time.setValue(t);
     }
 
     this.setReadOnly(args["readOnly"]);
+
+    if (args["listeners"]) {
+      date.setListeners(args["listeners"]);
+      time.setListeners(args["listeners"]);
+    }
   },
 
   getErrors: function (val) {

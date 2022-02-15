@@ -12,121 +12,75 @@ function getParm(field) {
   };
 }
 
-// const pageFilters = {
-//   rules: [
-//     {
-//       type: "combo",
-//       field: "action",
-//       label: "Action",
-//       options: [
-//         {
-//           field: "hold",
-//           label: "Hold",
-//         },
-//         {
-//           field: "mailbox",
-//           label: "Mailbox",
-//         },
-//       ],
-//     },
-//     {
-//       type: "checkbox",
-//       field: "ediflag",
-//       label: "Parse Edi",
-//     },
-//     {
-//       type: "checkbox",
-//       field: "scanflag",
-//       label: "Virus Scan",
-//     },
-//     {
-//       type: "combo",
-//       field: "status",
-//       label: "Status",
-//       options: [
-//         {
-//           field: "received",
-//           label: "Received",
-//         },
-//         {
-//           field: "held",
-//           label: "Held",
-//         },
-//         {
-//           field: "warning",
-//           label: "Warning",
-//         },
-//         {
-//           field: "failed",
-//           label: "Failed",
-//         },
-//       ],
-//     },
-//     {
-//       type: "text",
-//       field: "reason",
-//       label: "Reason",
-//     },
-//   ],
-//   accounts: [
-//     {
-//       type: "text",
-//       field: "username",
-//       label: "User Name",
-//     },
-//   ],
-//   agentput: [
-//     {
-//       type: "text",
-//       field: "name",
-//       label: "Rule Name",
-//     },
-//     {
-//       type: "text",
-//       field: "rtype",
-//       label: "Rule Type",
-//     },
-//     {
-//       type: "text",
-//       field: "bucket",
-//       label: "Upload Bucket Name",
-//     },
-//   ],
-//   agentget: [
-//     {
-//       type: "text",
-//       field: "name",
-//       label: "Rule Name",
-//     },
-//     {
-//       type: "text",
-//       field: "rtype",
-//       label: "Rule Type",
-//     },
-//     {
-//       type: "text",
-//       field: "bucket",
-//       label: "Bucket Name",
-//     },
-//   ],
-//   users: [
-//     {
-//       type: "text",
-//       field: "username",
-//       label: "User Name",
-//     },
-//     {
-//       type: "text",
-//       field: "firstname",
-//       label: "First Name",
-//     },
-//     {
-//       type: "text",
-//       field: "lastname",
-//       label: "Last Name",
-//     },
-//   ],
-// };
+Ext.define("Amps.column.Socket", {
+  extend: "Ext.grid.column.Widget",
+  cellFocusable: false,
+  xtype: "socketcolumn",
+  config: null,
+  constructor: function (args) {
+    this.callParent([args]);
+    this.config = args["config"];
+  },
+  widget: {
+    xtype: "socketwidget",
+  },
+  onWidgetAttach: function (col, widget, rec) {
+    clearInterval(widget.timer);
+    widget.removeAll();
+
+    var config = col.config(rec.data);
+
+    if (config) {
+      widget.load(config.event, config.payload, config.callback);
+    }
+  },
+});
+
+Ext.define("Amps.widget.Socket", {
+  extend: "Ext.container.Container",
+  xtype: "socketwidget",
+  timer: null,
+  style: {
+    background: "transparent",
+  },
+
+  listeners: {
+    beforedestroy: function (scope) {
+      console.log("destroying");
+      clearInterval(scope.timer);
+    },
+  },
+  layout: "fit",
+
+  constructor: function (config) {
+    // It is important to remember to call the Widget superclass constructor
+    // when overriding the constructor in a derived class. This ensures that
+    // the element is initialized from the template, and that initConfig() is
+    // is called.
+    this.callParent([config]);
+  },
+  load: function (event, parms, callback, time) {
+    var scope = this;
+    var data = this._rowContext.record.data;
+    var cb;
+    if (callback) {
+      cb = function (payload) {
+        callback(scope, payload);
+      };
+    } else {
+      cb = function (payload) {
+        scope.removeAll();
+
+        scope.insert({
+          xtype: "component",
+          html: payload,
+        });
+      };
+    }
+
+    scope.timer = amfutil.socketLoop(event, parms, cb, time);
+  },
+});
 
 const filterTypes = {
   text: (field) => ({
@@ -144,15 +98,20 @@ const filterTypes = {
     allowBlank: false,
     forceSelection: true,
   }),
-  combo: (field) => ({
-    xtype: "combobox",
-    fieldLabel: field.text,
-    name: field.dataIndex,
-    displayField: "label",
-    valueField: "field",
-    store: field.options,
-    emptyText: "Filter by " + field.text,
-  }),
+  combo: (field, opts) => {
+    return Object.assign(
+      {
+        xtype: "combobox",
+        fieldLabel: field.text,
+        name: field.dataIndex,
+        displayField: "label",
+        valueField: "field",
+        store: field.options,
+        emptyText: "Filter by " + field.text,
+      },
+      opts
+    );
+  },
 
   date: (field) =>
     new Ext.form.FieldSet({
@@ -489,6 +448,7 @@ const filterTypes = {
               xtype: "numberfield",
               anchor: "100%",
               fieldLabel: "Minimum",
+              minValue: 0,
               name: "minSize",
               itemId: field.dataIndex + "minSize",
               emptyText: "Minimum File Size",
@@ -570,6 +530,7 @@ const filterTypes = {
               fieldLabel: "Maximum",
               name: "maxSize",
               itemId: field.dataIndex + "maxSize",
+              minValue: 0,
               emptyText: "Maximum File Size",
               padding: { left: 0, top: 0, bottom: 6 },
               listeners: {
@@ -651,6 +612,8 @@ Ext.define("Amps.util.Utilities", {
   extend: "Ext.app.ViewController",
   singleton: true,
   renewPromise: null,
+  socketPromise: null,
+
   channel: null,
   socket: null,
   stores: [],
@@ -662,7 +625,7 @@ Ext.define("Amps.util.Utilities", {
       itemId: "approve",
       handler: "approveUser",
       getClass: function (v, meta, record) {
-        console.log(record);
+        // console.log(record);
         var style;
         if (record.data.approved) {
           style = "active";
@@ -727,6 +690,22 @@ Ext.define("Amps.util.Utilities", {
       tooltip: "Click here to reset user password",
       handler: "resetPassword",
     },
+    resetAdmin: {
+      name: "link",
+      iconCls: "x-fa fa-key actionicon",
+      itemId: "resetPassword",
+      tooltip: "Click here to reset user password",
+      handler: "resetAdminPassword",
+    },
+    changePassAdmin: {
+      xtype: "button",
+      name: "changepassword",
+      iconCls: "x-fa fa-refresh actionicon",
+      itemId: "changePassword",
+      tooltip: "Click here to change user password",
+      handler: "onChangeAdminPassword",
+      style: "cursor:pointer;",
+    },
     upload: {
       name: "upload",
       iconCls: "x-fa fa-upload actionicon",
@@ -756,6 +735,8 @@ Ext.define("Amps.util.Utilities", {
     "clearfilter",
     "refreshbtn",
     "reprocess",
+    "reroute",
+    "export",
   ],
 
   from: null,
@@ -781,6 +762,191 @@ Ext.define("Amps.util.Utilities", {
         console.log("fail");
       },
     });
+  },
+
+  changePasswordAdmin: function (id) {
+    var changePasswordWindow = new Ext.window.Window({
+      title: "Change Password",
+      modal: true,
+      scrollable: true,
+      resizable: false,
+      width: 600,
+      height: 250,
+      layout: "fit",
+      items: [
+        {
+          xtype: "form",
+          defaults: {
+            padding: 5,
+            labelWidth: 140,
+          },
+          scrollable: true,
+          items: [
+            {
+              xtype: "textfield",
+              name: "oldpassword",
+              fieldLabel: "Old Password",
+              inputType: "password",
+              allowBlank: false,
+              maskRe: /[^\^ ]/,
+              //vtype: "passwordCheck",
+              itemId: "oldpassword",
+              enableKeyEvents: true,
+              width: 550,
+              listeners: {
+                afterrender: function (cmp) {
+                  cmp.inputEl.set({
+                    autocomplete: "old-password",
+                  });
+                },
+                keypress: function (me, e) {
+                  var charCode = e.getCharCode();
+                  if (!e.shiftKey && charCode >= 65 && charCode <= 90) {
+                    capslock_id =
+                      Ext.ComponentQuery.query("#user_capslock_id")[0];
+                    capslock_id.setHidden(false);
+                  } else {
+                    me.isValid();
+                    capslock_id =
+                      Ext.ComponentQuery.query("#user_capslock_id")[0];
+                    capslock_id.setHidden(true);
+                  }
+                },
+              },
+            },
+            {
+              xtype: "textfield",
+              name: "password",
+              fieldLabel: "Password",
+              inputType: "password",
+              allowBlank: false,
+              maskRe: /[^\^ ]/,
+              vtype: "passwordCheck",
+              itemId: "password",
+              enableKeyEvents: true,
+              width: 550,
+              listeners: {
+                afterrender: function (cmp) {
+                  cmp.inputEl.set({
+                    autocomplete: "new-password",
+                  });
+                },
+                keypress: function (me, e) {
+                  var charCode = e.getCharCode();
+                  if (!e.shiftKey && charCode >= 65 && charCode <= 90) {
+                    capslock_id =
+                      Ext.ComponentQuery.query("#user_capslock_id")[0];
+                    capslock_id.setHidden(false);
+                  } else {
+                    me.isValid();
+                    capslock_id =
+                      Ext.ComponentQuery.query("#user_capslock_id")[0];
+                    capslock_id.setHidden(true);
+                  }
+                },
+                change: function (me, e) {
+                  confPassword = amfutil
+                    .getElementByID("confirmpwd")
+                    .getValue();
+                  password = me.value;
+                  if (confPassword.length != 0) {
+                    if (password != confPassword) {
+                      //amfutil.getElementByID('confpasswd').focus();
+                      var m = Ext.getCmp("confpasswd_id");
+                      m.setActiveError("Passwords doesn't match");
+                    } else {
+                      var m = Ext.getCmp("confpasswd_id");
+                      m.unsetActiveError();
+                    }
+                  }
+                },
+              },
+            },
+            {
+              xtype: "textfield",
+              name: "confirmpwd",
+              fieldLabel: "Confirm Password",
+              inputType: "password",
+              maskRe: /[^\^ ]/,
+              id: "confpasswd_id",
+              allowBlank: false,
+              vtype: "ChangepasswordMatch",
+              itemId: "confirmpwd",
+              enableKeyEvents: true,
+              width: 550,
+              listeners: {
+                keypress: function (me, e) {
+                  var charCode = e.getCharCode();
+                  if (!e.shiftKey && charCode >= 65 && charCode <= 90) {
+                    capslock_id =
+                      Ext.ComponentQuery.query("#user_capslock_id")[0];
+                    capslock_id.setHidden(false);
+                  } else {
+                    me.isValid();
+                    capslock_id =
+                      Ext.ComponentQuery.query("#user_capslock_id")[0];
+                    capslock_id.setHidden(true);
+                  }
+                },
+              },
+            },
+            {
+              html: '<p style="color:red;font-weight:600;margin-left:168px;"><i class="fa fa-exclamation-triangle" aria-hidden="true"></i>Caps lock is on</p>',
+              itemId: "user_capslock_id",
+              hidden: true,
+            },
+          ],
+
+          buttons: [
+            {
+              text: "Change",
+              formBind: true,
+              handler: function () {
+                var win = this.up("window");
+                win.setLoading(true);
+                password = amfutil.getElementByID("password").getValue();
+                oldpassword = amfutil.getElementByID("oldpassword").getValue();
+                confirmpwd = amfutil.getElementByID("confirmpwd").getValue();
+                if (password == oldpassword) {
+                  win.setLoading(false);
+                  Ext.toast("Old password & new password con't same");
+                } else {
+                  console.log(id, password);
+                  amfutil.ajaxRequest({
+                    url: "api/admin/changepassword/" + id,
+                    method: "post",
+                    jsonData: {
+                      password: password,
+                      oldpassword: oldpassword,
+                    },
+                    success: function () {
+                      changePasswordWindow.close();
+                      Ext.toast("Password changed successfully");
+                      //   grid.getStore().reload();
+                    },
+                    failure: function () {
+                      win.setLoading(false);
+                      Ext.toast("Change password failed");
+                    },
+                  });
+                }
+              },
+            },
+            {
+              text: "Cancel",
+              cls: "button_class",
+              itemId: "cancel",
+              listeners: {
+                click: function (btn) {
+                  changePasswordWindow.close();
+                },
+              },
+            },
+          ],
+        },
+      ],
+    });
+    changePasswordWindow.show();
   },
 
   check_redirect: function (scope) {
@@ -895,6 +1061,7 @@ Ext.define("Amps.util.Utilities", {
           source: store,
         },
         allowBlank: false,
+        forceSelection: true,
       },
       opts
     );
@@ -928,7 +1095,6 @@ Ext.define("Amps.util.Utilities", {
   },
 
   channelHandlers: function (channel) {
-    console.log(channel);
     channel
       .join()
       .receive("ok", (resp) => {
@@ -953,11 +1119,14 @@ Ext.define("Amps.util.Utilities", {
 
   renderMainApp: function () {},
 
-  broadcastEvent: function (
+  broadcastEvent: async function (
     event,
     message,
     callback = (payload) => console.log(payload)
   ) {
+    if (amfutil.socketPromise) {
+      return;
+    }
     if (event == "update") {
       amfutil.stores
         .filter((store) => store.config.collection == message.page)
@@ -967,7 +1136,50 @@ Ext.define("Amps.util.Utilities", {
       .push(event, message, 10000)
       .receive("ok", (payload) => callback(payload))
       .receive("error", (err) => console.log("phoenix errored", err))
-      .receive("timeout", () => console.log("timed out pushing"));
+      .receive("timeout", async () => {
+        await amfutil.updateChannel();
+        console.log("timed out pushing");
+      });
+  },
+  updateChannel: async function () {
+    if (amfutil.socketPromise) {
+      await amfutil.socketPromise;
+    } else {
+      amfutil.socketPromise = new Promise(function (resolve, reject) {
+        if (amfutil.socket) {
+          amfutil.socket.disconnect();
+          delete amfutil.socket;
+        }
+        var token = localStorage.getItem("access_token");
+        console.log(token);
+        amfutil.socket = new window.pSocket("/socket", {
+          params: { token: token },
+        });
+        amfutil.socket.connect();
+
+        amfutil.socket.onError(async function (e) {
+          console.log(e);
+
+          amfutil.socket.disconnect();
+          amfutil.socketPromise = null;
+
+          await amfutil.renew_session();
+
+          reject();
+        });
+
+        amfutil.socket.onOpen(async function () {
+          var channel = amfutil.socket.channel("notifications");
+
+          amfutil.channel = channel;
+
+          amfutil.channelHandlers(channel);
+          amfutil.socketPromise = null;
+          resolve();
+        });
+      });
+      await amfutil.socketPromise;
+    }
   },
   providercallback: function (params, scope) {
     var session_params = localStorage.getItem("session_params");
@@ -1069,6 +1281,15 @@ Ext.define("Amps.util.Utilities", {
       parms[v.field] = v.value;
     });
     return parms;
+  },
+
+  nameValidator(val) {
+    var regex = new RegExp("(\\s|-)");
+    // Check for white space
+    if (regex.test(val)) {
+      //alert();
+      return "Names cannot contain spaces or hyphens.";
+    }
   },
 
   formatMatchPatterns(values) {
@@ -1174,10 +1395,86 @@ Ext.define("Amps.util.Utilities", {
     }
   },
 
+  getAllHeaders: function () {
+    var headers = {};
+    Object.entries(ampsgrids.grids).forEach((grid) => {
+      var h = amfutil.getHeaders(grid[0]);
+      if (h) {
+        headers[grid[0]] = h;
+      }
+    });
+    return JSON.stringify(headers);
+  },
+
+  getHeaders: function (collection) {
+    var config = ampsgrids.grids[collection]();
+    return amfutil.getFromConfig(config);
+  },
+
+  getFromConfig: function (config) {
+    var headers = [];
+    if (config.fields) {
+      amfutil.searchFields(config.fields, function (field) {
+        if (field.name != null) {
+          console.log(field.name);
+          headers.push(field.name);
+        }
+        return field;
+      });
+      var types = {};
+
+      if (config.types) {
+        Object.entries(config.types).forEach((entry) => {
+          var typeconfig = entry[1];
+          var typeheaders = [];
+          amfutil.searchFields(typeconfig.fields, function (field) {
+            if (field.name != null) {
+              console.log(field.name);
+              typeheaders.push(field.name);
+            }
+            return field;
+          });
+          types[entry[0]] = amfutil.uniques(typeheaders);
+        });
+      }
+      var subgrids = {};
+
+      if (config.subgrids) {
+        Object.entries(config.subgrids).forEach((s) => {
+          var cf = s[1];
+          if (!cf.grid) {
+            amfutil.searchFields(cf.fields, function (field) {
+              if (field.name != null) {
+                console.log(field.name);
+                headers.push(s[0] + "/" + field.name);
+              }
+              return field;
+            });
+          } else {
+            subgrids[s[0]] = amfutil.getFromConfig(cf);
+          }
+        });
+      }
+
+      return {
+        headers: amfutil.uniques(headers),
+        types: Object.keys(types).length === 0 ? null : types,
+        subgrids: Object.keys(subgrids).length === 0 ? null : subgrids,
+      };
+    }
+  },
+
+  uniques: function (arr) {
+    var a = [];
+    for (var i = 0, l = arr.length; i < l; i++)
+      if (a.indexOf(arr[i]) === -1 && arr[i] !== "") a.push(arr[i]);
+    return a;
+  },
+
   getCollectionData: async function (collection, filters = {}) {
     console.log(filters);
     var resp = await amfutil.ajaxRequest({
-      url: "/api/" + collection,
+      url: "/api/store/" + collection,
       method: "GET",
       timeout: 60000,
       params: { filters: JSON.stringify(filters ? filters : {}) },
@@ -1239,7 +1536,10 @@ Ext.define("Amps.util.Utilities", {
   },
 
   search: function (field, func) {
+    console.log(field);
+
     field = func(field);
+    console.log(field);
     if (field.items && field.items.length) {
       field.items = field.items.map((item) => {
         return amfutil.search(item, func);
@@ -1288,6 +1588,22 @@ Ext.define("Amps.util.Utilities", {
         grid.getStore().reload();
       },
     });
+  },
+
+  socketLoop: function (event, parms, callback, time = 1000) {
+    function broadcast(data) {
+      amfutil.broadcastEvent(event, parms, (payload) => {
+        callback(payload);
+      });
+    }
+
+    var timer = setInterval(function () {
+      if (Ext.util.History.getToken().split("/")[0] == "monitoring") {
+        broadcast();
+      }
+    }, time);
+    broadcast();
+    return timer;
   },
 
   tooltip: function (field, opts) {
@@ -1635,18 +1951,23 @@ Ext.define("Amps.util.Utilities", {
   },
 
   compareOpts: function (x, y, val = true) {
-    Object.entries(x).forEach((entry) => {
-      var v = entry[1];
-      if (
-        typeof entry[1] === "object" &&
-        !Array.isArray(entry[1]) &&
-        entry[1] !== null
-      ) {
-        val = amfutil.compareOpts(x[entry[0]], y[entry[0]], val);
-      } else {
-        val = val && y[entry[0]] == x[entry[0]];
-      }
-    });
+    if (x && y) {
+      Object.entries(x).forEach((entry) => {
+        var v = entry[1];
+        if (
+          typeof entry[1] === "object" &&
+          !Array.isArray(entry[1]) &&
+          entry[1] !== null
+        ) {
+          val = amfutil.compareOpts(x[entry[0]], y[entry[0]], val);
+        } else {
+          val = val && y[entry[0]] == x[entry[0]];
+        }
+      });
+    } else {
+      val = false;
+    }
+
     return val;
   },
 
@@ -1721,41 +2042,31 @@ Ext.define("Amps.util.Utilities", {
     );
   },
 
-  renderListeners: function (render) {
+  renderListeners: function (render, ar, change) {
     return {
       afterrender: function (scope) {
         var val = scope.getValue();
         render(scope, val);
+        if (ar) {
+          ar(scope, val);
+        }
       },
       change: function (scope, val) {
         render(scope, val);
+        if (change) {
+          change(scope, val);
+        }
       },
     };
   },
 
-  updateChannel: function () {
-    if (amfutil.socket) {
-      amfutil.socket.disconnect();
-    }
-    var token = localStorage.getItem("access_token");
-    console.log(token);
-    amfutil.socket = new window.pSocket("/socket", {
-      params: { token: token },
-    });
-
-    amfutil.socket.connect();
-
-    var channel = amfutil.socket.channel("notifications");
-
-    amfutil.channel = channel;
-
-    amfutil.channelHandlers(channel);
-  },
-
   renew_session: async function () {
+    console.log(localStorage.getItem("renewing"));
+
     if (amfutil.renewPromise) {
       await amfutil.renewPromise;
     } else {
+      localStorage.setItem("renewing", "true");
       amfutil.renewPromise = new Promise(function (resolve, reject) {
         Ext.Ajax.request({
           url: "/api/session/renew",
@@ -1765,7 +2076,7 @@ Ext.define("Amps.util.Utilities", {
           method: "POST",
           timeout: 30000,
           params: {},
-          success: function (response) {
+          success: async function (response) {
             //console.log(response);
             var obj = Ext.decode(response.responseText);
             console.log(obj);
@@ -1773,7 +2084,8 @@ Ext.define("Amps.util.Utilities", {
               var token = obj.data.access_token;
               localStorage.setItem("access_token", token);
               localStorage.setItem("renewal_token", obj.data.renewal_token);
-              amfutil.updateChannel();
+              await amfutil.updateChannel();
+              localStorage.removeItem("renewing");
             } else {
               Ext.Msg.show({
                 title: "Unauthorized or Expired Session",
@@ -1813,28 +2125,92 @@ Ext.define("Amps.util.Utilities", {
     }
   },
 
-  duplicateHandler: async function (cmp, value, message, validator) {
-    var duplicate = await amfutil.checkDuplicate(value);
+  duplicateValidation: function (config, check) {
+    var obj = Object.assign(config, {
+      validator: function (val) {
+        // check(this, val);
+        return this.validCheck;
+      },
+      validCheck: true,
+      check: async function () {
+        await check(this, this.getValue());
+      },
+      duplicate: true,
+      listeners: amfutil.duplicateListeners(check),
+    });
+    return obj;
+  },
 
-    if (duplicate) {
-      cmp.setActiveError(message);
-      cmp.setValidation(message);
-      // cmp.isValid(false);
-    } else {
-      if (validator) {
-        var invalid = validator(cmp.getValue());
-        if (invalid) {
-          cmp.setActiveError(invalid);
-          cmp.setValidation(invalid);
-        } else {
-          cmp.setActiveError();
-          cmp.setValidation();
-        }
-      } else {
-        cmp.setActiveError();
-        cmp.setValidation();
-      }
+  duplicateIdCheck: function (clauses, cmp) {
+    var form = cmp.up("form");
+    if (form.record && form.record._id) {
+      clauses["bool"] = {
+        must_not: {
+          match: { _id: form.record._id },
+        },
+      };
     }
+    return clauses;
+  },
+
+  duplicateListeners: function (check, ar, change) {
+    return {
+      afterrender: async function (scope) {
+        var val = scope.getValue();
+        if (ar) {
+          ar(scope, val);
+        }
+        check(scope, val);
+      },
+      change: async function (scope, val) {
+        if (change) {
+          change(scope, val);
+        }
+        check(scope, val);
+      },
+    };
+  },
+
+  duplicateHandler: async function (cmp, value, message, validator) {
+    return new Promise(async (resolve, reject) => {
+      var duplicate = await amfutil.checkDuplicate(value);
+
+      if (duplicate) {
+        // cmp.markInvalid(message);
+        // cmp.setActiveError(message);
+
+        // cmp.setValidation(message);
+        cmp.validCheck = message;
+        // cmp.isValid(false);
+      } else {
+        if (validator) {
+          var invalid = validator(cmp.getValue());
+          if (invalid) {
+            // cmp.markInvalid(invalid);
+            // cmp.setActiveError(invalid);
+
+            // cmp.setValidation(invalid);
+            cmp.validCheck = invalid;
+          } else {
+            // cmp.clearInvalid();
+            // cmp.unsetActiveError();
+
+            // cmp.setValidation();
+            cmp.validCheck = true;
+          }
+        } else {
+          // cmp.clearInvalid();
+          // cmp.unsetActiveError();
+
+          // cmp.setValidation();
+          cmp.validCheck = true;
+        }
+      }
+
+      cmp.validate();
+
+      resolve();
+    });
   },
 
   processTypes: function (collection, form, values) {
@@ -2237,7 +2613,11 @@ Ext.define("Amps.util.Utilities", {
       page.subgrids[field].columns &&
       page.subgrids[field].columns.map((field) => {
         if (field.type) {
-          return filterTypes[field.type](field);
+          if (field.searchOpts) {
+            return filterTypes[field.type](field, field.searchOpts);
+          } else {
+            return filterTypes[field.type](field);
+          }
         } else {
           return;
         }
@@ -2329,7 +2709,11 @@ Ext.define("Amps.util.Utilities", {
       page.columns &&
       page.columns.map((field) => {
         if (field.type) {
-          return filterTypes[field.type](field);
+          if (field.searchOpts) {
+            return filterTypes[field.type](field, field.searchOpts);
+          } else {
+            return filterTypes[field.type](field);
+          }
         } else {
           return;
         }
@@ -2420,6 +2804,192 @@ Ext.define("Amps.util.Utilities", {
     });
     e.stopEvent();
     contextMenu.showAt(e.pageX, e.pageY);
+  },
+
+  renderFileSize: function fileSize(size) {
+    var i = Math.floor(Math.log(size) / Math.log(1000));
+    return (
+      (size / Math.pow(1000, i)).toFixed(2) * 1 +
+      " " +
+      ["B", "kB", "MB", "GB", "TB"][i]
+    );
+  },
+
+  consumerConfig(topicfilter, tooltip) {
+    return {
+      xtype: "fieldset",
+      title: "Consumer Config",
+      items: [
+        amfutil.infoBlock(
+          'Certain rules, actions, or services require the creation of a topic consumer which determines which subset of events to process. This block allows for the configuration of that subscriber and changing any of these values after creation will result in the creation of a new consumer. (i.e. If the consumer is configured with a Deliver Policy of "All" and 50 messages are consumed, updating the consumer config and leaving the delivery policy of "All" will result in the reprocessing of those messages.)'
+        ),
+        {
+          xtype: "displayfield",
+          name: "updated",
+          itemId: "updated",
+          fieldLabel: "Config Updated",
+          renderer: function (val) {
+            return val ? "True" : "False";
+          },
+          update: function () {
+            this.setValue(true);
+          },
+          submitValue: true,
+        },
+        amfutil.dynamicCreate(
+          amfutil.combo("Topic", "topic", null, "topic", "topic", {
+            tooltip: tooltip,
+            listeners: {
+              beforerender: async function (scope) {
+                var filter = await topicfilter(scope);
+                console.log(filter);
+                var store = {
+                  type: "chained",
+                  source: amfutil.createCollectionStore("topics", filter),
+                };
+
+                scope.setStore(store);
+              },
+              change: function (scope, val) {
+                var updated = this.up("fieldset").down("#updated");
+                updated.update();
+              },
+            },
+          }),
+          "topics"
+        ),
+        amfutil.combo(
+          "Deliver Policy",
+          "policy",
+          [
+            { field: "all", label: "All" },
+            { field: "new", label: "New" },
+            { field: "last", label: "Last" },
+            { field: "by_start_time", label: "Start Time" },
+          ],
+          "field",
+          "label",
+          {
+            listeners: amfutil.renderListeners(
+              function (scope, val) {
+                var conts = ["by_start_time"];
+
+                conts.forEach((cont) => {
+                  console.log(cont);
+                  var c = scope.up("fieldset").down("#" + cont);
+                  console.log(c);
+                  c.setHidden(val != cont);
+                  c.setDisabled(val != cont);
+                });
+              },
+              null,
+              function (scope) {
+                var updated = scope.up("fieldset").down("#updated");
+                updated.update();
+              }
+            ),
+          }
+        ),
+        {
+          xtype: "fieldcontainer",
+          itemId: "by_start_time",
+
+          items: [
+            {
+              xtype: "datetime",
+              name: "start_time",
+              fieldLabel: "Start Time",
+              allowBlank: false,
+              tooltip: 'The start time for the "Start Time" deliver policy',
+              listeners: {
+                change: function (scope, val) {
+                  var updated = scope.up("fieldset").down("#updated");
+                  updated.update();
+                },
+              },
+            },
+          ],
+        },
+      ],
+    };
+  },
+
+  download: async function (url, method = "get", body = {}) {
+    var filename;
+    var msgbox = Ext.MessageBox.show({
+      title: "Please wait",
+      msg: "Downloading...",
+      progressText: "Downloading...",
+      width: 300,
+      progress: true,
+      closable: false,
+    });
+    await amfutil.renew_session();
+    await fetch(url, {
+      headers: {
+        Authorization: localStorage.getItem("access_token"),
+        "Content-Type": "application/json",
+      },
+      method: method,
+      body: method.toLowerCase() == "get" ? null : JSON.stringify(body),
+    })
+      .then(async (response) => {
+        if (response.ok) {
+          var progress = 0;
+          var size;
+          for (let entry of response.headers.entries()) {
+            if (entry[0] == "content-length") {
+              size = entry[1];
+            }
+            if (entry[0] == "content-disposition") {
+              filename = entry[1].match(/filename="(.+)"/)[1];
+            }
+          }
+          console.log(size);
+
+          console.log(response);
+          const reader = response.body.getReader();
+          return new ReadableStream({
+            start(controller) {
+              return pump();
+              function pump() {
+                return reader.read().then(({ done, value }) => {
+                  // When no more data needs to be consumed, close the stream
+                  if (done) {
+                    controller.close();
+                    return;
+                  }
+                  // Enqueue the next data chunk into our target stream
+                  progress += value.length;
+                  console.log(progress);
+
+                  msgbox.updateProgress(progress / size);
+                  controller.enqueue(value);
+                  return pump();
+                });
+              }
+            },
+          });
+        } else {
+          msgbox.close();
+          Ext.MessageBox.alert("Error", "Failed to Download");
+          throw new Error("Something went wrong");
+        }
+      })
+      .then((stream) => new Response(stream))
+      .then((response) => response.blob())
+      .then((blob) => {
+        console.log(blob);
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", filename);
+        document.body.appendChild(link);
+        msgbox.close();
+        link.click();
+        link.remove();
+      })
+      .catch((err) => console.error(err));
   },
 
   showCurrentTime: function () {

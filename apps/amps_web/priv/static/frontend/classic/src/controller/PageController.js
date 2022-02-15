@@ -45,7 +45,10 @@ Ext.define("Amps.controller.PageController", {
       before: "beforeItemPage",
       action: "onItemPage",
     },
-    ":collection": "onPage",
+    ":collection": {
+      before: "beforePage",
+      action: "onPage",
+    },
     "*": "onRoute",
     // ":collection/:id/:field": "onItemPage",
   },
@@ -113,8 +116,7 @@ Ext.define("Amps.controller.PageController", {
     }
   },
 
-  onPage: function (value) {
-    // console.log(amfutil.channel);
+  beforePage: function () {
     var route = Ext.util.History.getToken();
     var tokens = route.split("/");
     console.log(route);
@@ -234,6 +236,11 @@ Ext.define("Amps.controller.PageController", {
 
       amfutil.showActionIcons(route);
     }
+  },
+
+  onPage: function (value) {
+    // console.log(amfutil.channel);
+
     // amfutil.renew_session();
 
     console.log("bottom");
@@ -269,13 +276,11 @@ Ext.define("Amps.controller.PageController", {
 
     mask.show();
     var id;
-    if (tokens.length == 1) {
-      id = rec.data._id;
-    }
+    id = rec.data._id;
     amfutil.ajaxRequest({
       url:
         tokens.length > 1
-          ? "/api/" + route + "/" + rowIndex
+          ? "/api/" + route + "/" + id
           : "/api/" + route + "/" + id,
       headers: {
         Authorization: localStorage.getItem("access_token"),
@@ -404,7 +409,7 @@ Ext.define("Amps.controller.PageController", {
       if (rows.length) {
         deletable = false;
         msg =
-          "This action can't be deleted, it is in use by one or more rules.";
+          "This action can't be deleted, it is in use by one or more subscribers.";
         title = "Error: Action in Use.";
       }
     }
@@ -423,11 +428,12 @@ Ext.define("Amps.controller.PageController", {
             var rec = grid.getStore().getAt(rowIndex);
             console.log(rowIndex);
             var id = rec.data._id;
+            console.log(rec);
             amfutil.ajaxRequest({
               url:
                 tokens.length == 1
                   ? "/api/" + route + "/" + id
-                  : "/api/" + route + "/" + rowIndex,
+                  : "/api/" + route + "/" + id,
               headers: {
                 Authorization: localStorage.getItem("access_token"),
               },
@@ -473,78 +479,249 @@ Ext.define("Amps.controller.PageController", {
       });
     }
   },
+  onChangeAdminPassword: async function (grid, rowIndex, colIndex, e) {
+    var record = grid.getStore().getAt(rowIndex);
+    console.log(record);
+    amfutil.changePasswordAdmin(record.data._id);
+  },
+
+  resetAdminPassword: async function (grid, rowIndex, colIndex, e) {
+    var record = grid.getStore().getAt(rowIndex);
+
+    var win = new Ext.window.Window({
+      title: "Confirm Password Reset",
+      width: 400,
+      height: 300,
+      layout: {
+        type: "vbox",
+        align: "stretch",
+      },
+      padding: 25,
+      items: [
+        {
+          flex: 1,
+          layout: "center",
+          xtype: "container",
+          items: [
+            {
+              xtype: "button",
+              text: "Reset Password",
+              scale: "large",
+              handler: async function (scope) {
+                var win = scope.up("window");
+                win.setLoading(true);
+                var resp = await amfutil.ajaxRequest({
+                  method: "GET",
+                  url: "/api/admin/reset/" + record.data._id,
+                  failure: function () {
+                    Ext.toast("Couldn't reset password");
+                  },
+                });
+                var data = Ext.decode(resp.responseText);
+                var items = [
+                  {
+                    xtype: "component",
+                    autoEl: "h3",
+                    style: {
+                      "text-align": "center",
+                    },
+                    html: "Password Successfully Reset",
+                  },
+
+                  {
+                    xtype: "container",
+                    layout: "center",
+                    items: [
+                      {
+                        xtype: "button",
+                        text: "Copy Password",
+                        handler: function (btn) {
+                          navigator.clipboard
+                            .writeText(data.success.password)
+                            .then(
+                              function () {
+                                console.log(
+                                  "Async: Copying to clipboard was successful!"
+                                );
+                                Ext.toast("Copied to clipboard");
+                              },
+                              function (err) {
+                                console.error(
+                                  "Async: Could not copy text: ",
+                                  err
+                                );
+                              }
+                            );
+                        },
+                      },
+                    ],
+                  },
+                ];
+
+                win.removeAll();
+                win.insert(0, items);
+                win.setLoading(false);
+              },
+            },
+          ],
+        },
+      ],
+    });
+    win.show();
+  },
 
   resetPassword: async function (grid, rowIndex, colIndex, e) {
     var record = grid.getStore().getAt(rowIndex);
 
-    Ext.MessageBox.confirm(
-      "Reset Password",
-      `Are you sure you want to reset ${record.data.firstname} ${record.data.lastname}'s password?`,
-      async function (res) {
-        if (res == "yes") {
-          console.log("yes");
-          var resp = await amfutil.ajaxRequest({
-            method: "GET",
-            url: "/api/users/reset/" + record.data._id,
-            failure: function () {
-              Ext.toast("Couldn't reset password");
-            },
-          });
-          var data = Ext.decode(resp.responseText);
-          if (data.success) {
-            var win = new Ext.window.Window({
-              title: "Password Reset",
-              modal: true,
-              width: 300,
-              padding: 10,
-              layout: {
-                type: "vbox",
-                align: "stretch",
-              },
-              items: [
-                {
-                  xtype: "component",
-                  autoEl: "h3",
-                  html: "Password Successfully Reset",
-                },
-
-                {
-                  xtype: "container",
-                  layout: "center",
-                  items: [
-                    {
-                      xtype: "button",
-                      text: "Copy Password",
-                      handler: function (btn) {
-                        navigator.clipboard
-                          .writeText(data.success.password)
-                          .then(
-                            function () {
-                              console.log(
-                                "Async: Copying to clipboard was successful!"
-                              );
-                              Ext.toast("Copied to clipboard");
-                            },
-                            function (err) {
-                              console.error(
-                                "Async: Could not copy text: ",
-                                err
-                              );
-                            }
-                          );
-                      },
+    var win = new Ext.window.Window({
+      title: "Confirm Password Reset",
+      width: 400,
+      height: 300,
+      layout: {
+        type: "vbox",
+        align: "stretch",
+      },
+      padding: 25,
+      items: [
+        {
+          flex: 1,
+          layout: "center",
+          xtype: "container",
+          items: [
+            {
+              xtype: "button",
+              text: "Reset Password",
+              scale: "large",
+              handler: async function (scope) {
+                var win = scope.up("window");
+                win.setLoading(true);
+                var resp = await amfutil.ajaxRequest({
+                  method: "GET",
+                  url: "/api/users/reset/" + record.data._id,
+                  failure: function () {
+                    Ext.toast("Couldn't reset password");
+                  },
+                });
+                var data = Ext.decode(resp.responseText);
+                var items = [
+                  {
+                    xtype: "component",
+                    autoEl: "h3",
+                    style: {
+                      "text-align": "center",
                     },
-                  ],
-                },
-              ],
-            });
-            win.show();
-          }
-        }
-      }
-    );
+                    html: "Password Successfully Reset",
+                  },
+
+                  {
+                    xtype: "container",
+                    layout: "center",
+                    items: [
+                      {
+                        xtype: "button",
+                        text: "Copy Password",
+                        handler: function (btn) {
+                          navigator.clipboard
+                            .writeText(data.success.password)
+                            .then(
+                              function () {
+                                console.log(
+                                  "Async: Copying to clipboard was successful!"
+                                );
+                                Ext.toast("Copied to clipboard");
+                              },
+                              function (err) {
+                                console.error(
+                                  "Async: Could not copy text: ",
+                                  err
+                                );
+                              }
+                            );
+                        },
+                      },
+                    ],
+                  },
+                ];
+
+                win.removeAll();
+                win.insert(0, items);
+                win.setLoading(false);
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    // Ext.MessageBox.confirm(
+    //   "Reset Password",
+    //   `Are you sure you want to reset ${record.data.firstname} ${record.data.lastname}'s password?`,
+    //   async function (res) {
+    //     if (res == "yes") {
+    //       console.log("yes");
+    //       var resp = await amfutil.ajaxRequest({
+    //         method: "GET",
+    //         url: "/api/users/reset/" + record.data._id,
+    //         failure: function () {
+    //           Ext.toast("Couldn't reset password");
+    //         },
+    //       });
+    //       var data = Ext.decode(resp.responseText);
+    //       if (data.success) {
+    //         var win = new Ext.window.Window({
+    //           title: "Password Reset",
+    //           modal: true,
+    //           width: 300,
+    //           padding: 10,
+    //           layout: {
+    //             type: "vbox",
+    //             align: "stretch",
+    //           },
+    //           items: [
+    //             {
+    //               xtype: "component",
+    //               autoEl: "h3",
+    //               html: "Password Successfully Reset",
+    //             },
+
+    //             {
+    //               xtype: "container",
+    //               layout: "center",
+    //               items: [
+    //                 {
+    //                   xtype: "button",
+    //                   text: "Copy Password",
+    //                   handler: function (btn) {
+    //                     navigator.clipboard
+    //                       .writeText(data.success.password)
+    //                       .then(
+    //                         function () {
+    //                           console.log(
+    //                             "Async: Copying to clipboard was successful!"
+    //                           );
+    //                           Ext.toast("Copied to clipboard");
+    //                         },
+    //                         function (err) {
+    //                           console.error(
+    //                             "Async: Could not copy text: ",
+    //                             err
+    //                           );
+    //                         }
+    //                       );
+    //                   },
+    //                 },
+    //               ],
+    //             },
+    //           ],
+    //         });
+    //         win.show();
+    //       }
+    //     }
+    //   }
+    // );
 
     // console.log(resp);
+    win.show();
   },
 
   getLink: async function (grid, rowIndex, colIndex, e) {
@@ -836,7 +1013,6 @@ Ext.define("Amps.controller.PageController", {
                   amfuploads.handleUpload(
                     encodeURI("api/upload/" + topic),
                     file,
-                    topic,
                     meta
                   );
 
@@ -1059,6 +1235,41 @@ Ext.define("Amps.controller.PageController", {
     console.log(record);
     amfutil.reprocess(grid, record.msgid);
   },
+
+  downloadExcelFormat: function (scope) {
+    var values = scope.up("form").getValues();
+    var type = values.type;
+    if (type) {
+      if (type == "collection") {
+        if (values.collection) {
+          amfutil.download("/api/data/import/sample/" + values.collection);
+        } else {
+          Ext.toast("Select a collection");
+        }
+      } else {
+        if (values.collection) {
+          if (values.field) {
+            amfutil.download(
+              "/api/data/import/sample/" +
+                values.collection +
+                "/" +
+                values.field
+            );
+          } else {
+            Ext.toast("Select a field");
+          }
+        } else {
+          Ext.toast("Select a collection");
+        }
+      }
+    } else {
+      Ext.toast("Select a type");
+    }
+  },
+
+  onImportClear: function (scope) {
+    scope.up("form").reset();
+  },
 });
 
 Ext.define("Amps.window.Uploads", {
@@ -1074,77 +1285,84 @@ Ext.define("Amps.window.Uploads", {
     this.down("grid").setStore(this.uploads);
   },
 
-  handleUpload: async function (url, file, topic, metadata) {
-    await amfutil.renew_session();
+  handleUpload: async function (url, file, metadata = false, show = true) {
     var scope = this;
-    var data = new FormData();
-    console.log(url);
 
-    data.append("file", file);
-    data.append("meta", JSON.stringify(metadata));
+    return new Promise(async (resolve, reject) => {
+      await amfutil.renew_session();
+      var data = new FormData();
+      console.log(url);
 
-    let request = new XMLHttpRequest();
-    request.open("POST", url);
-    request.setRequestHeader(
-      "Authorization",
-      localStorage.getItem("access_token")
-    );
-
-    var id = Math.floor(Math.random() * Date.now());
-    console.log(id);
-    // upload progress event
-    var startTime = new Date();
-
-    request.upload.addEventListener("progress", function (e) {
-      // upload progress as percentage
-      var endTime = new Date();
-      var timeDiff = endTime - startTime;
-      if (timeDiff > 500) {
-        let progress = e.loaded / e.total;
-        var idx = scope.uploads.findIndex((item) => item.id == id);
-        if (progress > 0.99) {
-          progress = 0.99;
-        }
-        scope.uploads[idx].progress = progress;
-        console.log(scope.uploads[idx]);
-        startTime = new Date();
-        scope.update();
+      data.append("file", file);
+      if (metadata) {
+        data.append("meta", JSON.stringify(metadata));
       }
-    });
 
-    // request finished event
-    request.addEventListener("load", function (e) {
-      console.log(request.status);
-      console.log(request.response);
-      var idx = scope.uploads.findIndex((item) => item.id == id);
-      scope.uploads[idx].progress = 1;
+      let request = new XMLHttpRequest();
+      request.open("POST", url);
+      request.setRequestHeader(
+        "Authorization",
+        localStorage.getItem("access_token")
+      );
 
-      scope.uploads[idx].status = "Uploaded";
+      var id = Math.floor(Math.random() * Date.now());
+      console.log(id);
+      // upload progress event
+      var startTime = new Date();
+
+      request.upload.addEventListener("progress", function (e) {
+        // upload progress as percentage
+        console.log(e);
+        var endTime = new Date();
+        var timeDiff = endTime - startTime;
+        if (timeDiff > 500) {
+          let progress = e.loaded / e.total;
+          var idx = scope.uploads.findIndex((item) => item.id == id);
+          if (progress > 0.99) {
+            progress = 0.99;
+          }
+          scope.uploads[idx].progress = progress;
+          console.log(scope.uploads[idx]);
+          startTime = new Date();
+          scope.update();
+        }
+      });
+
+      // request finished event
+      request.addEventListener("load", function (e) {
+        console.log(request.status);
+        console.log(request.response);
+        var idx = scope.uploads.findIndex((item) => item.id == id);
+        scope.uploads[idx].progress = 1;
+
+        scope.uploads[idx].status = "Uploaded";
+        scope.update();
+        resolve(request);
+      });
+
+      request.addEventListener("abort", function (e) {
+        var idx = scope.uploads.findIndex((item) => item.id == id);
+
+        scope.uploads[idx].status = "Aborted";
+        scope.update();
+      });
+
+      scope.uploads.push({
+        id: id,
+        progress: 0,
+        fname: file.name,
+        request: request,
+        status: "Uploading",
+      });
+
+      console.log(data);
+      // send POST request to server
+      request.send(data);
+      if (show) {
+        scope.show();
+      }
       scope.update();
     });
-
-    request.addEventListener("abort", function (e) {
-      var idx = scope.uploads.findIndex((item) => item.id == id);
-
-      scope.uploads[idx].status = "Aborted";
-      scope.update();
-    });
-
-    scope.uploads.push({
-      id: id,
-      progress: 0,
-      fname: file.name,
-      topic: topic,
-      request: request,
-      status: "Uploading",
-    });
-
-    console.log(data);
-    // send POST request to server
-    request.send(data);
-
-    scope.show();
-    scope.update();
   },
 
   removeUpload: function (id) {
@@ -1199,7 +1417,13 @@ Ext.define("Amps.window.Uploads", {
                 console.log("Cancel");
                 grid.up("window").cancelUpload(grid, rowIndex);
               },
-              isDisabled: function (view, rowIndex, colIndex, item, record) {
+              isActionDisabled: function (
+                view,
+                rowIndex,
+                colIndex,
+                item,
+                record
+              ) {
                 return !(record.get("status") == "Uploading");
               },
             },

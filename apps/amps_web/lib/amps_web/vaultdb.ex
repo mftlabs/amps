@@ -25,29 +25,25 @@ defmodule VaultDatabase do
     Map.drop(body, ["password", "confirmpswd"])
   end
 
-  def update_vault_password(body) do
+  def update_vault_password(username, password) do
     token = AmpsWeb.Vault.get_token(:vaulthandler)
 
-    if body["password"] != nil && body["password"] != "" do
-      {:ok, vault} =
-        Vault.new(
-          engine: Vault.Engine.KVV1,
-          auth: Vault.Auth.Token,
-          host: host(),
-          credentials: %{token: token}
-        )
-        |> Vault.auth()
+    {:ok, vault} =
+      Vault.new(
+        engine: Vault.Engine.KVV1,
+        auth: Vault.Auth.Token,
+        host: host(),
+        credentials: %{token: token}
+      )
+      |> Vault.auth()
 
-      result =
-        Vault.request(
-          vault,
-          :post,
-          "auth/userpass/users/" |> Kernel.<>(body["username"]) |> Kernel.<>("/password"),
-          body: %{"password" => body["password"]}
-        )
-    end
-
-    Map.drop(body, ["password", "confirmpswd"])
+    result =
+      Vault.request(
+        vault,
+        :post,
+        "auth/userpass/users/" <> username <> "/password",
+        body: %{"password" => password}
+      )
   end
 
   def vault_store_key(body, collection, unique, field) do

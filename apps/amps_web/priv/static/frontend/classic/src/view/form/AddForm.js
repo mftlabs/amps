@@ -3,31 +3,77 @@ Ext.define("Amps.form.add", {
   xtype: "addform",
   modal: true,
   minWidth: 500,
-  maxHeight: 600,
+  // maxHeight: 600,
   scrollable: true,
   // resizable: false,
   layout: "fit",
-  loadForm: function (item, fields, process = (form, val) => val, request) {
+
+  constructor(args) {
+    this.callParent([args]);
+  },
+
+  setValue: async function (field) {
+    var f = await Object.assign({}, field);
+    // console.log(f);
+    var config = this.config;
+    var record = this.record;
+    var scope = this;
+    // console.log(f);
+    f.value = record[f.name];
+
+    if (f.xtype == "radiogroup") {
+      f.value = {};
+      f.value[f.name] = record[f.name];
+    } else {
+      if (f.items && f.items.length) {
+        f.items = await Promise.all(
+          f.items.map(async (item) => {
+            return scope.setValue(item);
+          })
+        );
+      }
+    }
+
+    return f;
+  },
+
+  setValues: async function (fields) {
+    var scope = this;
+
+    console.log(fields);
+    fields = await Promise.all(
+      fields.map(async function (field) {
+        return scope.setValue(field);
+      })
+    );
+    return fields;
+  },
+
+  loadForm: function (
+    item,
+    fields,
+    process = (form, val) => val,
+    request = false,
+    entity = null
+  ) {
     this.item = item;
-    this.title = "Add " + item;
+    this.setTitle("Create " + item);
     this.process = process;
-    var user = amfutil.get_user();
 
     if (request) {
       this.request = request;
     }
-    console.log(fields);
     fields = amfutil.scanFields(fields);
     console.log(fields);
-
-    fields.forEach((field) => {
-      this.down("form").insert(field);
-    });
+    this.down("form").setConfig("entity", entity);
+    this.down("form").insert(0, fields);
   },
 
   items: [
     {
       xtype: "form",
+      entity: null,
+
       bodyPadding: 10,
       defaults: {
         padding: 5,
@@ -65,6 +111,8 @@ Ext.define("Amps.form.add", {
 
               values.modifiedby = user.firstname + " " + user.lastname;
               values.modified = new Date().toISOString();
+
+              delete values.id;
 
               btn.setDisabled(true);
               console.log(scope);

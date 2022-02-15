@@ -95,6 +95,22 @@ defmodule AmpsPortal.UserController do
     json(conn, %{status: "ok"})
   end
 
+  def register(conn, _params) do
+    body = conn.body_params
+
+    conn
+    |> Pow.Plug.create_user(body)
+    |> case do
+      {:ok, _user, conn} ->
+        json(conn, %{"success" => true, "message" => "Successfully registered"})
+
+      {:error, _changeset, conn} ->
+        conn
+        |> put_status(500)
+        |> json(%{error: %{status: 500, message: "Couldn't create user", errors: "error"}})
+    end
+  end
+
   defp expire_token(%{private: %{pow_reset_password_decoded_token: token}}, config) do
     {store, store_config} = store(config)
     store.delete(store_config, token)

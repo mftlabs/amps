@@ -7,7 +7,7 @@ Ext.define("Amps.form.Parms", {
   collapsible: true,
 
   constructor: function (args) {
-    this.callParent(args);
+    this.callParent([args]);
 
     console.log(args);
     var scope = this;
@@ -20,12 +20,13 @@ Ext.define("Amps.form.Parms", {
       var types = args["types"];
       if (types.length > 1) {
         args["types"].forEach((type) => {
-          scope.down("#addMenu").insert(scope.types[type]);
+          scope.down("#addMenu").insert(scope.parmtypes[type]);
         });
       } else {
         this.removeAll();
         args["types"].forEach((type) => {
-          var button = Object.assign(scope.types[type], {
+          console.log(scope);
+          var button = Object.assign(scope.parmtypes[type], {
             itemId: "parmbutton",
             xtype: "button",
           });
@@ -35,7 +36,7 @@ Ext.define("Amps.form.Parms", {
         });
       }
     } else {
-      Object.entries(this.types).forEach((type) => {
+      Object.entries(this.parmtypes).forEach((type) => {
         console.log(type);
         scope.down("#addMenu").insert(type[1]);
       });
@@ -46,7 +47,7 @@ Ext.define("Amps.form.Parms", {
     this.setReadOnly(args["readOnly"]);
   },
 
-  types: {
+  parmtypes: {
     bool: {
       text: "Boolean",
       // xtype: "button",
@@ -169,7 +170,7 @@ Ext.define("Amps.form.Parm.Bool", {
   defaults: { anchor: "100%" },
   layout: "anchor",
   constructor: function (args) {
-    this.callParent(args);
+    this.callParent([args]);
     var name;
     if (args) {
       name = args["name"] ? args["name"] : "parms";
@@ -243,7 +244,7 @@ Ext.define("Amps.form.Parm.Bool", {
 Ext.define("Amps.form.Parm.String", {
   extend: "Ext.form.FieldSet",
   constructor: function (args) {
-    this.callParent(args);
+    this.callParent([args]);
     var name;
     if (args) {
       name = args["name"] ? args["name"] : "parms";
@@ -312,7 +313,7 @@ Ext.define("Amps.form.Parm.String", {
 Ext.define("Amps.form.Parm.Number", {
   extend: "Ext.form.FieldSet",
   constructor: function (args) {
-    this.callParent(args);
+    this.callParent([args]);
     var name;
     if (args) {
       name = args["name"] ? args["name"] : "parms";

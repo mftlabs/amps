@@ -3,34 +3,24 @@
  * calls Ext.application(). This is the ideal place to handle application launch and
  * initialization details.
  */
+var allow_enterkey = true;
 
 Ext.define("Amps.Application", {
   extend: "Ext.app.Application",
 
   name: "Amps",
+  style: "background-color: #32404e;",
 
-  // quickTips: false,
-  // platformConfig: {
-  //   desktop: {
-  //     quickTips: true,
-  //   },
-  // },
-  // defaultToken: "home",
-  // onAppUpdate: function () {
-  //   Ext.Msg.confirm(
-  //     "Application Update",
-  //     "This application has an update, reload?",
-  //     function (choice) {
-  //       if (choice === "yes") {
-  //         window.location.reload();
-  //       }
-  //     }
-  //   );
-  // },
+  quickTips: false,
+  platformConfig: {
+    desktop: {
+      quickTips: true,
+    },
+  },
   launch: async function () {
-    ampsutil = Amps.Utilities;
+    amfutil = Amps.Utilities;
 
-    console.log(ampsutil);
+    console.log(amfutil);
     console.log("launch");
     var route = Ext.util.History.getToken();
     console.log(route);
@@ -38,7 +28,7 @@ Ext.define("Amps.Application", {
       // var query = window.location.search.substring(0);
       const urlParams = new URLSearchParams(window.location.search);
       var token = urlParams.get("token");
-      var resp = await ampsutil.ajaxRequest({
+      var resp = await amfutil.ajaxRequest({
         method: "GET",
         url: "api/users/token/" + token,
       });
@@ -70,30 +60,56 @@ Ext.define("Amps.Application", {
           xtype: "unauthorized",
         });
       } else {
-        // ampsgrids = Amps.util.Grids;
-        // ampsgrids.getGrids();
-        // ampsgrids.getPages();
-        // var routes = Object.keys(ampsgrids.grids).concat(
-        //   Object.keys(ampsgrids.pages)
-        // );
-        // console.log(route);
-        // console.log(routes);
-        // if (routes.indexOf(tokens[0]) >= 0) {
-        //   console.log("Valid Route");
-        //   if (tokens.length > 2) {
-        //     this.redirectTo(tokens[0] + "/" + tokens[1]);
-        //   } else {
-        //   }
-        // } else {
-        //   this.redirectTo("messages");
-        // }
         ampsuploads = Amps.Authorized.Uploads;
-        this.redirectTo("inbox", { replace: true });
 
-        Ext.Viewport.add({
+        var routes = Object.keys(Amps.Pages.pages);
+        const tokens = route.split("/");
+        if (routes.indexOf(tokens[0]) >= 0) {
+          console.log("Valid Route");
+          if (tokens.length > 2) {
+            this.redirectTo(tokens[0] + "/" + tokens[1]);
+          } else {
+          }
+        } else {
+          this.redirectTo("inbox", { replace: true });
+        }
+
+        Ext.create({
           xtype: "authorized",
         });
       }
     }
+  },
+  // defaultToken: "home",
+  onAppUpdate: function () {
+    Ext.Msg.confirm(
+      "Application Update",
+      "This application has an update, reload?",
+      function (choice) {
+        if (choice === "yes") {
+          window.location.reload();
+        }
+      }
+    );
+  },
+});
+
+Ext.override(Ext.data.Store, {
+  constructor: function (config) {
+    this.callParent([config]);
+    var store = this;
+    this.proxy.setListeners({
+      exception: async function (proxy, response, options, eOpts) {
+        console.log("exception");
+        if (response.status == 401) {
+          await amfutil.renew_session();
+          proxy.setHeaders({
+            Authorization: localStorage.getItem("access_token"),
+          });
+          store.reload();
+        }
+      },
+    });
+    // this.proxy.on("exception", this.onProxyException, this);
   },
 });

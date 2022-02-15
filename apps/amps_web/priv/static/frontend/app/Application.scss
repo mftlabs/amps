@@ -8,3 +8,44 @@ $enable-font-awesome: dynamic(true);
   box-shadow: rgba(60, 64, 67, 0.3) 0px 1px 2px 0px,
     rgba(60, 64, 67, 0.15) 0px 1px 3px 1px;
 }
+$base-color: dynamic(#385cac);
+
+:root {
+  --main-color: #385cac;
+  --secondary-color: #32404e;
+}
+
+// $treelist-tool-selected-color: $tree-color;
+// $treelist-tool-selected-background-color:$selected-color;
+// $treelist-tool-indicator-selected-color:$selected-color;
+
+
+
+
+$form-label-font-weight: 550;
+// @include treelist-ui(
+//   $ui: "navigation",
+//   $background-color: $tree-color,
+//   $item-text-icon-gap: 20,
+//   $item-text-color: $text-color,
+//   $item-text-over-color: $text-color,
+//   $item-text-font-size: 18px,
+//   $item-icon-color: $text-color,
+//   $row-indicator-selected-over-color: $hover-color,
+//   $row-over-background-color: $hover-color,
+//   $row-selected-background-color: $selected-color,
+//   $toolstrip-background-color: $tree-color,
+//   $tool-selected-color: $text-color,
+//   $tool-selected-background-color: $tree-color,
+//   $tool-indicator-selected-color: $selected-color,
+//   $item-expander-color: $text-color,
+//   $item-expanded-background-color: $bg-color,
+//   $item-line-height: 36px,
+//   $toolstrip-background-color :  $tree-color,
+//   $tool-float-indicator-color :  $text-color,
+//   $tool-float-indicator-width :  20,
+//   $tool-selected-color :  $selected-color,
+//   $tool-selected-background-color :  $tree-color,
+//   $tool-indicator-selected-color: $text-color
+
+// );

@@ -1,9 +1,5 @@
 /* This file is for your main application CSS */
-@import url('https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400;1,500;1,600;1,700;1,800&display=swap');
 
-/* * {
-  font-family: 'Open Sans' !important;
-} */
 
 /* Alerts and form errors used by phx.new */
 .alert {
@@ -27,12 +23,14 @@
   background-color: #f2dede;
   border-color: #ebccd1;
 }
+
 .alert p {
   margin-bottom: 0;
 }
 .alert:empty {
   display: none;
 }
+
 .invalid-feedback {
   color: #a94442;
   display: block;
@@ -90,4 +88,347 @@
   color: black;
   text-decoration: none;
   cursor: pointer;
+}
+
+.rtb {
+  background-color: #32404e;
+}
+
+.headerblk {
+  font-size: 30px;
+  text-align: center;
+  padding-top: 20px;
+  padding-bottom: 20px;
+  background-color: midnightblue !important;
+  color: white;
+}
+.footerblk {
+  padding-top: "10px";
+}
+
+.x-toolbar-footer {
+  background-color: #fff !important;
+}
+
+.button_class {
+  background-color: #5897ce !important;
+  border: #5897ce !important;
+}
+@font-face {
+  font-family: "Roboto";
+  src: url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap');
+}
+/* * {
+  font-family: "Roboto", sans-serif;
+} */
+.headerclass {
+  color: #fff !important;
+  font-size: 15px !important;
+}
+.headerclass2 {
+  color: #fff !important;
+  font-weight: bold;
+  font-size: 25px !important;
+}
+.x-btn-icon-el-default-toolbar-small {
+  height: auto !important;
+}
+
+.menu_toggle .x-treelist-nav .x-treelist-item-selected > .x-treelist-row {
+  background-color: #0a0080 !important;
+}
+
+.menu_toggle .x-treelist-item-text {
+  font-size: 15px !important;
+  color: #fff;
+  margin-left: 66px !important;
+}
+
+.menu_toggle .x-treelist-nav .x-treelist-item-text {
+  margin-left: 66px !important;
+}
+.x-toolbar-footer {
+  background-color: #fff !important;
+}
+
+.enabled-icon {
+  color: green !important;
+}
+.disabled-icon {
+  color: red !important;
+}
+
+.rtb .x-btn-default-small {
+  border-color: #ffffff !important;
+  background-color: #ffffff !important;
+  margin-left: 4px;
+  margin-top: 5px;
+  height: 42px;
+}
+.rtb .x-btn-icon-el-default-small {
+  font-size: 17px;
+  height: auto;
+  color: #404040;
+  line-height: 24px;
+}
+
+.rtb .x-btn-icon-left > .x-btn-icon-el-default-small,
+.rtb .x-btn-icon-right > .x-btn-icon-el-default-small {
+  width: 26px;
+}
+
+input[type="email"],
+input[type="number"],
+input[type="password"],
+input[type="search"],
+input[type="tel"],
+input[type="text"],
+input[type="url"],
+textarea,
+select {
+  appearance: none;
+  background-color: transparent;
+  border: none;
+  border-radius: 0.4rem;
+  box-shadow: none;
+  box-sizing: inherit;
+  height: auto;
+  padding: 3px;
+  width: 98%;
+}
+
+label.x-form-required-field > span:after {
+  color: #b12029;
+  content: " *";
+  font-weight: bold;
+}
+
+.x-grid-td {
+  padding: 4px !important;
+}
+.x-grid-item-container .x-grid-item {
+  margin-bottom: 0px !important;
+}
+
+/*.x-autocontainer-innerCt {
+    background-color:white!important;
+    border:1px static sliver;
+}*/
+.pageslayout {
+  background-color: lightgray !important;
+  color: black !important;
+  padding: 10px !important;
+  font-size: 14px !important;
+  font-weight: bold !important;
+  position: fixed !important;
+  left: 0 !important;
+  bottom: 0 !important;
+}
+
+.pageslayout input {
+  background-color: white !important;
+  border: 1px solid silver !important;
+  color: black !important;
+  font-weight: normal !important;
+}
+
+.pagebtn {
+  background-color: navy !important;
+  color: white !important;
+  font-size: 14px !important;
+}
+
+.pagebtn2 {
+  background-color: #5897f6 !important;
+  color: white !important;
+  font-size: 14px !important;
+  margin-right: 20px !important;
+}
+
+
+.led {
+  margin: 0 auto;
+  width:.5rem;
+  height: .5rem;
+  border-radius: 50%;
+}
+
+.led.green {
+  background-color: rgb(81, 255, 0);
+  /* box-shadow: rgb(11, 93, 170) 0 -1px 7px 1px, inset rgb(6, 138, 1) 0 -1px 9px, #7D0 0 2px 12px; */
+}
+
+.led.red {
+  background-color: red;
+  /* box-shadow: #fff 0 -1px 7px 1px, inset red 0 -1px 9px, #F00 0 2px 5px; */
+}
+
+.widgetbutton {
+  background: #404040;
+  color: white;
+  cursor: pointer;
+}
+
+.widgetbutton:hover {
+  background: #5a5252;
+  color: white;
+  cursor: pointer;
+}
+
+.widgetbutton:active {
+  background: #000000;
+}
+
+.greenIcon {
+  color: green;
+}
+
+.workflow-step {
+  position: relative;
+}
+
+.workflow-step.up:after {
+  content: '';
+  width: 0; 
+  height: 0; 
+  border-left: 60px solid transparent;
+  border-right: 60px solid transparent;
+  border-bottom: 60px solid #5fa2dd;
+  position: absolute;
+  top: -10;  /* position the top  edge of the element at the middle of the parent */
+  left: 50%; /* position the left edge of the element at the middle of the parent */
+  transform: translate(-50%, 0);
+}
+
+.workflow-step.down:after {
+  content: '';
+  width: 0; 
+  height: 0; 
+  border-left: 60px solid transparent;
+  border-right: 60px solid transparent;
+  
+  border-top: 60px solid #32404e;
+  position: absolute;
+  bottom: 0;  /* position the top  edge of the element at the middle of the parent */
+  left: 50%; /* position the left edge of the element at the middle of the parent */
+  transform: translate(-50%, 0);
+}
+
+.workflow-step.right:after {
+  content: '';
+  width: 0; 
+  height: 0; 
+  border-top: 60px solid transparent;
+  border-bottom: 60px solid transparent;
+  
+  border-left: 60px solid #32404e;
+  position: absolute;
+  top: 50%;  /* position the top  edge of the element at the middle of the parent */
+  /* left: 0; position the left edge of the element at the middle of the parent */
+  transform: translate(0, -50%);
+}
+
+.workflow-step.left:after {
+  content: '';
+  width: 0; 
+  height: 0; 
+  border-top: 60px solid transparent;
+  border-bottom: 60px solid transparent;
+  
+  border-right: 60px solid #32404e;
+  position: absolute;
+  top: 50%;  /* position the top  edge of the element at the middle of the parent */
+  /* right: 0; position the left edge of the element at the middle of the parent */
+  transform: translate(0, -50%);
+}
+
+.workflow-arrow{
+  background: #ccc;
+  position: relative;
+  width: 300px;
+  height: 100px;
+}
+.workflow-arrow.down:before {
+  width: 0;
+  height: 0;
+  border-left: 150px solid transparent;
+  border-right: 150px solid transparent;
+  border-top: 30px solid #ccc;
+  top: 100%;
+}
+.workflow-arrow{
+  margin-top: 100px;
+}
+.workflow-arrow:before{
+  content: '';
+  position: absolute;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 400;
+  /* letter-spacing: -.1rem;
+  margin-bottom: 2.0rem;
+  margin-top: 0; */
+}
+
+/* h1 {
+  font-size: 4.6rem;
+  line-height: 1.2;
+}
+
+h2 {
+  font-size: 3.6rem;
+  line-height: 1.25;
+}
+
+h3 {
+  font-size: 2.8rem;
+  line-height: 1.3;
+}
+
+h4 {
+  font-size: 2.2rem;
+  letter-spacing: -.08rem;
+  line-height: 1.35;
+}
+
+h5 {
+  font-size: 1.8rem;
+  letter-spacing: -.05rem;
+  line-height: 1.5;
+}
+
+h6 {
+  font-size: 1.6rem;
+  letter-spacing: 0;
+  line-height: 1.4;
+} */
+
+.button_light {
+  background-color: #404040;
+  border: #404040;
+  transition: .2s;
+}
+
+.button_light:hover {
+  background-color: #555555;
+  border: #555555;
+  transition: .2s;
+
+}
+
+.button_light:active {
+  background-color: #555555;
+  border: #555555;
+  transition: .2s;
+
+}
+
+.boldrow {
+font-weight: 700;
 }

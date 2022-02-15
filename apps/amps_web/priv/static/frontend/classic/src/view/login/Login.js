@@ -75,7 +75,6 @@ Ext.define("Amps.view.login.Login", {
       {
         text: "Login",
         formBind: true,
-        cls: "button_class",
         itemId: "loginbtn",
         listeners: {
           click: "onLoginClick",
@@ -83,7 +82,6 @@ Ext.define("Amps.view.login.Login", {
       },
       {
         text: "Signup",
-        cls: "button_class",
         itemId: "signup_btn_id",
         listeners: {
           click: "onSignupInstead",

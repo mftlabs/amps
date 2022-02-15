@@ -11,8 +11,7 @@ Ext.define("Amps.form.ArrayField", {
   fieldTitle: "Field",
 
   constructor: function (args) {
-    this.callParent(args);
-    console.log(args);
+    this.callParent([args]);
 
     this.fields = [];
 
@@ -24,8 +23,6 @@ Ext.define("Amps.form.ArrayField", {
     } else {
       this.setTitle("ArrayField");
     }
-
-    console.log(this);
 
     this.name = args["name"];
 
@@ -74,15 +71,11 @@ Ext.define("Amps.form.ArrayField", {
   },
 
   getValue: function () {
-    console.log(this);
     var val = [];
     this.fields.forEach((field) => {
       var f = amfutil.getElementByID(field);
-      console.log(f);
-      console.log(f.getValue());
       val.push(f.getValue());
     });
-    console.log(JSON.stringify(val));
     return JSON.stringify(val);
   },
 
@@ -169,7 +162,7 @@ Ext.define("Amps.form.ArrayField", {
 });
 
 Ext.define("Amps.form.ArrayField.Field", {
-  extend: "Ext.form.FieldSet",
+  extend: "Ext.form.FieldContainer",
   collapsible: true,
   layout: {
     type: "vbox",
@@ -177,20 +170,14 @@ Ext.define("Amps.form.ArrayField.Field", {
   },
 
   constructor: function (args) {
-    this.callParent(args);
+    this.callParent([args]);
     var name = "field-" + amfutil.makeRandom();
     this.itemId = name;
     this.name = name;
-    if (args["title"]) {
-      this.setTitle(args["title"]);
-    } else {
-      this.setTitle("Field");
-    }
     args.register(name);
     this.deregister = function () {
       args.deregister(name);
     };
-    console.log(args);
     this.fields = args["fields"];
     this.insertFields(args["fields"]);
     // console.log(scope.down("#addMenu"));
@@ -200,19 +187,16 @@ Ext.define("Amps.form.ArrayField.Field", {
 
   getValue: function () {
     var scope = this;
-    console.log(scope);
     var data = {};
-    console.log(this.fields);
     this.fields.forEach((field) => {
       var cmp = amfutil.getElementByID(scope.name + "-" + field.name);
       data[cmp.name] = cmp.getValue();
-      console.log(cmp);
+      // console.log(cmp);
     });
     return data;
   },
 
   convert: function (v) {
-    console.log(v);
     return v;
   },
 
@@ -233,7 +217,6 @@ Ext.define("Amps.form.ArrayField.Field", {
 
     for (var i = 0; i < fields.length; i++) {
       var ref = this.name + "-" + fields[i].name;
-      console.log(ref);
       var field = Object.assign({ id: ref, isFormField: false }, fields[i]);
       items.push(field);
       if (items.length == 2) {
@@ -249,11 +232,9 @@ Ext.define("Amps.form.ArrayField.Field", {
   },
 
   setReadOnly: function (readOnly) {
-    console.log(readOnly);
     var buttons = Ext.ComponentQuery.query("#fieldbutton");
     // var fi = Ext.ComponentQuery.query("fields");
 
-    console.log(buttons);
     if (readOnly) {
       buttons.forEach((b) => {
         console.log(b);
@@ -303,9 +284,12 @@ Ext.define("Amps.form.ArrayField.Field", {
       flex: 1,
       handler: function (button, event) {
         console.log(button);
-        button.up("fieldset").deregister();
+        button.up("fieldcontainer").deregister();
 
-        button.up("fieldset").up("fieldset").remove(button.up("fieldset"));
+        button
+          .up("fieldcontainer")
+          .up("fieldset")
+          .remove(button.up("fieldcontainer"));
       },
     },
   ],

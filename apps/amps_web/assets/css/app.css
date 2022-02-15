@@ -166,7 +166,7 @@
 .rtb .x-btn-icon-el-default-small {
   font-size: 17px;
   height: auto;
-  color: #404040;
+  color: var(--secondary-color);
   line-height: 24px;
 }
 
@@ -246,19 +246,35 @@ label.x-form-required-field > span:after {
 
 .led {
   margin: 0 auto;
-  width: 1.75rem;
-  height: 1.75rem;
+  width:.5rem;
+  height: .5rem;
   border-radius: 50%;
 }
 
 .led.green {
-  background-color: lightgreen;
-  box-shadow: #fff 0 -1px 7px 1px, inset green 0 -1px 9px, #7D0 0 2px 5px;
+  background-color: rgb(81, 255, 0);
+  /* box-shadow: rgb(11, 93, 170) 0 -1px 7px 1px, inset rgb(6, 138, 1) 0 -1px 9px, #7D0 0 2px 12px; */
 }
 
 .led.red {
-  background-color: orange;
-  box-shadow: #fff 0 -1px 7px 1px, inset red 0 -1px 9px, #F00 0 2px 5px;
+  background-color: red;
+  /* box-shadow: #fff 0 -1px 7px 1px, inset red 0 -1px 9px, #F00 0 2px 5px; */
+}
+
+.widgetbutton {
+  background: #404040;
+  color: white;
+  cursor: pointer;
+}
+
+.widgetbutton:hover {
+  background: #5a5252;
+  color: white;
+  cursor: pointer;
+}
+
+.widgetbutton:active {
+  background: #000000;
 }
 
 .greenIcon {

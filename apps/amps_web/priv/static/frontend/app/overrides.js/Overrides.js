@@ -232,7 +232,16 @@ Ext.define("Amps.override.form.field.VTypes", {
     }
     return value == password.getValue();
   },
+
+  
+
+ChangepasswordMatch: function (value, field) {
+  var password = field.up("form").down("#" + "password");
+  return value == password.getValue();
+},
+
 });
+
 
 Ext.define("Amps.overrides.form.field.Base", {
   override: "Ext.form.field.Base",
@@ -249,4 +258,16 @@ Ext.define("Amps.overrides.form.field.Base", {
 
     return data;
   },
+});
+
+Ext.override(Ext.form.field.Text, {
+  onBlur: function() {
+          var value = this.getValue();
+          if (value != null) {
+              if (String(value).length != String(value).trim().length) {
+                  this.setValue(String(value).trim());
+                  Ext.toast('Leading and trailing spaces are trimmed');
+              }
+          }
+  }
 });

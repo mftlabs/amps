@@ -26,6 +26,10 @@ if config_env() == :prod do
       ip: {0, 0, 0, 0, 0, 0, 0, 0},
       port: String.to_integer(System.get_env("PORT") || "4001")
     ],
+    url: [
+      host: System.get_env("AMPS_HOST", "localhost"),
+      port: String.to_integer(System.get_env("AMPS_PORT"))
+    ],
     secret_key_base: secret_key_base
 
   # ## Using releases
@@ -74,6 +78,46 @@ if config_env() == :prod do
       You can generate one by calling: mix phx.gen.secret
       """
 
+  if String.upcase(System.get_env("AMPS_USE_SSL", "FALSE")) == "TRUE" do
+    config :master_proxy,
+      # any Cowboy options are allowed
+      http: [:inet6, port: String.to_integer(System.get_env("AMPS_PORT", "4080"))],
+      log_requests: false,
+      https: [
+        :inet6,
+        port: String.to_integer(System.get_env("AMPS_SSL_PORT", "4443")),
+        cipher_suite: :strong,
+        keyfile: System.get_env("AMPS_SSL_KEY"),
+        certfile: System.get_env("AMPS_SSL_CERT")
+      ],
+      backends: [
+        %{
+          host: ~r/^#{System.get_env("AMPS_ADMIN_HOST", "admin.localhost")}$/,
+          phoenix_endpoint: AmpsWeb.Endpoint
+        },
+        %{
+          host: ~r/^#{System.get_env("AMPS_HOST", "localhost")}$/,
+          phoenix_endpoint: AmpsPortal.Endpoint
+        }
+      ]
+  else
+    config :master_proxy,
+      # any Cowboy options are allowed
+      http: [:inet6, port: String.to_integer(System.get_env("AMPS_PORT", "4080"))],
+      log_requests: false,
+      # https: [:inet6, port: 4443],
+      backends: [
+        %{
+          host: ~r/^#{System.get_env("AMPS_ADMIN_HOST", "admin.localhost")}$/,
+          phoenix_endpoint: AmpsWeb.Endpoint
+        },
+        %{
+          host: ~r/^#{System.get_env("AMPS_HOST", "localhost")}$/,
+          phoenix_endpoint: AmpsPortal.Endpoint
+        }
+      ]
+  end
+
   config :amps_web, AmpsWeb.Endpoint,
     http: [
       # Enable IPv6 and bind on all interfaces.
@@ -81,26 +125,27 @@ if config_env() == :prod do
       # See the documentation on https://hexdocs.pm/plug_cowboy/Plug.Cowboy.html
       # for details about using IPv6 vs IPv4 and loopback vs public addresses.
       ip: {0, 0, 0, 0, 0, 0, 0, 0},
-      port: String.to_integer(System.get_env("PORT") || "4000")
+      port: String.to_integer(System.get_env("AMPS_PORT") || "4080")
     ],
-    url: [host: "admin." <> System.get_env("AMPS_HOST_URL", "localhost")],
+    url: [
+      host: System.get_env("AMPS_ADMIN_HOST", "admin.localhost"),
+      port: System.get_env("AMPS_PORT")
+    ],
     authmethod: System.get_env("AMPS_AUTH_METHOD") || "db",
-    db: "mongo",
     vault_addr: System.get_env("AMPS_VAULT_ADDR", "http://localhost:8200"),
     mongo_addr: System.get_env("AMPS_MONGO_ADDR", "mongodb://localhost:27017/amps"),
     minio_addr: System.get_env("AMPS_MINIO_ADDR", "http://localhost:9001"),
-    pg_addr: System.get_env("AMPS_POSTGRES_ADDR"),
     secret_key_base: secret_key_base
 
-  config :amps, Amps.Cluster, url: System.get_env("AMPS_OS_ADDR", "http://localhost:9200")
+  config :amps, Amps.Cluster, url: System.get_env("AMPS_OPENSEARCH_ADDR", "http://localhost:9200")
 
-  config :ex_aws, :s3,
-    access_key_id: "minioadmin",
-    secret_access_key: "minioadmin",
-    region: "us-east-1",
-    scheme: System.get_env("AMPS_S3_SCHEME") || "http://",
-    host: System.get_env("AMPS_S3_HOST") || "localhost",
-    port: System.get_env("AMPS_S3_PORT") || "9000"
+  # config :ex_aws, :s3,
+  #   access_key_id: "minioadmin",
+  #   secret_access_key: "minioadmin",
+  #   region: "us-east-1",
+  #   scheme: System.get_env("AMPS_S3_SCHEME") || "http://",
+  #   host: System.get_env("AMPS_S3_HOST") || "localhost",
+  #   port: System.get_env("AMPS_S3_PORT") || "9000"
 
   config :amps, :gnat,
     host: String.to_charlist(System.get_env("AMPS_NATS_HOST", "localhost")),
@@ -124,7 +169,7 @@ if config_env() == :prod do
   # If you are doing OTP releases, you need to instruct Phoenix
   # to start each relevant endpoint:
   #
-  config :amps, AmpsWeb.Endpoint, server: true
+  # config :amps, AmpsWeb.Endpoint, server: true
 
   # ## Using releases
   #

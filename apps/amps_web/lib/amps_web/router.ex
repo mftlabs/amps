@@ -26,6 +26,7 @@ defmodule AmpsWeb.Router do
 
   scope "/api", AmpsWeb do
     pipe_through(:api)
+    get("/ampstest",UtilController,:execute_test)
     get("/startup", UtilController, :initialized)
     post("/startup", UtilController, :startup)
 
@@ -44,7 +45,29 @@ defmodule AmpsWeb.Router do
 
   scope "/api", AmpsWeb do
     pipe_through([:api, :api_protected])
+    get("/data/export/:collection", DataController, :export_collection)
+    post("/data/import/:collection", DataController, :import_data)
+    post("/data/import/:collection/:entity/:field", DataController, :import_field_data)
+
+    post("/data/export/:collection", DataController, :export_selection)
+
+    get("/data/export-subitem/:collection/:id/:field", DataController, :export_sub_collection)
+
+    get(
+      "/data/import/sample/:collection",
+      DataController,
+      :sample_template_download
+    )
+
+    get(
+      "/data/import/sample/:collection/:field",
+      DataController,
+      :sample_field_template_download
+    )
+
     get("/users/reset/:id", DataController, :reset_password)
+    get("/admin/reset/:id", DataController, :reset_admin_password)
+    post("/admin/changepassword/:id", DataController, :change_admin_password)
 
     get("/message_events/history/:msgid", UtilController, :history)
     get("/message_events/download/:msgid", DataController, :download)
@@ -54,7 +77,7 @@ defmodule AmpsWeb.Router do
     get("/service/:name", ServiceController, :ping_service)
     post("/msg/reprocess/:msgid", DataController, :reprocess)
     post("/msg/reroute/:id", DataController, :reroute)
-    get("/:stream/consumers", DataController, :get_consumers)
+    post("/msg/reroute", DataController, :reroute_many)
     get("/streams", DataController, :get_streams)
 
     post("/upload/:topic", DataController, :upload)
@@ -68,10 +91,11 @@ defmodule AmpsWeb.Router do
     get("/:collection/:id/:field", DataController, :get_field)
     put("/:collection/:id/:field", DataController, :update_field)
     post("/:collection/:id/:field", DataController, :add_to_field)
-    get("/:collection/:id/:field/:idx", DataController, :get_in_field)
+    get("/:collection/:id/:field/:fieldid", DataController, :get_in_field)
 
-    put("/:collection/:id/:field/:idx", DataController, :update_in_field)
-    delete("/:collection/:id/:field/:idx", DataController, :delete_from_field)
+    put("/:collection/:id/:field/:fieldid", DataController, :update_in_field)
+    delete("/:collection/:id/:field/:fieldid", DataController, :delete_from_field)
+
     # Your protected API endpoints here
   end
 

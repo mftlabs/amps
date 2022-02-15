@@ -4,7 +4,6 @@ Ext.define("Amps.view.main.DetailsScreen", {
   layout: "fit",
   height: "100%",
   width: "100%",
-  requires: ["Amps.controller.PageController"],
   controller: "page",
   tbar: [
     {
@@ -38,6 +37,7 @@ Ext.define("Amps.view.main.DetailsScreen", {
           // amfutil.hideAllButtons();
           // amfutil.showActionIcons(route);
         }
+        console.log("REDIRECTED");
 
         // amfutil.getElementByID("actionbar").show();
       },

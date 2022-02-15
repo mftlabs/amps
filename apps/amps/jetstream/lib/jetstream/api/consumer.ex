@@ -123,7 +123,6 @@ defmodule Jetstream.API.Consumer do
   end
 
   defp to_consumer_config(raw) do
-    IO.inspect(raw)
     policy = raw |> Map.get("deliver_policy")
 
     %{

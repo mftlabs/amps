@@ -22,7 +22,7 @@ defmodule RouterAction do
     msgid = AmpsUtil.get_id()
     msg = Map.merge(msg, %{"msgid" => msgid, "parent" => msg["msgid"]})
 
-    AmpsEvents.send(msg, %{"output" => rule["topic"]}, state)
+    AmpsEvents.send(msg, %{"output" => rule["output"]}, state)
   end
 
   def run(subject, body) do
@@ -58,7 +58,20 @@ defmodule RouterAction do
   end
 
   def evaluate(parms, msg) do
-    case find_rule(parms["rules"], msg) do
+    rules =
+      Enum.reduce(parms["rules"], [], fn id, acc ->
+        rule = Amps.DB.find_one("rules", %{"_id" => id})
+
+        case rule do
+          nil ->
+            acc
+
+          rule ->
+            List.insert_at(acc, -1, rule)
+        end
+      end)
+
+    case find_rule(rules, msg) do
       false ->
         nil
 
@@ -95,12 +108,12 @@ defmodule RouterAction do
   defp find_pattern([{key, pmap} | tail], msg) do
     matchval = msg[key] || ""
     pattern = pmap["value"] || "*"
-    Logger.info("matching on #{key} => #{pattern} and #{matchval}")
+    Logger.info("matching on #{key} => #{matchval} and #{pattern}")
     regex_flag = pmap["regex"] || false
 
     if regex_flag do
       if regex_match(matchval, pattern) do
-        Logger.info("found match on #{key} => #{pattern} and #{matchval}")
+        Logger.info("found match on #{key} => #{matchval} and #{pattern}")
         find_pattern(tail, msg)
       else
         # Logger.info("doesn't match")
@@ -108,7 +121,7 @@ defmodule RouterAction do
       end
     else
       if :glob.matches(matchval, pattern) do
-        Logger.info("found match on #{key} => #{pattern} and #{matchval}")
+        Logger.info("found match on #{key} => #{matchval} and #{pattern}")
         find_pattern(tail, msg)
       else
         # Logger.info("doesn't match")

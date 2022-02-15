@@ -8,10 +8,10 @@ def run(input):
     input = json.loads(input)
     msg = input["msg"]
     parms = input["parms"]
-    try:
-        outputdir = msg["fpath"] + ".tmp"
+    outputdir = msg["fpath"] + ".tmp"
 
-        zf = zipfile.ZipFile(msg["fpath"], mode='r')
+    zf = zipfile.ZipFile(msg["fpath"], mode='r')
+    try:
 
         if "password" in parms:
             pwd = parms["password"]
@@ -33,10 +33,12 @@ def run(input):
                 files.append(os.path.join(outputdir, name))
             if i == parms["maxfiles"]:
                 break
+        zf.close()
 
         output["status"] = "success"
         output["files"] = files
     except Exception as e:
+        zf.close()
         output["status"] = "error"
         output["message"] = str(e)
     return output

@@ -585,18 +585,12 @@ Ext.define("Amps.view.main.MainController", {
               capslock_id.setHidden(true);
             },
             change: async function (cmp, value, oldValue, eOpts) {
-              var duplicate = await amfutil.checkDuplicate({
-                users: { username: value },
-              });
-
-              if (duplicate) {
-                cmp.setActiveError("User Already Exists");
-                cmp.setValidation("User or Bucket Already Exists");
-                // cmp.isValid(false);
-              } else {
-                cmp.setActiveError();
-                cmp.setValidation();
-              }
+              await amfutil.duplicateHandler(
+                cmp,
+                { admin: { username: value } },
+                "Admin User Already Exists",
+                amfutil.nameValidator
+              );
             },
           },
           width: 400,
@@ -693,7 +687,7 @@ Ext.define("Amps.view.main.MainController", {
           xtype: "textfield",
           tooltip: "The First Name of this user",
 
-          name: "firstname",
+          name: "given_name",
           itemId: "given_name",
           fieldLabel: "Given Name",
           vtype: "textbox",
@@ -713,7 +707,7 @@ Ext.define("Amps.view.main.MainController", {
         },
         {
           xtype: "textfield",
-          name: "lastname",
+          name: "surname",
           itemId: "surname",
           fieldLabel: "Last Name",
           tooltip: "The last name of the user",
@@ -1115,6 +1109,128 @@ Ext.define("Amps.view.main.MainController", {
       var data = m.data;
       amfutil.reprocess(grid, data.msgid);
     });
+  },
+
+  onRerouteClicked: function () {
+    var grid = Ext.ComponentQuery.query("#main-grid")[0];
+    var sel = grid.getSelection();
+
+    var ids = sel.map((m) => {
+      return m.data._id;
+    });
+    var uploadWindow = new Ext.window.Window({
+      title: "Reroute Event",
+      modal: true,
+      width: 600,
+      height: 500,
+      scrollable: true,
+      resizable: false,
+      layout: "fit",
+      padding: 10,
+      items: [
+        {
+          xtype: "form",
+          defaults: {
+            padding: 5,
+            labelWidth: 140,
+          },
+          // layout: {
+          //   type: "vbox",
+          //   align: "stretch",
+          // },
+          scrollable: true,
+          items: [
+            amfutil.outputTopic(),
+            {
+              // Fieldset in Column 1 - collapsible via toggle button
+              xtype: "fieldset",
+              title: "Additional Metadata",
+              collapsible: true,
+              onAdd: function (component, position) {
+                // component.setTitle("Match Pattern" + position);
+                console.log(component);
+                console.log(position);
+              },
+              items: [
+                {
+                  xtype: "button",
+                  text: "Add",
+                  handler: function (button, event) {
+                    var formpanel = button.up();
+
+                    formpanel.insert(
+                      formpanel.items.length - 1,
+                      Ext.create("Amps.form.Defaults")
+                    );
+                  },
+                },
+              ],
+            },
+          ],
+
+          buttons: [
+            {
+              text: "Send",
+              formBind: true,
+              handler: function (scope) {
+                var form = this.up("form").getForm();
+                scope.up("window").setLoading(true);
+                var fields = form.getFields();
+                var values = form.getValues();
+
+                var meta = amfutil.formatArrayField(values.defaults);
+                console.log(meta);
+                // console.log(files);
+                amfutil.ajaxRequest({
+                  url: "api/msg/reroute",
+                  method: "post",
+                  jsonData: {
+                    meta: JSON.stringify(meta),
+                    topic: values.output,
+                    ids: ids,
+                  },
+                  success: function () {
+                    uploadWindow.close();
+                    grid.getStore().reload();
+                  },
+                });
+                // msgbox.anchorTo(Ext.getBody(), "br");
+              },
+            },
+            {
+              text: "Cancel",
+              cls: "button_class",
+              itemId: "cancel",
+              listeners: {
+                click: function (btn) {
+                  uploadWindow.close();
+                },
+              },
+            },
+          ],
+        },
+      ],
+    });
+    uploadWindow.show();
+  },
+
+  onExportClicked: function () {
+    var grid = amfutil.getElementByID("main-grid");
+
+    var sel = grid.getSelection().map((rec) => {
+      var data = rec.data;
+      delete data.id;
+      return data;
+    });
+    var route = Ext.util.History.currentToken;
+    var tokens = route.split("/");
+    console.log(sel);
+
+    if (sel.length) {
+      amfutil.download("/api/data/export/" + route, "POST", { rows: sel });
+    } else {
+      amfutil.download("/api/data/export/" + route);
+    }
   },
 
   onSearchPanel: function (btn) {
@@ -1645,6 +1761,7 @@ Ext.define("Amps.view.main.MainController", {
       },
     });
   },
+
   onLogout() {
     amfutil.logout();
   },

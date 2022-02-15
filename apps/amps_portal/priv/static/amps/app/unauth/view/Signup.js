@@ -1,5 +1,5 @@
 Ext.define("Amps.Unauthorized.Signup", {
-  extend: "Ext.Panel",
+  extend: "Ext.panel.Panel",
   xtype: "signup",
   itemId: "signupform",
   controller: "auth",
@@ -7,98 +7,82 @@ Ext.define("Amps.Unauthorized.Signup", {
   title: "AMPS Dashboard Signup",
   closable: false,
   autoShow: true,
+  layout: "center",
 
   items: {
-    xtype: "formpanel",
-
+    xtype: "form",
     defaults: {
       labelWidth: 120,
     },
-    layout: "vbox",
     items: [
       {
-        xtype: "container",
-        layout: "hbox",
-        items: [
-          {
-            xtype: "textfield",
-            name: "username",
-            itemId: "username",
-            maskRe: /[^\^ ]/,
-            label: "User name",
-            allowBlank: false,
-            listeners: {
-              afterrender: function (cmp) {
-                try {
-                  cmp.focus();
-                } catch (e) {}
-                cmp.inputEl.set({
-                  autocomplete: "nope",
-                });
-              },
-              change: async function (cmp, value, oldValue, eOpts) {
-                var duplicate = await amfutil.checkDuplicate({
-                  users: { username: value },
-                });
-
-                if (duplicate) {
-                  cmp.setActiveError("User Already Exists");
-                  cmp.setValidation("User Already Exists");
-                  // cmp.isValid(false);
-                } else {
-                  cmp.setActiveError();
-                  cmp.setValidation();
-                }
-              },
-            },
+        xtype: "textfield",
+        name: "username",
+        itemId: "username",
+        maskRe: /[^\^ ]/,
+        fieldLabel: "User name",
+        allowBlank: false,
+        listeners: {
+          afterrender: function (cmp) {
+            try {
+              cmp.focus();
+            } catch (e) {}
+            cmp.inputEl.set({
+              autocomplete: "nope",
+            });
           },
-        ],
+          change: async function (cmp, value, oldValue, eOpts) {
+            var duplicate = await amfutil.checkDuplicate({
+              users: { username: value },
+            });
+
+            if (duplicate) {
+              cmp.setActiveError("User Already Exists");
+              cmp.setValidation("User Already Exists");
+              // cmp.isValid(false);
+            } else {
+              cmp.setActiveError();
+              cmp.setValidation();
+            }
+          },
+        },
       },
       {
-        xtype: "container",
-        layout: "hbox",
-        items: [
-          {
-            xtype: "textfield",
-            name: "firstname",
-            flex: 1,
-            itemId: "firstname",
-            label: "First name",
-            allowBlank: false,
-            maskRe: /[^\^ ]/,
-            listeners: {
-              afterrender: function (cmp) {
-                cmp.inputEl.set({
-                  autocomplete: "nope",
-                });
-              },
-            },
+        xtype: "textfield",
+        name: "firstname",
+        itemId: "firstname",
+        fieldLabel: "First name",
+        allowBlank: false,
+        maskRe: /[^\^ ]/,
+        listeners: {
+          afterrender: function (cmp) {
+            cmp.inputEl.set({
+              autocomplete: "nope",
+            });
           },
-          {
-            xtype: "textfield",
-            name: "lastname",
-            itemId: "lastname",
-            flex: 1,
-            label: "Last name",
-            allowBlank: false,
-            maskRe: /[^\^ ]/,
-            listeners: {
-              afterrender: function (cmp) {
-                cmp.inputEl.set({
-                  autocomplete: "nope",
-                });
-              },
-            },
-          },
-        ],
+        },
       },
-
+      {
+        xtype: "textfield",
+        name: "lastname",
+        itemId: "lastname",
+        fieldLabel: "Last name",
+        allowBlank: false,
+        maskRe: /[^\^ ]/,
+        listeners: {
+          afterrender: function (cmp) {
+            cmp.inputEl.set({
+              autocomplete: "nope",
+            });
+          },
+        },
+      },
       {
         xtype: "textfield",
         name: "passwd",
         itemId: "passwd",
         inputType: "password",
-        label: "Password",
+        fieldLabel: "Password",
         maskRe: /[^\^ ]/,
         allowBlank: false,
         enableKeyEvents: true,
@@ -143,7 +127,7 @@ Ext.define("Amps.Unauthorized.Signup", {
         itemId: "confpasswd",
         inputType: "password",
         maskRe: /[^\^ ]/,
-        label: "Confirm Password",
+        fieldLabel: "Confirm Password",
         allowBlank: false,
         enableKeyEvents: true,
         vtype: "passwordMatch",
@@ -166,7 +150,7 @@ Ext.define("Amps.Unauthorized.Signup", {
         xtype: "textfield",
         name: "email",
         itemId: "email",
-        label: "Email",
+        fieldLabel: "Email",
         allowBlank: false,
         listeners: {
           afterrender: function (cmp) {
@@ -179,7 +163,7 @@ Ext.define("Amps.Unauthorized.Signup", {
       {
         xtype: "textfield",
         name: "phone",
-        label: "Phone Number",
+        fieldLabel: "Phone Number",
         allowBlank: false,
         itemId: "phone_number",
         vtype: "phone",
@@ -197,12 +181,16 @@ Ext.define("Amps.Unauthorized.Signup", {
         formBind: true,
         cls: "button_class",
         itemId: "signup_id",
-        handler: "onSignupClick",
+        listeners: {
+          click: "onSignupClick",
+        },
       },
       {
         text: "Login Instead",
         cls: "button_class",
-        handler: "onLoginInstead",
+        listeners: {
+          click: "onLoginInstead",
+        },
       },
     ],
   },

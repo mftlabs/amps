@@ -16,16 +16,16 @@ defmodule AmpsWeb.Startup do
   end
 
   def create_history() do
-    IO.inspect(Amps.DB.find_one("services", %{"name" => "history updater"}))
+    IO.inspect(Amps.DB.find_one("services", %{"name" => "history_updater"}))
 
-    case Amps.DB.find_one("services", %{"name" => "history updater"}) do
+    case Amps.DB.find_one("services", %{"name" => "history_updater"}) do
       nil ->
         IO.puts("Creating History Updater")
 
         history = %{
-          name: "history updater",
+          name: "history_updater",
           type: "history",
-          subs_count: 1,
+          subs_count: 2,
           active: true,
           topic: "amps.events.*"
         }

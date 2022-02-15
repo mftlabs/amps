@@ -86,6 +86,10 @@ defmodule AmpsWeb.UtilController do
     end
   end
 
+  def execute_test(conn, _params) do
+    "Welcome to AMPS!"
+  end
+
   def startup(conn, _params) do
     body = conn.body_params()
 
@@ -175,7 +179,7 @@ defmodule AmpsWeb.UtilController do
 
       msgs ->
         IO.inspect(msgs)
-        msg = Enum.find(msgs, fn msg -> msg["status"] == "started" end)
+        msg = Enum.at(msgs, 0)
         get_parents(msg, []) ++ msgs ++ get_children(msg, [])
     end
   end
@@ -211,9 +215,7 @@ defmodule AmpsWeb.UtilController do
   end
 
   def workflow(conn, %{"topic" => topic, "meta" => meta}) do
-    {steps, topics} = find_topics(topic, meta, [])
-    IO.inspect(steps)
-    IO.inspect(topics)
+    steps = find_topics(topic, meta, [])
 
     res =
       case steps do
@@ -221,7 +223,6 @@ defmodule AmpsWeb.UtilController do
           %{
             "steps" => steps,
             "action" => %{"output" => topic},
-            "topics" => Enum.reverse(topics),
             "topic" => topic
           }
 
@@ -229,61 +230,62 @@ defmodule AmpsWeb.UtilController do
           %{
             "steps" => steps,
             "action" => %{"output" => topic},
-            "topics" => Enum.reverse(topics),
             "topic" => topic
           }
       end
-
-    IO.inspect(res)
 
     json(conn, res)
   end
 
   defp find_topics(topic, meta, topics) do
+    IO.inspect(topics)
+    IO.inspect(topic)
+
     if Enum.member?(topics, topic) do
+      IO.inspect(topics)
+      IO.inspect(topic)
       Logger.warn("Workflow loop detected")
       {[%{"loop" => true, "topic" => topic}], topics}
     else
+      topics = [topic | topics]
+
       subs =
         DB.find("services", %{
-          type: "subscriber"
+          type: "subscriber",
+          active: true
         })
 
-      {steps, topics} =
-        Enum.reduce(subs, {[], topics}, fn sub, {steps, topics} ->
+      steps =
+        Enum.reduce(subs, [], fn sub, steps ->
           if match_topic(sub["topic"], topic) do
             action = DB.find_one("actions", %{"_id" => sub["handler"]})
             step = %{"action" => action, "sub" => sub, "topic" => sub["topic"]}
 
-            {step, topics} =
+            step =
               if action["type"] == "router" do
                 rule = RouterAction.evaluate(action, meta)
 
                 # rule["topic"]
-                topics = [topic | topics]
 
-                {steps, topics} = find_topics(rule["topic"], Map.merge(meta, %{}), topics)
+                IO.inspect(topics)
+
+                steps = find_topics(rule["output"], Map.merge(meta, %{}), topics)
 
                 step =
                   step
                   |> Map.put(
-                    "ruleid",
-                    rule["id"]
+                    "action",
+                    Map.merge(action, %{"output" => rule["output"]})
                   )
                   |> Map.put(
                     "steps",
                     steps
                   )
 
-                {step, topics}
+                step
               else
-                if action["output"] do
-                  topics = [topic | topics]
-
-                  {steps, topics} = find_topics(action["output"], Map.merge(meta, %{}), topics)
-
-                  IO.inspect(steps)
-                  IO.inspect(topics)
+                output = fn action ->
+                  steps = find_topics(action["output"], Map.merge(meta, %{}), topics)
 
                   step =
                     step
@@ -292,15 +294,27 @@ defmodule AmpsWeb.UtilController do
                       steps
                     )
 
-                  {step, topics}
+                  step
+                end
+
+                if Map.has_key?(action, "send_output") do
+                  if(action["send_output"]) do
+                    output.(action)
+                  else
+                    step
+                  end
                 else
-                  {step, topics}
+                  if action["output"] do
+                    output.(action)
+                  else
+                    step
+                  end
                 end
               end
 
-            {[step | steps], topics}
+            [step | steps]
           else
-            {steps, topics}
+            steps
           end
         end)
     end

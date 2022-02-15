@@ -29,4 +29,29 @@ defmodule AmpsWeb.NotificationChannel do
 
     {:reply, {:ok, response}, socket}
   end
+
+  def handle_in("stream", %{"name" => stream}, socket) do
+    {:ok, %{consumers: consumers}} = Jetstream.API.Consumer.list(:gnat, stream)
+
+    consumers =
+      Enum.reduce(consumers, [], fn consumer, acc ->
+        {:ok, info} = Jetstream.API.Consumer.info(:gnat, stream, consumer)
+
+        info =
+          Map.merge(info, info.config)
+          |> Map.merge(info.delivered)
+          |> Map.drop([:config, :delivered])
+
+        [info | acc]
+      end)
+
+    {:reply, {:ok, consumers}, socket}
+  end
+
+  def handle_in("consumer", %{"name" => name, "topic" => topic}, socket) do
+    {stream, consumer} = AmpsUtil.get_names(%{"name" => name, "topic" => topic})
+    # IO.inspect("#{stream}, #{consumer}")
+    {:ok, info} = Jetstream.API.Consumer.info(:gnat, stream, consumer)
+    {:reply, {:ok, Integer.to_string(info.num_pending)}, socket}
+  end
 end

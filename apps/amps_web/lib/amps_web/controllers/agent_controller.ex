@@ -16,40 +16,53 @@ defmodule AmpsWeb.AgentController do
 
     IO.puts(id)
 
-    agentdir = Application.app_dir(:amps, "priv/agents")
+    agentdir = Application.app_dir(:amps_web, "priv/agents")
     query = conn.query_params()
     os = query["os"]
     arch = query["arch"]
     host = query["host"]
     {:ok, agentfolder} = Temp.mkdir()
 
-    {scriptname, agent} =
+    agent =
       case os do
         "linux" ->
-          {"run.sh", os <> "_" <> arch}
+          case arch do
+            "32" ->
+              "386"
 
-        "mac" ->
-          {"run.sh", os <> "_" <> "64"}
+            "64" ->
+              "amd64"
+          end
+
+        "darwin" ->
+          "universal"
 
         "windows" ->
-          {"run.bat", os <> "_" <> arch <> ".exe"}
+          case arch do
+            "32" ->
+              "386"
+
+            "64" ->
+              "amd64"
+          end
       end
 
     IO.inspect(File.copy(Path.join([agentdir, os, agent]), Path.join(agentfolder, agent)))
 
-    script =
-      File.read!(Path.join([agentdir, os, scriptname]))
-      |> String.replace("{ACCOUNT}", account["username"])
-      |> String.replace("{KEY}", account["username"])
-      |> String.replace(
-        "{CRED}",
-        AmpsWeb.Encryption.decrypt(account["aws_secret_access_key"])
-      )
-      |> String.replace("{HOST}", host)
-      |> String.replace("{AGENT}", agent)
+    # script =
+    #   File.read!(Path.join([agentdir, os, scriptname]))
+    #   |> String.replace("{ACCOUNT}", account["username"])
+    #   |> String.replace("{KEY}", account["username"])
+    #   |> String.replace(
+    #     "{CRED}",
+    #     AmpsWeb.Encryption.decrypt(account["aws_secret_access_key"])
+    #   )
+    #   |> String.replace("{HOST}", host)
+    #   |> String.replace("{AGENT}", agent)
 
-    IO.inspect(script)
-    IO.inspect(File.write(Path.join(agentfolder, scriptname), script))
+    # IO.inspect(script)
+
+    IO.inspect(File.write(Path.join(agentfolder, "conf"), "ufa_url=#{host}"))
 
     IO.inspect(File.ls(agentfolder))
 
