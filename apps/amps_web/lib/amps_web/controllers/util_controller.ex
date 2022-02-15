@@ -87,7 +87,7 @@ defmodule AmpsWeb.UtilController do
   end
 
   def execute_test(conn, _params) do
-    "Welcome to AMPS!"
+    json(conn,  %{"message" => "Welcome to AMPS!"})
   end
 
   def startup(conn, _params) do

@@ -4,6 +4,6 @@ defmodule AmpsWeb.PageControllerTest do
   #Check api call /api/ampstest
   test "GET /api/ampstest", %{conn: conn} do
     conn = get(conn, "/api/ampstest")
-    assert html_response(conn, 200) =~ "Welcome to AMPS!"
+    assert json_response(conn, 200) == %{"message" => "Welcome to AMPS!"}
   end
 end

@@ -28,6 +28,7 @@ defmodule AmpsPortal.Router do
 
   scope "/api", AmpsPortal do
     pipe_through(:api)
+    get("/ampstest", PageController, :execute_test)
     resources("/session", SessionController, singleton: true, only: [:create, :delete])
     post("/session/renew", SessionController, :renew)
     post("/users/reg", UserController, :register)
