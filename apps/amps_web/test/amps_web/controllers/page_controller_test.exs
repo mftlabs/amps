@@ -1,8 +1,9 @@
 defmodule AmpsWeb.PageControllerTest do
   use AmpsWeb.ConnCase
 
-  test "GET /", %{conn: conn} do
-    conn = get(conn, "/")
-    assert html_response(conn, 200) =~ "Welcome to Phoenix!"
+  #Check api call /api/ampstest
+  test "GET /api/ampstest", %{conn: conn} do
+    conn = get(conn, "/api/ampstest")
+    assert html_response(conn, 200) =~ "Welcome to AMPS!"
   end
 end

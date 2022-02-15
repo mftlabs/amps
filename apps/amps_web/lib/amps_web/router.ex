@@ -26,6 +26,7 @@ defmodule AmpsWeb.Router do
 
   scope "/api", AmpsWeb do
     pipe_through(:api)
+    get("/ampstest",UtilController,:execute_test)
     get("/startup", UtilController, :initialized)
     post("/startup", UtilController, :startup)
 

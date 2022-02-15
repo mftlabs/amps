@@ -86,6 +86,10 @@ defmodule AmpsWeb.UtilController do
     end
   end
 
+  def execute_test(conn, _params) do
+    "Welcome to AMPS!"
+  end
+
   def startup(conn, _params) do
     body = conn.body_params()
 
