@@ -15,10 +15,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Run docker containers
-    - run: |
-        cd apps\docker
-        docker-compose up
-        docker ps -a
+      run: export curdir=$PWD && cd apps/docker && docker-compose up -d && docker ps -a && cd $curdir
     - name: Set up Elixir
       uses: erlef/setup-beam@988e02bfe678367a02564f65ca2e37726dc0268f
       with:
