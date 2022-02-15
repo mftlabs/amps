@@ -30,6 +30,6 @@ jobs:
     - name: Run docker containers
       run: source ./env  && export curdir=$PWD && cd docker && docker-compose -f docker-compose.dev.yml up -d && docker ps -a && cd $curdir
     - name: Install dependencies
-      run: mix deps.get && mix phx.digest
+      run: sleep 60 && mix deps.get && mix phx.digest
     - name: Run tests
       run: source ./env && mix test
