@@ -943,11 +943,12 @@ Ext.define("Amps.Pages", {
 
                     var pbar = new Ext.Progress();
 
-                    var msgbox = new Ext.MessageBox();
-                    msgbox.show({
-                      title: "Downloading...",
-                      items: [pbar],
+                    var msgbox = Ext.MessageBox.show({
+                      title: "Please wait",
+                      msg: "Downloading...",
+                      progressText: "Downloading...",
                       width: 300,
+                      progress: true,
                       closable: false,
                     });
                     await amfutil.renew_session();
@@ -982,7 +983,7 @@ Ext.define("Amps.Pages", {
                                   }
                                   // Enqueue the next data chunk into our target stream
                                   progress += value.length;
-                                  pbar.setValue(progress / size);
+                                  msgbox.updateProgress(progress / size);
                                   controller.enqueue(value);
                                   return pump();
                                 });

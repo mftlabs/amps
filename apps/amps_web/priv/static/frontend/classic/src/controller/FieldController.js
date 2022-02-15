@@ -9,22 +9,30 @@ Ext.define("Amps.controller.FieldController", {
   onAddNewButtonClicked: function (btn) {
     var tokens = Ext.util.History.getToken().split("/");
     var config = ampsgrids.grids[tokens[0]]().subgrids[tokens[2]];
-
+    // var win = new Ext.window.Window({
+    //   title: "Yes",
+    // });
     var win = Ext.create("Amps.form.add", config.window);
-    win.loadForm(config.object, config.fields, (form, values) => {
-      if (config.add && config.add.process) {
-        values = config.add.process(form, values);
-      }
-      return values;
-    });
 
     win.show();
 
-    // amfutil.getById(tokens[0], tokens[1]).then((item) => {
-    //   id = item._id;
-    //   win.down("form").entity = id;
-    //   win.show();
-    // });
+    amfutil.getById(tokens[0], tokens[1]).then(async (item) => {
+      console.log(item);
+      win.loadForm(
+        config.object,
+        config.fields,
+        (form, values) => {
+          if (config.add && config.add.process) {
+            values = config.add.process(form, values);
+          }
+          return values;
+        },
+        false,
+        item
+      );
+      console.log("Yes");
+      win.show();
+    });
 
     // ampsgrids.grids[tokens[0]].subgrids[tokens[2]].create(btn, record);
   },

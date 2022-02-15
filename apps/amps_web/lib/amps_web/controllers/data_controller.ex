@@ -168,39 +168,49 @@ defmodule AmpsWeb.DataController do
 
         data =
           Enum.reduce(list, [], fn item, data ->
-            obj =
-              Enum.reduce(Enum.with_index(item), %{}, fn {val, idx}, obj ->
-                if val != nil do
-                  key = Enum.at(headers, idx)
-
-                  try do
-                    val = Jason.decode!(val)
-
-                    Map.put(obj, key, val)
-                  rescue
-                    e ->
-                      splits = Path.split(key)
-
-                      if Enum.count(splits) == 1 do
-                        Map.put(obj, key, val)
-                      else
-                        keys =
-                          Enum.reduce(splits, [], fn piece, acc ->
-                            acc ++ [piece]
-                          end)
-
-                        put_in(obj, Enum.map(keys, &Access.key(&1, %{})), val)
-                      end
-                  end
-                else
-                  obj
-                end
+            has =
+              Enum.reduce(item, false, fn val, acc ->
+                acc || val
               end)
 
-            [
-              obj
-              | data
-            ]
+            if has do
+              obj =
+                Enum.reduce(Enum.with_index(item), %{}, fn {val, idx}, obj ->
+                  if val != nil do
+                    key = Enum.at(headers, idx)
+                    IO.inspect(key)
+
+                    try do
+                      val = Jason.decode!(val)
+
+                      Map.put(obj, key, val)
+                    rescue
+                      e ->
+                        splits = Path.split(key)
+
+                        if Enum.count(splits) == 1 do
+                          Map.put(obj, key, val)
+                        else
+                          keys =
+                            Enum.reduce(splits, [], fn piece, acc ->
+                              acc ++ [piece]
+                            end)
+
+                          put_in(obj, Enum.map(keys, &Access.key(&1, %{})), val)
+                        end
+                    end
+                  else
+                    obj
+                  end
+                end)
+
+              [
+                obj
+                | data
+              ]
+            else
+              data
+            end
           end)
 
         Xlsxir.close(tid)

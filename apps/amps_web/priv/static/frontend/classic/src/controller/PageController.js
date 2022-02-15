@@ -479,13 +479,11 @@ Ext.define("Amps.controller.PageController", {
       });
     }
   },
-  onChangeAdminPassword : async function (grid, rowIndex, colIndex, e) {
+  onChangeAdminPassword: async function (grid, rowIndex, colIndex, e) {
     var record = grid.getStore().getAt(rowIndex);
-    console.log(record)
-    amfutil.changePasswordAdmin(record.data._id)
-
+    console.log(record);
+    amfutil.changePasswordAdmin(record.data._id);
   },
-
 
   resetAdminPassword: async function (grid, rowIndex, colIndex, e) {
     var record = grid.getStore().getAt(rowIndex);
@@ -570,7 +568,6 @@ Ext.define("Amps.controller.PageController", {
       ],
     });
     win.show();
-
   },
 
   resetPassword: async function (grid, rowIndex, colIndex, e) {
@@ -1340,7 +1337,7 @@ Ext.define("Amps.window.Uploads", {
 
         scope.uploads[idx].status = "Uploaded";
         scope.update();
-        resolve(request.response);
+        resolve(request);
       });
 
       request.addEventListener("abort", function (e) {

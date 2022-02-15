@@ -9,6 +9,7 @@ Ext.define("Amps.form.update", {
   defaults: {
     labelWidth: 175,
   },
+  entity: null,
   resizable: true,
   bodyPadding: 25,
   height: 500,
@@ -176,6 +177,7 @@ Ext.define("Amps.form.update", {
               console.log(values);
               values = amfutil.convertNumbers(form, values);
               console.log(values);
+              delete values.id;
               var user = amfutil.get_user();
               console.log(scope);
               if (scope.audit) {
@@ -272,7 +274,13 @@ Ext.define("Amps.form.update", {
     }
     this.editing = !this.editing;
   },
-  loadForm: function (config, record, title, route = false, audit = true) {
+  loadForm: async function (
+    config,
+    record,
+    title,
+    route = false,
+    audit = true
+  ) {
     this.config = config;
     this.record = record;
     if (config.transform) {
@@ -339,7 +347,7 @@ Ext.define("Amps.form.update", {
 
     this.editing = false;
     // fields.forEach((field) => {
-    this.edit();
+    await this.edit();
     console.log(this.fields);
   },
   dockedItems: [
@@ -548,13 +556,13 @@ Ext.define("Amps.util.UpdateRecordController", {
               if (config.update && config.update.fields) {
                 fields.concat(config.update.fields);
               }
-
-              var updateForm = Ext.create("Amps.form.update");
-              updateForm.loadForm(config, record.data);
               var tokens = currRoute.split("/");
-              var item = await amfutil.getById(tokens[0], tokens[1]);
-              id = item._id;
-              updateForm.entity = id;
+
+              var updateForm = Ext.create("Amps.form.update", {
+                entity: record,
+              });
+              updateForm.loadForm(config, record.data);
+
               console.log(config.types);
               console.log(gridinfo);
               var win = Ext.create("Ext.window.Window", {
@@ -1496,7 +1504,6 @@ Ext.define("Amps.util.UpdateRecordController", {
           itemId: "phone_number",
           vtype: "phone",
           width: 550,
-       
         },
         {
           xtype: "combobox",
@@ -1556,7 +1563,6 @@ Ext.define("Amps.util.UpdateRecordController", {
                 approved: approved,
                 role: role,
               };
-
 
               amfutil.ajaxRequest({
                 headers: {
