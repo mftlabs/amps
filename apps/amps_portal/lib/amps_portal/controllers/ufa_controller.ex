@@ -260,7 +260,7 @@ defmodule AmpsPortal.UFAController do
           end
         end)
 
-      Task.await(pid, 2500)
+      Task.await(pid, 2000)
     catch
       :exit, _ ->
         Logger.info("UFA Subscription Timeout")
