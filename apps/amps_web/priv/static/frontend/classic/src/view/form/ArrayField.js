@@ -80,27 +80,21 @@ Ext.define("Amps.form.ArrayField", {
   },
 
   register: function (name) {
-    console.log(this);
     this.fields.push(name);
-    console.log(this.fields);
   },
   deregister: function (name) {
     var index = this.fields.indexOf(name);
     if (index > -1) {
       this.fields.splice(index, 1);
     }
-    console.log(this.fields);
   },
 
   setReadOnly: function (readOnly) {
-    console.log(readOnly);
     var buttons = Ext.ComponentQuery.query("#arraybutton");
     // var fi = Ext.ComponentQuery.query("fields");
 
-    console.log(buttons);
     if (readOnly) {
       buttons.forEach((b) => {
-        console.log(b);
         b.setHidden(true);
       });
     }
@@ -112,8 +106,6 @@ Ext.define("Amps.form.ArrayField", {
       var parms = Object.entries(data).map((entry) => {
         return { field: entry[0], value: entry[1] };
       });
-
-      console.log(parms);
 
       parms.forEach(function (p) {
         var length = scope.items.length;
@@ -237,7 +229,6 @@ Ext.define("Amps.form.ArrayField.Field", {
 
     if (readOnly) {
       buttons.forEach((b) => {
-        console.log(b);
         b.setHidden(true);
       });
     }
@@ -249,8 +240,6 @@ Ext.define("Amps.form.ArrayField.Field", {
       var parms = Object.entries(data).map((entry) => {
         return { field: entry[0], value: entry[1] };
       });
-
-      console.log(parms);
 
       parms.forEach(function (p) {
         var length = scope.items.length;
@@ -283,7 +272,6 @@ Ext.define("Amps.form.ArrayField.Field", {
       iconCls: "x-fa fa-trash",
       flex: 1,
       handler: function (button, event) {
-        console.log(button);
         button.up("fieldcontainer").deregister();
 
         button

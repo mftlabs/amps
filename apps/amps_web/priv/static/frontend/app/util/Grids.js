@@ -220,11 +220,6 @@ Ext.define("Amps.form.RuleGrid", {
       Promise.all([amfutil.getCollectionData("rules")]).then((values) => {
         var rules = values[0];
         var ids = args["value"];
-
-        console.log(ids);
-        console.log(rules);
-
-        console.log(gridstore);
         var filtered = [];
 
         ids.forEach((id) => {
@@ -255,7 +250,6 @@ Ext.define("Amps.form.RuleGrid", {
     var buttons = Ext.ComponentQuery.query("#rulegridButton");
     // var fi = Ext.ComponentQuery.query("fields");
 
-    console.log(buttons);
     if (readOnly) {
       buttons.forEach((b) => {
         console.log(b);
@@ -1627,7 +1621,6 @@ Ext.define("Amps.container.Imports", {
 
       listeners: {
         reconfigure: async function () {
-          console.log("Reconfigure");
           var progress = amfutil.getElementByID("progress");
           var num = 0;
           var length = this.widgets.length;
@@ -1639,7 +1632,6 @@ Ext.define("Amps.container.Imports", {
           var start = this.start;
           var widgets = this.widgets;
           for (var widget of widgets) {
-            console.log("Wait");
             await new Promise((resolve) => setTimeout(resolve, 25));
             await widget.promise();
             num++;
@@ -1651,7 +1643,6 @@ Ext.define("Amps.container.Imports", {
             this.invalids = 0;
             this.up("imports").setActiveItem(0);
           }
-          console.log("show");
           if (this.importing) {
           } else {
             if (this.widgets.length > 0) {
@@ -1694,8 +1685,9 @@ Ext.define("Amps.container.Imports", {
 
         for (var i = 0; i < items.length; i++) {
           var item = items[i];
-
-          var values = item.win.down("form").getValues();
+          var form = item.win.down("form");
+          var values = form.getValues();
+          values = form.process(form, form.getValues());
           this.data[this.start - 1 + i] = values;
         }
       },
@@ -1703,7 +1695,6 @@ Ext.define("Amps.container.Imports", {
         amfutil.getElementByID("left").setDisabled(true);
         amfutil.getElementByID("right").setDisabled(true);
         var old = this.data;
-        console.log(old);
 
         this.conts = [];
         this.widgets = [];
@@ -1769,12 +1760,21 @@ Ext.define("Amps.container.Imports", {
 
             values.modifiedby = user.firstname + " " + user.lastname;
             values.modified = new Date().toISOString();
+            var route;
+            if (grid.idtype == "generated") {
+              route = grid.route;
+            } else {
+              var id = values._id;
+              delete values._id;
+
+              route = grid.route + "/" + id;
+            }
 
             await amfutil.ajaxRequest({
               headers: {
                 Authorization: localStorage.getItem("access_token"),
               },
-              url: "api/" + grid.route,
+              url: "api/" + route,
               method: "POST",
               timeout: 60000,
               params: {},
@@ -1801,7 +1801,6 @@ Ext.define("Amps.container.Imports", {
         this.up("imports").setActiveItem(0);
 
         // this.importing = false;
-        console.log(this.data);
 
         if (this.start + 25 > this.data.length) {
           this.importing = false;
@@ -2032,6 +2031,23 @@ Ext.define("Amps.container.Imports", {
                     ],
                   },
                   {
+                    xtype: "radiogroup",
+                    name: "idtype",
+                    fieldLabel: "ID Type",
+                    labelWidth: 200,
+                    allowBlank: false,
+                    items: [
+                      {
+                        boxLabel: "Generated",
+                        inputValue: "generated",
+                      },
+                      {
+                        boxLabel: "Provided",
+                        inputValue: "provided",
+                      },
+                    ],
+                  },
+                  {
                     xtype: "container",
                     layout: {
                       type: "hbox",
@@ -2059,39 +2075,46 @@ Ext.define("Amps.container.Imports", {
                       {
                         xtype: "button",
                         iconCls: "x-fa fa-question-circle",
+                        text: "Template",
                         tooltip: "Click here to get sample excel format",
                         margin: { left: 5 },
                         itemId: "sample_format",
                         handler: function (scope) {
                           var values = scope.up("form").getValues();
                           var type = values.type;
-                          if (type) {
-                            if (type == "collection") {
-                              if (values.collection) {
-                                amfutil.download(
-                                  "/api/data/import/sample/" + values.collection
-                                );
-                              } else {
-                                Ext.toast("Select a collection");
-                              }
-                            } else {
-                              if (values.collection) {
-                                if (values.field) {
+                          var idtype = values.idtype;
+                          if (idtype) {
+                            if (type) {
+                              if (type == "collection") {
+                                if (values.collection) {
                                   amfutil.download(
                                     "/api/data/import/sample/" +
-                                      values.collection +
-                                      "/" +
-                                      values.field
+                                      values.collection
                                   );
                                 } else {
-                                  Ext.toast("Select a field");
+                                  Ext.toast("Select a collection");
                                 }
                               } else {
-                                Ext.toast("Select a collection");
+                                if (values.collection) {
+                                  if (values.field) {
+                                    amfutil.download(
+                                      "/api/data/import/sample/" +
+                                        values.collection +
+                                        "/" +
+                                        values.field
+                                    );
+                                  } else {
+                                    Ext.toast("Select a field");
+                                  }
+                                } else {
+                                  Ext.toast("Select a collection");
+                                }
                               }
+                            } else {
+                              Ext.toast("Select a type");
                             }
                           } else {
-                            Ext.toast("Select a type");
+                            Ext.toast("Select an ID type");
                           }
                         },
                       },
@@ -2140,6 +2163,7 @@ Ext.define("Amps.container.Imports", {
                     grid.data = data;
                     grid.widgets = [];
                     grid.conts = [];
+                    grid.idtype = values.idtype;
                     var config;
                     var entity;
 
@@ -2184,6 +2208,9 @@ Ext.define("Amps.container.Imports", {
                               return new Promise(async (resolve, reject) => {
                                 var myForm = Ext.create("Amps.form.config", {
                                   entity: entity ? entity : null,
+                                  show_id: values.idtype == "provided",
+                                  idcheck: false,
+                                  collection: collection,
                                 });
 
                                 await myForm.loadForm(
@@ -3508,25 +3535,23 @@ Ext.define("Amps.util.Grids", {
         },
       },
       fields: [
-        {
-          xtype: "textfield",
-          name: "name",
-          fieldLabel: "Name",
-          allowBlank: false,
-          tooltip: "A name for this provider",
-          listeners: {
-            change: async function (cmp, value, oldValue, eOpts) {
-              await amfutil.duplicateHandler(
-                cmp,
-                {
-                  providers: { name: value },
-                },
-                "Provider Already Exists",
-                amfutil.nameValidator
-              );
-            },
+        amfutil.duplicateVal(
+          {
+            xtype: "textfield",
+            name: "name",
+            fieldLabel: "Name",
+            allowBlank: false,
+            tooltip: "A name for this provider",
           },
-        },
+          function (cmp, value) {
+            var form = cmp.up("form");
+            return {
+              providers: amfutil.duplicateIdCheck({ name: value }),
+            };
+          },
+          "Provider Already Exists",
+          amfutil.nameValidator
+        ),
         {
           xtype: "textfield",
           name: "desc",
@@ -3643,25 +3668,22 @@ Ext.define("Amps.util.Grids", {
         },
       ],
       fields: [
-        {
-          xtype: "textfield",
-          name: "name",
-          fieldLabel: "Name",
-          allowBlank: false,
-          tooltip: "A name for this provider",
-          listeners: {
-            change: async function (cmp, value, oldValue, eOpts) {
-              await amfutil.duplicateHandler(
-                cmp,
-                {
-                  rules: { name: value },
-                },
-                "Rule Already Exists",
-                amfutil.nameValidator
-              );
-            },
+        amfutil.duplicateVal(
+          {
+            xtype: "textfield",
+            name: "name",
+            fieldLabel: "Name",
+            allowBlank: false,
+            tooltip: "A name for this rule",
           },
-        },
+          function (cmp, value) {
+            return {
+              rules: amfutil.duplicateIdCheck({ name: value }),
+            };
+          },
+          "Rule Already Exists",
+          amfutil.nameValidator
+        ),
         {
           xtype: "textfield",
           name: "desc",
@@ -3741,23 +3763,22 @@ Ext.define("Amps.util.Grids", {
         },
       ],
       fields: [
-        {
-          xtype: "textfield",
-          name: "name",
-          fieldLabel: "Job Name",
-          tooltip: "A name for the scheduled job",
-          allowBlank: false,
-          listeners: {
-            change: async function (scope, val) {
-              await amfutil.duplicateHandler(
-                scope,
-                { scheduler: { name: val } },
-                "Job Name Already Exists",
-                amfutil.nameValidator
-              );
-            },
+        amfutil.duplicateVal(
+          {
+            xtype: "textfield",
+            name: "name",
+            fieldLabel: "Job Name",
+            tooltip: "A name for the scheduled job",
+            allowBlank: false,
           },
-        },
+          function (cmp, value) {
+            return {
+              scheduler: amfutil.duplicateIdCheck({ name: value }),
+            };
+          },
+          "Job Name Already Exists",
+          amfutil.nameValidator
+        ),
         {
           xtype: "checkbox",
           name: "active",
@@ -4294,23 +4315,22 @@ Ext.define("Amps.util.Grids", {
         { text: "Email", dataIndex: "email", flex: 1, type: "text" },
       ],
       fields: [
-        {
-          xtype: "textfield",
-          name: "name",
-          fieldLabel: "Customer Name",
-          tooltip: "The Name of the Customer",
-          allowBlank: false,
-          listeners: {
-            change: async function (cmp, value, oldValue, eOpts) {
-              await amfutil.duplicateHandler(
-                cmp,
-                { customers: { name: value } },
-                "Customer Name Already Exists",
-                amfutil.nameValidator
-              );
-            },
+        amfutil.duplicateVal(
+          {
+            xtype: "textfield",
+            name: "name",
+            fieldLabel: "Customer Name",
+            tooltip: "The Name of the Customer",
+            allowBlank: false,
           },
-        },
+          function (cmp, value) {
+            return {
+              customers: amfutil.duplicateIdCheck({ name: value }),
+            };
+          },
+          "Customer Name Already Exists",
+          amfutil.nameValidator
+        ),
         {
           xtype: "textfield",
           name: "phone",
@@ -4397,20 +4417,17 @@ Ext.define("Amps.util.Grids", {
           ),
           "customers"
         ),
-        amfutil.duplicateValidation(
+        amfutil.duplicateVal(
           amfutil.text("Username", "username", {
             tooltip: "The username of this user.",
           }),
-          async function (cmp, value, oldValue, eOpts) {
-            var clauses = { username: value };
-
-            await amfutil.duplicateHandler(
-              cmp,
-              { users: amfutil.duplicateIdCheck(clauses, cmp) },
-              "Username Already Exists",
-              amfutil.nameValidator
-            );
-          }
+          function (cmp, value, oldValue, eOpts) {
+            return {
+              users: amfutil.duplicateIdCheck({ username: value }, cmp),
+            };
+          },
+          "Username Already Exists",
+          amfutil.nameValidator
         ),
         amfutil.text("First Name", "firstname", {
           tooltip: "The First Name of the user.",
@@ -4765,21 +4782,18 @@ Ext.define("Amps.util.Grids", {
             },
           },
           fields: [
-            amfutil.duplicateValidation(
+            amfutil.duplicateVal(
               {
                 xtype: "textfield",
                 name: "name",
                 fieldLabel: "Rule Name",
               },
-              async function (cmp, value, oldValue, eOpts) {
+              function (cmp, value) {
                 var form = cmp.up("form");
-                await amfutil.duplicateHandler(
-                  cmp,
-                  { users: { "rules.name": value, _id: form.entity._id } },
-                  "Agent Rule Already Exists",
-                  amfutil.nameValidator
-                );
-              }
+                return { users: { "rules.name": value, _id: form.entity._id } };
+              },
+              "Agent Rule Already Exists",
+              amfutil.nameValidator
             ),
             {
               name: "type",
@@ -5094,9 +5108,6 @@ Ext.define("Amps.util.Grids", {
             },
           ],
           process: function (form, values) {
-            console.log(form);
-            console.log(values);
-
             values.rules = JSON.parse(values.rules);
             return values;
           },
@@ -5142,7 +5153,6 @@ Ext.define("Amps.util.Grids", {
                 listeners: amfutil.renderListeners(function render(scope, val) {
                   var conts = ["topic", "mailbox"];
                   conts.forEach((con) => {
-                    console.log(con == val);
                     var c = amfutil.getElementByID(con);
                     c.setDisabled(con != val);
                     c.setHidden(con != val);
@@ -6046,21 +6056,18 @@ Ext.define("Amps.util.Grids", {
         },
       ],
       fields: [
-        amfutil.duplicateValidation(
+        amfutil.duplicateVal(
           {
             xtype: "textfield",
             name: "name",
             fieldLabel: "Name",
             tooltip: "Unique Action Name",
           },
-          async function (cmp, value) {
-            await amfutil.duplicateHandler(
-              cmp,
-              { actions: amfutil.duplicateIdCheck({ name: value }, cmp) },
-              "Action Already Exists",
-              amfutil.nameValidator
-            );
-          }
+          function (cmp, value, oldValue, eOpts) {
+            return { actions: amfutil.duplicateIdCheck({ name: value }, cmp) };
+          },
+          "Action Already Exists",
+          amfutil.nameValidator
         ),
         {
           xtype: "textfield",
@@ -6134,8 +6141,6 @@ Ext.define("Amps.util.Grids", {
       ],
       add: {
         process: function (form, values) {
-          console.log(form);
-          console.log(values);
           var actions = ampsgrids.grids.actions();
           if (actions.types[values.type].process) {
             values = actions.types[values.type].process(form, values);
@@ -6574,24 +6579,23 @@ Ext.define("Amps.util.Grids", {
       title: "Services",
       object: "Service",
       fields: [
-        {
-          xtype: "textfield",
-          name: "name",
-          fieldLabel: "Name",
-          allowBlank: false,
-          submitValue: true,
-          tooltip: "A name for this service",
-          listeners: {
-            change: async function (cmp, value, oldValue, eOpts) {
-              await amfutil.duplicateHandler(
-                cmp,
-                { services: { name: value } },
-                "Service Already Exists",
-                amfutil.nameValidator
-              );
-            },
+        amfutil.duplicateVal(
+          {
+            xtype: "textfield",
+            name: "name",
+            fieldLabel: "Name",
+            allowBlank: false,
+            submitValue: true,
+            tooltip: "A name for this service",
           },
-        },
+          function (cmp, value) {
+            return {
+              services: amfutil.duplicateIdCheck({ name: value }),
+            };
+          },
+          "Service Already Exists",
+          amfutil.nameValidator
+        ),
         {
           xtype: "textfield",
           allowBlank: false,

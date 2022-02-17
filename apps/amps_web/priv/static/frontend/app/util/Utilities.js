@@ -782,38 +782,38 @@ Ext.define("Amps.util.Utilities", {
           },
           scrollable: true,
           items: [
-            {
-              xtype: "textfield",
-              name: "oldpassword",
-              fieldLabel: "Old Password",
-              inputType: "password",
-              allowBlank: false,
-              maskRe: /[^\^ ]/,
-              //vtype: "passwordCheck",
-              itemId: "oldpassword",
-              enableKeyEvents: true,
-              width: 550,
-              listeners: {
-                afterrender: function (cmp) {
-                  cmp.inputEl.set({
-                    autocomplete: "old-password",
-                  });
-                },
-                keypress: function (me, e) {
-                  var charCode = e.getCharCode();
-                  if (!e.shiftKey && charCode >= 65 && charCode <= 90) {
-                    capslock_id =
-                      Ext.ComponentQuery.query("#user_capslock_id")[0];
-                    capslock_id.setHidden(false);
-                  } else {
-                    me.isValid();
-                    capslock_id =
-                      Ext.ComponentQuery.query("#user_capslock_id")[0];
-                    capslock_id.setHidden(true);
-                  }
-                },
-              },
-            },
+            // {
+            //   xtype: "textfield",
+            //   name: "oldpassword",
+            //   fieldLabel: "Old Password",
+            //   inputType: "password",
+            //   allowBlank: false,
+            //   maskRe: /[^\^ ]/,
+            //   //vtype: "passwordCheck",
+            //   itemId: "oldpassword",
+            //   enableKeyEvents: true,
+            //   width: 550,
+            //   listeners: {
+            //     afterrender: function (cmp) {
+            //       cmp.inputEl.set({
+            //         autocomplete: "old-password",
+            //       });
+            //     },
+            //     keypress: function (me, e) {
+            //       var charCode = e.getCharCode();
+            //       if (!e.shiftKey && charCode >= 65 && charCode <= 90) {
+            //         capslock_id =
+            //           Ext.ComponentQuery.query("#user_capslock_id")[0];
+            //         capslock_id.setHidden(false);
+            //       } else {
+            //         me.isValid();
+            //         capslock_id =
+            //           Ext.ComponentQuery.query("#user_capslock_id")[0];
+            //         capslock_id.setHidden(true);
+            //       }
+            //     },
+            //   },
+            // },
             {
               xtype: "textfield",
               name: "password",
@@ -905,31 +905,31 @@ Ext.define("Amps.util.Utilities", {
                 var win = this.up("window");
                 win.setLoading(true);
                 password = amfutil.getElementByID("password").getValue();
-                oldpassword = amfutil.getElementByID("oldpassword").getValue();
+                // oldpassword = amfutil.getElementByID("oldpassword").getValue();
                 confirmpwd = amfutil.getElementByID("confirmpwd").getValue();
-                if (password == oldpassword) {
-                  win.setLoading(false);
-                  Ext.toast("Old password & new password con't same");
-                } else {
-                  console.log(id, password);
-                  amfutil.ajaxRequest({
-                    url: "api/admin/changepassword/" + id,
-                    method: "post",
-                    jsonData: {
-                      password: password,
-                      oldpassword: oldpassword,
-                    },
-                    success: function () {
-                      changePasswordWindow.close();
-                      Ext.toast("Password changed successfully");
-                      //   grid.getStore().reload();
-                    },
-                    failure: function () {
-                      win.setLoading(false);
-                      Ext.toast("Change password failed");
-                    },
-                  });
-                }
+                // if (password == oldpassword) {
+                //   win.setLoading(false);
+                //   Ext.toast("Old password & new password con't same");
+                // } else {
+                console.log(id, password);
+                amfutil.ajaxRequest({
+                  url: "api/admin/changepassword/" + id,
+                  method: "post",
+                  jsonData: {
+                    password: password,
+                    // oldpassword: oldpassword,
+                  },
+                  success: function () {
+                    changePasswordWindow.close();
+                    Ext.toast("Password changed successfully");
+                    //   grid.getStore().reload();
+                  },
+                  failure: function () {
+                    win.setLoading(false);
+                    Ext.toast("Change password failed");
+                  },
+                });
+                // }
               },
             },
             {
@@ -958,15 +958,11 @@ Ext.define("Amps.util.Utilities", {
   },
 
   convertNumbers: function (form, data) {
-    console.log(form);
-    console.log(data);
-    console.log(form.getFields());
     form.getFields().items.forEach((field) => {
       if (field.xtype == "numberfield") {
         data[field.name] = parseInt(data[field.name]);
       }
     });
-    console.log(data);
     return data;
   },
 
@@ -1472,7 +1468,6 @@ Ext.define("Amps.util.Utilities", {
   },
 
   getCollectionData: async function (collection, filters = {}) {
-    console.log(filters);
     var resp = await amfutil.ajaxRequest({
       url: "/api/store/" + collection,
       method: "GET",
@@ -1570,6 +1565,8 @@ Ext.define("Amps.util.Utilities", {
 
   renderContainer: function (itemId, items) {
     return {
+      hidden: true,
+      disabled: true,
       xtype: "fieldcontainer",
       itemId: itemId,
       layout: {
@@ -2141,15 +2138,38 @@ Ext.define("Amps.util.Utilities", {
     return obj;
   },
 
+  duplicateVal: function (config, getClauses, message, validator) {
+    var check = async function (cmp, value) {
+      var clauses = await getClauses(cmp, value);
+      await amfutil.duplicateHandler(cmp, clauses, message, validator);
+    };
+    var obj = Object.assign(config, {
+      validator: function (val) {
+        // check(this, val);
+        return this.validCheck;
+      },
+      validCheck: true,
+      check: async function () {
+        await check(this, this.getValue());
+      },
+      duplicate: true,
+      listeners: amfutil.duplicateListeners(check),
+    });
+    return obj;
+  },
+
   duplicateIdCheck: function (clauses, cmp) {
     var form = cmp.up("form");
-    if (form.record && form.record._id) {
-      clauses["bool"] = {
-        must_not: {
-          match: { _id: form.record._id },
-        },
-      };
+    if (form.idcheck) {
+      if (form.record && form.record._id) {
+        clauses["bool"] = {
+          must_not: {
+            match: { _id: form.record._id },
+          },
+        };
+      }
     }
+
     return clauses;
   },
 

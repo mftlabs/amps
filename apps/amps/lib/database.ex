@@ -22,6 +22,19 @@ defmodule Amps.DB do
     end
   end
 
+  def insert_with_id(collection, body, id) do
+    case db() do
+      "pg" ->
+        Postgres.create(collection, body)
+
+      "mongo" ->
+        MongoDB.create(collection, body)
+
+      "es" ->
+        Elastic.insert_with_id(collection, body, id)
+    end
+  end
+
   def delete(collection, clauses) do
     case db() do
       "pg" ->
@@ -921,6 +934,7 @@ defmodule Amps.DB do
 
         nil ->
           nil
+
         _ ->
           nil
       end
@@ -1060,6 +1074,18 @@ defmodule Amps.DB do
 
     def insert(collection, body) do
       case Amps.Cluster.post(path(collection) <> "/" <> collection, body, %{
+             "refresh" => true
+           }) do
+        {:ok, response} ->
+          {:ok, response["_id"]}
+
+        {:error, reason} ->
+          {:error, reason}
+      end
+    end
+
+    def insert_with_id(collection, body, id) do
+      case Amps.Cluster.put(path(collection) <> "/" <> collection <> "/" <> id, body, %{
              "refresh" => true
            }) do
         {:ok, response} ->

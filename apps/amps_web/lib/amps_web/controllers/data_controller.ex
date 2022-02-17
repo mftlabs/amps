@@ -514,6 +514,22 @@ defmodule AmpsWeb.DataController do
     json(conn, res)
   end
 
+  def create_with_id(conn, %{"collection" => collection, "id" => id}) do
+    body = Util.before_create(collection, conn.body_params())
+
+    {:ok, res} =
+      if vault_collection(collection) do
+        VaultDatabase.insert(collection, body)
+      else
+        DB.insert_with_id(collection, body, id)
+      end
+
+    Util.after_create(collection, body)
+
+    IO.inspect(res)
+    json(conn, res)
+  end
+
   def show(conn, %{"collection" => collection, "id" => id}) do
     object =
       if vault_collection(collection) do
