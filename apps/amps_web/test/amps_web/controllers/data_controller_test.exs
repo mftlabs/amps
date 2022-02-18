@@ -77,7 +77,62 @@ defmodule AmpsWeb.DataControllerTest do
           "username" => "aram0112"
         },
         "unique" => "username"
-      }
+      },
+      %{
+        "collection" => "providers",
+        "obj" => %{
+          "created" => "2022-02-18T06=>50=>56.802Z",
+          "createdby" => "Bindu Rani",
+          "desc" => "test",
+          "key" => "sdyhjhjdsdsd",
+          "modified" => "2022-02-18T06=>50=>56.802Z",
+          "modifiedby" => "Bindu Rani",
+          "name" => "DeliverViaS3",
+          "provider" => "AWS",
+          "proxy" => true,
+          "proxy_password" => "test@123",
+          "proxy_url" => "https://test.com",
+          "proxy_username" => "admin",
+          "region" => "ap-south-1",
+          "secret" => "password",
+          "type" => "s3"
+        },
+        "unique" => "name"
+      },
+      %{
+        "collection" => "actions",
+        "obj" => %{
+          "active" => true,
+          "created" => "2022-02-17T07:32:30.042Z",
+          "createdby" => "Bindu Rani",
+          "desc" => "testrun",
+          "format" => "*",
+          "modified" => "2022-02-17T07:32:30.042Z",
+          "modifiedby" => "Bindu Rani",
+          "module" => "test",
+          "name" => "CreateTMUser",
+          "output" => "amps.actions.zip.Test",
+          "parms" => %{
+            "action" => "add"
+          },
+          "script_type" => "python",
+          "send_output" => true,
+          "type" => "runscript"
+        },
+        "unique" => "name"
+      },
+      %{
+        "collection" => "fields",
+        "obj" => %{
+          "created" => "2022-02-18T10:08:05.133Z",
+          "createdby" => "Bindu Rani",
+          "desc" => "test",
+          "field" => "Test",
+          "modified" => "2022-02-18T10:08:05.133Z",
+          "modifiedby" => "Bindu Rani"
+        },
+        "unique" => "field"
+      },
     ],
     fn config ->
       collection = config["collection"]
