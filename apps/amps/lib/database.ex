@@ -64,6 +64,13 @@ defmodule Amps.DB do
     end
   end
 
+  def delete_index(collection) do
+    case db() do
+      "es" ->
+        Elastic.delete_index(collection)
+    end
+  end
+
   def get_rows(conn, %{
         "collection" => collection
       }) do
@@ -851,6 +858,10 @@ defmodule Amps.DB do
       end
     end
 
+    def delete_index(collection) do
+      Amps.Cluster.delete(path(collection))
+    end
+
     def get_rows(conn, %{
           "collection" => collection
         }) do
@@ -946,9 +957,11 @@ defmodule Amps.DB do
     end
 
     def path(collection) do
-      # pfx = Application.get_env(:amps_web, AmpsWeb.Endpoint)[:elastic_prefix]
-      # path = pfx <> "-" <> collection
-      collection
+      if Application.get_env(:amps, :env) == :test do
+        "test-" <> collection
+      else
+        collection
+      end
     end
 
     def format_search(map) do
@@ -979,8 +992,6 @@ defmodule Amps.DB do
         search
         |> format_search()
         |> Enum.reduce([], fn {k, v}, acc ->
-          IO.inspect(v)
-
           filter =
             case k do
               "exists" ->
@@ -1030,8 +1041,6 @@ defmodule Amps.DB do
 
           [filter | acc]
         end)
-
-      IO.inspect(search)
 
       %{
         bool: %{
@@ -1187,8 +1196,6 @@ defmodule Amps.DB do
           %{"fields" => [field]}
         )
 
-      IO.inspect(item[field])
-
       Enum.find_value(item[field], fn obj ->
         if obj["_id"] == fieldid do
           obj
@@ -1249,8 +1256,6 @@ defmodule Amps.DB do
             "refresh" => true
           }
         )
-
-      IO.inspect(result)
 
       find_one(
         collection,

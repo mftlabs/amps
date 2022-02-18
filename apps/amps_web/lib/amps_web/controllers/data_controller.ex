@@ -178,7 +178,6 @@ defmodule AmpsWeb.DataController do
                 Enum.reduce(Enum.with_index(item), %{}, fn {val, idx}, obj ->
                   if val != nil do
                     key = Enum.at(headers, idx)
-                    IO.inspect(key)
 
                     try do
                       val = Jason.decode!(val)
@@ -296,10 +295,8 @@ defmodule AmpsWeb.DataController do
 
   def create_sheet(name, headers, contents) do
     formatted_contents = Enum.map(contents, fn x -> Enum.map(x, fn y -> [y] end) end)
-    IO.inspect(formatted_contents)
     headers |> Enum.map(fn x -> [x, bold: true] end)
     row_data = [headers | formatted_contents]
-    IO.inspect(row_data)
     newsheet = %Sheet{name: name, rows: row_data}
   end
 
@@ -307,7 +304,6 @@ defmodule AmpsWeb.DataController do
         "collection" => collection
       }) do
     data = AmpsWeb.Util.headers(collection)
-    IO.inspect(data)
     sheets = create_sample_sheets(collection, data)
 
     {:ok, {name, binary}} = Elixlsx.write_to_memory(%Workbook{sheets: sheets}, collection)
@@ -358,7 +354,6 @@ defmodule AmpsWeb.DataController do
   def export_collection(conn, %{
         "collection" => collection
       }) do
-    IO.puts("Generating report for:::: #{collection}")
     data = DB.find(collection)
 
     sheets = get_excel_data(collection, data)
@@ -391,7 +386,6 @@ defmodule AmpsWeb.DataController do
   def export_selection(conn, %{"collection" => collection}) do
     body = conn.body_params()
 
-    IO.inspect(body)
     rows = body["rows"]
     sheets = get_excel_data(collection, rows)
 
@@ -404,20 +398,13 @@ defmodule AmpsWeb.DataController do
   end
 
   def write_in_workbook(sheet_name, column_headers, contents) do
-    IO.inspect(column_headers)
-    IO.inspect(contents)
-
     # formatted_contents = Enum.map(contents, fn x  -> Enum.map(x, fn y -> [y, {:bold, false}] end)  end)
     formatted_contents = Enum.map(contents, fn x -> Enum.map(x, fn y -> [y] end) end)
-    IO.inspect(formatted_contents)
     row_data = [column_headers | formatted_contents]
-    IO.inspect(row_data)
     newsheet = %Sheet{name: sheet_name, rows: row_data}
 
     newsheet = Sheet.set_pane_freeze(newsheet, 1, 0)
-    # IO.inspect(newsheet)
     workbook = %Workbook{sheets: [newsheet]}
-    # IO.inspect(workbook)
     workbook
   end
 
@@ -510,7 +497,6 @@ defmodule AmpsWeb.DataController do
 
     Util.after_create(collection, body)
 
-    IO.inspect(res)
     json(conn, res)
   end
 
@@ -526,7 +512,6 @@ defmodule AmpsWeb.DataController do
 
     Util.after_create(collection, body)
 
-    IO.inspect(res)
     json(conn, res)
   end
 
@@ -703,10 +688,8 @@ defmodule AmpsWeb.DataController do
     Logger.debug("Adding Field")
     body = conn.body_params()
 
-    IO.inspect(body)
     fieldid = DB.add_to_field(collection, body, id, field)
     updated = DB.find_one(collection, %{"_id" => id})
-    IO.inspect(updated)
 
     Util.after_field_create(collection, id, field, fieldid, body, updated)
 
