@@ -1,4 +1,6 @@
 defmodule AmpsEvents do
+  require Logger
+
   def send(msg, parms, state) do
     IO.puts("send parms #{inspect(msg)}   #{inspect(parms)}   #{inspect(state)}")
 
@@ -21,7 +23,7 @@ defmodule AmpsEvents do
   def send_history(topic, index, msg, app \\ %{}) do
     app = Map.merge(app, %{"index" => index, "etime" => AmpsUtil.gettime()})
     data = Map.merge(msg, app)
-    IO.puts("post event #{topic}   #{inspect(data)}")
+    Logger.debug("post event #{topic}   #{inspect(data)}")
     Gnat.pub(:gnat, topic, Poison.encode!(data))
   end
 

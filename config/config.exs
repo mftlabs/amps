@@ -243,9 +243,6 @@ config :amps, :pyworker,
     {:max_overflow, 2}
   ]
 
-config :kafka_ex,
-  disable_default_worker: true
-
 # Configure esbuild (the version is required)
 # config :esbuild,
 #   version: "0.12.18",

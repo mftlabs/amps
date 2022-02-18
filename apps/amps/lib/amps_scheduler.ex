@@ -6,9 +6,6 @@ defmodule Amps.Scheduler do
   require Logger
 
   def init(config) do
-    IO.puts("Scheduler Config")
-    IO.inspect(config)
-
     sched = DB.find("scheduler")
 
     jobs =
