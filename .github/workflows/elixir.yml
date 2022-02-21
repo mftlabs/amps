@@ -45,18 +45,3 @@ jobs:
       run: mix deps.get && mix phx.digest
     - name: Run tests
       run: mix test
-    - name: Build
-      run: MIX_ENV=prod mix release
-    - name: Zip Build
-      uses: montudor/action-zip@v1
-      with:
-        args: zip -q -r build.zip ./_build/prod/rel/amps
-    # - name: Generate Release
-    #   uses: "marvinpinto/action-automatic-releases@latest"
-    #   with:
-    #     repo_token: "${{ secrets.RELEASE_TOKEN }}"
-    #     automatic_release_tag: "latest"
-    #     prerelease: true
-    #     title: "Development Build"
-    #     files: |
-    #       build.zip
