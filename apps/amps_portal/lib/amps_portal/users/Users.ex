@@ -273,7 +273,7 @@ defmodule AmpsPortal.Users.User do
         nil
 
       _ ->
-        res = Amps.DB.find_one_and_update("users", %{"_id" => user.id}, attrs)
+        _res = Amps.DB.find_one_and_update("users", %{"_id" => user.id}, attrs)
         user
     end
   end

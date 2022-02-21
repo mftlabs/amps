@@ -108,7 +108,7 @@ defmodule AmpsWeb.Startup do
         IO.puts("Creating SYSTEM Default Account")
         Amps.DB.insert("services", system_defaults)
 
-      object ->
+      _object ->
         IO.puts("SYSTEM Defaults Already Exist")
     end
   end
@@ -139,7 +139,7 @@ defmodule AmpsWeb.Startup do
         IO.puts("Creating SYSTEM Default Rules")
         Amps.DB.insert("rules", system_rules)
 
-      object ->
+      _object ->
         IO.puts("SYSTEM Default Rules Already Exist")
     end
   end

@@ -1,7 +1,7 @@
 defmodule RunScriptAction do
   require Logger
 
-  def run(msg, parms, state) do
+  def run(msg, parms, _state) do
     result =
       case parms["script_type"] do
         "python" ->

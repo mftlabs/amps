@@ -133,6 +133,55 @@ defmodule AmpsWeb.DataControllerTest do
         },
         "unique" => "field"
       },
+      %{
+        "collection" => "rules",
+        "obj" => %{
+        "created" => "2022-02-18T10:01:39.685Z",
+        "createdby" => "Bindu Rani",
+        "desc" => "add rule",
+        "modified" => "2022-02-18T10:01:39.685Z",
+        "modifiedby" => "Bindu Rani",
+        "name" => "testrule",
+        "output" => "amps.actions.zip.Test",
+        "patterns" => %{
+          "test" => %{
+            "regex" => false,
+            "value" => "*"
+          }
+        }
+        },
+        "unique" => "name"
+      },
+      #%{
+      #  "collection" => "scheduler",
+      #  "obj" => %{
+      #    "active" => true,
+      #    "created" => "2022-02-21T04:55:43.026Z",
+      #    "createdby" => "Bindu Rani",
+      #    "meta" => %{ },
+      #    "modified" => "2022-02-21T04:55:43.027Z",
+      #    "modifiedby" => "Bindu Rani",
+      #    "name" => "RunBasedOnTimer",
+      #    "topic" => "amps.actions.zip.Test",
+      #    "type" => "timer",
+      #    "unit" => "Minutes",
+      #    "value" => "1"
+      #  },
+      #  "unique" => "name"
+      #}
+      %{
+        "collection" => "topics",
+        "obj" => %{
+          "created" => "2022-02-17T11:18:49.037Z",
+          "createdby" => "Bindu Rani",
+          "desc" => "test",
+          "modified" => "2022-02-17T11:18:49.037Z",
+          "modifiedby" => "Bindu Rani",
+          "topic" => "amps.data.test",
+          "type" => "data"
+        },
+        "unique" => "topic"
+      },
     ],
     fn config ->
       collection = config["collection"]
