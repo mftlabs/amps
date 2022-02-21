@@ -38,11 +38,11 @@ defmodule AmpsWeb.UtilController do
                   false
               end
 
-            {:error, reason} ->
+            {:error, _reason} ->
               true
           end
 
-        item ->
+        _item ->
           true
       end
 
@@ -120,7 +120,7 @@ defmodule AmpsWeb.UtilController do
           )
           |> Vault.auth()
 
-        result =
+        _result =
           Vault.request(vault, :post, "auth/userpass/users/" <> root["username"],
             body: %{"token_policies" => "admin,default", "password" => password}
           )

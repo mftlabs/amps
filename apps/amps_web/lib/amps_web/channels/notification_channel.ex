@@ -23,7 +23,7 @@ defmodule AmpsWeb.NotificationChannel do
         nil ->
           false
 
-        pid ->
+        _pid ->
           true
       end
 

@@ -74,7 +74,7 @@ defmodule AmpsPortal.UFAController do
     end
   end
 
-  def heartbeat(conn, %{"username" => username}) do
+  def heartbeat(conn, %{"username" => _username}) do
     case Pow.Plug.current_user(conn) do
       nil ->
         send_resp(conn, 403, "Forbidden")
@@ -95,7 +95,7 @@ defmodule AmpsPortal.UFAController do
     end
   end
 
-  def poll_mailbox(conn, %{"username" => username}) do
+  def poll_mailbox(_conn, %{"username" => _username}) do
   end
 
   def handle_upload(conn, %{
@@ -195,7 +195,7 @@ defmodule AmpsPortal.UFAController do
             IO.inspect("none")
             send_resp(conn, 404, "No Messages")
 
-          {:error, error} ->
+          {:error, _error} ->
             send_resp(conn, 408, "Subscriber Timeout")
         end
     end
@@ -230,7 +230,7 @@ defmodule AmpsPortal.UFAController do
     end
   end
 
-  def receive_message({user, rule}, pid) do
+  def receive_message({user, rule}, _pid) do
     listening_topic = "_CON.#{nuid()}"
 
     {stream, consumer} = {"MAILBOX", user.username <> "_" <> rule}

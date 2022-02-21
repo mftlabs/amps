@@ -19,7 +19,7 @@ defmodule AmpsWeb.ServiceController do
       nil ->
         json(conn, false)
 
-      pid ->
+      _pid ->
         json(conn, true)
     end
   end
@@ -51,7 +51,7 @@ defmodule AmpsWeb.ServiceController do
     json(conn, resp)
   end
 
-  def restart_service(svcname) do
+  def restart_service(_svcname) do
   end
 
   def start_service(svcname) do

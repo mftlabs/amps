@@ -462,7 +462,7 @@ defmodule Amps.DB do
           acc <> curr
         end)
 
-      filters = String.trim(filters, " AND ")
+      _filters = String.trim(filters, " AND ")
     end
 
     def parse_sort(collection, sort) do
@@ -590,7 +590,7 @@ defmodule Amps.DB do
           ", TRUE)" <>
           " WHERE data->>'_id' = " <> single_quote(id) <> ";"
 
-      {:ok, result} = Postgrex.query(:postgres, query, [])
+      {:ok, _result} = Postgrex.query(:postgres, query, [])
       find_one(collection, %{"_id" => id})
     end
 
@@ -607,7 +607,7 @@ defmodule Amps.DB do
           ", TRUE)" <>
           " WHERE data->>'_id' = " <> single_quote(id) <> ";"
 
-      {:ok, result} = Postgrex.query(:postgres, query, [])
+      {:ok, _result} = Postgrex.query(:postgres, query, [])
       find_one(collection, %{"_id" => id})
     end
 
@@ -622,7 +622,7 @@ defmodule Amps.DB do
           "}'" <>
           " WHERE data->>'_id' = " <> single_quote(id) <> ";"
 
-      {:ok, result} = Postgrex.query(:postgres, query, [])
+      {:ok, _result} = Postgrex.query(:postgres, query, [])
       find_one(collection, %{"_id" => id})
     end
 
@@ -683,7 +683,7 @@ defmodule Amps.DB do
       query = "DELETE FROM " <> collection <> where(clauses) <> ";"
 
       case Postgrex.query(:postgres, query, []) do
-        {:ok, request} ->
+        {:ok, _request} ->
           :ok
 
         {:error, error} ->
@@ -695,7 +695,7 @@ defmodule Amps.DB do
       query = "DELETE FROM " <> collection <> where(clauses) <> ";"
 
       case Postgrex.query(:postgres, query, []) do
-        {:ok, request} ->
+        {:ok, _request} ->
           :ok
 
         {:error, error} ->
@@ -711,7 +711,7 @@ defmodule Amps.DB do
 
       case Postgrex.query(:postgres, "INSERT INTO " <> collection <> " (data)
       VALUES('" <> body <> "') RETURNING data->'_id';", []) do
-        {:ok, result} ->
+        {:ok, _result} ->
           # AmpsWeb.Endpoint.broadcast("notifications", "update", %{page: collection})
           id
 
@@ -911,7 +911,7 @@ defmodule Amps.DB do
     end
 
     def find(collection, clauses, opts \\ %{}) do
-      %{rows: rows, success: success, count: count} =
+      %{rows: rows, success: _success, count: _count} =
         query(
           collection,
           Map.merge(
@@ -1013,7 +1013,7 @@ defmodule Amps.DB do
                         }
                       }
 
-                    %{"gt" => gt} ->
+                    %{"gt" => _gt} ->
                       %{
                         range: %{k => v}
                       }
@@ -1051,7 +1051,7 @@ defmodule Amps.DB do
 
     def convert_sort(collection, sort) do
       case Amps.Cluster.get(path(collection)) do
-        {:error, e} ->
+        {:error, _e} ->
           []
 
         {:ok,
@@ -1167,7 +1167,7 @@ defmodule Amps.DB do
     end
 
     def add_to_field(collection, body, id, field) do
-      {:ok, result} =
+      {:ok, _result} =
         Amps.Cluster.post(
           path(collection) <> "/_update_by_query",
           %{
@@ -1207,7 +1207,7 @@ defmodule Amps.DB do
 
     @spec update_in_field(any, any, any, any, any) :: any
     def update_in_field(collection, body, id, field, fieldid) do
-      {:ok, result} =
+      {:ok, _result} =
         Amps.Cluster.post(
           path(collection) <> "/_update_by_query",
           %{
@@ -1235,8 +1235,8 @@ defmodule Amps.DB do
       find_one(collection, %{"_id" => id})
     end
 
-    def delete_from_field(collection, body, id, field, fieldid) do
-      {:ok, result} =
+    def delete_from_field(collection, _body, id, field, fieldid) do
+      {:ok, _result} =
         Amps.Cluster.post(
           path(collection) <> "/_update_by_query",
           %{

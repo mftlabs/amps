@@ -36,7 +36,7 @@ defmodule Amps.Scheduler do
   end
 
   defp get_job_config(job) do
-    pieces = %Quantum.Job{
+    _pieces = %Quantum.Job{
       name: String.to_atom(job["name"]),
       overlap: true,
       run_strategy: %Quantum.RunStrategy.Random{nodes: :cluster},

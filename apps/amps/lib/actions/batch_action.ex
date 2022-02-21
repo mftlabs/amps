@@ -15,7 +15,7 @@ defmodule BatchAction do
     end
   end
 
-  def batch(msg, parms, state) do
+  def batch(msg, parms, _state) do
     messages =
       case parms["inputtype"] do
         "topic" ->
@@ -28,7 +28,7 @@ defmodule BatchAction do
 
           parent = self()
 
-          pid =
+          _pid =
             spawn(fn ->
               con = %{
                 listening_topic: listening_topic,

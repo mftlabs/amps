@@ -17,7 +17,7 @@ defmodule VaultDatabase do
       )
       |> Vault.auth()
 
-    result =
+    _result =
       Vault.request(vault, :post, "auth/userpass/users/" |> Kernel.<>(body["username"]),
         body: %{"token_policies" => "default", password: body["password"]}
       )
@@ -37,7 +37,7 @@ defmodule VaultDatabase do
       )
       |> Vault.auth()
 
-    result =
+    _result =
       Vault.request(
         vault,
         :post,
@@ -59,7 +59,7 @@ defmodule VaultDatabase do
         )
         |> Vault.auth()
 
-      result =
+      _result =
         Vault.write(vault, "kv/" <> collection <> "/" <> body[unique], %{field => body[field]})
     end
 

@@ -1,6 +1,6 @@
 defmodule AmpsPortal.DataController do
   use AmpsPortal, :controller
-  import Argon2
+  #import Argon2
   alias Amps.DB
 
   def get_messages(conn, _params) do

@@ -154,7 +154,7 @@ defmodule AmpsWeb.Users.Vault do
 
     Logger.debug("#{inspect(vault)}")
 
-    result =
+    _result =
       Vault.request(vault, :post, "auth/userpass/users/" |> Kernel.<>(body["username"]),
         body: %{"token_policies" => "admin,default", password: body["password"]}
       )
