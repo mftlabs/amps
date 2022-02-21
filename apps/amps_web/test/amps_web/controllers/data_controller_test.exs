@@ -77,7 +77,62 @@ defmodule AmpsWeb.DataControllerTest do
           "username" => "aram0112"
         },
         "unique" => "username"
-      }
+      },
+      %{
+        "collection" => "providers",
+        "obj" => %{
+          "created" => "2022-02-18T06=>50=>56.802Z",
+          "createdby" => "Bindu Rani",
+          "desc" => "test",
+          "key" => "sdyhjhjdsdsd",
+          "modified" => "2022-02-18T06=>50=>56.802Z",
+          "modifiedby" => "Bindu Rani",
+          "name" => "DeliverViaS3",
+          "provider" => "AWS",
+          "proxy" => true,
+          "proxy_password" => "test@123",
+          "proxy_url" => "https://test.com",
+          "proxy_username" => "admin",
+          "region" => "ap-south-1",
+          "secret" => "password",
+          "type" => "s3"
+        },
+        "unique" => "name"
+      },
+      %{
+        "collection" => "actions",
+        "obj" => %{
+          "active" => true,
+          "created" => "2022-02-17T07:32:30.042Z",
+          "createdby" => "Bindu Rani",
+          "desc" => "testrun",
+          "format" => "*",
+          "modified" => "2022-02-17T07:32:30.042Z",
+          "modifiedby" => "Bindu Rani",
+          "module" => "test",
+          "name" => "CreateTMUser",
+          "output" => "amps.actions.zip.Test",
+          "parms" => %{
+            "action" => "add"
+          },
+          "script_type" => "python",
+          "send_output" => true,
+          "type" => "runscript"
+        },
+        "unique" => "name"
+      },
+      %{
+        "collection" => "fields",
+        "obj" => %{
+          "created" => "2022-02-18T10:08:05.133Z",
+          "createdby" => "Bindu Rani",
+          "desc" => "test",
+          "field" => "Test",
+          "modified" => "2022-02-18T10:08:05.133Z",
+          "modifiedby" => "Bindu Rani"
+        },
+        "unique" => "field"
+      },
     ],
     fn config ->
       collection = config["collection"]
@@ -180,6 +235,118 @@ defmodule AmpsWeb.DataControllerTest do
         conn = delete(admin_conn, Path.join(["/api", collection, id]))
         assert response(conn, 200)
       end
+
+      test "create #{collection} with ID as admin", %{admin_conn: admin_conn} do
+        config = unquote(config)
+        collection = config["collection"]
+        obj = config["obj"]
+        unique = config["unique"]
+        id = "wYG7CH8BgM9CNIGhbIzh"
+          conn =
+            post(
+              admin_conn,
+              Path.join(["/api", collection, id]),
+              obj
+            )
+        item = DB.find_one(collection, %{unique => obj[unique]})
+        assert item["_id"] == json_response(conn, 200)
+        DB.delete_one(collection, %{"_id" => item["_id"]})
+      end
+
+      test "create #{collection} with ID as guest", %{guest_conn: guest_conn} do
+        config = unquote(config)
+        collection = config["collection"]
+        obj = config["obj"]
+        unique = config["unique"]
+        id = "wYG7CH8BgM9CNIGhbIzh"
+        conn =
+          post(
+            guest_conn,
+            Path.join(["/api", collection, id]),
+            obj
+          )
+          item = DB.find_one(collection, %{unique => obj[unique]})
+          assert item["_id"] == json_response(conn, 200)
+          DB.delete_one(collection, %{"_id" => item["_id"]})
+      end
+
+      test "get #{collection} field value with (id & field key) as admin", %{admin_conn: admin_conn} do
+        config = unquote(config)
+        collection = config["collection"]
+        obj = config["obj"]
+        unique = config["unique"]
+        conn = post(admin_conn, Path.join("/api", collection), obj)
+        assert response(conn, 200)
+        item = DB.find_one(collection, %{unique => obj[unique]})
+        id = item["_id"]
+        Enum.each item, fn {k, _v} ->
+          conn =
+            get(
+              admin_conn,
+              Path.join(["/api", collection, id,k])            )
+          assert response(conn, 200)
+        end
+        DB.delete_one(collection, %{"_id" => item["_id"]})
+      end
+
+
+
+      test "update #{collection} field value with (id & field key) as admin", %{admin_conn: admin_conn} do
+        config = unquote(config)
+        collection = config["collection"]
+        obj = config["obj"]
+        unique = config["unique"]
+        conn = post(admin_conn, Path.join("/api", collection), obj)
+        assert response(conn, 200)
+        item = DB.find_one(collection, %{unique => obj[unique]})
+        id = item["_id"]
+        conn =
+          put(
+            admin_conn,
+            Path.join(["/api", collection, id,"modifiedby"]),Map.merge(obj, %{modifiedby: "updated user"})
+          )
+        assert response(conn, 200)
+        item = DB.find_one(collection, %{unique => obj[unique]})
+        DB.delete_one(collection, %{"_id" => item["_id"]})
+      end
+
+      if collection == "users" do
+          test "create rule in users as admin", %{admin_conn: admin_conn} do
+            config = unquote(config)
+            collection = config["collection"]
+            obj = config["obj"]
+            unique = config["unique"]
+            conn = post(admin_conn, Path.join("/api", collection), obj)
+            item = DB.find_one(collection, %{unique => obj[unique]})
+            assert item["_id"] == json_response(conn, 200)
+            id = item["_id"]
+            conn =
+              post(
+                admin_conn,
+                Path.join(["/api", collection, id,"rules"]),
+                %{
+                  "ackmode" => "archive",
+                  "active" => true,
+                  "created" => "2022-02-03T09:56:55.844Z",
+                  "createdby" => "upendra bonthu",
+                  "fmatch" => "vfcds",
+                  "format" => "fdfc",
+                  "fpoll" => "300",
+                  "fretry" => "5",
+                  "modified" => "2022-02-03T09:56:55.844Z",
+                  "modifiedby" => "upendra bonthu",
+                  "name" => "vfdsfd",
+                  "regex" => false,
+                  "type" => "upload"
+                }
+              )
+            assert response(conn, 200)
+            item = DB.find_one(collection, %{unique => obj[unique]})
+            assert json_response(conn, 200)
+            DB.delete_one(collection, %{"_id" => item["_id"]})
+          end
+      end
+
     end
   )
 end
