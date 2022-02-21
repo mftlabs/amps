@@ -53,6 +53,7 @@ defmodule Amps.Startup do
 
             {:error, error} ->
               Logger.info("Couldn't Create Stream " <> name)
+              Logger.error(error)
 
               # IO.inspect(error)
           end
