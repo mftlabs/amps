@@ -345,6 +345,307 @@ defmodule AmpsWeb.DataControllerTest do
             assert json_response(conn, 200)
             DB.delete_one(collection, %{"_id" => item["_id"]})
           end
+
+
+          test "create rule in users as guest", %{admin_conn: admin_conn,guest_conn: guest_conn,} do
+            config = unquote(config)
+            collection = config["collection"]
+            obj = config["obj"]
+            unique = config["unique"]
+            conn = post(admin_conn, Path.join("/api", collection), obj)
+            item = DB.find_one(collection, %{unique => obj[unique]})
+            assert item["_id"] == json_response(conn, 200)
+            id = item["_id"]
+            conn =
+              post(
+                guest_conn,
+                Path.join(["/api", collection, id,"rules"]),
+                %{
+                  "ackmode" => "archive",
+                  "active" => true,
+                  "created" => "2022-02-03T09:56:55.844Z",
+                  "createdby" => "upendra bonthu",
+                  "fmatch" => "vfcds",
+                  "format" => "fdfc",
+                  "fpoll" => "300",
+                  "fretry" => "5",
+                  "modified" => "2022-02-03T09:56:55.844Z",
+                  "modifiedby" => "upendra bonthu",
+                  "name" => "vfdsfd",
+                  "regex" => false,
+                  "type" => "upload"
+                }
+              )
+            assert response(conn, 403)
+            item = DB.find_one(collection, %{unique => obj[unique]})
+            DB.delete_one(collection, %{"_id" => item["_id"]})
+          end
+
+
+          test "get rules object (user id & rule id ) as admin", %{admin_conn: admin_conn} do
+            config = unquote(config)
+            collection = config["collection"]
+            obj = config["obj"]
+            unique = config["unique"]
+            conn = post(admin_conn, Path.join("/api", collection), obj)
+            item = DB.find_one(collection, %{unique => obj[unique]})
+            assert item["_id"] == json_response(conn, 200)
+            id = item["_id"]
+            conn =
+              post(
+                admin_conn,
+                Path.join(["/api", collection, id,"rules"]),
+                %{
+                  "ackmode" => "archive",
+                  "active" => true,
+                  "created" => "2022-02-03T09:56:55.844Z",
+                  "createdby" => "upendra bonthu",
+                  "fmatch" => "vfcds",
+                  "format" => "fdfc",
+                  "fpoll" => "300",
+                  "fretry" => "5",
+                  "modified" => "2022-02-03T09:56:55.844Z",
+                  "modifiedby" => "upendra bonthu",
+                  "name" => "test_upload",
+                  "regex" => false,
+                  "type" => "upload"
+                }
+              )
+            #assert response(conn, 200)
+            res =  json_response(conn, 200)
+            for n <- res["rules"] do
+              IO.inspect(n)
+              if n["name"] == "test_upload" do
+                IO.inspect("Feaching Rule for test_upload")
+                conn = get(admin_conn,Path.join(["/api", collection, id,"rules",n["_id"]]))
+                assert json_response(conn, 200)
+              end
+            end
+            item = DB.find_one(collection, %{unique => obj[unique]})
+            assert json_response(conn, 200)
+            DB.delete_one(collection, %{"_id" => item["_id"]})
+          end
+
+          test "update rules object (user id & rule id ) as admin", %{admin_conn: admin_conn} do
+            config = unquote(config)
+            collection = config["collection"]
+            obj = config["obj"]
+            unique = config["unique"]
+            conn = post(admin_conn, Path.join("/api", collection), obj)
+            item = DB.find_one(collection, %{unique => obj[unique]})
+            assert item["_id"] == json_response(conn, 200)
+            id = item["_id"]
+            conn =
+              post(
+                admin_conn,
+                Path.join(["/api", collection, id,"rules"]),
+                %{
+                  "ackmode" => "archive",
+                  "active" => true,
+                  "created" => "2022-02-03T09:56:55.844Z",
+                  "createdby" => "upendra bonthu",
+                  "fmatch" => "vfcds",
+                  "format" => "fdfc",
+                  "fpoll" => "300",
+                  "fretry" => "5",
+                  "modified" => "2022-02-03T09:56:55.844Z",
+                  "modifiedby" => "upendra bonthu",
+                  "name" => "test_upload",
+                  "regex" => false,
+                  "type" => "upload"
+                }
+              )
+            res =  json_response(conn, 200)
+            for n <- res["rules"] do
+              IO.inspect(n)
+              if n["name"] == "test_upload" do
+                IO.inspect("Feaching Rule for test_upload to update")
+                conn = put(admin_conn,Path.join(["/api", collection, id,"rules",n["_id"]]),
+                Map.merge(n, %{fmatch: "updated_fmatch",format: "updated_format"})
+                )
+                assert json_response(conn, 200)
+              end
+            end
+            item = DB.find_one(collection, %{unique => obj[unique]})
+            assert json_response(conn, 200)
+            DB.delete_one(collection, %{"_id" => item["_id"]})
+          end
+
+
+          test "delete rules object (user id & rule id ) as admin", %{admin_conn: admin_conn} do
+            config = unquote(config)
+            collection = config["collection"]
+            obj = config["obj"]
+            unique = config["unique"]
+            conn = post(admin_conn, Path.join("/api", collection), obj)
+            item = DB.find_one(collection, %{unique => obj[unique]})
+            assert item["_id"] == json_response(conn, 200)
+            id = item["_id"]
+            conn =
+              post(
+                admin_conn,
+                Path.join(["/api", collection, id,"rules"]),
+                %{
+                  "ackmode" => "archive",
+                  "active" => true,
+                  "created" => "2022-02-03T09:56:55.844Z",
+                  "createdby" => "upendra bonthu",
+                  "fmatch" => "vfcds",
+                  "format" => "fdfc",
+                  "fpoll" => "300",
+                  "fretry" => "5",
+                  "modified" => "2022-02-03T09:56:55.844Z",
+                  "modifiedby" => "upendra bonthu",
+                  "name" => "test_upload",
+                  "regex" => false,
+                  "type" => "upload"
+                }
+              )
+            res =  json_response(conn, 200)
+            for n <- res["rules"] do
+              IO.inspect(n)
+              if n["name"] == "test_upload" do
+                IO.inspect("Feaching Rule for test_upload to delete")
+                conn = delete(admin_conn,Path.join(["/api", collection, id,"rules",n["_id"]]),
+                Map.merge(n, %{fmatch: "updated_fmatch",format: "updated_format"})
+                )
+                assert json_response(conn, 200)
+              end
+            end
+            item = DB.find_one(collection, %{unique => obj[unique]})
+            assert json_response(conn, 200)
+            DB.delete_one(collection, %{"_id" => item["_id"]})
+          end
+
+
+          test "delete rules object (user id & rule id ) as guest", %{guest_conn: guest_conn, admin_conn: admin_conn} do
+            config = unquote(config)
+            collection = config["collection"]
+            obj = config["obj"]
+            unique = config["unique"]
+            conn = post(admin_conn, Path.join("/api", collection), obj)
+            item = DB.find_one(collection, %{unique => obj[unique]})
+            assert item["_id"] == json_response(conn, 200)
+            id = item["_id"]
+            conn =
+              post(
+                admin_conn,
+                Path.join(["/api", collection, id,"rules"]),
+                %{
+                  "ackmode" => "archive",
+                  "active" => true,
+                  "created" => "2022-02-03T09:56:55.844Z",
+                  "createdby" => "upendra bonthu",
+                  "fmatch" => "vfcds",
+                  "format" => "fdfc",
+                  "fpoll" => "300",
+                  "fretry" => "5",
+                  "modified" => "2022-02-03T09:56:55.844Z",
+                  "modifiedby" => "upendra bonthu",
+                  "name" => "test_upload",
+                  "regex" => false,
+                  "type" => "upload"
+                }
+              )
+            res =  json_response(conn, 200)
+            for n <- res["rules"] do
+              IO.inspect(n)
+              if n["name"] == "test_upload" do
+                IO.inspect("Feaching Rule for test_upload to delete")
+                conn = delete(guest_conn,Path.join(["/api", collection, id,"rules",n["_id"]])
+                )
+                assert response(conn, 403)
+              end
+            end
+            item = DB.find_one(collection, %{unique => obj[unique]})
+            assert json_response(conn, 200)
+            DB.delete_one(collection, %{"_id" => item["_id"]})
+          end
+
+
+          test "update ufa object (user id & ufa key name ) as admin", %{admin_conn: admin_conn} do
+            config = unquote(config)
+            collection = config["collection"]
+            obj = config["obj"]
+            unique = config["unique"]
+            conn = post(admin_conn, Path.join("/api", collection), obj)
+            item = DB.find_one(collection, %{unique => obj[unique]})
+            assert item["_id"] == json_response(conn, 200)
+            id = item["_id"]
+            conn =
+              put(
+                admin_conn,
+                Path.join(["/api", collection, id,"ufa"]),
+                %{
+                  "cinterval" => 30,
+                  "debug" => false,
+                  "hinterval" => 30,
+                  "logfile" => "Info",
+                  "max" => 100,
+                  "stime" => "2022-02-21T08:53:13.370Z"
+                }
+              )
+            item = DB.find_one(collection, %{unique => obj[unique]})
+            assert json_response(conn, 200)
+            DB.delete_one(collection, %{"_id" => item["_id"]})
+          end
+
+
+          test "update ufa object (user id & ufa key name) as admin", %{admin_conn: admin_conn} do
+            config = unquote(config)
+            collection = config["collection"]
+            obj = config["obj"]
+            unique = config["unique"]
+            conn = post(admin_conn, Path.join("/api", collection), obj)
+            item = DB.find_one(collection, %{unique => obj[unique]})
+            assert item["_id"] == json_response(conn, 200)
+            id = item["_id"]
+            conn =
+              put(
+                admin_conn,
+                Path.join(["/api", collection, id,"ufa"]),
+                %{
+                  "cinterval" => 30,
+                  "debug" => false,
+                  "hinterval" => 30,
+                  "logfile" => "Info",
+                  "max" => 100,
+                  "stime" => "2022-02-21T08:53:13.370Z"
+                }
+              )
+            item = DB.find_one(collection, %{unique => obj[unique]})
+            assert json_response(conn, 200)
+            DB.delete_one(collection, %{"_id" => item["_id"]})
+          end
+
+          test "update ufa object (user id & ufa key name) as  guest", %{guest_conn: guest_conn, admin_conn: admin_conn} do
+            config = unquote(config)
+            collection = config["collection"]
+            obj = config["obj"]
+            unique = config["unique"]
+            conn = post(admin_conn, Path.join("/api", collection), obj)
+            item = DB.find_one(collection, %{unique => obj[unique]})
+            assert item["_id"] == json_response(conn, 200)
+            id = item["_id"]
+            conn =
+              put(
+                guest_conn,
+                Path.join(["/api", collection, id,"ufa"]),
+                %{
+                  "cinterval" => 30,
+                  "debug" => false,
+                  "hinterval" => 30,
+                  "logfile" => "Info",
+                  "max" => 100,
+                  "stime" => "2022-02-21T08:53:13.370Z"
+                }
+              )
+            item = DB.find_one(collection, %{unique => obj[unique]})
+            assert response(conn, 200)
+            DB.delete_one(collection, %{"_id" => item["_id"]})
+          end
+
+
       end
 
     end
