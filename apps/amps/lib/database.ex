@@ -237,7 +237,7 @@ defmodule Amps.DB do
     end
 
     def add_to_field(collection, body, id, field) do
-      {:ok, result} =
+      {:ok, _result} =
         Mongo.update_one(
           :mongo,
           collection,
@@ -1018,7 +1018,7 @@ defmodule Amps.DB do
                         range: %{k => v}
                       }
 
-                    %{"lt" => lt} ->
+                    %{"lt" => _lt} ->
                       %{
                         range: %{k => v}
                       }

@@ -1,13 +1,13 @@
 defmodule AmpsWeb.Util do
   require Logger
-  import Argon2
-  alias Amps.DB
-  alias AmpsWeb.Encryption
+  #import Argon2
+  #alias Amps.DB
+  #alias AmpsWeb.Encryption
   alias Amps.SvcManager
-  alias AmpsWeb.Util
-  alias AmpsWeb.ServiceController
-  alias Elixlsx.Workbook
-  alias Elixlsx.Sheet
+  #alias AmpsWeb.Util
+  #alias AmpsWeb.ServiceController
+  #alias Elixlsx.Workbook
+  #alias Elixlsx.Sheet
 
   def headers(collection, field \\ nil) do
     headers = %{
@@ -266,7 +266,7 @@ defmodule AmpsWeb.Util do
     end
   end
 
-  def after_field_create(collection, id, field, fieldid, body, updated) do
+  def after_field_create(collection, _id, field, fieldid, body, updated) do
     case collection do
       "services" ->
         case field do

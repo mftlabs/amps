@@ -1,8 +1,8 @@
 defmodule AmpsWeb.ServiceController do
   use AmpsWeb, :controller
   require Logger
-  import Argon2
-  alias Amps.DB
+  #import Argon2
+  #alias Amps.DB
   alias Amps.SvcManager
 
   plug(
@@ -59,7 +59,7 @@ defmodule AmpsWeb.ServiceController do
     res = SvcManager.start_service(svcname)
 
     case res do
-      {:ok, res} ->
+      {:ok, _res} ->
         %{
           "success" => true
         }

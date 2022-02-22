@@ -2,9 +2,9 @@ defmodule AmpsPortal.UserController do
   use AmpsPortal, :controller
   import Argon2
   alias Amps.DB
-  alias Plug.Conn
-  alias Pow.{Config, Plug, Store.Backend.EtsCache, UUID}
-  alias PowResetPassword.Ecto.Context, as: ResetPasswordContext
+  #alias Plug.Conn
+  alias Pow.{Config, Plug, Store.Backend.EtsCache}
+  #alias PowResetPassword.Ecto.Context, as: ResetPasswordContext
   alias PowResetPassword.Store.ResetTokenCache
 
   def get(conn, _params) do

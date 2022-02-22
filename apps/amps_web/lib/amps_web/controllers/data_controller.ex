@@ -10,7 +10,7 @@ defmodule AmpsWeb.DataController do
   require Logger
   import Argon2
   alias Amps.DB
-  alias AmpsWeb.Encryption
+  #alias AmpsWeb.Encryption
   alias Amps.SvcManager
   alias AmpsWeb.Util
   alias AmpsWeb.ServiceController

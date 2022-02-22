@@ -1,6 +1,6 @@
 defmodule AmpsPortal.UFAController do
   use AmpsPortal, :controller
-  import Argon2
+  #import Argon2
   import Jetstream
   alias Amps.DB
   require Logger
