@@ -1,5 +1,5 @@
 defmodule AmpsUtil do
-  alias Amps.DB
+  #alias Amps.DB
 
   def gettime() do
     DateTime.to_iso8601(DateTime.utc_now())
@@ -63,7 +63,7 @@ defmodule AmpsUtil do
     try do
       val =
         if msg["fpath"] do
-          {:ok, file} = File.read(msg["fpath"])
+          {:ok, _file} = File.read(msg["fpath"])
           {:ok, is} = :file.open(msg["fpath"], [:binary])
           {:ok, val} = :file.pread(is, 0, 200)
           val
@@ -151,7 +151,7 @@ defmodule AmpsUtil do
 
     pieces = String.split(header, elem) |> Enum.take(8)
 
-    {idx, meta} =
+    {_idx, meta} =
       Enum.reduce(pieces, {0, %{}}, fn piece, {index, acc} ->
         sec = Enum.at(sections, index)
 
@@ -458,7 +458,7 @@ defmodule AmpsUtil do
         {nil, nil, nil}
       end
 
-    config =
+    _config =
       case provider["auth"] do
         "SASL_PLAINTEXT" ->
           [

@@ -1,8 +1,8 @@
 defmodule AmpsWeb.ServiceController do
   use AmpsWeb, :controller
   require Logger
-  import Argon2
-  alias Amps.DB
+  #import Argon2
+  #alias Amps.DB
   alias Amps.SvcManager
 
   plug(
@@ -19,7 +19,7 @@ defmodule AmpsWeb.ServiceController do
       nil ->
         json(conn, false)
 
-      pid ->
+      _pid ->
         json(conn, true)
     end
   end
@@ -51,7 +51,7 @@ defmodule AmpsWeb.ServiceController do
     json(conn, resp)
   end
 
-  def restart_service(svcname) do
+  def restart_service(_svcname) do
   end
 
   def start_service(svcname) do
@@ -59,7 +59,7 @@ defmodule AmpsWeb.ServiceController do
     res = SvcManager.start_service(svcname)
 
     case res do
-      {:ok, res} ->
+      {:ok, _res} ->
         %{
           "success" => true
         }

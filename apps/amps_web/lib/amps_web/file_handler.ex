@@ -18,7 +18,7 @@ defmodule AmpsWeb.FileHandler do
         event
       end
 
-    res =
+    _res =
       case type do
         :heartbeat ->
           doHeartbeat(event)

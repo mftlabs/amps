@@ -28,7 +28,7 @@ if config_env() == :prod do
     ],
     url: [
       host: System.get_env("AMPS_HOST", "localhost"),
-      port: String.to_integer(System.get_env("AMPS_PORT"))
+      port: String.to_integer(System.get_env("AMPS_PORT", "4080"))
     ],
     secret_key_base: secret_key_base
 
@@ -125,7 +125,7 @@ if config_env() == :prod do
       # See the documentation on https://hexdocs.pm/plug_cowboy/Plug.Cowboy.html
       # for details about using IPv6 vs IPv4 and loopback vs public addresses.
       ip: {0, 0, 0, 0, 0, 0, 0, 0},
-      port: String.to_integer(System.get_env("AMPS_PORT") || "4080")
+      port: String.to_integer(System.get_env("AMPS_PORT") || "4000")
     ],
     url: [
       host: System.get_env("AMPS_ADMIN_HOST", "admin.localhost"),
@@ -133,11 +133,12 @@ if config_env() == :prod do
     ],
     authmethod: System.get_env("AMPS_AUTH_METHOD") || "db",
     vault_addr: System.get_env("AMPS_VAULT_ADDR", "http://localhost:8200"),
-    mongo_addr: System.get_env("AMPS_MONGO_ADDR", "mongodb://localhost:27017/amps"),
-    minio_addr: System.get_env("AMPS_MINIO_ADDR", "http://localhost:9001"),
     secret_key_base: secret_key_base
 
-  config :amps, Amps.Cluster, url: System.get_env("AMPS_OPENSEARCH_ADDR", "http://localhost:9200")
+  config :amps, Amps.Cluster,
+    url: System.get_env("AMPS_OPENSEARCH_ADDR", "http://localhost:9200"),
+    username: System.get_env("AMPS_OPENSEARCH_USERNAME", "admin"),
+    password: System.get_env("AMPS_OPENSEARCH_PASSWORD", "admin")
 
   # config :ex_aws, :s3,
   #   access_key_id: "minioadmin",

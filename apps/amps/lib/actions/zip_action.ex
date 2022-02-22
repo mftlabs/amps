@@ -8,12 +8,12 @@ defmodule ZipAction do
     AmpsEvents.send(newmsg, parms, state)
   end
 
-  def zip(msg, parms, state) do
+  def zip(msg, parms, _state) do
     is = AmpsUtil.get_istream(msg)
     opts = []
 
     if not AmpsUtil.blank?(parms["password"]) do
-      opts = [
+      _opts = [
         encryption_coder: {Zstream.EncryptionCoder.Traditional, password: parms["password"]}
       ]
     end

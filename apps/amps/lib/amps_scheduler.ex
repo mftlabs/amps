@@ -6,9 +6,6 @@ defmodule Amps.Scheduler do
   require Logger
 
   def init(config) do
-    IO.puts("Scheduler Config")
-    IO.inspect(config)
-
     sched = DB.find("scheduler")
 
     jobs =
@@ -39,7 +36,7 @@ defmodule Amps.Scheduler do
   end
 
   defp get_job_config(job) do
-    pieces = %Quantum.Job{
+    _pieces = %Quantum.Job{
       name: String.to_atom(job["name"]),
       overlap: true,
       run_strategy: %Quantum.RunStrategy.Random{nodes: :cluster},

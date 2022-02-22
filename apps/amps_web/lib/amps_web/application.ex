@@ -7,7 +7,7 @@ defmodule AmpsWeb.Application do
 
   @impl true
   def start(_type, _args) do
-    gnat_supervisor_settings = %{
+    _gnat_supervisor_settings = %{
       # (required) the registered named you want to give the Gnat connection
       name: :gnat,
       # number of milliseconds to wait between consecutive reconnect attempts (default: 2_000)

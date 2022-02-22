@@ -22,6 +22,19 @@ defmodule Amps.DB do
     end
   end
 
+  def insert_with_id(collection, body, id) do
+    case db() do
+      "pg" ->
+        Postgres.create(collection, body)
+
+      "mongo" ->
+        MongoDB.create(collection, body)
+
+      "es" ->
+        Elastic.insert_with_id(collection, body, id)
+    end
+  end
+
   def delete(collection, clauses) do
     case db() do
       "pg" ->
@@ -48,6 +61,13 @@ defmodule Amps.DB do
 
       "es" ->
         Elastic.delete_one(collection, clauses)
+    end
+  end
+
+  def delete_index(collection) do
+    case db() do
+      "es" ->
+        Elastic.delete_index(collection)
     end
   end
 
@@ -217,7 +237,7 @@ defmodule Amps.DB do
     end
 
     def add_to_field(collection, body, id, field) do
-      {:ok, result} =
+      {:ok, _result} =
         Mongo.update_one(
           :mongo,
           collection,
@@ -442,7 +462,7 @@ defmodule Amps.DB do
           acc <> curr
         end)
 
-      filters = String.trim(filters, " AND ")
+      _filters = String.trim(filters, " AND ")
     end
 
     def parse_sort(collection, sort) do
@@ -570,7 +590,7 @@ defmodule Amps.DB do
           ", TRUE)" <>
           " WHERE data->>'_id' = " <> single_quote(id) <> ";"
 
-      {:ok, result} = Postgrex.query(:postgres, query, [])
+      {:ok, _result} = Postgrex.query(:postgres, query, [])
       find_one(collection, %{"_id" => id})
     end
 
@@ -587,7 +607,7 @@ defmodule Amps.DB do
           ", TRUE)" <>
           " WHERE data->>'_id' = " <> single_quote(id) <> ";"
 
-      {:ok, result} = Postgrex.query(:postgres, query, [])
+      {:ok, _result} = Postgrex.query(:postgres, query, [])
       find_one(collection, %{"_id" => id})
     end
 
@@ -602,7 +622,7 @@ defmodule Amps.DB do
           "}'" <>
           " WHERE data->>'_id' = " <> single_quote(id) <> ";"
 
-      {:ok, result} = Postgrex.query(:postgres, query, [])
+      {:ok, _result} = Postgrex.query(:postgres, query, [])
       find_one(collection, %{"_id" => id})
     end
 
@@ -663,7 +683,7 @@ defmodule Amps.DB do
       query = "DELETE FROM " <> collection <> where(clauses) <> ";"
 
       case Postgrex.query(:postgres, query, []) do
-        {:ok, request} ->
+        {:ok, _request} ->
           :ok
 
         {:error, error} ->
@@ -675,7 +695,7 @@ defmodule Amps.DB do
       query = "DELETE FROM " <> collection <> where(clauses) <> ";"
 
       case Postgrex.query(:postgres, query, []) do
-        {:ok, request} ->
+        {:ok, _request} ->
           :ok
 
         {:error, error} ->
@@ -691,7 +711,7 @@ defmodule Amps.DB do
 
       case Postgrex.query(:postgres, "INSERT INTO " <> collection <> " (data)
       VALUES('" <> body <> "') RETURNING data->'_id';", []) do
-        {:ok, result} ->
+        {:ok, _result} ->
           # AmpsWeb.Endpoint.broadcast("notifications", "update", %{page: collection})
           id
 
@@ -838,6 +858,10 @@ defmodule Amps.DB do
       end
     end
 
+    def delete_index(collection) do
+      Amps.Cluster.delete(path(collection))
+    end
+
     def get_rows(conn, %{
           "collection" => collection
         }) do
@@ -887,7 +911,7 @@ defmodule Amps.DB do
     end
 
     def find(collection, clauses, opts \\ %{}) do
-      %{rows: rows, success: success, count: count} =
+      %{rows: rows, success: _success, count: _count} =
         query(
           collection,
           Map.merge(
@@ -921,6 +945,7 @@ defmodule Amps.DB do
 
         nil ->
           nil
+
         _ ->
           nil
       end
@@ -932,9 +957,11 @@ defmodule Amps.DB do
     end
 
     def path(collection) do
-      # pfx = Application.get_env(:amps_web, AmpsWeb.Endpoint)[:elastic_prefix]
-      # path = pfx <> "-" <> collection
-      collection
+      if Application.get_env(:amps, :env) == :test do
+        "test-" <> collection
+      else
+        collection
+      end
     end
 
     def format_search(map) do
@@ -965,8 +992,6 @@ defmodule Amps.DB do
         search
         |> format_search()
         |> Enum.reduce([], fn {k, v}, acc ->
-          IO.inspect(v)
-
           filter =
             case k do
               "exists" ->
@@ -988,12 +1013,12 @@ defmodule Amps.DB do
                         }
                       }
 
-                    %{"gt" => gt} ->
+                    %{"gt" => _gt} ->
                       %{
                         range: %{k => v}
                       }
 
-                    %{"lt" => lt} ->
+                    %{"lt" => _lt} ->
                       %{
                         range: %{k => v}
                       }
@@ -1017,8 +1042,6 @@ defmodule Amps.DB do
           [filter | acc]
         end)
 
-      IO.inspect(search)
-
       %{
         bool: %{
           must: search
@@ -1028,7 +1051,7 @@ defmodule Amps.DB do
 
     def convert_sort(collection, sort) do
       case Amps.Cluster.get(path(collection)) do
-        {:error, e} ->
+        {:error, _e} ->
           []
 
         {:ok,
@@ -1060,6 +1083,18 @@ defmodule Amps.DB do
 
     def insert(collection, body) do
       case Amps.Cluster.post(path(collection) <> "/" <> collection, body, %{
+             "refresh" => true
+           }) do
+        {:ok, response} ->
+          {:ok, response["_id"]}
+
+        {:error, reason} ->
+          {:error, reason}
+      end
+    end
+
+    def insert_with_id(collection, body, id) do
+      case Amps.Cluster.put(path(collection) <> "/" <> collection <> "/" <> id, body, %{
              "refresh" => true
            }) do
         {:ok, response} ->
@@ -1132,7 +1167,7 @@ defmodule Amps.DB do
     end
 
     def add_to_field(collection, body, id, field) do
-      {:ok, result} =
+      {:ok, _result} =
         Amps.Cluster.post(
           path(collection) <> "/_update_by_query",
           %{
@@ -1161,8 +1196,6 @@ defmodule Amps.DB do
           %{"fields" => [field]}
         )
 
-      IO.inspect(item[field])
-
       Enum.find_value(item[field], fn obj ->
         if obj["_id"] == fieldid do
           obj
@@ -1174,7 +1207,7 @@ defmodule Amps.DB do
 
     @spec update_in_field(any, any, any, any, any) :: any
     def update_in_field(collection, body, id, field, fieldid) do
-      {:ok, result} =
+      {:ok, _result} =
         Amps.Cluster.post(
           path(collection) <> "/_update_by_query",
           %{
@@ -1202,8 +1235,8 @@ defmodule Amps.DB do
       find_one(collection, %{"_id" => id})
     end
 
-    def delete_from_field(collection, body, id, field, fieldid) do
-      {:ok, result} =
+    def delete_from_field(collection, _body, id, field, fieldid) do
+      {:ok, _result} =
         Amps.Cluster.post(
           path(collection) <> "/_update_by_query",
           %{
@@ -1223,8 +1256,6 @@ defmodule Amps.DB do
             "refresh" => true
           }
         )
-
-      IO.inspect(result)
 
       find_one(
         collection,

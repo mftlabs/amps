@@ -44,6 +44,11 @@ Ext.define("Amps.form.config", {
       }
     }
 
+    if (f.name == "type") {
+      f.xtype = "displayfield";
+      f.submitValue = true;
+    }
+
     return f;
   },
 
@@ -83,7 +88,7 @@ Ext.define("Amps.form.config", {
           config.types[record.type].load(this, record);
         }
 
-        this.getForm().findField("type").setReadOnly(true);
+        // this.getForm().findField("type").setReadOnly(true);
       }
     } catch (e) {
       this.error = "Mismatch between specified type and imported data.";
@@ -112,6 +117,25 @@ Ext.define("Amps.form.config", {
       if (config.update && config.update.fields) {
         this.fields = this.fields.concat(config.update.fields);
       }
+
+      if (this.show_id) {
+        this.fields = [
+          amfutil.duplicateVal(
+            {
+              xtype: "textfield",
+              name: "_id",
+              fieldLabel: "ID",
+              allowBlank: false,
+              tooltip: "The ID for this record",
+            },
+            function (comp, value) {
+              return { collection: { _id: value } };
+            },
+            "ID Already Exists"
+          ),
+        ].concat(this.fields);
+      }
+
       var user = amfutil.get_user();
 
       if (this.audit) {

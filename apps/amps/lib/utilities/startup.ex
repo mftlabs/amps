@@ -1,7 +1,7 @@
 defmodule Amps.Startup do
   use Task
   require Vault
-  import Argon2
+  #import Argon2
   require Logger
 
   def start_link(_arg) do
@@ -31,12 +31,12 @@ defmodule Amps.Startup do
       subjects = Atom.to_string(subjects)
 
       case Jetstream.API.Stream.info(gnat, name) do
-        {:ok, res} ->
+        {:ok, _res} ->
           Logger.info(name <> " Stream Exists")
 
         # IO.inspect(res)
 
-        {:error, error} ->
+        {:error, _error} ->
           # IO.inspect(error)
           Logger.info("Creating Stream " <> name)
           subjects = subjects <> ".>"
@@ -46,13 +46,14 @@ defmodule Amps.Startup do
                  storage: :file,
                  subjects: [subjects]
                }) do
-            {:ok, res} ->
+            {:ok, _res} ->
               Logger.info("Created Stream " <> name)
 
             # IO.inspect(res)
 
             {:error, error} ->
               Logger.info("Couldn't Create Stream " <> name)
+              Logger.error(error)
 
               # IO.inspect(error)
           end
@@ -60,17 +61,17 @@ defmodule Amps.Startup do
     end)
   end
 
-  def create_action_consumers(gnat) do
+  def create_action_consumers(_gnat) do
     actions = Application.get_env(:amps, :actions)
     # Logger.info("actions")
     # IO.inspect(actions)
     actions = Enum.into(actions, %{})
     # IO.inspect(actions)
 
-    Enum.each(actions, fn {topic, module} ->
+    Enum.each(actions, fn {topic, _module} ->
       topic = Atom.to_string(topic)
       filter = "amps.actions." <> topic <> ".*"
-      name = filter |> String.replace("*", "_") |> String.replace(".", "_")
+      _name = filter |> String.replace("*", "_") |> String.replace(".", "_")
       "amps.actions." <> topic <> ".*"
       # Jetstream.API.Consumer.delete(gnat, "ACTIONS", name)
       # case Jetstream.API.Consumer.info(gnat, "ACTIONS", name) do

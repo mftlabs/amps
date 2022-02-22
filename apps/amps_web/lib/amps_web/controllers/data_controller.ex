@@ -10,7 +10,7 @@ defmodule AmpsWeb.DataController do
   require Logger
   import Argon2
   alias Amps.DB
-  alias AmpsWeb.Encryption
+  #alias AmpsWeb.Encryption
   alias Amps.SvcManager
   alias AmpsWeb.Util
   alias AmpsWeb.ServiceController
@@ -64,7 +64,7 @@ defmodule AmpsWeb.DataController do
 
   def reset_admin_password(conn, %{"id" => id}) do
     obj = Amps.DB.find_one("users", %{"_id" => id})
-    length = 15
+    _length = 15
 
     symbols = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMOPQRSTUVWXYZ$@~!@#$%^&*'
 
@@ -93,7 +93,7 @@ defmodule AmpsWeb.DataController do
 
   def reset_password(conn, %{"id" => id}) do
     obj = Amps.DB.find_one("users", %{"_id" => id})
-    length = 15
+    _length = 15
 
     symbols = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMOPQRSTUVWXYZ$@~!@#$%^&*'
 
@@ -178,14 +178,13 @@ defmodule AmpsWeb.DataController do
                 Enum.reduce(Enum.with_index(item), %{}, fn {val, idx}, obj ->
                   if val != nil do
                     key = Enum.at(headers, idx)
-                    IO.inspect(key)
 
                     try do
                       val = Jason.decode!(val)
 
                       Map.put(obj, key, val)
                     rescue
-                      e ->
+                      _e ->
                         splits = Path.split(key)
 
                         if Enum.count(splits) == 1 do
@@ -283,7 +282,7 @@ defmodule AmpsWeb.DataController do
 
         content ++ [v]
       else
-        v =
+        _v =
           Enum.reduce(splits, obj, fn key, obj ->
             obj[key]
           end)
@@ -296,21 +295,18 @@ defmodule AmpsWeb.DataController do
 
   def create_sheet(name, headers, contents) do
     formatted_contents = Enum.map(contents, fn x -> Enum.map(x, fn y -> [y] end) end)
-    IO.inspect(formatted_contents)
     headers |> Enum.map(fn x -> [x, bold: true] end)
     row_data = [headers | formatted_contents]
-    IO.inspect(row_data)
-    newsheet = %Sheet{name: name, rows: row_data}
+    _newsheet = %Sheet{name: name, rows: row_data}
   end
 
   def sample_template_download(conn, %{
         "collection" => collection
       }) do
     data = AmpsWeb.Util.headers(collection)
-    IO.inspect(data)
     sheets = create_sample_sheets(collection, data)
 
-    {:ok, {name, binary}} = Elixlsx.write_to_memory(%Workbook{sheets: sheets}, collection)
+    {:ok, {_name, binary}} = Elixlsx.write_to_memory(%Workbook{sheets: sheets}, collection)
 
     conn
     |> send_download({:binary, binary}, filename: "#{collection}_template.xlsx")
@@ -324,7 +320,7 @@ defmodule AmpsWeb.DataController do
 
     sheets = create_sample_sheets(collection, data)
 
-    {:ok, {name, binary}} = Elixlsx.write_to_memory(%Workbook{sheets: sheets}, collection)
+    {:ok, {_name, binary}} = Elixlsx.write_to_memory(%Workbook{sheets: sheets}, collection)
 
     conn
     |> send_download({:binary, binary}, filename: "#{collection}_#{field}_template.xlsx")
@@ -350,7 +346,7 @@ defmodule AmpsWeb.DataController do
     end
   end
 
-  def import_data(conn, %{"collection" => collection, "file" => file}) do
+  def import_data(conn, %{"collection" => _collection, "file" => file}) do
     data = import_excel_data(file.path)
     json(conn, data)
   end
@@ -358,12 +354,11 @@ defmodule AmpsWeb.DataController do
   def export_collection(conn, %{
         "collection" => collection
       }) do
-    IO.puts("Generating report for:::: #{collection}")
     data = DB.find(collection)
 
     sheets = get_excel_data(collection, data)
 
-    {:ok, {name, binary}} =
+    {:ok, {_name, binary}} =
       %Workbook{sheets: sheets}
       |> Elixlsx.write_to_memory(collection)
 
@@ -376,11 +371,11 @@ defmodule AmpsWeb.DataController do
         "id" => id,
         "field" => field
       }) do
-    body = conn.body_params()
+    _body = conn.body_params()
     data = DB.find_one(collection, %{"_id" => id})
     sheets = get_excel_data(collection, data[field], field)
 
-    {:ok, {name, binary}} =
+    {:ok, {_name, binary}} =
       %Workbook{sheets: sheets}
       |> Elixlsx.write_to_memory(collection)
 
@@ -391,11 +386,10 @@ defmodule AmpsWeb.DataController do
   def export_selection(conn, %{"collection" => collection}) do
     body = conn.body_params()
 
-    IO.inspect(body)
     rows = body["rows"]
     sheets = get_excel_data(collection, rows)
 
-    {:ok, {name, binary}} =
+    {:ok, {_name, binary}} =
       %Workbook{sheets: sheets}
       |> Elixlsx.write_to_memory(collection)
 
@@ -404,27 +398,20 @@ defmodule AmpsWeb.DataController do
   end
 
   def write_in_workbook(sheet_name, column_headers, contents) do
-    IO.inspect(column_headers)
-    IO.inspect(contents)
-
     # formatted_contents = Enum.map(contents, fn x  -> Enum.map(x, fn y -> [y, {:bold, false}] end)  end)
     formatted_contents = Enum.map(contents, fn x -> Enum.map(x, fn y -> [y] end) end)
-    IO.inspect(formatted_contents)
     row_data = [column_headers | formatted_contents]
-    IO.inspect(row_data)
     newsheet = %Sheet{name: sheet_name, rows: row_data}
 
     newsheet = Sheet.set_pane_freeze(newsheet, 1, 0)
-    # IO.inspect(newsheet)
     workbook = %Workbook{sheets: [newsheet]}
-    # IO.inspect(workbook)
     workbook
   end
 
   def send_event(conn, %{"topic" => topic, "meta" => meta}) do
     msgid = AmpsUtil.get_id()
     dir = AmpsUtil.tempdir(msgid)
-    fpath = Path.join(dir, msgid)
+    _fpath = Path.join(dir, msgid)
     meta = Jason.decode!(meta)
 
     AmpsEvents.send(meta, %{"output" => topic}, %{})
@@ -454,8 +441,8 @@ defmodule AmpsWeb.DataController do
   def reroute_many(conn, _params) do
     body = conn.body_params()
     ids = body["ids"]
-    topic = body["topic"]
-    meta = Jason.decode!(body["meta"])
+    _topic = body["topic"]
+    _meta = Jason.decode!(body["meta"])
 
     Enum.each(ids, fn id ->
       obj = Amps.DB.find_one("message_events", %{"_id" => id})
@@ -510,7 +497,21 @@ defmodule AmpsWeb.DataController do
 
     Util.after_create(collection, body)
 
-    IO.inspect(res)
+    json(conn, res)
+  end
+
+  def create_with_id(conn, %{"collection" => collection, "id" => id}) do
+    body = Util.before_create(collection, conn.body_params())
+
+    {:ok, res} =
+      if vault_collection(collection) do
+        VaultDatabase.insert(collection, body)
+      else
+        DB.insert_with_id(collection, body, id)
+      end
+
+    Util.after_create(collection, body)
+
     json(conn, res)
   end
 
@@ -600,7 +601,7 @@ defmodule AmpsWeb.DataController do
         end
 
       "actions" ->
-        action = DB.find_one("actions", %{"_id" => id})
+        _action = DB.find_one("actions", %{"_id" => id})
 
         if body["type"] == "batch" do
           Util.create_batch_consumer(body)
@@ -687,10 +688,8 @@ defmodule AmpsWeb.DataController do
     Logger.debug("Adding Field")
     body = conn.body_params()
 
-    IO.inspect(body)
     fieldid = DB.add_to_field(collection, body, id, field)
     updated = DB.find_one(collection, %{"_id" => id})
-    IO.inspect(updated)
 
     Util.after_field_create(collection, id, field, fieldid, body, updated)
 
@@ -704,7 +703,7 @@ defmodule AmpsWeb.DataController do
         "fieldid" => fieldid
       }) do
     Logger.debug("Getting Field")
-    body = conn.body_params()
+    _body = conn.body_params()
     result = DB.get_in_field(collection, id, field, fieldid)
     json(conn, result)
   end
@@ -980,9 +979,9 @@ defmodule S3 do
 
     {:ok, path} = Temp.mkdir()
     schedulepath = path <> "/schedule.json"
-    result = File.write(schedulepath, Jason.encode!(schedule))
+    _result = File.write(schedulepath, Jason.encode!(schedule))
 
-    put =
+    _put =
       ExAws.S3.put_object(
         account["username"],
         "schedule/schedule.json",
@@ -1024,9 +1023,9 @@ defmodule S3 do
 
     {:ok, path} = Temp.mkdir()
     schedulepath = path <> "/schedule.json"
-    result = File.write(schedulepath, Jason.encode!(schedule))
+    _result = File.write(schedulepath, Jason.encode!(schedule))
 
-    put =
+    _put =
       ExAws.S3.put_object(
         account["username"],
         "schedule/schedule.json",
@@ -1071,7 +1070,7 @@ defmodule S3 do
       :ok
     rescue
       e in ExAws.Error ->
-        val =
+        _val =
           Regex.named_captures(
             ~r/\<Message\>(?<message>.*?)\<\/Message\>/,
             e.message
@@ -1094,7 +1093,7 @@ defmodule S3 do
 
         Amps.DB.insert("message_status", ev)
 
-        {:ok, val} =
+        {:ok, _val} =
           Amps.DB.find_one_and_update(
             "messages",
             %{msgid: msgid},
@@ -1122,7 +1121,7 @@ defmodule S3 do
 
     Amps.DB.insert("message_status", ev)
 
-    {:ok, val} =
+    {:ok, _val} =
       Amps.DB.find_one_and_update(
         "messages",
         %{msgid: msgid},

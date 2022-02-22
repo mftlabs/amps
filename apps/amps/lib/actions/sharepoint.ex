@@ -2,7 +2,7 @@ defmodule SharePoint do
   alias Amps.DB
   require Logger
 
-  def run(msg, parms, state) do
+  def run(msg, parms, _state) do
     provider = DB.find_one("providers", %{"_id" => parms["provider"]})
 
     token = get_token(provider)
@@ -154,7 +154,7 @@ defmodule SharePoint do
             )
 
           if parms["ackmode"] == "delete" do
-            {:ok, res} =
+            {:ok, _res} =
               HTTPoison.delete(
                 Path.join([rooturl, "items", obj["id"]]),
                 [{"Authorization", "Bearer " <> token}]
@@ -179,7 +179,7 @@ defmodule SharePoint do
 
   def download(url, headers, path) do
     # 5 minutes
-    timeout = 300_000
+    _timeout = 300_000
 
     # do_download = fn ->
     {:ok, file} = File.open(path, [:write])
@@ -285,7 +285,7 @@ defmodule SharePoint do
 
       # IO.puts(start)
 
-      {status, res} =
+      {_status, res} =
         HTTPoison.put(
           body["uploadUrl"],
           chunk,
@@ -298,7 +298,7 @@ defmodule SharePoint do
           recv_timeout: 60000
         )
 
-      body = Jason.decode!(res.body)
+      _body = Jason.decode!(res.body)
       # IO.inspect(body["nextExpectedRanges"])
 
       if not done do

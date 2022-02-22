@@ -42,7 +42,7 @@ defmodule AmpsWeb.UserSocket do
     end
   end
 
-  def connect(_params, socket, %{pow_config: config}) do
+  def connect(_params, _socket, %{pow_config: _config}) do
     {:error, "Unauthorized"}
   end
 

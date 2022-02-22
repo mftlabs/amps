@@ -12,6 +12,8 @@ import Config
 config :amps_portal,
   generators: [context_app: false]
 
+config :amps, env: Mix.env()
+
 # Configures the endpoint
 config :amps_portal, AmpsPortal.Endpoint,
   url: [host: "localhost"],
@@ -116,15 +118,15 @@ config :amps_web, AmpsWeb.Endpoint,
 # at the `config/runtime.exs`.
 
 config :amps, :pow,
-  user: AmpsDashboard.Users.User,
-  users_context: AmpsDashboard.Users,
+  user: AmpsWeb.Users.User,
+  users_context: AmpsWeb.Users,
   extensions: [PowResetPassword],
   controller_callbacks: Pow.Extension.Phoenix.ControllerCallbacks,
   mailer_backend: AmpsWeb.PowMailer
 
 config :amps, :pow_assent,
-  user: AmpsDashboard.Users.User,
-  users_context: AmpsDashboard.Users,
+  user: AmpsWeb.Users.User,
+  users_context: AmpsWeb.Users,
   providers: [
     google: [
       client_id: "63199210559-hmhqeu7hmlkv3epournsu7j8sn9likqv.apps.googleusercontent.com",
@@ -240,9 +242,6 @@ config :amps, :pyworker,
     {:size, 5},
     {:max_overflow, 2}
   ]
-
-config :kafka_ex,
-  disable_default_worker: true
 
 # Configure esbuild (the version is required)
 # config :esbuild,

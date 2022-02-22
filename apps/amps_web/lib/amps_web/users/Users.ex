@@ -1,14 +1,14 @@
-defmodule AmpsDashboard.UserIdentities do
+defmodule AmpsWeb.UserIdentities do
   use PowAssent.Ecto.UserIdentities.Context,
-    users_context: AmpsDashboard.Users,
-    user: AmpsDashboard.Users.User
+    users_context: AmpsWeb.Users,
+    user: AmpsWeb.Users.User
 
   def all(user) do
     pow_assent_all(user)
   end
 end
 
-defmodule AmpsDashboard.Users do
+defmodule AmpsWeb.Users do
   import Pow.Context
   require Logger
 
@@ -24,10 +24,10 @@ defmodule AmpsDashboard.Users do
       _ ->
         case authmethod() do
           "vault" ->
-            AmpsDashboard.Users.Vault.authenticate(body)
+            AmpsWeb.Users.Vault.authenticate(body)
 
           _ ->
-            AmpsDashboard.Users.DB.authenticate(body)
+            AmpsWeb.Users.DB.authenticate(body)
         end
     end
 
@@ -37,10 +37,10 @@ defmodule AmpsDashboard.Users do
   def create(body) do
     case authmethod() do
       "vault" ->
-        AmpsDashboard.Users.Vault.create(body)
+        AmpsWeb.Users.Vault.create(body)
 
       _ ->
-        AmpsDashboard.Users.DB.create(body)
+        AmpsWeb.Users.DB.create(body)
     end
   end
 
@@ -70,7 +70,7 @@ defmodule AmpsDashboard.Users do
       Map.put(user, "id", user["_id"])
       |> Map.new(fn {k, v} -> {String.to_atom(k), v} end)
 
-    struct(AmpsDashboard.Users.User, user)
+    struct(AmpsWeb.Users.User, user)
   end
 
   def google_upsert(params) do
@@ -94,13 +94,13 @@ defmodule AmpsDashboard.Users do
       id = Amps.DB.insert("admin", user)
 
       user = Map.put(user, :id, id)
-      struct(AmpsDashboard.Users.User, user)
+      struct(AmpsWeb.Users.User, user)
     end
   end
 end
 
-defmodule AmpsDashboard.Users.Vault do
-  alias AmpsDashboard.Users, as: Users
+defmodule AmpsWeb.Users.Vault do
+  alias AmpsWeb.Users, as: Users
   import Pow.Context
   require Logger
 
@@ -154,7 +154,7 @@ defmodule AmpsDashboard.Users.Vault do
 
     Logger.debug("#{inspect(vault)}")
 
-    result =
+    _result =
       Vault.request(vault, :post, "auth/userpass/users/" |> Kernel.<>(body["username"]),
         body: %{"token_policies" => "admin,default", password: body["password"]}
       )
@@ -169,7 +169,7 @@ defmodule AmpsDashboard.Users.Vault do
     id = Amps.DB.insert("admin", user)
 
     user = Map.put(user, :id, id)
-    userstruct = struct(AmpsDashboard.Users.User, user)
+    userstruct = struct(AmpsWeb.Users.User, user)
     {:ok, userstruct}
   end
 
@@ -182,8 +182,8 @@ defmodule AmpsDashboard.Users.Vault do
   end
 end
 
-defmodule AmpsDashboard.Users.DB do
-  alias AmpsDashboard.Users, as: Users
+defmodule AmpsWeb.Users.DB do
+  alias AmpsWeb.Users, as: Users
   import Pow.Context
   require Logger
   import Argon2
@@ -221,7 +221,7 @@ defmodule AmpsDashboard.Users.DB do
 
     user = Map.put(user, "id", id) |> Map.new(fn {k, v} -> {String.to_atom(k), v} end)
 
-    user = struct(AmpsDashboard.Users.User, user)
+    user = struct(AmpsWeb.Users.User, user)
 
     {:ok, user}
   end
@@ -235,7 +235,7 @@ defmodule AmpsDashboard.Users.DB do
   end
 end
 
-defmodule AmpsDashboard.Users.User do
+defmodule AmpsWeb.Users.User do
   @derive Jason.Encoder
   defstruct firstname: nil,
             email: nil,

@@ -6,7 +6,7 @@ WORKDIR /build
 RUN apt-get update
 
 RUN apt-get install build-essential git -y
-RUN apt-get install python
+
 RUN mix local.hex --force && \
     mix local.rebar --force
 
@@ -23,6 +23,23 @@ RUN mix release
 
 FROM elixir:1.12.1
 
+ARG BUILD_ENV=prod
+ARG BUILD_REL=amps
+## Configure environment
+
+RUN apt-get install python
+
+ENV RELEASE_DISTRIBUTION="name"
+
+# This value should be overriden at runtime
+ENV RELEASE_IP="127.0.0.1"
+
+# This will be the basename of our node
+ENV RELEASE_NAME="${BUILD_REL}"
+
+# This will be the full nodename
+ENV RELEASE_NODE="${RELEASE_NAME}@${RELEASE_IP}"
+
 # RUN addgroup -S release && \
 #     adduser -S -G release release && \
 #     mkdir /release && \
@@ -30,9 +47,12 @@ FROM elixir:1.12.1
 
 # WORKDIR /release
 
-COPY --from=build /build/_build/prod/rel/amps ./amps
+
+
+
+COPY --from=build /build/_build/${BUILD_ENV}/rel/${BUILD_REL} ./amps
 # --chown=release:release 
 # USER release
 # EXPOSE 4000
 
-CMD ["/bin/sh"]
+CMD ["./amps/bin/amps", "start"]

@@ -519,7 +519,7 @@ Ext.define("Amps.util.UpdateRecordController", {
           grid.setListeners({
             rowdblclick: async function (
               grid,
-              record,
+              item,
               element,
               rowIndex,
               e,
@@ -557,11 +557,11 @@ Ext.define("Amps.util.UpdateRecordController", {
                 fields.concat(config.update.fields);
               }
               var tokens = currRoute.split("/");
-
+              console.log(record);
               var updateForm = Ext.create("Amps.form.update", {
                 entity: record,
               });
-              updateForm.loadForm(config, record.data);
+              updateForm.loadForm(config, item.data);
 
               console.log(config.types);
               console.log(gridinfo);
@@ -587,7 +587,7 @@ Ext.define("Amps.util.UpdateRecordController", {
               //   items: [updateForm],
               //   layout: "fit",
               // });
-              amfutil.redirect(currRoute + "/" + record.data._id);
+              amfutil.redirect(currRoute + "/" + item.data._id);
             },
           });
 

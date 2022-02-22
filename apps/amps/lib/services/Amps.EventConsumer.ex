@@ -126,7 +126,7 @@ defmodule Amps.PullConsumer do
   def get_consumer(parms, name) do
     action_id = parms["handler"]
     aparms = AmpsDatabase.get_action_parms(action_id)
-    type = aparms["type"]
+    _type = aparms["type"]
 
     name
   end
@@ -197,7 +197,7 @@ defmodule Amps.PullConsumer do
                 %{}
               end
 
-            mctx = data["state"]
+            _mctx = data["state"]
             action_id = parms["handler"]
             actparms = AmpsDatabase.get_action_parms(action_id)
             IO.puts("ack next message after action error")

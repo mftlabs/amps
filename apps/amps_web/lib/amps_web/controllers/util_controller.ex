@@ -3,9 +3,9 @@ defmodule AmpsWeb.UtilController do
   require Logger
   import Argon2
   alias Amps.DB
-  alias AmpsWeb.Encryption
-  alias Amps.SvcManager
-  alias AmpsWeb.ServiceController
+  #alias AmpsWeb.Encryption
+  #alias Amps.SvcManager
+  #alias AmpsWeb.ServiceController
 
   def glob_match(conn, _params) do
     body = conn.body_params()
@@ -38,11 +38,11 @@ defmodule AmpsWeb.UtilController do
                   false
               end
 
-            {:error, reason} ->
+            {:error, _reason} ->
               true
           end
 
-        item ->
+        _item ->
           true
       end
 
@@ -120,7 +120,7 @@ defmodule AmpsWeb.UtilController do
           )
           |> Vault.auth()
 
-        result =
+        _result =
           Vault.request(vault, :post, "auth/userpass/users/" <> root["username"],
             body: %{"token_policies" => "admin,default", "password" => password}
           )
@@ -255,7 +255,7 @@ defmodule AmpsWeb.UtilController do
           active: true
         })
 
-      steps =
+      _steps =
         Enum.reduce(subs, [], fn sub, steps ->
           if match_topic(sub["topic"], topic) do
             action = DB.find_one("actions", %{"_id" => sub["handler"]})
