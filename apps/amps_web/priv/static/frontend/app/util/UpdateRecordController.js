@@ -173,9 +173,11 @@ Ext.define("Amps.form.update", {
               });
               mask.show();
               console.log(values);
+              values = amfutil.convertNumbers(form, values);
+
               values = btn.up("form").process(btn.up("form"), values);
               console.log(values);
-              values = amfutil.convertNumbers(form, values);
+
               console.log(values);
               delete values.id;
               var user = amfutil.get_user();
@@ -428,7 +430,9 @@ Ext.define("Amps.util.UpdateRecordController", {
       fields.concat(config.update.fields);
     }
 
-    var myForm = Ext.create("Amps.form.update");
+    var myForm = Ext.create("Amps.form.update", {
+      idcheck: true,
+    });
     myForm.loadForm(config, record, true);
     console.log(config.types);
 

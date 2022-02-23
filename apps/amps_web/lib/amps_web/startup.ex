@@ -12,7 +12,7 @@ defmodule AmpsWeb.Startup do
     # create_defaults_rules()
     # create_root()
     setup_jetstream()
-    create_history()
+    # create_history()
   end
 
   def create_history() do

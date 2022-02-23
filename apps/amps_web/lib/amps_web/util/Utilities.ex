@@ -12,7 +12,7 @@ defmodule AmpsWeb.Util do
   def headers(collection, field \\ nil) do
     headers = %{
       "actions" => %{
-        "headers" => ["name", "desc", "active", "type"],
+        "headers" => ["name", "desc", "type"],
         "subgrids" => nil,
         "types" => %{
           "batch" => [
@@ -150,7 +150,7 @@ defmodule AmpsWeb.Util do
         "types" => nil
       },
       "services" => %{
-        "headers" => ["name", "desc"],
+        "headers" => ["name", "desc", "active", "type"],
         "subgrids" => nil,
         "types" => %{
           "httpd" => [
@@ -248,7 +248,7 @@ defmodule AmpsWeb.Util do
         types = SvcManager.service_types()
 
         if Map.has_key?(types, String.to_atom(body["type"])) do
-          Amps.SvcManager.load_service(body["name"])
+          Gnat.pub(:gnat, "amps.events.svcs.handler.#{body["name"]}.start", "")
         end
 
       "scheduler" ->

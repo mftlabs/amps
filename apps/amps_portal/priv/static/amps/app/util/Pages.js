@@ -191,13 +191,24 @@ Ext.define("Amps.Pages", {
                 value: "300",
               },
               {
-                xtype: "textfield",
-                name: "bretry",
-                itemId: "bretry",
-                maskRe: /[0-9]/,
-                fieldLabel: "Get Failure Retry Wait",
-                value: "5",
+                xtype: "numberfield",
+                name: "subs_count",
+                minValue: 1,
+                maxValue: 20,
+                value: 5,
+                fieldLabel: "Subscriber Count",
+                tooltip:
+                  "Number of concurrent processes fetching messages when rule is triggered",
+                allowBlank: false,
               },
+              // {
+              //   xtype: "textfield",
+              //   name: "bretry",
+              //   itemId: "bretry",
+              //   maskRe: /[0-9]/,
+              //   fieldLabel: "Get Failure Retry Wait",
+              //   value: "5",
+              // },
               amfutil.consumerConfig(
                 amfutil.mailboxTopics(),
                 "The user mailbox topic from which to consume files"
@@ -207,6 +218,8 @@ Ext.define("Amps.Pages", {
                 name: "folder",
                 itemId: "folder",
                 fieldLabel: "Download Path",
+                value: "./downloads",
+
                 allowBlank: false,
                 tooltip: "The path to store the file",
               },
@@ -340,6 +353,8 @@ Ext.define("Amps.Pages", {
         add: {
           process: function (form, values) {
             console.log(values);
+            values.subs_count = values.subs_count.toString();
+
             if (values.fmeta) {
               values.fmeta = JSON.stringify(
                 amfutil.formatArrayField(values.fmeta)
@@ -351,6 +366,8 @@ Ext.define("Amps.Pages", {
         update: {
           process: function (form, values) {
             console.log(values);
+            values.subs_count = values.subs_count.toString();
+
             if (values.fmeta) {
               values.fmeta = JSON.stringify(
                 amfutil.formatArrayField(values.fmeta)

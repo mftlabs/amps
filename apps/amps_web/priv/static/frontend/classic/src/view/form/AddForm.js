@@ -98,10 +98,10 @@ Ext.define("Amps.form.add", {
               var form = btn.up("form").getForm();
               var values = form.getValues();
               console.log(values);
+              values = amfutil.convertNumbers(form, values);
+              console.log(values);
 
               values = this.up("window").process(btn.up("form"), values);
-              console.log(values);
-              values = amfutil.convertNumbers(form, values);
               console.log(values);
 
               var user = amfutil.get_user();

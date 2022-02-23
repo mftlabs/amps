@@ -51,6 +51,8 @@ defmodule Amps.SvcManager do
             DynamicSupervisor.terminate_child(Amps.SvcSupervisor, pid)
           end)
 
+          DB.find_one_and_update("services", %{"name" => name}, %{"active" => false})
+
           {:ok, true}
       end
 
@@ -64,6 +66,7 @@ defmodule Amps.SvcManager do
           res = load_service(name)
           IO.inspect(res)
           res
+          DB.find_one_and_update("services", %{"name" => name}, %{"active" => true})
 
         pid ->
           {:error, "Service Already Running #{inspect(pid)}"}
@@ -224,6 +227,7 @@ defmodule Amps.SvcManager do
     case AmpsDatabase.get_config(svcname) do
       nil ->
         Logger.info("service not found #{svcname}")
+        nil
 
       parms ->
         opts = Map.delete(parms, "_id")
@@ -256,7 +260,7 @@ defmodule Amps.SvcManager do
 
   def load_system_parms() do
     parms =
-      case AmpsDatabase.get_config("SYSTEM") do
+      case Amps.DB.find_one("config", %{"name" => "SYSTEM"}) do
         nil ->
           %{}
 
@@ -267,6 +271,8 @@ defmodule Amps.SvcManager do
     IO.inspect(parms)
 
     Enum.each(parms, fn {key, val} ->
+      res = Amps.Defaults.put(key, val)
+      IO.inspect(res)
       Application.put_env(:amps, String.to_atom(key), val)
     end)
   end

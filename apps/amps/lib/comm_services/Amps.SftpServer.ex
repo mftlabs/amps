@@ -412,7 +412,7 @@ defmodule Amps.SftpHandler do
 
         fname = Path.basename(path)
         msgid = AmpsUtil.get_id()
-        fpath = AmpsUtil.get_env(:storage_temp) <> "/" <> msgid
+        fpath = Amps.Defaults.get("storage_temp") <> "/" <> msgid
         IO.inspect(fpath)
         dirname = Path.dirname(path)
 

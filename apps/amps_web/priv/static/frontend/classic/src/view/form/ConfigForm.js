@@ -30,7 +30,9 @@ Ext.define("Amps.form.config", {
     var record = this.record;
     var scope = this;
     f.value = record[f.name];
-
+    if (f.name == "type") {
+      console.log(f);
+    }
     if (f.xtype == "radiogroup") {
       f.value = {};
       f.value[f.name] = record[f.name];
@@ -42,11 +44,6 @@ Ext.define("Amps.form.config", {
           })
         );
       }
-    }
-
-    if (f.name == "type") {
-      f.xtype = "displayfield";
-      f.submitValue = true;
     }
 
     return f;

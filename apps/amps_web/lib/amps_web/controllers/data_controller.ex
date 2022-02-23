@@ -588,11 +588,7 @@ defmodule AmpsWeb.DataController do
 
         if Map.has_key?(service, "type") do
           if Map.has_key?(types, String.to_atom(service["type"])) do
-            ServiceController.stop_service(service["name"])
-
-            if service["active"] do
-              ServiceController.start_service(service["name"])
-            end
+            Gnat.pub(:gnat, "amps.events.svcs.handler.#{service["name"]}.restart", "")
           end
         end
 
@@ -646,7 +642,7 @@ defmodule AmpsWeb.DataController do
         types = SvcManager.service_types()
 
         if Map.has_key?(types, String.to_atom(object["type"])) do
-          AmpsWeb.ServiceController.stop_service(object["name"])
+          Gnat.pub(:gnat, "amps.events.svcs.handler.#{object["name"]}.stop", "")
         end
 
         if object["type"] == "subscriber" do

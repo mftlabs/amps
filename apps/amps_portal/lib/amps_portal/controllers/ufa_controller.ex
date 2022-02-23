@@ -209,7 +209,6 @@ defmodule AmpsPortal.UFAController do
         send_resp(conn, 403, "Forbidden")
 
       user ->
-        IO.inspect(reply)
         res = Jetstream.ack(%{gnat: Process.whereis(:gnat), reply_to: reply})
 
         msg = Jason.decode!(get_req_header(conn, "amps-message"))
@@ -225,7 +224,6 @@ defmodule AmpsPortal.UFAController do
           })
         )
 
-        IO.inspect(res)
         json(conn, :ok)
     end
   end
@@ -269,6 +267,11 @@ defmodule AmpsPortal.UFAController do
   end
 
   def subscribe(consumer, parms) do
+    group = String.replace(parms["name"], " ", "_")
+
+    {:ok, sid} =
+      Gnat.sub(consumer.connection_pid, self(), consumer.listening_topic, queue_group: group)
+
     :ok =
       Gnat.pub(
         consumer.connection_pid,
@@ -277,11 +280,7 @@ defmodule AmpsPortal.UFAController do
         reply_to: consumer.listening_topic
       )
 
-    group = String.replace(parms["name"], " ", "_")
     # consumer_name = get_consumer(parms, consumer_name)
-
-    {:ok, sid} =
-      Gnat.sub(consumer.connection_pid, self(), consumer.listening_topic, queue_group: group)
 
     sid
   end
@@ -308,6 +307,41 @@ defmodule AmpsPortal.UFAController do
             {:msg, message} ->
               message
           end
+      end
+    end
+  end
+
+  def get_messages(state, limit \\ 250, messages \\ []) do
+    with {:ok,
+          %{
+            num_pending: pen,
+            num_redelivered: red
+          }} <-
+           Jetstream.API.Consumer.info(
+             state.connection_pid,
+             state.stream_name,
+             state.consumer_name
+           ) do
+      num = pen + red
+      len = Enum.count(messages)
+      Logger.info(len)
+      Logger.info(num)
+
+      if len == limit || len == num do
+        messages
+      else
+        case num do
+          0 ->
+            messages
+
+          _ ->
+            receive do
+              {:msg, message} ->
+                Jetstream.ack_next(message, state.listening_topic)
+                IO.inspect(message)
+                get_messages(state, limit, messages ++ [message])
+            end
+        end
       end
     end
   end

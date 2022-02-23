@@ -1,5 +1,6 @@
 defmodule AmpsUtil do
   alias Amps.DB
+  require Logger
 
   def gettime() do
     DateTime.to_iso8601(DateTime.utc_now())
@@ -190,13 +191,13 @@ defmodule AmpsUtil do
         msg["fpath"]
 
       _ ->
-        root = Application.get_env(:amps, :storage_root)
+        root = Amps.Defaults.get("storage_root")
         root <> "/" <> msg["fpath"]
     end
   end
 
   def tempdir(session \\ nil) do
-    temp = Application.get_env(:amps, :storage_temp)
+    temp = Amps.Defaults.get("storage_temp")
 
     case session do
       nil ->
@@ -394,12 +395,12 @@ defmodule AmpsUtil do
 
     case Jetstream.API.Consumer.info(gnat, stream, name) do
       {:ok, res} ->
-        IO.puts("Consumer Already Exists")
-        IO.inspect(res)
+        Logger.info("Consumer #{name} Already Exists")
+        Logger.debug(res)
 
       {:error, error} ->
-        IO.inspect(error)
-        IO.puts("Creating Consumer")
+        Logger.info(error)
+        Logger.info("Creating Consumer #{name}")
 
         cons =
           Map.merge(
@@ -411,17 +412,18 @@ defmodule AmpsUtil do
             opts
           )
 
-        IO.inspect(cons)
+        Logger.debug(cons)
 
         case Jetstream.API.Consumer.create(
                gnat,
                cons
              ) do
           {:ok, res} ->
-            IO.inspect(res)
+            Logger.debug(res)
+            Logger.info("Created Consumer #{name}")
 
           {:error, error} ->
-            IO.inspect(error)
+            Logger.error(error)
         end
     end
   end

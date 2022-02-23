@@ -87,7 +87,7 @@ defmodule AmpsWeb.UtilController do
   end
 
   def execute_test(conn, _params) do
-    json(conn,  %{"message" => "Welcome to AMPS!"})
+    json(conn, %{"message" => "Welcome to AMPS!"})
   end
 
   def startup(conn, _params) do
@@ -127,7 +127,7 @@ defmodule AmpsWeb.UtilController do
       end
 
       systemdefaults = Map.merge(body["system"], %{"name" => "SYSTEM"})
-      Amps.DB.insert("services", systemdefaults)
+      Amps.DB.insert("config", systemdefaults)
 
       Amps.DB.insert("admin", root)
 

@@ -31,6 +31,16 @@ defmodule Amps.Application do
       # Start the PubSub system
       {Phoenix.PubSub, name: Amps.PubSub},
       Supervisor.Spec.worker(Gnat.ConnectionSupervisor, [gnat_supervisor_settings, []]),
+      {
+        Mnesiac.Supervisor,
+        [
+          [name: Amps.MnesiacSupervisor]
+        ]
+      },
+      {Pow.Store.Backend.MnesiaCache, extra_db_nodes: {Node, :list, []}},
+      # Recover from netsplit
+      Pow.Store.Backend.MnesiaCache.Unsplit,
+
       # {Mongo,
       #  [
       #    name: :mongo,
@@ -43,7 +53,14 @@ defmodule Amps.Application do
       AmpsWeb.Vault,
       Amps.SvcSupervisor,
       Amps.SvcManager,
+      Amps.ServiceHandler,
       Amps.Scheduler,
+      {Amps.HistoryHandler,
+       %{
+         "name" => "event_handler",
+         "subs_count" => 4,
+         "topic" => "amps.events.*"
+       }},
 
       # add this to db config...
 

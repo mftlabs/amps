@@ -69,9 +69,9 @@ Ext.define("Amps.view.main.MainController", {
       case "topics":
         this.createForm(btn, route);
         break;
-      case "services":
-        this.addService(btn);
-        break;
+      // case "services":
+      //   this.addService(btn);
+      //   break;
       default:
         this.createForm(btn, route);
     }
