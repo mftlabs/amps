@@ -8,7 +8,6 @@ defmodule Amps.HistoryConsumer do
     parms = Enum.into(args, %{})
     IO.puts("starting event listener #{inspect(parms)}")
     name = parms[:name]
-    IO.puts("first name #{inspect(name)}")
     GenServer.start_link(__MODULE__, parms)
   end
 

@@ -52,7 +52,7 @@ defmodule S3Action do
           end
 
         "put" ->
-          opts =
+          _opts =
             if parms["prefix"] do
               [prefix: parms["prefix"]]
             else
@@ -75,7 +75,7 @@ defmodule S3Action do
             end
 
           case resp do
-            {:ok, resp} ->
+            {:ok, _resp} ->
               Logger.info("Uploaded")
 
             {:error, error} ->
@@ -175,7 +175,7 @@ defmodule S3Action do
       end
 
     case message do
-      {:ok, msg} ->
+      {:ok, _msg} ->
         # case msg do
         #   :done ->
         info = File.stat!(fpath)

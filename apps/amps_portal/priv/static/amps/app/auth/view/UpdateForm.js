@@ -170,10 +170,11 @@ Ext.define("Amps.form.update", {
               });
               mask.show();
               console.log(values);
-              values = btn.up("form").process(btn.up("form"), values);
-              console.log(values);
               values = amfutil.convertNumbers(form, values);
               console.log(values);
+              values = btn.up("form").process(btn.up("form"), values);
+              console.log(values);
+
               var user = await amfutil.userInfo();
               console.log(scope);
               if (scope.audit) {

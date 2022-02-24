@@ -15,7 +15,7 @@ defmodule AmpsWeb.Router do
 
   pipeline :api do
     # plug(:accepts, ["json"])
-    plug(AmpsWeb.APIAuthPlug, otp_app: :amps)
+    plug(AmpsWeb.APIAuthPlug, otp_app: :amps_web)
   end
 
   pipeline :api_protected do

@@ -1,5 +1,5 @@
 defmodule AmpsWeb.AuditPlug do
-  import Plug.Conn
+  #import Plug.Conn
   require Logger
 
   def init(options) do
@@ -7,7 +7,7 @@ defmodule AmpsWeb.AuditPlug do
     options
   end
 
-  def call(conn, opts) do
+  def call(conn, _opts) do
     user = conn.assigns().current_user
     info = Phoenix.Router.route_info(AmpsWeb.Router, conn.method, conn.path_info, conn.host)
 

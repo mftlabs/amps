@@ -23,7 +23,7 @@ defmodule Amps.MixProject do
   def application do
     [
       mod: {Amps.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: [:logger, :runtime_tools, :datapio_cluster]
     ]
   end
 
@@ -50,7 +50,7 @@ defmodule Amps.MixProject do
       {:sftp_client, "~> 1.4"},
       {:snap, "~>0.5"},
       {:jetstream, path: "./jetstream"},
-      {:gnat, "~> 1.2"},
+      {:gnat, "~> 1.4"},
       {:ldap_ex, "~> 0.2.2"},
       {:httpoison, "~> 1.8"},
       {:zstream, "~> 0.6.0"},
@@ -59,7 +59,12 @@ defmodule Amps.MixProject do
       {:ex_aws_s3, "~> 2.0"},
       {:quantum, "~> 3.0"},
       {:argon2_elixir, "~> 2.0"},
-      {:tesla, git: "https://github.com/teamon/tesla", override: true}
+      {:tesla, git: "https://github.com/teamon/tesla", override: true},
+      {
+        :datapio_cluster,
+        github: "datapio/opencore", ref: "main", sparse: "apps/datapio_cluster"
+      },
+      {:mnesiac, git: "https://github.com/aram0112/mnesiac"}
     ]
   end
 

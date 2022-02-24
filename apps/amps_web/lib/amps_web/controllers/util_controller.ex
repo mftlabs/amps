@@ -38,11 +38,11 @@ defmodule AmpsWeb.UtilController do
                   false
               end
 
-            {:error, reason} ->
+            {:error, _reason} ->
               true
           end
 
-        item ->
+        _item ->
           true
       end
 
@@ -87,7 +87,7 @@ defmodule AmpsWeb.UtilController do
   end
 
   def execute_test(conn, _params) do
-    json(conn,  %{"message" => "Welcome to AMPS!"})
+    json(conn, %{"message" => "Welcome to AMPS!"})
   end
 
   def startup(conn, _params) do
@@ -120,14 +120,14 @@ defmodule AmpsWeb.UtilController do
           )
           |> Vault.auth()
 
-        result =
+        _result =
           Vault.request(vault, :post, "auth/userpass/users/" <> root["username"],
             body: %{"token_policies" => "admin,default", "password" => password}
           )
       end
 
       systemdefaults = Map.merge(body["system"], %{"name" => "SYSTEM"})
-      Amps.DB.insert("services", systemdefaults)
+      Amps.DB.insert("config", systemdefaults)
 
       Amps.DB.insert("admin", root)
 

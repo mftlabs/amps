@@ -117,14 +117,25 @@ config :amps_web, AmpsWeb.Endpoint,
 # For production it's recommended to configure a different adapter
 # at the `config/runtime.exs`.
 
-config :amps, :pow,
+# config :mnesia, dir: to_charlist(System.get_env("MNESIA_DIR", "/Users/abhayram/mnesia"))
+
+config :mnesiac,
+  stores: [Amps.Defaults],
+  # defaults to :ram_copies
+  schema_type: :disc_copies
+
+config :logger,
+  level: :info
+
+config :amps_web, :pow,
   user: AmpsWeb.Users.User,
   users_context: AmpsWeb.Users,
   extensions: [PowResetPassword],
   controller_callbacks: Pow.Extension.Phoenix.ControllerCallbacks,
-  mailer_backend: AmpsWeb.PowMailer
+  mailer_backend: AmpsWeb.PowMailer,
+  cache_store_backend: Pow.Store.Backend.MnesiaCache
 
-config :amps, :pow_assent,
+config :amps_web, :pow_assent,
   user: AmpsWeb.Users.User,
   users_context: AmpsWeb.Users,
   providers: [
@@ -140,7 +151,8 @@ config :amps_portal, :pow,
   users_context: AmpsPortal.Users,
   extensions: [PowResetPassword],
   controller_callbacks: Pow.Extension.Phoenix.ControllerCallbacks,
-  mailer_backend: AmpsWeb.PowMailer
+  mailer_backend: AmpsWeb.PowMailer,
+  cache_store_backend: Pow.Store.Backend.MnesiaCache
 
 config :amps_portal, :pow_assent,
   user: AmpsPortal.Users.User,

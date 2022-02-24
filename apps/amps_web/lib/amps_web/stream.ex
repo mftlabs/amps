@@ -19,14 +19,14 @@ defmodule AmpsWeb.Stream do
         ]
       })
 
-    {:ok, subscription} = Gnat.sub(gnat, self(), "AMPS.Messages")
+    {:ok, _subscription} = Gnat.sub(gnat, self(), "AMPS.Messages")
     # get_status()
     {:ok, nil}
   end
 
   def handle_info({:msg, message}, state) do
     IO.puts(message.topic <> " message received")
-    data = Jason.decode!(message.body)
+    _data = Jason.decode!(message.body)
     {:noreply, state}
   end
 

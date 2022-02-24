@@ -1082,12 +1082,74 @@ Ext.define("Amps.util.Utilities", {
         displayField: disp,
         valueField: val,
         store: store,
-        blankText: "Select One",
         allowBlank: false,
-        forceSelection: true,
       },
       opts
     );
+  },
+
+  typeFields: function (config) {
+    return [
+      amfutil.localCombo(
+        `${config.object} Type`,
+        "type",
+        Object.entries(config.types).map((entry) => entry[1]),
+        "field",
+        "label",
+        {
+          listeners: {
+            beforerender: function (scope) {
+              var val = scope.getValue();
+              if (val) {
+                scope.up("form").down("#type").setHtml(config.types[val].label);
+              }
+            },
+            change: function (scope, value) {
+              var form = scope.up("form");
+              var parms = form.down("#typeparms");
+              parms.removeAll();
+              var fields = amfutil.scanFields(config.types[value].fields);
+              console.log(fields);
+              parms.insert(0, fields);
+              var sel = scope.getSelection();
+              scope.up("form").down("#type").setHtml(sel.data.label);
+            },
+          },
+          tooltip: `${config.object} Type`,
+        }
+      ),
+      {
+        xtype: "container",
+        layout: "center",
+        padding: 10,
+        style: {
+          "font-weight": "600",
+          "font-size": "1rem",
+        },
+        items: [
+          {
+            itemId: "type",
+            xtype: "component",
+            autoEl: "div",
+            html: `Select ${config.object} Type`,
+          },
+        ],
+      },
+      {
+        xtype: "fieldcontainer",
+        itemId: "typeparms",
+        // style: {
+        //   background: "green",
+        // },
+        scrollable: true,
+        layout: {
+          type: "vbox",
+          align: "stretch",
+        },
+        padding: 15,
+        // width: 600,
+      },
+    ];
   },
 
   channelHandlers: function (channel) {
@@ -2058,12 +2120,12 @@ Ext.define("Amps.util.Utilities", {
   },
 
   renew_session: async function () {
-    console.log(localStorage.getItem("renewing"));
+    // console.log(localStorage.getItem("renewing"));
 
     if (amfutil.renewPromise) {
       await amfutil.renewPromise;
     } else {
-      localStorage.setItem("renewing", "true");
+      // localStorage.setItem("renewing", "true");
       amfutil.renewPromise = new Promise(function (resolve, reject) {
         Ext.Ajax.request({
           url: "/api/session/renew",
@@ -2082,7 +2144,7 @@ Ext.define("Amps.util.Utilities", {
               localStorage.setItem("access_token", token);
               localStorage.setItem("renewal_token", obj.data.renewal_token);
               await amfutil.updateChannel();
-              localStorage.removeItem("renewing");
+              // localStorage.removeItem("renewing");
             } else {
               Ext.Msg.show({
                 title: "Unauthorized or Expired Session",
@@ -2827,7 +2889,7 @@ Ext.define("Amps.util.Utilities", {
   },
 
   renderFileSize: function fileSize(size) {
-    var i = Math.floor(Math.log(size) / Math.log(1000));
+    var i = size == 0 ? 0 : Math.floor(Math.log(size) / Math.log(1000));
     return (
       (size / Math.pow(1000, i)).toFixed(2) * 1 +
       " " +

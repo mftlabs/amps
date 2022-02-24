@@ -31,7 +31,7 @@ defmodule Amps.PyService do
   end
 
   @impl true
-  def handle_call({:pyrun, msg, parms}, _from, pid) do
+  def handle_call({:pyrun, msg, parms}, _from, _pid) do
     path = AmpsUtil.get_env(:python_path)
     tmp = AmpsUtil.get_env(:storage_temp)
     {:ok, pid} = :python.start([{:python_path, to_charlist(path)}])

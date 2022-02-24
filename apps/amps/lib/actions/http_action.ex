@@ -7,7 +7,7 @@ defmodule HttpAction do
     # AmpsEvents.send(newmsg, parms, state)
   end
 
-  def req(msg, parms, state) do
+  def req(msg, parms, _state) do
     # case parms["method"] do
     # end
 
@@ -65,7 +65,7 @@ defmodule HttpAction do
         Map.put(acc, x["field"], x["value"])
       end)
 
-    resp =
+    _resp =
       case parms["method"] do
         b when b in ["post", "put", "get"] ->
           resp =

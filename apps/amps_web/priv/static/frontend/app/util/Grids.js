@@ -1300,7 +1300,17 @@ Ext.define("Amps.container.Workflow", {
       listeners: {
         beforerender: function () {
           this.setStore(
-            amfutil.createCollectionStore("services", { communication: true })
+            amfutil.createCollectionStore("services", {
+              bool: {
+                must_not: [
+                  {
+                    match: {
+                      type: "subscriber",
+                    },
+                  },
+                ],
+              },
+            })
           );
         },
       },
@@ -1753,6 +1763,8 @@ Ext.define("Amps.container.Imports", {
             var form = item.win.down("form");
             var values = form.process(form, form.getValues());
 
+            values = amfutil.convertNumbers(form.getForm(), values);
+
             var user = amfutil.get_user();
 
             values.createdby = user.firstname + " " + user.lastname;
@@ -1782,6 +1794,7 @@ Ext.define("Amps.container.Imports", {
               success: function (response) {
                 grid.data[grid.start + i - 1] = null;
                 amfutil.getElementByID("number").increment();
+
                 delete item;
 
                 // grid.getStore().reload();
@@ -1807,6 +1820,9 @@ Ext.define("Amps.container.Imports", {
           this.data = this.data.filter((n) => n);
           this.start = 1;
           this.loadRecords();
+          amfutil.broadcastEvent("update", {
+            page: grid.route,
+          });
         } else {
           this.paginate(25);
         }
@@ -3144,471 +3160,450 @@ Ext.define("Amps.util.Grids", {
         },
       ],
     }),
-    providers: () => ({
-      object: "Provider",
-      window: { height: 600, width: 600 },
+    providers: () => {
+      var config = {
+        object: "Provider",
+        window: { height: 600, width: 600 },
 
-      title: "Providers",
-      actionIcons: [
-        "addnewbtn",
-        "searchpanelbtn",
-        "clearfilter",
-        "refreshbtn",
-        "export",
-      ],
-      columns: [
-        {
-          text: "Name",
-          dataIndex: "name",
-          flex: 1,
-          type: "combo",
-          searchOpts: {
-            store: amfutil.createCollectionStore("providers"),
-            displayField: "name",
-            valueField: "name",
+        title: "Providers",
+        actionIcons: [
+          "addnewbtn",
+          "searchpanelbtn",
+          "clearfilter",
+          "refreshbtn",
+          "export",
+        ],
+        columns: [
+          {
+            text: "Name",
+            dataIndex: "name",
+            flex: 1,
+            type: "combo",
+            searchOpts: {
+              store: amfutil.createCollectionStore("providers"),
+              displayField: "name",
+              valueField: "name",
+            },
           },
-        },
-        {
-          text: "Type",
-          dataIndex: "type",
-          flex: 1,
-          type: "combo",
-          searchOpts: {
-            store: amfutil.createCollectionStore("providers"),
-            displayField: "type",
-            valueField: "type",
+          {
+            text: "Type",
+            dataIndex: "type",
+            flex: 1,
+            type: "combo",
+            searchOpts: {
+              store: amfutil.createCollectionStore("providers"),
+              displayField: "type",
+              valueField: "type",
+            },
           },
-        },
-      ],
-      types: {
-        s3: {
-          field: "s3",
-          label: "S3",
-          fields: [
-            amfutil.localCombo(
-              "S3 Service",
-              "provider",
-              ["AWS", "Minio"],
-              null,
-              null,
-              {
-                tooltip: "The S3 service that you are using",
-                listeners: amfutil.renderListeners(function render(scope, val) {
-                  var comps = ["Minio", "AWS"];
-
-                  comps.forEach((name) => {
-                    var component = scope.up("form").down("#" + name);
-                    component.setHidden(val != name);
-                    component.setDisabled(val != name);
-                  });
-                }),
-              }
-            ),
-
-            {
-              xtype: "fieldset",
-
-              title: "Minio",
-
-              itemId: "Minio",
-              items: [
-                amfutil.localCombo(
-                  "Scheme",
-                  "scheme",
-                  [
-                    {
-                      value: "http://",
-                      label: "HTTP",
-                    },
-                    {
-                      value: "https://",
-                      label: "HTTPS",
-                    },
-                  ],
-                  "value",
-                  "label",
-                  {
-                    tooltip: "The Scheme your Minio instance uses",
-                  }
-                ),
-
+        ],
+        types: {
+          s3: {
+            field: "s3",
+            label: "S3",
+            fields: [
+              amfutil.localCombo(
+                "S3 Service",
+                "provider",
+                ["AWS", "Minio"],
+                null,
+                null,
                 {
-                  xtype: "textfield",
-                  tooltip: "The URL Host for your Minio instance",
-                  itemId: "host",
-                  name: "host",
-                  fieldLabel: "Host",
-                  vtype: "ipandhostname",
-                },
-                {
-                  xtype: "textfield",
-                  tooltip: "The Port your Minio instance is running on.",
-                  itemId: "port",
-                  name: "port",
-                  fieldLabel: "Port",
-                  maskRe: /[0-9]/,
-                },
-              ],
-            },
-            {
-              xtype: "fieldset",
+                  tooltip: "The S3 service that you are using",
+                  listeners: amfutil.renderListeners(function render(
+                    scope,
+                    val
+                  ) {
+                    var comps = ["Minio", "AWS"];
 
-              title: "AWS",
-              itemId: "AWS",
-              items: [
-                amfutil.localCombo(
-                  "Region",
-                  "region",
-                  [
-                    "us-east-2",
-                    "us-east-1",
-                    "us-west-1",
-                    "us-west-2",
-                    "af-south-1",
-                    "ap-east-1",
-                    "ap-south-1",
-                    "ap-northeast-3",
-                    "ap-northeast-2",
-                    "ap-southeast-1",
-                    "ap-southeast-2",
-                    "ap-northeast-1",
-                    "ca-central-1",
-                    "cn-north-1",
-                    "cn-northwest-1",
-                    "eu-central-1",
-                    "eu-west-1",
-                    "eu-west-2",
-                    "eu-west-3",
-                    "eu-north-1",
-                    "eu-south-1",
-                    "me-south-1",
-                    "sa-east-1",
-                    "us-gov-west-1",
-                    "us-gov-east-1",
-                  ],
-                  null,
-                  null,
-                  {
-                    tooltip: "The AWS Region your S3 Buckets are hosted on.",
-                  }
-                ),
-              ],
-            },
-
-            {
-              xtype: "textfield",
-              name: "key",
-              fieldLabel: "Access Id",
-              tooltip: "Your S3 Access Key ID Credential",
-            },
-            {
-              xtype: "textfield",
-              name: "secret",
-              fieldLabel: "Access Key",
-              inputType: "password",
-              tooltip: "Your S3 Secret Access Key Credential",
-            },
-            {
-              xtype: "checkbox",
-              name: "proxy",
-              fieldLabel: "Use Proxy",
-              uncheckedValue: false,
-              tooltip: "Whether to use a proxy for the S3 connection",
-              inputValue: true,
-              listeners: {
-                afterrender: function (scope) {
-                  var val = scope.getValue();
-                  var components = ["#proxy"];
-                  components.forEach((name) => {
-                    var component = scope.up("form").down(name);
-                    component.setHidden(!val);
-                    component.setDisabled(!val);
-                  });
-                },
-                change: function (scope, val) {
-                  var components = ["#proxy"];
-                  components.forEach((name) => {
-                    var component = scope.up("form").down(name);
-                    component.setHidden(!val);
-                    component.setDisabled(!val);
-                  });
-                },
-              },
-            },
-            {
-              xtype: "fieldcontainer",
-              itemId: "proxy",
-              items: [
-                {
-                  xtype: "textfield",
-                  itemId: "proxyurl",
-                  name: "proxy_url",
-                  tooltip: "The URL for the proxy connection",
-                  fieldLabel: "Proxy Url",
-                },
-                {
-                  xtype: "textfield",
-                  itemId: "proxyusername",
-                  tooltip: "The proxy username",
-
-                  name: "proxy_username",
-                  fieldLabel: "Proxy Username",
-                },
-                {
-                  xtype: "textfield",
-                  itemId: "proxypassword",
-                  tooltip: "The proxy password",
-
-                  name: "proxy_password",
-                  fieldLabel: "Proxy Password",
-                },
-              ],
-            },
-          ],
-        },
-        kafka: {
-          field: "kafka",
-          label: "Kafka",
-          fields: [
-            amfutil.infoBlock(
-              "A list of Kafka brokers to connect to, provided in host-port pairs."
-            ),
-            {
-              xtype: "arrayfield",
-              name: "brokers",
-              title: "Brokers",
-
-              arrayfield: "Broker",
-              arrayfields: [
-                {
-                  xtype: "textfield",
-                  name: "host",
-                  fieldLabel: "Host",
-                  vtype: "ipandhostname",
-                },
-                {
-                  xtype: "numberfield",
-                  name: "port",
-                  fieldLabel: "Port",
-                  minValue: 1,
-                },
-              ],
-            },
-            {
-              xtype: "radiogroup",
-              fieldLabel: "Authentication",
-              name: "auth",
-              allowBlank: false,
-              columns: 2,
-              vertical: true,
-              tooltip: "The Kafka authentication method",
-              items: [
-                { boxLabel: "None", name: "auth", inputValue: "NONE" },
-                {
-                  boxLabel: "SASL_PLAINTEXT",
-                  name: "auth",
-                  inputValue: "SASL_PLAINTEXT",
-                },
-                {
-                  boxLabel: "SASL_SSL",
-                  name: "auth",
-                  inputValue: "SASL_SSL",
-                },
-                {
-                  boxLabel: "SSL",
-                  name: "auth",
-                  inputValue: "SSL",
-                },
-              ],
-              listeners: amfutil.renderListeners(function (scope, val) {
-                if (typeof val === "object" && val !== null) {
-                  val = val.auth || "";
+                    comps.forEach((name) => {
+                      var component = scope.up("form").down("#" + name);
+                      component.setHidden(val != name);
+                      component.setDisabled(val != name);
+                    });
+                  }),
                 }
+              ),
 
-                var sasl = scope.up("form").down("#sasl");
-                var ssl = scope.up("form").down("#ssl");
+              {
+                xtype: "fieldset",
 
-                sasl.setHidden(!val.includes("SASL"));
-                sasl.setDisabled(!val.includes("SASL"));
+                title: "Minio",
 
-                ssl.setHidden(!val.includes("SSL"));
-                ssl.setDisabled(!val.includes("SSL"));
-              }),
-            },
-            {
-              xtype: "fieldcontainer",
-              itemId: "sasl",
-              layout: {
-                type: "vbox",
-                align: "stretch",
-              },
-              items: [
-                amfutil.localCombo(
-                  "SASL Mechanism",
-                  "mechanism",
-                  [
-                    { field: "Plain", value: "plain" },
-                    { value: "scram_sha_256", field: "SCRAM SHA 256" },
-                    { value: "scram_sha_512", field: "SCRAM SHA 512" },
-                  ],
-                  "value",
-                  "field",
+                itemId: "Minio",
+                items: [
+                  amfutil.localCombo(
+                    "Scheme",
+                    "scheme",
+                    [
+                      {
+                        value: "http://",
+                        label: "HTTP",
+                      },
+                      {
+                        value: "https://",
+                        label: "HTTPS",
+                      },
+                    ],
+                    "value",
+                    "label",
+                    {
+                      tooltip: "The Scheme your Minio instance uses",
+                    }
+                  ),
+
                   {
-                    itemId: "sasl-mech",
-                    tooltip: "The SASL Mechanism for SASL Auth",
-                  }
-                ),
-                {
-                  itemId: "sasl-username",
-                  allowBlank: false,
-
-                  xtype: "textfield",
-                  name: "username",
-                  fieldLabel: "Username",
-                  tooltip: "The Username for SASL Auth",
-                },
-                {
-                  itemId: "sasl-password",
-                  allowBlank: false,
-
-                  xtype: "textfield",
-                  name: "password",
-                  fieldLabel: "Password",
-                  tooltip: "The Password for SASL Auth",
-                },
-              ],
-            },
-
-            {
-              xtype: "fieldcontainer",
-              itemId: "ssl",
-              layout: {
-                type: "vbox",
-                align: "stretch",
+                    xtype: "textfield",
+                    tooltip: "The URL Host for your Minio instance",
+                    itemId: "host",
+                    name: "host",
+                    fieldLabel: "Host",
+                    vtype: "ipandhostname",
+                  },
+                  {
+                    xtype: "textfield",
+                    tooltip: "The Port your Minio instance is running on.",
+                    itemId: "port",
+                    name: "port",
+                    fieldLabel: "Port",
+                    maskRe: /[0-9]/,
+                  },
+                ],
               },
-              items: [
-                amfutil.loadKey("Certificate Authority Certificate", "cacert", {
-                  tooltip: "The Certificate Authority Certificate for SSL Auth",
+              {
+                xtype: "fieldset",
+
+                title: "AWS",
+                itemId: "AWS",
+                items: [
+                  amfutil.localCombo(
+                    "Region",
+                    "region",
+                    [
+                      "us-east-2",
+                      "us-east-1",
+                      "us-west-1",
+                      "us-west-2",
+                      "af-south-1",
+                      "ap-east-1",
+                      "ap-south-1",
+                      "ap-northeast-3",
+                      "ap-northeast-2",
+                      "ap-southeast-1",
+                      "ap-southeast-2",
+                      "ap-northeast-1",
+                      "ca-central-1",
+                      "cn-north-1",
+                      "cn-northwest-1",
+                      "eu-central-1",
+                      "eu-west-1",
+                      "eu-west-2",
+                      "eu-west-3",
+                      "eu-north-1",
+                      "eu-south-1",
+                      "me-south-1",
+                      "sa-east-1",
+                      "us-gov-west-1",
+                      "us-gov-east-1",
+                    ],
+                    null,
+                    null,
+                    {
+                      tooltip: "The AWS Region your S3 Buckets are hosted on.",
+                    }
+                  ),
+                ],
+              },
+
+              {
+                xtype: "textfield",
+                name: "key",
+                fieldLabel: "Access Id",
+                tooltip: "Your S3 Access Key ID Credential",
+              },
+              {
+                xtype: "textfield",
+                name: "secret",
+                fieldLabel: "Access Key",
+                inputType: "password",
+                tooltip: "Your S3 Secret Access Key Credential",
+              },
+              {
+                xtype: "checkbox",
+                name: "proxy",
+                fieldLabel: "Use Proxy",
+                uncheckedValue: false,
+                tooltip: "Whether to use a proxy for the S3 connection",
+                inputValue: true,
+                listeners: {
+                  afterrender: function (scope) {
+                    var val = scope.getValue();
+                    var components = ["#proxy"];
+                    components.forEach((name) => {
+                      var component = scope.up("form").down(name);
+                      component.setHidden(!val);
+                      component.setDisabled(!val);
+                    });
+                  },
+                  change: function (scope, val) {
+                    var components = ["#proxy"];
+                    components.forEach((name) => {
+                      var component = scope.up("form").down(name);
+                      component.setHidden(!val);
+                      component.setDisabled(!val);
+                    });
+                  },
+                },
+              },
+              {
+                xtype: "fieldcontainer",
+                itemId: "proxy",
+                items: [
+                  {
+                    xtype: "textfield",
+                    itemId: "proxyurl",
+                    name: "proxy_url",
+                    tooltip: "The URL for the proxy connection",
+                    fieldLabel: "Proxy Url",
+                  },
+                  {
+                    xtype: "textfield",
+                    itemId: "proxyusername",
+                    tooltip: "The proxy username",
+
+                    name: "proxy_username",
+                    fieldLabel: "Proxy Username",
+                  },
+                  {
+                    xtype: "textfield",
+                    itemId: "proxypassword",
+                    tooltip: "The proxy password",
+
+                    name: "proxy_password",
+                    fieldLabel: "Proxy Password",
+                  },
+                ],
+              },
+            ],
+          },
+          kafka: {
+            field: "kafka",
+            label: "Kafka",
+            fields: [
+              amfutil.infoBlock(
+                "A list of Kafka brokers to connect to, provided in host-port pairs."
+              ),
+              {
+                xtype: "arrayfield",
+                name: "brokers",
+                title: "Brokers",
+
+                arrayfield: "Broker",
+                arrayfields: [
+                  {
+                    xtype: "textfield",
+                    name: "host",
+                    fieldLabel: "Host",
+                    vtype: "ipandhostname",
+                  },
+                  {
+                    xtype: "numberfield",
+                    name: "port",
+                    fieldLabel: "Port",
+                    minValue: 1,
+                  },
+                ],
+              },
+              {
+                xtype: "radiogroup",
+                fieldLabel: "Authentication",
+                name: "auth",
+                allowBlank: false,
+                columns: 2,
+                vertical: true,
+                tooltip: "The Kafka authentication method",
+                items: [
+                  { boxLabel: "None", name: "auth", inputValue: "NONE" },
+                  {
+                    boxLabel: "SASL_PLAINTEXT",
+                    name: "auth",
+                    inputValue: "SASL_PLAINTEXT",
+                  },
+                  {
+                    boxLabel: "SASL_SSL",
+                    name: "auth",
+                    inputValue: "SASL_SSL",
+                  },
+                  {
+                    boxLabel: "SSL",
+                    name: "auth",
+                    inputValue: "SSL",
+                  },
+                ],
+                listeners: amfutil.renderListeners(function (scope, val) {
+                  if (typeof val === "object" && val !== null) {
+                    val = val.auth || "";
+                  }
+
+                  var sasl = scope.up("form").down("#sasl");
+                  var ssl = scope.up("form").down("#ssl");
+
+                  sasl.setHidden(!val.includes("SASL"));
+                  sasl.setDisabled(!val.includes("SASL"));
+
+                  ssl.setHidden(!val.includes("SSL"));
+                  ssl.setDisabled(!val.includes("SSL"));
                 }),
-                amfutil.loadKey("Client Certificate", "cert", {
-                  tooltip: "The Client Certificate for SSL Auth",
-                }),
-                amfutil.loadKey("Client Key", "key", {
-                  tooltip: "The Client Key for SSL Auth",
-                }),
-              ],
+              },
+              {
+                xtype: "fieldcontainer",
+                itemId: "sasl",
+                layout: {
+                  type: "vbox",
+                  align: "stretch",
+                },
+                items: [
+                  amfutil.localCombo(
+                    "SASL Mechanism",
+                    "mechanism",
+                    [
+                      { field: "Plain", value: "plain" },
+                      { value: "scram_sha_256", field: "SCRAM SHA 256" },
+                      { value: "scram_sha_512", field: "SCRAM SHA 512" },
+                    ],
+                    "value",
+                    "field",
+                    {
+                      itemId: "sasl-mech",
+                      tooltip: "The SASL Mechanism for SASL Auth",
+                    }
+                  ),
+                  {
+                    itemId: "sasl-username",
+                    allowBlank: false,
+
+                    xtype: "textfield",
+                    name: "username",
+                    fieldLabel: "Username",
+                    tooltip: "The Username for SASL Auth",
+                  },
+                  {
+                    itemId: "sasl-password",
+                    allowBlank: false,
+
+                    xtype: "textfield",
+                    name: "password",
+                    fieldLabel: "Password",
+                    tooltip: "The Password for SASL Auth",
+                  },
+                ],
+              },
+
+              {
+                xtype: "fieldcontainer",
+                itemId: "ssl",
+                layout: {
+                  type: "vbox",
+                  align: "stretch",
+                },
+                items: [
+                  amfutil.loadKey(
+                    "Certificate Authority Certificate",
+                    "cacert",
+                    {
+                      tooltip:
+                        "The Certificate Authority Certificate for SSL Auth",
+                    }
+                  ),
+                  amfutil.loadKey("Client Certificate", "cert", {
+                    tooltip: "The Client Certificate for SSL Auth",
+                  }),
+                  amfutil.loadKey("Client Key", "key", {
+                    tooltip: "The Client Key for SSL Auth",
+                  }),
+                ],
+              },
+            ],
+            process: function (form) {
+              var values = form.getValues();
+              console.log(values);
+              values.brokers = JSON.parse(values.brokers);
+              return values;
             },
-          ],
-          process: function (form) {
-            var values = form.getValues();
-            console.log(values);
-            values.brokers = JSON.parse(values.brokers);
-            return values;
+          },
+          sharepoint: {
+            field: "sharepoint",
+            label: "SharePoint",
+            fields: [
+              {
+                xtype: "textfield",
+                name: "tenant",
+                fieldLabel: "Tenant",
+                tooltip:
+                  "The Tenant ID for your Microsoft Azure Active Directory Application",
+              },
+              {
+                xtype: "textfield",
+                name: "client_id",
+                fieldLabel: "Client ID",
+                tooltip:
+                  "The Application (Client) ID for your Microsoft Azure Active Directory Application",
+              },
+              {
+                xtype: "textfield",
+                name: "client_secret",
+                fieldLabel: "Client Secret",
+                tooltip:
+                  "The Client Secret or Application Password for your Microsoft Azure Active Directory Application",
+              },
+            ],
           },
         },
-        sharepoint: {
-          field: "sharepoint",
-          label: "SharePoint",
-          fields: [
+        fields: [
+          amfutil.duplicateVal(
             {
               xtype: "textfield",
-              name: "tenant",
-              fieldLabel: "Tenant",
-              tooltip:
-                "The Tenant ID for your Microsoft Azure Active Directory Application",
+              name: "name",
+              fieldLabel: "Name",
+              allowBlank: false,
+              tooltip: "A name for this provider",
             },
-            {
-              xtype: "textfield",
-              name: "client_id",
-              fieldLabel: "Client ID",
-              tooltip:
-                "The Application (Client) ID for your Microsoft Azure Active Directory Application",
+            function (cmp, value) {
+              var form = cmp.up("form");
+              return {
+                providers: amfutil.duplicateIdCheck({ name: value }, cmp),
+              };
             },
-            {
-              xtype: "textfield",
-              name: "client_secret",
-              fieldLabel: "Client Secret",
-              tooltip:
-                "The Client Secret or Application Password for your Microsoft Azure Active Directory Application",
-            },
-          ],
-        },
-      },
-      fields: [
-        amfutil.duplicateVal(
+            "Provider Already Exists",
+            amfutil.nameValidator
+          ),
           {
             xtype: "textfield",
-            name: "name",
-            fieldLabel: "Name",
+            name: "desc",
+            fieldLabel: "Description",
+            tooltip: "A description of this provider",
             allowBlank: false,
-            tooltip: "A name for this provider",
           },
-          function (cmp, value) {
-            var form = cmp.up("form");
-            return {
-              providers: amfutil.duplicateIdCheck({ name: value }),
-            };
+        ],
+        add: {
+          process: function (form, values) {
+            return amfutil.processTypes("providers", form, values);
           },
-          "Provider Already Exists",
-          amfutil.nameValidator
-        ),
-        {
-          xtype: "textfield",
-          name: "desc",
-          fieldLabel: "Description",
-          tooltip: "A description of this provider",
-          allowBlank: false,
         },
+        update: {
+          load: function (form, record) {
+            form.down("#type").setValue(record.type);
+          },
+          process: (form, values) => {
+            return amfutil.processTypes("providers", form, values);
+          },
+        },
+      };
 
-        amfutil.localCombo("Provider Type", "type", null, "field", "label", {
-          itemId: "type",
-          tooltip: "The type of provider you are configuring",
-          listeners: {
-            beforerender: function (scope) {
-              if (scope.xtype == "combobox") {
-                scope.setStore(
-                  Object.entries(ampsgrids.grids.providers().types).map(
-                    (entry) => entry[1]
-                  )
-                );
-              }
-            },
-            change: function (scope, value) {
-              var form = scope.up("form");
-              var actionparms = form.down("#typeparms");
-              var fields = amfutil.scanFields(
-                ampsgrids.grids.providers().types[value].fields
-              );
-              actionparms.removeAll();
-              actionparms.insert(0, fields);
-            },
-          },
-        }),
+      config.fields = config.fields.concat(amfutil.typeFields(config));
 
-        {
-          xtype: "fieldcontainer",
-          itemId: "typeparms",
-          layout: {
-            type: "vbox",
-            align: "stretch",
-          },
-          // width: 600,
-        },
-      ],
-      add: {
-        process: function (form, values) {
-          return amfutil.processTypes("providers", form, values);
-        },
-      },
-      update: {
-        load: function (form, record) {
-          form.down("#type").setValue(record.type);
-        },
-        process: (form, values) => {
-          return amfutil.processTypes("providers", form, values);
-        },
-      },
-    }),
+      return config;
+    },
     fields: () => ({
       object: "Field",
       window: { height: 600, width: 400 },
@@ -3678,7 +3673,7 @@ Ext.define("Amps.util.Grids", {
           },
           function (cmp, value) {
             return {
-              rules: amfutil.duplicateIdCheck({ name: value }),
+              services: amfutil.duplicateIdCheck({ name: value }, cmp),
             };
           },
           "Rule Already Exists",
@@ -3773,7 +3768,7 @@ Ext.define("Amps.util.Grids", {
           },
           function (cmp, value) {
             return {
-              scheduler: amfutil.duplicateIdCheck({ name: value }),
+              scheduler: amfutil.duplicateIdCheck({ name: value }, cmp),
             };
           },
           "Job Name Already Exists",
@@ -4279,6 +4274,10 @@ Ext.define("Amps.util.Grids", {
               field: "received",
               label: "Received",
             },
+            {
+              field: "failed",
+              label: "Failed",
+            },
           ],
         },
       ],
@@ -4325,7 +4324,7 @@ Ext.define("Amps.util.Grids", {
           },
           function (cmp, value) {
             return {
-              customers: amfutil.duplicateIdCheck({ name: value }),
+              customers: amfutil.duplicateIdCheck({ name: value }, cmp),
             };
           },
           "Customer Name Already Exists",
@@ -4707,12 +4706,33 @@ Ext.define("Amps.util.Grids", {
                 },
                 {
                   xtype: "textfield",
-                  name: "bretry",
-                  itemId: "bretry",
+                  name: "fpoll",
+                  itemId: "fpoll",
                   maskRe: /[0-9]/,
-                  fieldLabel: "Get Failure Retry Wait",
-                  value: "5",
+                  fieldLabel: "File Polling Interval(Sec)",
+                  allowBlank: false,
+                  value: "300",
                 },
+
+                {
+                  xtype: "numberfield",
+                  name: "subs_count",
+                  minValue: 1,
+                  maxValue: 20,
+                  value: 5,
+                  fieldLabel: "Subscriber Count",
+                  tooltip:
+                    "Number of concurrent processes fetching messages when rule is triggered",
+                  allowBlank: false,
+                },
+                // {
+                //   xtype: "textfield",
+                //   name: "bretry",
+                //   itemId: "bretry",
+                //   maskRe: /[0-9]/,
+                //   fieldLabel: "Get Failure Retry Wait",
+                //   value: "5",
+                // },
                 amfutil.consumerConfig(async function (scope) {
                   var item = scope.up("form").entity;
                   console.log(item);
@@ -4852,6 +4872,7 @@ Ext.define("Amps.util.Grids", {
           add: {
             process: function (form, values) {
               console.log(values);
+              values.subs_count = values.subs_count.toString();
               if (values.fmeta) {
                 values.fmeta = JSON.stringify(
                   amfutil.formatArrayField(values.fmeta)
@@ -4862,6 +4883,8 @@ Ext.define("Amps.util.Grids", {
           },
           update: {
             process: function (form, values) {
+              values.subs_count = values.subs_count.toString();
+
               console.log(values);
               if (values.fmeta) {
                 values.fmeta = JSON.stringify(
@@ -4916,488 +4939,77 @@ Ext.define("Amps.util.Grids", {
         },
       },
     }),
-    actions: () => ({
-      title: "Actions",
-      window: { height: 600, width: 800 },
-      types: {
-        // generic: {
-        //   field: "generic",
-        //   label: "Generic",
-        //   fields: [
-        //     {
-        //       // Fieldset in Column 1 - collapsible via toggle button
-        //       xtype: "parmfield",
-        //       title: "Parameters",
-        //       name: "parms",
-        //     },
-        //   ],
-        //   load: function (form, record) {
-        //     //   console.log(record.parms);
-        //     //   var parms = Object.entries(record.parms).map((entry) => {
-        //     //     return { field: entry[0], value: entry[1] };
-        //     //   });
-        //     //   parms.forEach(function (p) {
-        //     //     var dcon = form.down("#parms");
-        //     //     var length = dcon.items.length;
-        //     //     if (typeof p.value === "boolean") {
-        //     //       var d = Ext.create("Amps.form.Parm.Bool");
-        //     //       d.down("#field").setValue(p.field);
-        //     //       d.down("#value").setValue(p.value);
-        //     //       dcon.insert(length - 1, d);
-        //     //     } else {
-        //     //       var d = Ext.create("Amps.form.Parm.String");
-        //     //       d.down("#field").setValue(p.field);
-        //     //       d.down("#value").setValue(p.value);
-        //     //       dcon.insert(length - 1, d);
-        //     //     }
-        //     //   });
-        //   },
-        //   process: function (form, values) {
-        //     console.log(values);
-        //     values.parms = amfutil.formatArrayField(values.parms);
-        //     delete values.field;
-        //     delete values.value;
-        //     return values;
-        //   },
-        // },
-        runscript: {
-          field: "runscript",
-          label: "Run Script",
-          fields: [
-            amfutil.combo(
-              "Script Type",
-              "script_type",
-              [
-                { field: "python", label: "Python" },
-                // { field: "elixir", label: "Elixir" },
-              ],
-              "field",
-              "label",
-              {
-                tooltip: "The language your script is written in.",
-                queryMode: "local",
-              }
-            ),
-            {
-              xtype: "textfield",
-              name: "module",
-              fieldLabel: "Script Name",
-              allowBlank: false,
-              tooltip:
-                "The file name of the Python file/module to run. Exclude the file extension .py",
-            },
-            amfutil.check("Send Output", "send_output", {
-              listeners: amfutil.renderListeners(function (scope, val) {
-                var out = scope.up("form").down("#output_parms");
-                out.setHidden(!val);
-                out.setDisabled(!val);
-              }),
-            }),
-            amfutil.renderContainer("output_parms", [
-              amfutil.outputTopic(),
-              amfutil.formatFileName(),
-            ]),
-            {
-              // Fieldset in Column 1 - collapsible via toggle button
-              xtype: "parmfield",
-              title: "Extra Parameters",
-              name: "parms",
-              tooltip: "Additional Parameters to pass to your python module",
-            },
-          ],
-          process: function (form, values) {
-            console.log(values);
-            values.parms = amfutil.formatArrayField(values.parms);
-            delete values.field;
-            delete values.value;
-            console.log(values);
-            return values;
-          },
-        },
-        strrepl: {
-          field: "strrepl",
-          label: "String Replace",
-          fields: [
-            {
-              xtype: "textfield",
-              name: "from",
-              fieldLabel: "From",
-              allowBlank: false,
-              tooltip: "Text to search for and replace in document",
-            },
-            {
-              xtype: "textfield",
-              flex: 1,
-              name: "to",
-              fieldLabel: "To",
-              allowBlank: false,
-              tooltip: "Text to insert in document",
-            },
-
-            amfutil.outputTopic(),
-          ],
-        },
-        mailbox: {
-          field: "mailbox",
-          label: "Mailbox",
-          fields: [
-            amfutil.dynamicCreate(
+    actions: () => {
+      var config = {
+        title: "Actions",
+        window: { height: 600, width: 800 },
+        types: {
+          // generic: {
+          //   field: "generic",
+          //   label: "Generic",
+          //   fields: [
+          //     {
+          //       // Fieldset in Column 1 - collapsible via toggle button
+          //       xtype: "parmfield",
+          //       title: "Parameters",
+          //       name: "parms",
+          //     },
+          //   ],
+          //   load: function (form, record) {
+          //     //   console.log(record.parms);
+          //     //   var parms = Object.entries(record.parms).map((entry) => {
+          //     //     return { field: entry[0], value: entry[1] };
+          //     //   });
+          //     //   parms.forEach(function (p) {
+          //     //     var dcon = form.down("#parms");
+          //     //     var length = dcon.items.length;
+          //     //     if (typeof p.value === "boolean") {
+          //     //       var d = Ext.create("Amps.form.Parm.Bool");
+          //     //       d.down("#field").setValue(p.field);
+          //     //       d.down("#value").setValue(p.value);
+          //     //       dcon.insert(length - 1, d);
+          //     //     } else {
+          //     //       var d = Ext.create("Amps.form.Parm.String");
+          //     //       d.down("#field").setValue(p.field);
+          //     //       d.down("#value").setValue(p.value);
+          //     //       dcon.insert(length - 1, d);
+          //     //     }
+          //     //   });
+          //   },
+          //   process: function (form, values) {
+          //     console.log(values);
+          //     values.parms = amfutil.formatArrayField(values.parms);
+          //     delete values.field;
+          //     delete values.value;
+          //     return values;
+          //   },
+          // },
+          runscript: {
+            field: "runscript",
+            label: "Run Script",
+            fields: [
               amfutil.combo(
-                "Recipient",
-                "recipient",
-                amfutil.createCollectionStore("users", {}, { autoLoad: true }),
-                "username",
-                "username",
+                "Script Type",
+                "script_type",
+                [
+                  { field: "python", label: "Python" },
+                  // { field: "elixir", label: "Elixir" },
+                ],
+                "field",
+                "label",
                 {
-                  tooltip: "The mailbox to deliver the message to",
+                  tooltip: "The language your script is written in.",
+                  queryMode: "local",
                 }
               ),
-              "users"
-            ),
-            amfutil.formatFileName(),
-          ],
-        },
-        unzip: {
-          field: "unzip",
-          label: "Unzip",
-          fields: [
-            {
-              xtype: "numberfield",
-              fieldLabel: "Max Files",
-              name: "maxfiles",
-              allowBlank: false,
-              tooltip: "The max number of files to unzip from a zip file.",
-              // Arrange radio buttons into two columns, distributed vertically
-            },
-            amfutil.outputTopic(),
-          ],
-        },
-        zip: {
-          field: "zip",
-          label: "Zip",
-          fields: [
-            amfutil.formatFileName({
-              value: ".zip",
-              validator: function (val) {
-                return val.endsWith(".zip") || "Filename must end in .zip";
-              },
-            }),
-            amfutil.outputTopic(),
-          ],
-        },
-        router: {
-          field: "router",
-          label: "Router",
-          fields: [
-            amfutil.infoBlock(
-              "The Router Action consists of a series of rules. Each rule consists of an output topic and any number of match patterns. A match pattern consists of a metadata field and either a regex or glob pattern to match. A message that matches on all the match patterns will subsequently be routed to the specified topic."
-            ),
-            {
-              xtype: "checkbox",
-              uncheckedValue: false,
-              inputValue: true,
-              fieldLabel: "Parse EDI",
-              name: "parse_edi",
-              allowBlank: false,
-              tooltip:
-                "Parse additional metadata from EDI documents passing through this router.",
-            },
-            {
-              xtype: "rulelist",
-              name: "rules",
-            },
-          ],
-          process: function (form, values) {
-            values.rules = JSON.parse(values.rules);
-            return values;
-          },
-        },
-        // change_delimiter: {
-        //   field: "change_delimiter",
-        //   label: "Change Delimeter",
-        //   fields: [
-        //     {
-        //       fieldLabel: "Destination OS",
-        //       xtype: "combobox",
-        //       name: "os",
-        //       valueField: "field",
-        //       displayField: "label",
-        //       store: [
-        //         {
-        //           field: "LF",
-        //           label: "Linux",
-        //         },
-        //         {
-        //           field: "CRLF",
-        //           label: "Windows",
-        //         },
-        //       ],
-        //       allowBlank: false,
-        //     },
-        //   ],
-        // },
-        batch: {
-          field: "batch",
-          label: "Batch",
-          fields: [
-            amfutil.combo(
-              "Input Type",
-              "inputtype",
-              [
-                { f: "topic", l: "Data Topic" },
-                { f: "mailbox", l: "Mailbox" },
-              ],
-              "f",
-              "l",
               {
-                listeners: amfutil.renderListeners(function render(scope, val) {
-                  var conts = ["topic", "mailbox"];
-                  conts.forEach((con) => {
-                    var c = amfutil.getElementByID(con);
-                    c.setDisabled(con != val);
-                    c.setHidden(con != val);
-                  });
-                }),
+                xtype: "textfield",
+                name: "module",
+                fieldLabel: "Script Name",
+                allowBlank: false,
                 tooltip:
-                  "From what source to fetch the files to batch. Can be either a data topic or a mailbox.",
-              }
-            ),
-            {
-              xtype: "fieldset",
-              title: "Topic",
-
-              itemId: "topic",
-              layout: {
-                type: "vbox",
-                align: "stretch",
+                  "The file name of the Python file/module to run. Exclude the file extension .py",
               },
-              disabled: true,
-              hidden: true,
-              items: [
-                amfutil.dynamicCreate(
-                  amfutil.combo(
-                    "Input Topic",
-                    "input",
-                    amfutil.createCollectionStore("topics", { type: "data" }),
-                    "topic",
-                    "topic",
-                    {
-                      tooltip: "The data topic from which to batch files.",
-                    }
-                  ),
-                  "topics"
-                ),
-                amfutil.combo(
-                  "Deliver Policy",
-                  "policy",
-                  [
-                    { field: "all", label: "All" },
-                    { field: "new", label: "New" },
-                    { field: "last", label: "Last" },
-                    { field: "by_start_time", label: "Start Time" },
-                  ],
-                  "field",
-                  "label",
-                  {
-                    listeners: amfutil.renderListeners(function (scope, val) {
-                      var conts = ["by_start_time"];
-
-                      conts.forEach((cont) => {
-                        console.log(cont);
-                        var c = scope.up("fieldset").down("#" + cont);
-                        console.log(c);
-                        c.setHidden(val != cont);
-                        c.setDisabled(val != cont);
-                      });
-                    }),
-                  },
-                  amfutil.infoBlock(
-                    'When batching via a topic, messages are consumed according to this policy. "All" specifies that all files be consumed starting from the earliest. "New" specifies that all messages after the creation or update of this action be consumed. "Last" specifies that all messages be consumed starting with the most recent. "Start Time" specifies that all messages be consumed starting from the specified start time.'
-                  )
-                ),
-                {
-                  xtype: "fieldcontainer",
-                  itemId: "by_start_time",
-
-                  items: [
-                    {
-                      xtype: "datetime",
-                      name: "start_time",
-                      fieldLabel: "Start Time",
-                      allowBlank: false,
-                      tooltip:
-                        'The start time for the "Start Time" deliver policy',
-                    },
-                  ],
-                },
-              ],
-            },
-            {
-              xtype: "fieldset",
-              title: "Mailbox",
-              itemId: "mailbox",
-              layout: {
-                type: "vbox",
-                align: "stretch",
-              },
-              disabled: true,
-              hidden: true,
-              items: [
-                amfutil.dynamicCreate(
-                  amfutil.combo(
-                    "Mailbox",
-                    "mailbox",
-                    amfutil.createCollectionStore("users"),
-                    "username",
-                    "username",
-                    {
-                      tooltip: "The mailbox from which to batch files.",
-                    }
-                  ),
-                  "topics"
-                ),
-                {
-                  xtype: "numberfield",
-                  name: "from_time",
-                  fieldLabel: "Send From (Seconds)",
-                  tooltip:
-                    "The period from which to batch messages specified in seconds prior to action execution. (i.e. to batch all mailbox messages from the previous day, one should do atleast 86400 seconds (24 hours)",
-                },
-              ],
-            },
-
-            amfutil.outputTopic(),
-            amfutil.formatFileName(),
-            {
-              xtype: "textfield",
-              name: "delimiter",
-              fieldLabel: "Delimiter",
-              allowBlank: false,
-              tooltip: "The delimiter to use when batching messages.",
-            },
-          ],
-        },
-        pgpencrypt: {
-          field: "pgpencrypt",
-          label: "PGP Encrypt",
-          fields: [
-            amfutil.loadKey("Encryption Key", "key", {
-              tooltip: "The recipient public encryption key.",
-            }),
-            {
-              xtype: "checkbox",
-              fieldLabel: "Compress",
-              name: "compress",
-              uncheckedValue: false,
-              inputValue: true,
-              allowBlank: false,
-              tooltip: "A flag indicating whether or not to compress the file.",
-            },
-            {
-              xtype: "checkbox",
-              fieldLabel: "Armor",
-              name: "armor",
-              uncheckedValue: false,
-              inputValue: true,
-              allowBlank: false,
-              tooltip:
-                "A flag indicating whether or not to ASCII Armor the file.",
-            },
-            amfutil.loadKey("Signing Key", "signing_key", {
-              tooltip: "The signing key.",
-            }),
-            {
-              xtype: "textfield",
-              name: "passphrase",
-              inputType: "password",
-              allowBlank: false,
-              fieldLabel: "Signing Key Passphrase",
-              tooltip: "The passphrase for the signing key.",
-            },
-            amfutil.formatFileName(),
-
-            amfutil.outputTopic(),
-          ],
-        },
-        pgpdecrypt: {
-          field: "pgpdecrypt",
-          label: "PGP Decrypt",
-          fields: [
-            amfutil.loadKey("Decrypt Key", "key", {
-              tooltip: "The private decryption key.",
-            }),
-            {
-              xtype: "textfield",
-              inputType: "password",
-              allowBlank: false,
-              name: "passphrase",
-              fieldLabel: "Decryption Key Passphrase",
-              tooltip: "Passphrase for Decryption Key",
-            },
-            {
-              xtype: "checkbox",
-              fieldLabel: "Verify Signature",
-              name: "verify",
-              uncheckedValue: false,
-              inputValue: true,
-              allowBlank: false,
-              tooltip: "Whether or not to verify the file signature.",
-            },
-            amfutil.loadKey("Partner Signing Key", "signing_key", {
-              tooltip: "The key to use when verifying the signature.",
-            }),
-            amfutil.formatFileName(),
-            amfutil.outputTopic(),
-          ],
-        },
-        http: {
-          field: "http",
-          label: "Webservice Call",
-          fields: [
-            amfutil.infoBlock(
-              "For the url, you can either specify the url directly, or provided a tokenized string that will be used to generate the url and query params. (i.e. https://api.site.com/{refno}?user={user})"
-            ),
-            {
-              xtype: "textfield",
-              name: "url",
-              fieldLabel: "URL",
-              allowBlank: false,
-              tooltip: "The URL for the request.",
-            },
-            amfutil.localCombo(
-              "Method",
-              "method",
-              [
-                {
-                  field: "get",
-                  label: "GET",
-                },
-                {
-                  field: "post",
-                  label: "POST",
-                },
-                {
-                  field: "put",
-                  label: "PUT",
-                },
-                {
-                  field: "delete",
-                  label: "DELETE",
-                },
-              ],
-              "field",
-              "label",
-              {
-                listeners: amfutil.renderListeners(function (scope, val) {
-                  var out = scope.up("form").down("#output");
-                  var hide = val == "delete" || val == undefined;
-                  out.setHidden(hide);
-                  out.setDisabled(hide);
-                }),
-                tooltip: "The HTTP Method for the request.",
-              }
-            ),
-            amfutil.renderContainer("output", [
               amfutil.check("Send Output", "send_output", {
                 listeners: amfutil.renderListeners(function (scope, val) {
                   var out = scope.up("form").down("#output_parms");
@@ -5405,771 +5017,1138 @@ Ext.define("Amps.util.Grids", {
                   out.setDisabled(!val);
                 }),
               }),
-            ]),
-            amfutil.renderContainer("output_parms", [
-              amfutil.outputTopic(),
-              amfutil.check("Store Headers as Metadata", "store_headers"),
-              amfutil.formatFileName(),
-            ]),
-            {
-              // Fieldset in Column 1 - collapsible via toggle button
-              xtype: "arrayfield",
-              title: "Headers",
-              name: "headers",
-              fieldTitle: "header",
-              tooltip: `The HTTP Headers to set for the request`,
-
-              arrayfields: [
-                {
-                  xtype: "textfield",
-                  name: "field",
-                  fieldLabel: "Header",
-                },
-                {
-                  xtype: "textfield",
-                  name: "value",
-                  fieldLabel: "Field",
-                },
-              ],
-            },
-
-            {
-              xtype: "checkbox",
-              uncheckedValue: false,
-              inputValue: true,
-              name: "oauth",
-              fieldLabel: "OAuth",
-              listeners: amfutil.renderListeners(function (scope, val) {
-                var field = scope.up("form").down("#oauth");
-                console.log(field);
-                field.setHidden(!val);
-                field.setDisabled(!val);
-              }),
-              tooltip: "Whether to fetch OAuth Credentials",
-            },
-            {
-              xtype: "fieldcontainer",
-              itemId: "oauth",
-              layout: {
-                type: "vbox",
-                align: "stretch",
+              amfutil.renderContainer("output_parms", [
+                amfutil.outputTopic(),
+                amfutil.formatFileName(),
+              ]),
+              {
+                // Fieldset in Column 1 - collapsible via toggle button
+                xtype: "parmfield",
+                title: "Extra Parameters",
+                name: "parms",
+                tooltip: "Additional Parameters to pass to your python module",
               },
-              items: [
-                {
-                  xtype: "textfield",
-                  name: "oauthurl",
-                  itemId: "oathurl",
-                  fieldLabel: "OAuth URL",
-
-                  tooltip: "URL to request OAuth Credentials",
-                },
-                {
-                  xtype: "textfield",
-                  name: "oauthuser",
-                  itemId: "oauthuser",
-
-                  fieldLabel: "OAuth User",
-
-                  tooltip: "OAuth Username",
-                },
-                {
-                  xtype: "textfield",
-                  name: "oauthpassword",
-                  itemId: "oauthpassword",
-                  tooltip: "OAuth Password",
-
-                  fieldLabel: "OAuth Password",
-                },
-              ],
+            ],
+            process: function (form, values) {
+              console.log(values);
+              values.parms = amfutil.formatArrayField(values.parms);
+              delete values.field;
+              delete values.value;
+              console.log(values);
+              return values;
             },
-          ],
-          process: function (form, values) {
-            values.headers = JSON.parse(values.headers);
+          },
+          strrepl: {
+            field: "strrepl",
+            label: "String Replace",
+            fields: [
+              {
+                xtype: "textfield",
+                name: "from",
+                fieldLabel: "From",
+                allowBlank: false,
+                tooltip: "Text to search for and replace in document",
+              },
+              {
+                xtype: "textfield",
+                flex: 1,
+                name: "to",
+                fieldLabel: "To",
+                allowBlank: false,
+                tooltip: "Text to insert in document",
+              },
 
+              amfutil.outputTopic(),
+            ],
+          },
+          mailbox: {
+            field: "mailbox",
+            label: "Mailbox",
+            fields: [
+              amfutil.dynamicCreate(
+                amfutil.combo(
+                  "Recipient",
+                  "recipient",
+                  amfutil.createCollectionStore(
+                    "users",
+                    {},
+                    { autoLoad: true }
+                  ),
+                  "username",
+                  "username",
+                  {
+                    tooltip: "The mailbox to deliver the message to",
+                  }
+                ),
+                "users"
+              ),
+              amfutil.formatFileName(),
+            ],
+          },
+          unzip: {
+            field: "unzip",
+            label: "Unzip",
+            fields: [
+              {
+                xtype: "numberfield",
+                fieldLabel: "Max Files",
+                name: "maxfiles",
+                allowBlank: false,
+                tooltip: "The max number of files to unzip from a zip file.",
+                // Arrange radio buttons into two columns, distributed vertically
+              },
+              amfutil.outputTopic(),
+            ],
+          },
+          zip: {
+            field: "zip",
+            label: "Zip",
+            fields: [
+              amfutil.formatFileName({
+                value: ".zip",
+                validator: function (val) {
+                  return val.endsWith(".zip") || "Filename must end in .zip";
+                },
+              }),
+              amfutil.outputTopic(),
+            ],
+          },
+          router: {
+            field: "router",
+            label: "Router",
+            fields: [
+              amfutil.infoBlock(
+                "The Router Action consists of a series of rules. Each rule consists of an output topic and any number of match patterns. A match pattern consists of a metadata field and either a regex or glob pattern to match. A message that matches on all the match patterns will subsequently be routed to the specified topic."
+              ),
+              {
+                xtype: "checkbox",
+                uncheckedValue: false,
+                inputValue: true,
+                fieldLabel: "Parse EDI",
+                name: "parse_edi",
+                allowBlank: false,
+                tooltip:
+                  "Parse additional metadata from EDI documents passing through this router.",
+              },
+              {
+                xtype: "rulelist",
+                name: "rules",
+              },
+            ],
+            process: function (form, values) {
+              values.rules = JSON.parse(values.rules);
+              return values;
+            },
+          },
+          // change_delimiter: {
+          //   field: "change_delimiter",
+          //   label: "Change Delimeter",
+          //   fields: [
+          //     {
+          //       fieldLabel: "Destination OS",
+          //       xtype: "combobox",
+          //       name: "os",
+          //       valueField: "field",
+          //       displayField: "label",
+          //       store: [
+          //         {
+          //           field: "LF",
+          //           label: "Linux",
+          //         },
+          //         {
+          //           field: "CRLF",
+          //           label: "Windows",
+          //         },
+          //       ],
+          //       allowBlank: false,
+          //     },
+          //   ],
+          // },
+          batch: {
+            field: "batch",
+            label: "Batch",
+            fields: [
+              amfutil.combo(
+                "Input Type",
+                "inputtype",
+                [
+                  { f: "topic", l: "Data Topic" },
+                  { f: "mailbox", l: "Mailbox" },
+                ],
+                "f",
+                "l",
+                {
+                  listeners: amfutil.renderListeners(function render(
+                    scope,
+                    val
+                  ) {
+                    var conts = ["topic", "mailbox"];
+                    conts.forEach((con) => {
+                      var c = amfutil.getElementByID(con);
+                      c.setDisabled(con != val);
+                      c.setHidden(con != val);
+                    });
+                  }),
+                  tooltip:
+                    "From what source to fetch the files to batch. Can be either a data topic or a mailbox.",
+                }
+              ),
+              {
+                xtype: "fieldset",
+                title: "Topic",
+
+                itemId: "topic",
+                layout: {
+                  type: "vbox",
+                  align: "stretch",
+                },
+                disabled: true,
+                hidden: true,
+                items: [
+                  amfutil.dynamicCreate(
+                    amfutil.combo(
+                      "Input Topic",
+                      "input",
+                      amfutil.createCollectionStore("topics", { type: "data" }),
+                      "topic",
+                      "topic",
+                      {
+                        tooltip: "The data topic from which to batch files.",
+                      }
+                    ),
+                    "topics"
+                  ),
+                  amfutil.combo(
+                    "Deliver Policy",
+                    "policy",
+                    [
+                      { field: "all", label: "All" },
+                      { field: "new", label: "New" },
+                      { field: "last", label: "Last" },
+                      { field: "by_start_time", label: "Start Time" },
+                    ],
+                    "field",
+                    "label",
+                    {
+                      listeners: amfutil.renderListeners(function (scope, val) {
+                        var conts = ["by_start_time"];
+
+                        conts.forEach((cont) => {
+                          console.log(cont);
+                          var c = scope.up("fieldset").down("#" + cont);
+                          console.log(c);
+                          c.setHidden(val != cont);
+                          c.setDisabled(val != cont);
+                        });
+                      }),
+                    },
+                    amfutil.infoBlock(
+                      'When batching via a topic, messages are consumed according to this policy. "All" specifies that all files be consumed starting from the earliest. "New" specifies that all messages after the creation or update of this action be consumed. "Last" specifies that all messages be consumed starting with the most recent. "Start Time" specifies that all messages be consumed starting from the specified start time.'
+                    )
+                  ),
+                  {
+                    xtype: "fieldcontainer",
+                    itemId: "by_start_time",
+
+                    items: [
+                      {
+                        xtype: "datetime",
+                        name: "start_time",
+                        fieldLabel: "Start Time",
+                        allowBlank: false,
+                        tooltip:
+                          'The start time for the "Start Time" deliver policy',
+                      },
+                    ],
+                  },
+                ],
+              },
+              {
+                xtype: "fieldset",
+                title: "Mailbox",
+                itemId: "mailbox",
+                layout: {
+                  type: "vbox",
+                  align: "stretch",
+                },
+                disabled: true,
+                hidden: true,
+                items: [
+                  amfutil.dynamicCreate(
+                    amfutil.combo(
+                      "Mailbox",
+                      "mailbox",
+                      amfutil.createCollectionStore("users"),
+                      "username",
+                      "username",
+                      {
+                        tooltip: "The mailbox from which to batch files.",
+                      }
+                    ),
+                    "topics"
+                  ),
+                  {
+                    xtype: "numberfield",
+                    name: "from_time",
+                    fieldLabel: "Send From (Seconds)",
+                    tooltip:
+                      "The period from which to batch messages specified in seconds prior to action execution. (i.e. to batch all mailbox messages from the previous day, one should do atleast 86400 seconds (24 hours)",
+                  },
+                ],
+              },
+
+              amfutil.outputTopic(),
+              amfutil.formatFileName(),
+              {
+                xtype: "textfield",
+                name: "delimiter",
+                fieldLabel: "Delimiter",
+                allowBlank: false,
+                tooltip: "The delimiter to use when batching messages.",
+              },
+            ],
+          },
+          pgpencrypt: {
+            field: "pgpencrypt",
+            label: "PGP Encrypt",
+            fields: [
+              amfutil.loadKey("Encryption Key", "key", {
+                tooltip: "The recipient public encryption key.",
+              }),
+              {
+                xtype: "checkbox",
+                fieldLabel: "Compress",
+                name: "compress",
+                uncheckedValue: false,
+                inputValue: true,
+                allowBlank: false,
+                tooltip:
+                  "A flag indicating whether or not to compress the file.",
+              },
+              {
+                xtype: "checkbox",
+                fieldLabel: "Armor",
+                name: "armor",
+                uncheckedValue: false,
+                inputValue: true,
+                allowBlank: false,
+                tooltip:
+                  "A flag indicating whether or not to ASCII Armor the file.",
+              },
+              amfutil.loadKey("Signing Key", "signing_key", {
+                tooltip: "The signing key.",
+              }),
+              {
+                xtype: "textfield",
+                name: "passphrase",
+                inputType: "password",
+                allowBlank: false,
+                fieldLabel: "Signing Key Passphrase",
+                tooltip: "The passphrase for the signing key.",
+              },
+              amfutil.formatFileName(),
+
+              amfutil.outputTopic(),
+            ],
+          },
+          pgpdecrypt: {
+            field: "pgpdecrypt",
+            label: "PGP Decrypt",
+            fields: [
+              amfutil.loadKey("Decrypt Key", "key", {
+                tooltip: "The private decryption key.",
+              }),
+              {
+                xtype: "textfield",
+                inputType: "password",
+                allowBlank: false,
+                name: "passphrase",
+                fieldLabel: "Decryption Key Passphrase",
+                tooltip: "Passphrase for Decryption Key",
+              },
+              {
+                xtype: "checkbox",
+                fieldLabel: "Verify Signature",
+                name: "verify",
+                uncheckedValue: false,
+                inputValue: true,
+                allowBlank: false,
+                tooltip: "Whether or not to verify the file signature.",
+              },
+              amfutil.loadKey("Partner Signing Key", "signing_key", {
+                tooltip: "The key to use when verifying the signature.",
+              }),
+              amfutil.formatFileName(),
+              amfutil.outputTopic(),
+            ],
+          },
+          http: {
+            field: "http",
+            label: "Webservice Call",
+            fields: [
+              amfutil.infoBlock(
+                "For the url, you can either specify the url directly, or provided a tokenized string that will be used to generate the url and query params. (i.e. https://api.site.com/{refno}?user={user})"
+              ),
+              {
+                xtype: "textfield",
+                name: "url",
+                fieldLabel: "URL",
+                allowBlank: false,
+                tooltip: "The URL for the request.",
+              },
+              amfutil.localCombo(
+                "Method",
+                "method",
+                [
+                  {
+                    field: "get",
+                    label: "GET",
+                  },
+                  {
+                    field: "post",
+                    label: "POST",
+                  },
+                  {
+                    field: "put",
+                    label: "PUT",
+                  },
+                  {
+                    field: "delete",
+                    label: "DELETE",
+                  },
+                ],
+                "field",
+                "label",
+                {
+                  listeners: amfutil.renderListeners(function (scope, val) {
+                    var out = scope.up("form").down("#output");
+                    var hide = val == "delete" || val == undefined;
+                    out.setHidden(hide);
+                    out.setDisabled(hide);
+                  }),
+                  tooltip: "The HTTP Method for the request.",
+                }
+              ),
+              amfutil.renderContainer("output", [
+                amfutil.check("Send Output", "send_output", {
+                  listeners: amfutil.renderListeners(function (scope, val) {
+                    var out = scope.up("form").down("#output_parms");
+                    out.setHidden(!val);
+                    out.setDisabled(!val);
+                  }),
+                }),
+              ]),
+              amfutil.renderContainer("output_parms", [
+                amfutil.outputTopic(),
+                amfutil.check("Store Headers as Metadata", "store_headers"),
+                amfutil.formatFileName(),
+              ]),
+              {
+                // Fieldset in Column 1 - collapsible via toggle button
+                xtype: "arrayfield",
+                title: "Headers",
+                name: "headers",
+                fieldTitle: "header",
+                tooltip: `The HTTP Headers to set for the request`,
+
+                arrayfields: [
+                  {
+                    xtype: "textfield",
+                    name: "field",
+                    fieldLabel: "Header",
+                  },
+                  {
+                    xtype: "textfield",
+                    name: "value",
+                    fieldLabel: "Field",
+                  },
+                ],
+              },
+
+              {
+                xtype: "checkbox",
+                uncheckedValue: false,
+                inputValue: true,
+                name: "oauth",
+                fieldLabel: "OAuth",
+                listeners: amfutil.renderListeners(function (scope, val) {
+                  var field = scope.up("form").down("#oauth");
+                  console.log(field);
+                  field.setHidden(!val);
+                  field.setDisabled(!val);
+                }),
+                tooltip: "Whether to fetch OAuth Credentials",
+              },
+              {
+                xtype: "fieldcontainer",
+                itemId: "oauth",
+                layout: {
+                  type: "vbox",
+                  align: "stretch",
+                },
+                items: [
+                  {
+                    xtype: "textfield",
+                    name: "oauthurl",
+                    itemId: "oathurl",
+                    fieldLabel: "OAuth URL",
+
+                    tooltip: "URL to request OAuth Credentials",
+                  },
+                  {
+                    xtype: "textfield",
+                    name: "oauthuser",
+                    itemId: "oauthuser",
+
+                    fieldLabel: "OAuth User",
+
+                    tooltip: "OAuth Username",
+                  },
+                  {
+                    xtype: "textfield",
+                    name: "oauthpassword",
+                    itemId: "oauthpassword",
+                    tooltip: "OAuth Password",
+
+                    fieldLabel: "OAuth Password",
+                  },
+                ],
+              },
+            ],
+            process: function (form, values) {
+              values.headers = JSON.parse(values.headers);
+
+              return values;
+            },
+          },
+          sftpput: {
+            field: "sftpput",
+            label: "SFTP PUT",
+            fields: [
+              {
+                xtype: "textfield",
+                name: "host",
+                fieldLabel: "Host",
+                allowBlank: false,
+                tooltip: "The SFTP Host",
+                vtype: "ipandhostname",
+              },
+              {
+                xtype: "numberfield",
+                name: "port",
+                fieldLabel: "Port",
+                tooltip: "The SFTP Port",
+                minValue: 1,
+                maxValue: 65535,
+              },
+              {
+                xtype: "textfield",
+                name: "folder",
+                fieldLabel: "Folder",
+                tooltip: "The Folder path to put the file",
+              },
+              amfutil.formatFileName(),
+              {
+                xtype: "textfield",
+                name: "user",
+                allowBlank: false,
+                fieldLabel: "SFTP Username",
+                tooltip: "SFTP Username",
+              },
+              {
+                xtype: "textfield",
+                name: "password",
+                inputType: "password",
+                allowBlank: false,
+                fieldLabel: "SFTP Password",
+                tooltip: "SFTP Password",
+              },
+              // {
+              //   xtype: "combobox",
+              //   name: "account",
+              //   fieldLabel: "Account",
+              //   displayField: "username",
+              //   valueField: "username",
+              //   store: amfutil.createCollectionStore(
+              //     "accounts",
+              //     {},
+              //     { autoLoad: true }
+              //   ),
+              // },
+            ],
+          },
+          // sftpget: {
+          //   field: "sftpget",
+          //   label: "SFTP GET",
+          //   fields: [
+          //     {
+          //       xtype: "textfield",
+          //       name: "host",
+          //       fieldLabel: "Host",
+          //     },
+          //     {
+          //       xtype: "textfield",
+          //       name: "port",
+          //       fieldLabel: "Port",
+          //     },
+          //     {
+          //       xtype: "textfield",
+          //       name: "folder",
+          //       fieldLabel: "Folder",
+          //     },
+          //     {
+          //       xtype: "combobox",
+          //       name: "account",
+          //       fieldLabel: "Account",
+          //       displayField: "username",
+          //       valueField: "username",
+          //       store: amfutil.getCollectionData("accounts"),
+          //     },
+          //     {
+          //       xtype: "radiogroup",
+          //       fieldLabel: "Acknowledgement Mode",
+          //       itemId: "ackmode",
+          //       allowBlank: false,
+          //       columns: 3,
+          //       width: 400,
+          //       items: [
+          //         {
+          //           boxLabel: "Archive",
+          //           name: "ackmode",
+          //           inputValue: "archive",
+          //         },
+          //         {
+          //           boxLabel: "Delete",
+          //           name: "ackmode",
+          //           inputValue: "delete",
+          //           // checked: true,
+          //         },
+          //       ],
+          //       listeners: {
+          //         change: function (scope) {
+          //           var form = scope.up("form");
+          //           var archfolder = form.down("#archive-folder");
+          //           var mode = scope.getValue().ackmode;
+          //           if (mode == "archive") {
+          //             archfolder.setHidden(false);
+          //             archfolder.setDisabled(false);
+          //           } else {
+          //             archfolder.setHidden(true);
+          //             archfolder.setDisabled(true);
+          //           }
+          //         },
+          //       },
+          //     },
+          //     {
+          //       xtype: "textfield",
+          //       hidden: true,
+          //       disabled: true,
+          //       itemId: "archive-folder",
+          //       fieldLabel: "Archive Folder",
+          //       name: "archive_folder",
+          //     },
+          //     {
+          //       xtype: "textfield",
+          //       name: "file_match_pattern",
+          //       fieldLabel: "File Match Pattern",
+          //     },
+          //   ],
+          // },
+          // smtp: {
+          //   field: "smtp",
+          //   label: "SMTP",
+          //   fields: [
+          //     {
+          //       xtype: "textfield",
+          //       name: "url",
+          //       fieldLabel: "URL",
+          //     },
+          //     {
+          //       xtype: "textfield",
+          //       name: "account",
+          //       fieldLabel: "Account",
+          //     },
+          //     {
+          //       xtype: "textfield",
+          //       name: "password",
+          //       fieldLabel: "Password",
+          //     },
+          //   ],
+          // },
+          kafkaput: {
+            field: "kafkaput",
+            label: "Kafka PUT",
+            fields: [
+              amfutil.dynamicCreate(
+                amfutil.combo(
+                  "Kafka Provider",
+                  "provider",
+                  amfutil.createCollectionStore("providers", {
+                    type: "kafka",
+                  }),
+                  "_id",
+                  "name",
+                  {
+                    tooltip:
+                      "The configured provider with broker and authenticiation configuration.",
+                  }
+                ),
+                "providers"
+              ),
+              {
+                xtype: "textfield",
+                fieldLabel: "Topic",
+                name: "topic",
+                allowBlank: false,
+                tooltip:
+                  "The Kafka topic to which the message should be delivered",
+              },
+
+              // {
+              //   xtype: "numberfield",
+              //   fieldLabel: "Partition",
+              //   name: "partition",
+              // },
+            ],
+          },
+          s3: {
+            field: "s3",
+            label: "S3",
+            fields: [
+              amfutil.dynamicCreate(
+                amfutil.combo(
+                  "S3 Provider",
+                  "provider",
+                  amfutil.createCollectionStore("providers", {
+                    type: "s3",
+                  }),
+                  "_id",
+                  "name",
+                  {
+                    tooltip: "The configured S3 provider to use.",
+                  }
+                ),
+                "providers"
+              ),
+              amfutil.localCombo(
+                "Operation",
+                "operation",
+                [
+                  {
+                    field: "put",
+                    label: "PUT",
+                  },
+                  {
+                    field: "get",
+                    label: "GET",
+                  },
+                  {
+                    field: "delete",
+                    label: "DELETE",
+                  },
+                ],
+                "field",
+                "label",
+                {
+                  listeners: amfutil.renderListeners(function (scope, val) {
+                    var conts = ["get", "put", "delete"];
+                    conts.forEach((cont) => {
+                      var component = scope.up("form").down("#" + cont);
+                      component.setHidden(cont != val);
+                      component.setDisabled(cont != val);
+                    });
+                  }),
+                  tooltip: "The S3 operation to perform.",
+                }
+              ),
+              {
+                xtype: "fieldset",
+                itemId: "get",
+                hidden: true,
+                disabled: true,
+                title: "GET",
+                layout: {
+                  type: "vbox",
+                  align: "stretch",
+                },
+                maxWidth: 600,
+                items: [
+                  {
+                    xtype: "textfield",
+                    name: "bucket",
+                    fieldLabel: "Bucket",
+                    allowBlank: false,
+                    tooltip: "The S3 Bucket from which to get.",
+                  },
+                  {
+                    xtype: "textfield",
+                    name: "prefix",
+                    fieldLabel: "Prefix",
+                    allowBlank: false,
+                    tooltip: "The Bucket Prefix from which to get.",
+                  },
+
+                  {
+                    xtype: "textfield",
+                    itemId: "matchpattern",
+                    name: "pattern",
+                    fieldLabel: "File Match Pattern",
+                    allowBlank: false,
+                    tooltip:
+                      "A match pattern to match against when getting files.",
+                  },
+                  {
+                    xtype: "checkbox",
+                    name: "regex",
+                    fieldLabel: "Regex",
+                    tooltip: "Whether to evaluate pattern using regex",
+                  },
+                  {
+                    xtype: "radiogroup",
+                    fieldLabel: "Acknowledgment",
+                    itemId: "ackmode",
+                    allowBlank: false,
+                    name: "ackmode",
+                    columns: 3,
+                    width: 400,
+                    items: [
+                      {
+                        boxLabel: "None",
+                        inputValue: "none",
+                        name: "ackmode",
+                        // checked: true,
+                      },
+                      // {
+                      //   boxLabel: "Archive",
+                      //   name: "ackmode",
+                      //   inputValue: "archive",
+                      // },
+                      {
+                        boxLabel: "Delete",
+                        name: "ackmode",
+                        inputValue: "delete",
+                      },
+                    ],
+                    tooltip:
+                      "How to acknowledge a successful get of a file. Can either delete or do nothing.",
+                  },
+                  amfutil.formatFileName(),
+                  amfutil.outputTopic(),
+                ],
+              },
+              {
+                xtype: "fieldset",
+                itemId: "put",
+                maxWidth: 600,
+
+                title: "PUT",
+                layout: {
+                  type: "vbox",
+                  align: "stretch",
+                },
+                hidden: true,
+                disabled: true,
+                items: [
+                  {
+                    xtype: "textfield",
+                    name: "bucket",
+                    fieldLabel: "Bucket",
+                    allowBlank: false,
+                    tooltip: "The bucket to which to put the message.",
+                  },
+                  {
+                    xtype: "textfield",
+                    name: "prefix",
+                    fieldLabel: "Prefix",
+                    allowBlank: false,
+                    tooltip:
+                      "The prefix on the bucket to which to put the message.",
+                  },
+                ],
+              },
+              {
+                xtype: "fieldset",
+                itemId: "delete",
+                maxWidth: 600,
+
+                title: "DELETE",
+                layout: {
+                  type: "vbox",
+                  align: "stretch",
+                },
+                items: [
+                  {
+                    xtype: "textfield",
+                    name: "bucket",
+                    fieldLabel: "Bucket",
+                    allowBlank: false,
+                    tooltip: "The bucket to delete from.",
+                  },
+                  {
+                    xtype: "textfield",
+                    name: "prefix",
+                    fieldLabel: "Prefix",
+                    allowBlank: false,
+
+                    tooltip: "The bucket prefix to delete from.",
+                  },
+                  {
+                    xtype: "textfield",
+                    fieldLabel: "Path Match Pattern",
+                    name: "pattern",
+                    allowBlank: false,
+
+                    tooltip:
+                      "The file path pattern to match when deciding whether to delete.",
+                  },
+                ],
+                hidden: true,
+                disabled: true,
+              },
+            ],
+          },
+          sharepoint: {
+            field: "sharepoint",
+            label: "Sharepoint",
+            fields: [
+              amfutil.dynamicCreate(
+                amfutil.combo(
+                  "Sharepoint Provider",
+                  "provider",
+                  amfutil.createCollectionStore("providers", {
+                    type: "sharepoint",
+                  }),
+                  "_id",
+                  "name",
+                  {
+                    tooltip: "The configured Sharepoint Provider to use.",
+                  }
+                ),
+                "providers"
+              ),
+              amfutil.localCombo(
+                "Operation",
+                "operation",
+                [
+                  {
+                    field: "download",
+                    label: "Download",
+                  },
+                  {
+                    field: "upload",
+                    label: "Upload",
+                  },
+                ],
+                "field",
+                "label",
+                {
+                  listeners: amfutil.renderListeners(function (scope, val) {
+                    var conts = ["download", "upload"];
+                    conts.forEach((cont) => {
+                      var component = scope.up("form").down("#" + cont);
+                      component.setHidden(cont != val);
+                      component.setDisabled(cont != val);
+                    });
+                  }),
+                  tooltip:
+                    "Whether to perform a download or upload operation on sharepoint.",
+                }
+              ),
+              {
+                xtype: "textfield",
+                name: "host",
+                fieldLabel: "Host",
+                tooltip: "The root host for the sharepoint site",
+                allowBlank: false,
+                vtype: "ipandhostname",
+              },
+              {
+                xtype: "textfield",
+                name: "sitepath",
+                fieldLabel: "Site Path",
+                allowBlank: false,
+                tooltip:
+                  "Relative path to the desired site. For example, Test.768@sharepoint.com/sites/test.",
+              },
+              {
+                xtype: "fieldset",
+                itemId: "download",
+                hidden: true,
+                disabled: true,
+                title: "Download",
+                layout: {
+                  type: "vbox",
+                  align: "stretch",
+                },
+                maxWidth: 600,
+                items: [
+                  {
+                    xtype: "textfield",
+                    name: "path",
+                    tooltip: "Path to the folder to scan.",
+                    allowBlank: false,
+                    fieldLabel: "Folder Path",
+                  },
+                  {
+                    xtype: "checkbox",
+                    name: "regex",
+                    fieldLabel: "Regex",
+                    allowBlank: false,
+
+                    tooltip: "Whether to use regex when matching.",
+                  },
+                  {
+                    xtype: "textfield",
+                    itemId: "matchpattern",
+                    tooltip: "The file path pattern.",
+
+                    allowBlank: false,
+
+                    name: "pattern",
+                    fieldLabel: "File Match Pattern",
+                  },
+                  amfutil.check("Scan Subdirectories", "scan"),
+                  {
+                    xtype: "radiogroup",
+                    fieldLabel: "Acknowledgment Mode",
+                    itemId: "ackmode",
+                    allowBlank: false,
+                    name: "ackmode",
+                    columns: 3,
+                    width: 400,
+                    items: [
+                      {
+                        boxLabel: "None",
+                        inputValue: "none",
+                        name: "ackmode",
+                        // checked: true,
+                      },
+                      // {
+                      //   boxLabel: "Archive",
+                      //   name: "ackmode",
+                      //   inputValue: "archive",
+                      // },
+                      {
+                        boxLabel: "Delete",
+                        name: "ackmode",
+                        inputValue: "delete",
+                      },
+                    ],
+                    tooltip:
+                      "How to acknowledge a successful get of a file. Can either delete or do nothing.",
+                  },
+                  amfutil.outputTopic(),
+                ],
+              },
+              {
+                xtype: "fieldset",
+                itemId: "upload",
+                maxWidth: 600,
+
+                title: "PUT",
+                layout: {
+                  type: "vbox",
+                  align: "stretch",
+                },
+                hidden: true,
+                disabled: true,
+                items: [
+                  {
+                    xtype: "textfield",
+                    name: "path",
+                    fieldLabel: "Upload Path",
+                    allowBlank: false,
+                    tooltip: "The path to which to upload the message",
+                  },
+                ],
+              },
+            ],
+          },
+        },
+        object: "Action",
+        actionIcons: [
+          "addnewbtn",
+          "searchpanelbtn",
+          "clearfilter",
+          "refreshbtn",
+          "export",
+        ],
+        columns: [
+          {
+            text: "Name",
+            dataIndex: "name",
+            flex: 1,
+            type: "text",
+          },
+          {
+            text: "Type",
+            dataIndex: "type",
+            flex: 1,
+            type: "text",
+          },
+        ],
+        fields: [
+          amfutil.duplicateVal(
+            {
+              xtype: "textfield",
+              name: "name",
+              fieldLabel: "Name",
+              tooltip: "Unique Action Name",
+            },
+            function (cmp, value, oldValue, eOpts) {
+              return {
+                actions: amfutil.duplicateIdCheck({ name: value }, cmp),
+              };
+            },
+            "Action Already Exists",
+            amfutil.nameValidator
+          ),
+          {
+            xtype: "textfield",
+            name: "desc",
+            fieldLabel: "Description",
+            tooltip: "Action Description",
+
+            allowBlank: false,
+          },
+          // amfutil.checkbox("Active", "active", true, {
+          //   tooltip: "Whether this action is active.",
+          // }),
+        ],
+        add: {
+          process: function (form, values) {
+            var actions = ampsgrids.grids.actions();
+            if (actions.types[values.type].process) {
+              values = actions.types[values.type].process(form, values);
+            }
+
+            values = amfutil.convertNumbers(form.getForm(), values);
+
+            values.active = true;
             return values;
           },
         },
-        sftpput: {
-          field: "sftpput",
-          label: "SFTP PUT",
-          fields: [
-            {
-              xtype: "textfield",
-              name: "host",
-              fieldLabel: "Host",
-              allowBlank: false,
-              tooltip: "The SFTP Host",
-              vtype: "ipandhostname",
-            },
-            {
-              xtype: "numberfield",
-              name: "port",
-              fieldLabel: "Port",
-              tooltip: "The SFTP Port",
-              minValue: 1,
-              maxValue: 65535,
-            },
-            {
-              xtype: "textfield",
-              name: "folder",
-              fieldLabel: "Folder",
-              tooltip: "The Folder path to put the file",
-            },
-            amfutil.formatFileName(),
-            {
-              xtype: "textfield",
-              name: "user",
-              allowBlank: false,
-              fieldLabel: "SFTP Username",
-              tooltip: "SFTP Username",
-            },
-            {
-              xtype: "textfield",
-              name: "password",
-              inputType: "password",
-              allowBlank: false,
-              fieldLabel: "SFTP Password",
-              tooltip: "SFTP Password",
-            },
-            // {
-            //   xtype: "combobox",
-            //   name: "account",
-            //   fieldLabel: "Account",
-            //   displayField: "username",
-            //   valueField: "username",
-            //   store: amfutil.createCollectionStore(
-            //     "accounts",
-            //     {},
-            //     { autoLoad: true }
-            //   ),
-            // },
-          ],
-        },
-        // sftpget: {
-        //   field: "sftpget",
-        //   label: "SFTP GET",
-        //   fields: [
-        //     {
-        //       xtype: "textfield",
-        //       name: "host",
-        //       fieldLabel: "Host",
-        //     },
-        //     {
-        //       xtype: "textfield",
-        //       name: "port",
-        //       fieldLabel: "Port",
-        //     },
-        //     {
-        //       xtype: "textfield",
-        //       name: "folder",
-        //       fieldLabel: "Folder",
-        //     },
-        //     {
-        //       xtype: "combobox",
-        //       name: "account",
-        //       fieldLabel: "Account",
-        //       displayField: "username",
-        //       valueField: "username",
-        //       store: amfutil.getCollectionData("accounts"),
-        //     },
-        //     {
-        //       xtype: "radiogroup",
-        //       fieldLabel: "Acknowledgement Mode",
-        //       itemId: "ackmode",
-        //       allowBlank: false,
-        //       columns: 3,
-        //       width: 400,
-        //       items: [
-        //         {
-        //           boxLabel: "Archive",
-        //           name: "ackmode",
-        //           inputValue: "archive",
-        //         },
-        //         {
-        //           boxLabel: "Delete",
-        //           name: "ackmode",
-        //           inputValue: "delete",
-        //           // checked: true,
-        //         },
-        //       ],
-        //       listeners: {
-        //         change: function (scope) {
-        //           var form = scope.up("form");
-        //           var archfolder = form.down("#archive-folder");
-        //           var mode = scope.getValue().ackmode;
-        //           if (mode == "archive") {
-        //             archfolder.setHidden(false);
-        //             archfolder.setDisabled(false);
-        //           } else {
-        //             archfolder.setHidden(true);
-        //             archfolder.setDisabled(true);
-        //           }
-        //         },
-        //       },
-        //     },
-        //     {
-        //       xtype: "textfield",
-        //       hidden: true,
-        //       disabled: true,
-        //       itemId: "archive-folder",
-        //       fieldLabel: "Archive Folder",
-        //       name: "archive_folder",
-        //     },
-        //     {
-        //       xtype: "textfield",
-        //       name: "file_match_pattern",
-        //       fieldLabel: "File Match Pattern",
-        //     },
-        //   ],
-        // },
-        // smtp: {
-        //   field: "smtp",
-        //   label: "SMTP",
-        //   fields: [
-        //     {
-        //       xtype: "textfield",
-        //       name: "url",
-        //       fieldLabel: "URL",
-        //     },
-        //     {
-        //       xtype: "textfield",
-        //       name: "account",
-        //       fieldLabel: "Account",
-        //     },
-        //     {
-        //       xtype: "textfield",
-        //       name: "password",
-        //       fieldLabel: "Password",
-        //     },
-        //   ],
-        // },
-        kafkaput: {
-          field: "kafkaput",
-          label: "Kafka PUT",
-          fields: [
-            amfutil.dynamicCreate(
-              amfutil.combo(
-                "Kafka Provider",
-                "provider",
-                amfutil.createCollectionStore("providers", {
-                  type: "kafka",
-                }),
-                "_id",
-                "name",
-                {
-                  tooltip:
-                    "The configured provider with broker and authenticiation configuration.",
-                }
-              ),
-              "providers"
-            ),
-            {
-              xtype: "textfield",
-              fieldLabel: "Topic",
-              name: "topic",
-              allowBlank: false,
-              tooltip:
-                "The Kafka topic to which the message should be delivered",
-            },
-
-            // {
-            //   xtype: "numberfield",
-            //   fieldLabel: "Partition",
-            //   name: "partition",
-            // },
-          ],
-        },
-        s3: {
-          field: "s3",
-          label: "S3",
-          fields: [
-            amfutil.dynamicCreate(
-              amfutil.combo(
-                "S3 Provider",
-                "provider",
-                amfutil.createCollectionStore("providers", {
-                  type: "s3",
-                }),
-                "_id",
-                "name",
-                {
-                  tooltip: "The configured S3 provider to use.",
-                }
-              ),
-              "providers"
-            ),
-            amfutil.localCombo(
-              "Operation",
-              "operation",
-              [
-                {
-                  field: "put",
-                  label: "PUT",
-                },
-                {
-                  field: "get",
-                  label: "GET",
-                },
-                {
-                  field: "delete",
-                  label: "DELETE",
-                },
-              ],
-              "field",
-              "label",
-              {
-                listeners: amfutil.renderListeners(function (scope, val) {
-                  var conts = ["get", "put", "delete"];
-                  conts.forEach((cont) => {
-                    var component = scope.up("form").down("#" + cont);
-                    component.setHidden(cont != val);
-                    component.setDisabled(cont != val);
-                  });
-                }),
-                tooltip: "The S3 operation to perform.",
-              }
-            ),
-            {
-              xtype: "fieldset",
-              itemId: "get",
-              hidden: true,
-              disabled: true,
-              title: "GET",
-              layout: {
-                type: "vbox",
-                align: "stretch",
-              },
-              maxWidth: 600,
-              items: [
-                {
-                  xtype: "textfield",
-                  name: "bucket",
-                  fieldLabel: "Bucket",
-                  allowBlank: false,
-                  tooltip: "The S3 Bucket from which to get.",
-                },
-                {
-                  xtype: "textfield",
-                  name: "prefix",
-                  fieldLabel: "Prefix",
-                  allowBlank: false,
-                  tooltip: "The Bucket Prefix from which to get.",
-                },
-
-                {
-                  xtype: "textfield",
-                  itemId: "matchpattern",
-                  name: "pattern",
-                  fieldLabel: "File Match Pattern",
-                  allowBlank: false,
-                  tooltip:
-                    "A match pattern to match against when getting files.",
-                },
-                {
-                  xtype: "checkbox",
-                  name: "regex",
-                  fieldLabel: "Regex",
-                  tooltip: "Whether to evaluate pattern using regex",
-                },
-                {
-                  xtype: "radiogroup",
-                  fieldLabel: "Acknowledgment",
-                  itemId: "ackmode",
-                  allowBlank: false,
-                  name: "ackmode",
-                  columns: 3,
-                  width: 400,
-                  items: [
-                    {
-                      boxLabel: "None",
-                      inputValue: "none",
-                      name: "ackmode",
-                      // checked: true,
-                    },
-                    // {
-                    //   boxLabel: "Archive",
-                    //   name: "ackmode",
-                    //   inputValue: "archive",
-                    // },
-                    {
-                      boxLabel: "Delete",
-                      name: "ackmode",
-                      inputValue: "delete",
-                    },
-                  ],
-                  tooltip:
-                    "How to acknowledge a successful get of a file. Can either delete or do nothing.",
-                },
-                amfutil.formatFileName(),
-                amfutil.outputTopic(),
-              ],
-            },
-            {
-              xtype: "fieldset",
-              itemId: "put",
-              maxWidth: 600,
-
-              title: "PUT",
-              layout: {
-                type: "vbox",
-                align: "stretch",
-              },
-              hidden: true,
-              disabled: true,
-              items: [
-                {
-                  xtype: "textfield",
-                  name: "bucket",
-                  fieldLabel: "Bucket",
-                  allowBlank: false,
-                  tooltip: "The bucket to which to put the message.",
-                },
-                {
-                  xtype: "textfield",
-                  name: "prefix",
-                  fieldLabel: "Prefix",
-                  allowBlank: false,
-                  tooltip:
-                    "The prefix on the bucket to which to put the message.",
-                },
-              ],
-            },
-            {
-              xtype: "fieldset",
-              itemId: "delete",
-              maxWidth: 600,
-
-              title: "DELETE",
-              layout: {
-                type: "vbox",
-                align: "stretch",
-              },
-              items: [
-                {
-                  xtype: "textfield",
-                  name: "bucket",
-                  fieldLabel: "Bucket",
-                  allowBlank: false,
-                  tooltip: "The bucket to delete from.",
-                },
-                {
-                  xtype: "textfield",
-                  name: "prefix",
-                  fieldLabel: "Prefix",
-                  allowBlank: false,
-
-                  tooltip: "The bucket prefix to delete from.",
-                },
-                {
-                  xtype: "textfield",
-                  fieldLabel: "Path Match Pattern",
-                  name: "pattern",
-                  allowBlank: false,
-
-                  tooltip:
-                    "The file path pattern to match when deciding whether to delete.",
-                },
-              ],
-              hidden: true,
-              disabled: true,
-            },
-          ],
-        },
-        sharepoint: {
-          field: "sharepoint",
-          label: "Sharepoint",
-          fields: [
-            amfutil.dynamicCreate(
-              amfutil.combo(
-                "Sharepoint Provider",
-                "provider",
-                amfutil.createCollectionStore("providers", {
-                  type: "sharepoint",
-                }),
-                "_id",
-                "name",
-                {
-                  tooltip: "The configured Sharepoint Provider to use.",
-                }
-              ),
-              "providers"
-            ),
-            amfutil.localCombo(
-              "Operation",
-              "operation",
-              [
-                {
-                  field: "download",
-                  label: "Download",
-                },
-                {
-                  field: "upload",
-                  label: "Upload",
-                },
-              ],
-              "field",
-              "label",
-              {
-                listeners: amfutil.renderListeners(function (scope, val) {
-                  var conts = ["download", "upload"];
-                  conts.forEach((cont) => {
-                    var component = scope.up("form").down("#" + cont);
-                    component.setHidden(cont != val);
-                    component.setDisabled(cont != val);
-                  });
-                }),
-                tooltip:
-                  "Whether to perform a download or upload operation on sharepoint.",
-              }
-            ),
-            {
-              xtype: "textfield",
-              name: "host",
-              fieldLabel: "Host",
-              tooltip: "The root host for the sharepoint site",
-              allowBlank: false,
-              vtype: "ipandhostname",
-            },
-            {
-              xtype: "textfield",
-              name: "sitepath",
-              fieldLabel: "Site Path",
-              allowBlank: false,
-              tooltip:
-                "Relative path to the desired site. For example, Test.768@sharepoint.com/sites/test.",
-            },
-            {
-              xtype: "fieldset",
-              itemId: "download",
-              hidden: true,
-              disabled: true,
-              title: "Download",
-              layout: {
-                type: "vbox",
-                align: "stretch",
-              },
-              maxWidth: 600,
-              items: [
-                {
-                  xtype: "textfield",
-                  name: "path",
-                  tooltip: "Path to the folder to scan.",
-                  allowBlank: false,
-                  fieldLabel: "Folder Path",
-                },
-                {
-                  xtype: "checkbox",
-                  name: "regex",
-                  fieldLabel: "Regex",
-                  allowBlank: false,
-
-                  tooltip: "Whether to use regex when matching.",
-                },
-                {
-                  xtype: "textfield",
-                  itemId: "matchpattern",
-                  tooltip: "The file path pattern.",
-
-                  allowBlank: false,
-
-                  name: "pattern",
-                  fieldLabel: "File Match Pattern",
-                },
-                amfutil.check("Scan Subdirectories", "scan"),
-                {
-                  xtype: "radiogroup",
-                  fieldLabel: "Acknowledgment Mode",
-                  itemId: "ackmode",
-                  allowBlank: false,
-                  name: "ackmode",
-                  columns: 3,
-                  width: 400,
-                  items: [
-                    {
-                      boxLabel: "None",
-                      inputValue: "none",
-                      name: "ackmode",
-                      // checked: true,
-                    },
-                    // {
-                    //   boxLabel: "Archive",
-                    //   name: "ackmode",
-                    //   inputValue: "archive",
-                    // },
-                    {
-                      boxLabel: "Delete",
-                      name: "ackmode",
-                      inputValue: "delete",
-                    },
-                  ],
-                  tooltip:
-                    "How to acknowledge a successful get of a file. Can either delete or do nothing.",
-                },
-                amfutil.outputTopic(),
-              ],
-            },
-            {
-              xtype: "fieldset",
-              itemId: "upload",
-              maxWidth: 600,
-
-              title: "PUT",
-              layout: {
-                type: "vbox",
-                align: "stretch",
-              },
-              hidden: true,
-              disabled: true,
-              items: [
-                {
-                  xtype: "textfield",
-                  name: "path",
-                  fieldLabel: "Upload Path",
-                  allowBlank: false,
-                  tooltip: "The path to which to upload the message",
-                },
-              ],
-            },
-          ],
-        },
-      },
-      object: "Action",
-      actionIcons: [
-        "addnewbtn",
-        "searchpanelbtn",
-        "clearfilter",
-        "refreshbtn",
-        "export",
-      ],
-      columns: [
-        {
-          text: "Name",
-          dataIndex: "name",
-          flex: 1,
-          type: "text",
-        },
-        {
-          text: "Type",
-          dataIndex: "type",
-          flex: 1,
-          type: "text",
-        },
-      ],
-      fields: [
-        amfutil.duplicateVal(
-          {
-            xtype: "textfield",
-            name: "name",
-            fieldLabel: "Name",
-            tooltip: "Unique Action Name",
+        update: {
+          load: function (form, record) {
+            form.down("#type").setValue(record.type);
           },
-          function (cmp, value, oldValue, eOpts) {
-            return { actions: amfutil.duplicateIdCheck({ name: value }, cmp) };
-          },
-          "Action Already Exists",
-          amfutil.nameValidator
-        ),
-        {
-          xtype: "textfield",
-          name: "desc",
-          fieldLabel: "Description",
-          tooltip: "Action Description",
+          process: (form, values) => {
+            console.log(values);
+            var actions = ampsgrids.grids.actions();
+            if (actions.types[values.type].process) {
+              values = actions.types[values.type].process(form, values);
+            }
+            values = amfutil.convertNumbers(form.getForm(), values);
 
-          allowBlank: false,
-        },
-        // amfutil.checkbox("Active", "active", true, {
-        //   tooltip: "Whether this action is active.",
-        // }),
-        amfutil.localCombo("Action Type", "type", null, "field", "label", {
-          listeners: {
-            beforerender: function (scope) {
-              var types = ampsgrids.grids.actions().types;
-              if (scope.xtype == "combobox") {
-                scope.setStore(Object.entries(types).map((entry) => entry[1]));
-              }
-              var val = scope.getValue();
-              if (val) {
-                scope.up("form").down("#actiontype").setHtml(types[val].label);
-              }
-            },
-            change: function (scope, value) {
-              var form = scope.up("form");
-              var actionparms = form.down("#typeparms");
-              actionparms.removeAll();
-              var fields = amfutil.scanFields(
-                ampsgrids.grids.actions().types[value].fields
-              );
-              console.log(fields);
-              actionparms.insert(0, fields);
-              var act = scope.getSelection();
-              scope.up("form").down("#actiontype").setHtml(act.data.label);
-            },
+            return values;
           },
-          tooltip: "Action Type",
-        }),
-        {
-          xtype: "container",
-          layout: "center",
-          padding: 10,
-          style: {
-            "font-weight": "600",
-            "font-size": "1.5rem",
-          },
-          items: [
-            {
-              itemId: "actiontype",
-              xtype: "component",
-              autoEl: "div",
-              html: "Select Action Type",
-            },
-          ],
+          readOnly: ["name"],
         },
-        {
-          xtype: "fieldcontainer",
-          itemId: "typeparms",
-          // style: {
-          //   background: "green",
-          // },
-          scrollable: true,
-          layout: {
-            type: "vbox",
-            align: "stretch",
-          },
-          padding: 15,
-          // width: 600,
-        },
-      ],
-      add: {
-        process: function (form, values) {
-          var actions = ampsgrids.grids.actions();
-          if (actions.types[values.type].process) {
-            values = actions.types[values.type].process(form, values);
-          }
-
-          values = amfutil.convertNumbers(form.getForm(), values);
-
-          values.active = true;
-          return values;
-        },
-      },
-      update: {
-        load: function (form, record) {
-          form.down("#type").setValue(record.type);
-        },
-        process: (form, values) => {
-          console.log(values);
-          var actions = ampsgrids.grids.actions();
-          if (actions.types[values.type].process) {
-            values = actions.types[values.type].process(form, values);
-          }
-          values = amfutil.convertNumbers(form.getForm(), values);
-
-          return values;
-        },
-        readOnly: ["name"],
-      },
-      options: ["active", "delete"],
-    }),
+        options: ["active", "delete"],
+      };
+      config.fields = config.fields.concat(amfutil.typeFields(config));
+      return config;
+    },
     topics: () => ({
       title: "Topics",
       object: "Topic",
@@ -6575,458 +6554,450 @@ Ext.define("Amps.util.Grids", {
         },
       ],
     }),
-    services: () => ({
-      title: "Services",
-      object: "Service",
-      fields: [
-        amfutil.duplicateVal(
+    services: () => {
+      var config = {
+        title: "Services",
+        window: { width: 600, height: 600 },
+        object: "Service",
+
+        update: {
+          process: function (form, values) {
+            console.log(form);
+            var services = ampsgrids.grids["services"]();
+            if (services.types[values.type].process) {
+              values = services.types[values.type].process(form);
+            }
+
+            return values;
+          },
+          readOnly: ["name"],
+        },
+        fields: [
+          amfutil.duplicateVal(
+            {
+              xtype: "textfield",
+              name: "name",
+              fieldLabel: "Name",
+              allowBlank: false,
+              submitValue: true,
+              tooltip: "A name for this service",
+            },
+            function (cmp, value) {
+              return {
+                services: amfutil.duplicateIdCheck({ name: value }, cmp),
+              };
+            },
+            "Service Already Exists",
+            amfutil.nameValidator
+          ),
           {
             xtype: "textfield",
-            name: "name",
-            fieldLabel: "Name",
             allowBlank: false,
-            submitValue: true,
-            tooltip: "A name for this service",
+            tooltip: "A description for this service",
+            name: "desc",
+            fieldLabel: "Description",
           },
-          function (cmp, value) {
-            return {
-              services: amfutil.duplicateIdCheck({ name: value }),
-            };
-          },
-          "Service Already Exists",
-          amfutil.nameValidator
-        ),
-        {
-          xtype: "textfield",
-          allowBlank: false,
-          tooltip: "A description for this service",
-          name: "desc",
-          fieldLabel: "Description",
-        },
-      ],
-      update: {
-        fields: [
-          {
-            xtype: "displayfield",
-            name: "type",
-            fieldLabel: "Type",
-            submitValue: true,
-            tooltip: "The service type",
-          },
-          {
-            xtype: "container",
-            layout: "fit",
-            items: [
+          amfutil.check("Active", "active", {
+            value: true,
+          }),
+        ],
+        types: {
+          kafka: {
+            field: "kafka",
+            label: "Kafka",
+            iconCls: "kafka-icon",
+            combo: function (service) {
+              return amfutil.localCombo(
+                "Topics",
+                "topicparms",
+                service.topics,
+                null,
+                null,
+                {
+                  itemId: "topicparms",
+                }
+              );
+            },
+            format: function (topic) {
+              var reg = /[.>* -]/;
+              return topic.replace(reg, "_");
+            },
+            fields: [
+              amfutil.dynamicCreate(
+                amfutil.combo(
+                  "Provider",
+                  "provider",
+                  amfutil.createCollectionStore("providers", { type: "kafka" }),
+                  "_id",
+                  "name",
+                  {
+                    tooltip: "The Kafka Provider to use for this service.",
+                  }
+                ),
+                "providers"
+              ),
               {
-                xtype: "fieldcontainer",
-                itemId: "typeparms",
-                layout: {
-                  type: "vbox",
-                  align: "stretch",
+                row: true,
+                xtype: "arrayfield",
+                name: "topics",
+                title: "Topics",
+                tooltip: "The Kafka Topics to consume.",
+                fieldTitle: "Topic",
+                arrayfields: [
+                  {
+                    xtype: "textfield",
+                    name: "topic",
+                  },
+                ],
+              },
+              amfutil.formatFileName(),
+              {
+                xtype: "checkbox",
+                inputValue: true,
+                checked: true,
+                hidden: true,
+                name: "communication",
+              },
+            ],
+            process: function (form) {
+              var values = form.getValues();
+              console.log(values);
+              values.topics = JSON.parse(values.topics).map(
+                (topic) => topic.topic
+              );
+              console.log(values);
+              return values;
+            },
+          },
+          httpd: {
+            field: "httpd",
+            label: "HTTP Server",
+            iconCls: "x-fa fa-feed",
+            fields: [
+              {
+                xtype: "numberfield",
+                name: "port",
+                fieldLabel: "Port",
+                tooltip: "The port to run the HTTP Api on",
+                allowBlank: false,
+                minValue: 1,
+                listeners: {
+                  change: async function (cmp, value, oldValue, eOpts) {
+                    await amfutil.portHandler(cmp, value);
+                  },
                 },
-                maxWidth: 700,
+              },
+              {
+                xtype: "numberfield",
+                name: "idle_timeout",
+                allowBlank: false,
+                tooltip:
+                  "The time in milliseconds the server will wait to receive data before closing the connection",
+                fieldLabel: "Idle Timeout (ms)",
+                minValue: 0,
+              },
+              {
+                xtype: "numberfield",
+                name: "request_timeout",
+                allowBlank: false,
+                tooltip:
+                  "The time in milliseconds the server will wait for additional requests before closing the connection",
+                fieldLabel: "Request Timeout (ms)",
+                minValue: 0,
+              },
+              {
+                xtype: "numberfield",
+                name: "max_keepalive",
+                allowBlank: false,
+                tooltip: "Maximum number of requests allowed per connection",
+                fieldLabel: "Max Keep Alive",
+                minValue: 0,
+              },
+              {
+                xtype: "checkbox",
+                allowBlank: false,
+                inputValue: true,
+                uncheckedValue: false,
+                row: true,
+                name: "tls",
+                fieldLabel: "TLS",
+                tooltip: "Use TLS for this HTTP API",
+                listeners: amfutil.renderListeners(function (scope, val) {
+                  var fields = ["tls"];
+                  var form = scope.up("form");
+                  console.log(val);
+                  fields.forEach((field) => {
+                    var f = form.down("#" + field);
+                    console.log(f);
+                    f.setHidden(!val);
+                    f.setDisabled(!val);
+                  });
+                }),
+              },
+              amfutil.renderContainer("tls", [
+                amfutil.loadKey("Server Cert", "cert", {
+                  tooltip: "The TLS Certificate in PEM Format",
+                }),
+                amfutil.loadKey("Server Key", "key", {
+                  tooltip: "The TLS Key in PEM Format",
+                }),
+              ]),
+
+              {
+                xtype: "checkbox",
+                inputValue: true,
+                checked: true,
+                hidden: true,
+                name: "communication",
+              },
+            ],
+            // load: function (form, record) {
+            //   if (record.tls) {
+            //     var fields = ["cert", "cert_file", "key", "key_file"];
+
+            //     form.down("#tls").setValue(true);
+            //     // form.down("#cert").setValue(record.server_cert);
+            //     // form.down("#key").setValue(record.key);
+            //     // fields.forEach(field => {
+            //     //   var f = form.down("#" + field);
+            //     // })
+            //   }
+            // },
+          },
+          sftpd: {
+            field: "sftpd",
+            label: "SFTP Server",
+            iconCls: "x-fa fa-files-o",
+            combo: function (combo, service) {
+              return amfutil.combo(
+                "Users",
+                "topicparms",
+                amfutil.createCollectionStore("users", {}, { autoLoad: true }),
+                "username",
+                "username",
+                {
+                  itemId: "topicparms",
+                }
+              );
+            },
+            fields: [
+              {
+                xtype: "numberfield",
+                name: "port",
+                fieldLabel: "Port",
+                tooltip: "The port to run the SFTP Server on",
+                minValue: 0,
+                maxValue: 65535,
+                allowBlank: false,
+                listeners: {
+                  change: async function (cmp, value, oldValue, eOpts) {
+                    await amfutil.portHandler(cmp, value);
+                  },
+                },
+              },
+
+              amfutil.loadKey("Server Key", "server_key", {
+                tooltip: "The EC Private Key to use for the SFTP Server.",
+              }),
+
+              {
+                xtype: "checkbox",
+                inputValue: true,
+                checked: true,
+                hidden: true,
+                name: "communication",
               },
             ],
           },
-        ],
-        process: function (form, values) {
-          console.log(form);
-          var services = ampsgrids.grids["services"]();
-          if (services.types[values.type].process) {
-            values = services.types[values.type].process(form);
-          }
-
-          return values;
-        },
-      },
-      types: {
-        kafka: {
-          type: "kafka",
-          name: "Kafka",
-          iconCls: "kafka-icon",
-          combo: function (service) {
-            return amfutil.localCombo(
-              "Topics",
-              "topicparms",
-              service.topics,
-              null,
-              null,
+          subscriber: {
+            field: "subscriber",
+            label: "Subscriber",
+            iconCls: "x-fa fa-arrow-down",
+            fields: [
               {
-                itemId: "topicparms",
-              }
-            );
-          },
-          format: function (topic) {
-            var reg = /[.>* -]/;
-            return topic.replace(reg, "_");
-          },
-          fields: [
-            amfutil.dynamicCreate(
-              amfutil.combo(
-                "Provider",
-                "provider",
-                amfutil.createCollectionStore("providers", { type: "kafka" }),
-                "_id",
-                "name",
-                {
-                  tooltip: "The Kafka Provider to use for this service.",
-                }
-              ),
-              "providers"
-            ),
-            {
-              row: true,
-              xtype: "arrayfield",
-              name: "topics",
-              title: "Topics",
-              tooltip: "The Kafka Topics to consume.",
-              fieldTitle: "Topic",
-              arrayfields: [
-                {
-                  xtype: "textfield",
-                  name: "topic",
-                },
-              ],
-            },
-            amfutil.formatFileName(),
-            {
-              xtype: "checkbox",
-              inputValue: true,
-              checked: true,
-              hidden: true,
-              name: "communication",
-            },
-          ],
-          process: function (form) {
-            var values = form.getValues();
-            console.log(values);
-            values.topics = JSON.parse(values.topics).map(
-              (topic) => topic.topic
-            );
-            console.log(values);
-            return values;
-          },
-        },
-        httpd: {
-          type: "httpd",
-          name: "HTTP Server",
-          iconCls: "x-fa fa-feed",
-          fields: [
-            {
-              xtype: "numberfield",
-              name: "port",
-              fieldLabel: "Port",
-              tooltip: "The port to run the HTTP Api on",
-              allowBlank: false,
-              minValue: 1,
-              listeners: {
-                change: async function (cmp, value, oldValue, eOpts) {
-                  await amfutil.portHandler(cmp, value);
-                },
+                xtype: "numberfield",
+                name: "subs_count",
+                fieldLabel: "Subscriber Count",
+                tooltip:
+                  "The Number of concurrent processes of this subscriber to run.",
+                allowBlank: false,
+                minValue: 1,
+                maxValue: 9,
+                value: 1,
               },
-            },
-            {
-              xtype: "numberfield",
-              name: "idle_timeout",
-              allowBlank: false,
-              tooltip:
-                "The time in milliseconds the server will wait to receive data before closing the connection",
-              fieldLabel: "Idle Timeout (ms)",
-              minValue: 0,
-            },
-            {
-              xtype: "numberfield",
-              name: "request_timeout",
-              allowBlank: false,
-              tooltip:
-                "The time in milliseconds the server will wait for additional requests before closing the connection",
-              fieldLabel: "Request Timeout (ms)",
-              minValue: 0,
-            },
-            {
-              xtype: "numberfield",
-              name: "max_keepalive",
-              allowBlank: false,
-              tooltip: "Maximum number of requests allowed per connection",
-              fieldLabel: "Max Keep Alive",
-              minValue: 0,
-            },
-            {
-              xtype: "checkbox",
-              allowBlank: false,
-              inputValue: true,
-              uncheckedValue: false,
-              row: true,
-              name: "tls",
-              fieldLabel: "TLS",
-              tooltip: "Use TLS for this HTTP API",
-              listeners: amfutil.renderListeners(function (scope, val) {
-                var fields = ["tls"];
-                var form = scope.up("form");
-                console.log(val);
-                fields.forEach((field) => {
-                  var f = form.down("#" + field);
-                  console.log(f);
-                  f.setHidden(!val);
-                  f.setDisabled(!val);
-                });
-              }),
-            },
-            amfutil.renderContainer("tls", [
-              amfutil.loadKey("Server Cert", "cert", {
-                tooltip: "The TLS Certificate in PEM Format",
-              }),
-              amfutil.loadKey("Server Key", "key", {
-                tooltip: "The TLS Key in PEM Format",
-              }),
-            ]),
-
-            {
-              xtype: "checkbox",
-              inputValue: true,
-              checked: true,
-              hidden: true,
-              name: "communication",
-            },
-          ],
-          // load: function (form, record) {
-          //   if (record.tls) {
-          //     var fields = ["cert", "cert_file", "key", "key_file"];
-
-          //     form.down("#tls").setValue(true);
-          //     // form.down("#cert").setValue(record.server_cert);
-          //     // form.down("#key").setValue(record.key);
-          //     // fields.forEach(field => {
-          //     //   var f = form.down("#" + field);
-          //     // })
-          //   }
-          // },
-        },
-        sftpd: {
-          type: "sftpd",
-          name: "SFTP Server",
-          iconCls: "x-fa fa-files-o",
-          combo: function (combo, service) {
-            return amfutil.combo(
-              "Users",
-              "topicparms",
-              amfutil.createCollectionStore("users", {}, { autoLoad: true }),
-              "username",
-              "username",
-              {
-                itemId: "topicparms",
-              }
-            );
-          },
-          fields: [
-            {
-              xtype: "numberfield",
-              name: "port",
-              fieldLabel: "Port",
-              tooltip: "The port to run the SFTP Server on",
-              minValue: 0,
-              maxValue: 65535,
-              allowBlank: false,
-              listeners: {
-                change: async function (cmp, value, oldValue, eOpts) {
-                  await amfutil.portHandler(cmp, value);
-                },
-              },
-            },
-
-            amfutil.loadKey("Server Key", "server_key", {
-              tooltip: "The EC Private Key to use for the SFTP Server.",
-            }),
-
-            {
-              xtype: "checkbox",
-              inputValue: true,
-              checked: true,
-              hidden: true,
-              name: "communication",
-            },
-          ],
-        },
-        subscriber: {
-          type: "subscriber",
-          name: "Subscriber",
-          iconCls: "x-fa fa-arrow-down",
-          fields: [
-            {
-              xtype: "numberfield",
-              name: "subs_count",
-              fieldLabel: "Subscriber Count",
-              tooltip:
-                "The Number of concurrent processes of this subscriber to run.",
-              allowBlank: false,
-              minValue: 1,
-              maxValue: 9,
-              value: 1,
-            },
-            amfutil.dynamicCreate(
-              amfutil.combo(
-                "Action",
-                "handler",
-                amfutil.createCollectionStore(
-                  "actions",
-                  {},
-                  { autoLoad: true }
+              amfutil.dynamicCreate(
+                amfutil.combo(
+                  "Action",
+                  "handler",
+                  amfutil.createCollectionStore(
+                    "actions",
+                    {},
+                    { autoLoad: true }
+                  ),
+                  "_id",
+                  "name",
+                  {
+                    tooltip:
+                      "The Action to execute when a message is received by this subscriber.",
+                  }
                 ),
-                "_id",
-                "name",
-                {
-                  tooltip:
-                    "The Action to execute when a message is received by this subscriber.",
-                }
+
+                "actions"
               ),
+              amfutil.dynamicCreate(
+                amfutil.combo(
+                  "Topic",
+                  "topic",
+                  amfutil.createCollectionStore(
+                    "topics",
+                    {},
+                    { autoLoad: true }
+                  ),
+                  "topic",
+                  "topic",
+                  {
+                    tooltip:
+                      "The Topic this subscriber will consumes messages from.",
 
-              "actions"
-            ),
-            amfutil.dynamicCreate(
-              amfutil.combo(
-                "Topic",
-                "topic",
-                amfutil.createCollectionStore("topics", {}, { autoLoad: true }),
-                "topic",
-                "topic",
-                {
-                  tooltip:
-                    "The Topic this subscriber will consumes messages from.",
-
-                  flex: 1,
-                }
+                    flex: 1,
+                  }
+                ),
+                "topics"
               ),
-              "topics"
-            ),
-          ],
-          process: function (form) {
-            var values = form.getValues();
-            values.active = true;
+            ],
+            process: function (form) {
+              var values = form.getValues();
+              values.active = true;
 
-            return values;
+              return values;
+            },
           },
+          //   defaults: {
+          //     type: "defaults",
+          //     name: "Defaults",
+          //     iconCls: "x-fa fa-pencil",
+          //     singleton: true,
+          //     fields: [
+          //       {
+          //         // Fieldset in Column 1 - collapsible via toggle button
+          //         xtype: "fieldset",
+          //         title: "Default Values",
+          //         row: true,
+
+          //         itemId: "defaults",
+          //         collapsible: true,
+          //         onAdd: function (component, position) {
+          //           // component.setTitle("Match Pattern" + position);
+          //           console.log(component);
+          //           console.log(position);
+          //         },
+          //         items: [
+          //           {
+          //             xtype: "button",
+          //             text: "Add",
+          //             handler: function (button, event) {
+          //               var formpanel = button.up();
+
+          //               formpanel.insert(
+          //                 formpanel.items.length - 1,
+          //                 Ext.create("Amps.form.Defaults", {
+          //                   title: "Default Value",
+          //                 })
+          //               );
+          //             },
+          //           },
+          //         ],
+          //       },
+          //     ],
+
+          //     load: function (form, record) {
+          //       console.log(form);
+          //       console.log(record);
+          //       delete record._id;
+          //       delete record.name;
+          //       delete record.desc;
+          //       delete record.type;
+
+          //       var defaults = Object.entries(record).map((entry) => {
+          //         return { field: entry[0], value: entry[1] };
+          //       });
+
+          //       defaults.forEach(function (def) {
+          //         var dcon = form.down("#defaults");
+          //         var length = dcon.items.length;
+          //         var d = Ext.create("Amps.form.Defaults");
+          //         d.down("#field").setValue(def.field);
+          //         d.down("#value").setValue(def.value);
+          //         dcon.insert(length - 1, d);
+          //       });
+          //     },
+
+          //     process: function (form) {
+          //       var values = form.getValues();
+          //       var defaults = values.defaults
+          //         ? Array.isArray(values.defaults)
+          //           ? values.defaults.map((defaultobj) => {
+          //               return JSON.parse(defaultobj);
+          //             })
+          //           : [JSON.parse(values.defaults)]
+          //         : [];
+          //       var processed = {};
+
+          //       defaults.forEach((def) => {
+          //         processed[def.field] = def.value;
+          //       });
+
+          //       delete values.field;
+          //       delete values.value;
+          //       delete values.defaults;
+
+          //       Object.assign(values, processed);
+          //       console.log(values);
+
+          //       return values;
+          //     },
+          //   },
         },
-        //   defaults: {
-        //     type: "defaults",
-        //     name: "Defaults",
-        //     iconCls: "x-fa fa-pencil",
-        //     singleton: true,
-        //     fields: [
-        //       {
-        //         // Fieldset in Column 1 - collapsible via toggle button
-        //         xtype: "fieldset",
-        //         title: "Default Values",
-        //         row: true,
+        actionIcons: [
+          "addnewbtn",
+          "searchpanelbtn",
+          "clearfilter",
+          "refreshbtn",
+          "export",
+        ],
+        options: ["active", "delete"],
+        columns: [
+          {
+            text: "Name",
+            dataIndex: "name",
+            flex: 1,
+            type: "text",
+          },
+          {
+            text: "Type",
+            dataIndex: "type",
+            flex: 1,
+            type: "text",
+          },
+          {
+            text: "Description",
+            dataIndex: "desc",
+            flex: 1,
+            type: "text",
+          },
+          {
+            text: "Topic",
+            dataIndex: "topic",
+            flex: 1,
+            type: "text",
+          },
+        ],
+      };
 
-        //         itemId: "defaults",
-        //         collapsible: true,
-        //         onAdd: function (component, position) {
-        //           // component.setTitle("Match Pattern" + position);
-        //           console.log(component);
-        //           console.log(position);
-        //         },
-        //         items: [
-        //           {
-        //             xtype: "button",
-        //             text: "Add",
-        //             handler: function (button, event) {
-        //               var formpanel = button.up();
+      config.fields = config.fields.concat(amfutil.typeFields(config));
 
-        //               formpanel.insert(
-        //                 formpanel.items.length - 1,
-        //                 Ext.create("Amps.form.Defaults", {
-        //                   title: "Default Value",
-        //                 })
-        //               );
-        //             },
-        //           },
-        //         ],
-        //       },
-        //     ],
-
-        //     load: function (form, record) {
-        //       console.log(form);
-        //       console.log(record);
-        //       delete record._id;
-        //       delete record.name;
-        //       delete record.desc;
-        //       delete record.type;
-
-        //       var defaults = Object.entries(record).map((entry) => {
-        //         return { field: entry[0], value: entry[1] };
-        //       });
-
-        //       defaults.forEach(function (def) {
-        //         var dcon = form.down("#defaults");
-        //         var length = dcon.items.length;
-        //         var d = Ext.create("Amps.form.Defaults");
-        //         d.down("#field").setValue(def.field);
-        //         d.down("#value").setValue(def.value);
-        //         dcon.insert(length - 1, d);
-        //       });
-        //     },
-
-        //     process: function (form) {
-        //       var values = form.getValues();
-        //       var defaults = values.defaults
-        //         ? Array.isArray(values.defaults)
-        //           ? values.defaults.map((defaultobj) => {
-        //               return JSON.parse(defaultobj);
-        //             })
-        //           : [JSON.parse(values.defaults)]
-        //         : [];
-        //       var processed = {};
-
-        //       defaults.forEach((def) => {
-        //         processed[def.field] = def.value;
-        //       });
-
-        //       delete values.field;
-        //       delete values.value;
-        //       delete values.defaults;
-
-        //       Object.assign(values, processed);
-        //       console.log(values);
-
-        //       return values;
-        //     },
-        //   },
-      },
-      actionIcons: [
-        "addnewbtn",
-        "searchpanelbtn",
-        "clearfilter",
-        "refreshbtn",
-        "export",
-      ],
-      options: ["active", "delete"],
-      columns: [
-        {
-          text: "Name",
-          dataIndex: "name",
-          flex: 1,
-          type: "text",
-        },
-        {
-          text: "Type",
-          dataIndex: "type",
-          flex: 1,
-          type: "text",
-        },
-        {
-          text: "Description",
-          dataIndex: "desc",
-          flex: 1,
-          type: "text",
-        },
-        {
-          text: "Topic",
-          dataIndex: "topic",
-          flex: 1,
-          type: "text",
-        },
-      ],
-    }),
+      return config;
+    },
     admin: () => ({
       title: "Admin Users",
       actionIcons: [
@@ -7436,6 +7407,10 @@ Ext.define("Amps.util.Grids", {
                         field: "received",
                         label: "Received",
                       },
+                      {
+                        field: "failed",
+                        label: "Failed",
+                      },
                     ],
                   },
                 ],
@@ -7604,7 +7579,7 @@ Ext.define("Amps.util.Grids", {
             fc.removeAll();
             this.setMasked(true);
 
-            var data = await amfutil.getCollectionData("services", {
+            var data = await amfutil.getCollectionData("config", {
               name: "SYSTEM",
             });
             var record = data[0];
@@ -7656,11 +7631,7 @@ Ext.define("Amps.util.Grids", {
               text: "Update",
               handler: function (scope) {
                 var form = scope.up("form");
-                var mask = new Ext.LoadMask({
-                  target: form,
-                  msg: "Loading",
-                });
-                mask.show();
+                form.setLoading(true);
                 var values = scope.up("form").getForm().getValues();
                 console.log(values);
                 var id = scope.up("form")._id;
@@ -7674,16 +7645,19 @@ Ext.define("Amps.util.Grids", {
                   headers: {
                     Authorization: localStorage.getItem("access_token"),
                   },
-                  url: "/api/services/" + id,
+                  url: "/api/config/" + id,
                   method: "PUT",
                   timeout: 60000,
                   params: {},
                   jsonData: values,
                   success: function () {
-                    mask.hide();
+                    form.setLoading(false);
+
                     form.loadConfig();
                   },
                   failure: function () {
+                    form.setLoading(false);
+
                     mask.hide();
                   },
                 });

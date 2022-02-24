@@ -1,7 +1,7 @@
 defmodule Jetstream.API.Consumer do
   import Jetstream.API.Util
 
-  @enforce_keys [:stream_name, :name]
+  @enforce_keys [:stream_name]
   defstruct stream_name: nil,
             name: nil,
             deliver_subject: nil,
@@ -60,6 +60,14 @@ defmodule Jetstream.API.Consumer do
   @spec create(Gnat.t(), t()) :: {:ok, consumer_response()} | {:error, term()}
   def create(gnat, %__MODULE__{durable: true} = consumer) do
     create_topic = "$JS.API.CONSUMER.DURABLE.CREATE.#{consumer.stream_name}.#{consumer.name}"
+
+    with {:ok, raw_response} <- request(gnat, create_topic, create_payload(consumer)) do
+      {:ok, to_consumer_response(raw_response)}
+    end
+  end
+
+  def create(gnat, %__MODULE__{durable: false} = consumer) do
+    create_topic = "$JS.API.CONSUMER.CREATE.#{consumer.stream_name}"
 
     with {:ok, raw_response} <- request(gnat, create_topic, create_payload(consumer)) do
       {:ok, to_consumer_response(raw_response)}
