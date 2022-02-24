@@ -198,6 +198,57 @@ defmodule AmpsWeb.DataControllerTest do
         },
         "unique" => "topic"
       },
+      %{
+        "collection" => "message_events",
+        "obj" => %{
+          "action" => "cedsfdsd",
+          "etime"  => "2022-02-10T09:30:23.115383Z",
+          "index"  => "message_events",
+          "status"  => "started",
+          "subscriber"  => "vcfdsfd",
+          "topic"  => "amps.actions.runscript.fecdsfd",
+          "_id"  => "cgO36H4B8fsseZHXd3Cc"
+        },
+        "unique" => "name"
+      },
+      # %{
+      #   "collection" => "keys",
+      #   "obj" => %{
+      #   "created" => "2022-02-24T09:29:55.138Z",
+      #   "createdby" => "upendra bonthu",
+      #   "data" => "-----BEGIN RSA PRIVATE KEY-----\nMIIEogIBAAKCAQEAxUF74GyzMHKEdN1/O+d+MWRPau8eGz34FDDzIN9qi4Mo1+Pm\nVlcmSZKkUoyFuebBBJUHqOAplYbWV/Eaq20vVZ6ARmib8WntCquuCfVF6g49xZsX\nywgqZGfR/+3ZlQonqJjxhzmfg52IWFyHA+vl7gKHv453b5gfzTFjohKGNW7PgcJ0\n3l5s25kuFb5V1Qh1JVgdgNNpzOZL5cuO/qe2mE5CXz+pBHQgp3o9RBIeJmNCrbww\ncwgPE43sRjuC+1qvcnu9UX+gGn6mfX4i0cM8F36HZdm7A8jj//RlcEui4ULyGGLK\nuUJRZy5atRHDlmEjAPWlMZ61Mlxku+lqpOMQbQIDAQABAoIBAFK7P1iGXrVgInvd\ndoLKedv/ZWvFNIxadlUJnr9X1RkEfrnlpPLrhGxxK6hPtbqdtLDWTKsgsXA8aGPk\nBLqHhcXUP5rIPzeGpNvH26vjilo7dN8PSHBoUVdhT+uWd56R7sZAt3Ruz59lEA13\naU1UwFAOEZ9fAmr0k8n8//u250E7JndvfZVKKUFctnjSU3qbQwzvOlKWi0IQZ47l\nvzGWBSX9te6MCyLcuaD/5F9Agwly5Ae/LVPGF+aTH3RFJ9Zx9SUCdQv5LDvS8nJQ\n6OGuh+mWfjMkdWfC1FEnNPlRmZ1NRNV+kaCJuwjNdS7Q7dS2lcC3qXdMntwVdRFF\nyiobn8UCgYEA9D00WpCl2RRflHC2InN0xCnCPGBRfq/yuvgzoRhzztTWdJCTeVVe\nVfu69kAdyhrB5I/DLCRhPwjsUm8IcCI2ZrvESOU/6jCg4OFEcdXZ647bKgnroSKp\nmYHjjzUTnnFibl3/KM/sdJX/YvO8KU1TJXFPgYXXYyfaZs+5hkBQ0LsCgYEAzsEa\n1roYXutVbjE2GEUsVVhwO1uaVJxV0VP+FC8UL6BZHd9+NWAW4HUssFmHIlu6ILUQ\nR/+HkaTrGk6q1bfZEBHCfaE/+pA2giQPMSj+ga4Qt2Vi7wtpoWy83+ANkSoxzS0u\n/dDnHEibFplU9p0Fb7RZfzRSquA7GwB5I4LoRPcCgYBAOQvYOKrznxDXBqBOBNAS\neOyTVbx4NKn+Eh/5X2WsYHkX46BzykfpEi2CbS+oIksT392xcMuFeMIzlvDAE678\naqldhbK90RWsrG+EA3ivITxuHHeyQlwYengtAwbqpeP9I4hh4fLKYVrrWS4EKkoP\n0XDXnSsa7rLWUA73x1e42wKBgE9PnDAKqxaeR+NBVXLx9hO3HTZn6UfTwMfP5INx\nm9i5NfZTqWJoPd5UlJQBg+kWLswlKN21lBe2n8kzrCzXnZigd28h0B0Z/Q7nLjy5\ncQfl8duoNM9mHVsjD0EB/bJV8Uy3rHMJE96xq2x73S/NBCzZjgtR0vRhl8q/37hT\nmy35AoGARTjW3eqHdfisL0MBwItlF1EcphEYflDtxX8ovhuoPxX1+/Zgl20XpiCc\nFsJAIOqT9y7p0NzxTPSO/spRpOjmCXA/Lp1XBnU4vZr/c+0fQ59zO10xlyBwYdc5\n8D9r5jJvR/6FhGbioQNQ4ZOE5l30K/O585S9hVnelNrXmA7gd0Y=\n-----END RSA PRIVATE KEY-----\n",
+      #   "modified" => "2022-02-24T09:29:55.138Z",
+      #   "modifiedby" => "upendra bonthu",
+      #   "name" => "key_name",
+      #   "type" => "private",
+      #   "usage" => "SSH"
+      #   },
+      #   "unique" => "name"
+      # },
+      # %{
+      #   "collection" => "services",
+      #   "obj" => %{
+      #     "active" => true,
+      #     "communication" => true,
+      #     "created" => "2022-02-24T04:29:53.646Z",
+      #     "createdby" => "upendra bonthu",
+      #     "desc" => "Test",
+      #     "modified" => "2022-02-24T04:29:53.646Z",
+      #     "modifiedby" => "upendra bonthu",
+      #     "name" => "testsftp_server",
+      #     "port" => 1433,
+      #     "server_key" => "0edfe1d4-94c7-4a0a-92b2-f093ea285b4e",
+      #     "type" => "sftpd"
+      #   },
+      #   "unique" => "name"
+      # },
+      %{
+        "collection" => "ui_audit",
+        "obj" => %{
+          "action" => "index",
+        },
+        "unique" => "name"
+      },
     ],
     fn config ->
       collection = config["collection"]
@@ -302,7 +353,24 @@ defmodule AmpsWeb.DataControllerTest do
           #   assert response(conn, 200)
           # end
 
+        collection == "message_events" ->
+                IO.inspect("Message Events testcases")
+                test "get message_events collection", %{admin_conn: admin_conn} do
+                  config = unquote(config)
+                  collection = config["collection"]
 
+                  conn = get(admin_conn, Path.join("/api", collection))
+                  assert %{"count" => _count, "rows" => _rows, "success" => true} = json_response(conn, 200)
+                end
+
+        collection == "ui_audit" ->
+                test "get #{collection} collection", %{admin_conn: admin_conn} do
+                  config = unquote(config)
+                  collection = config["collection"]
+
+                  conn = get(admin_conn, Path.join("/api", collection))
+                  assert %{"count" => _count, "rows" => _rows, "success" => true} = json_response(conn, 200)
+                end
 
         true ->
                 test "get #{collection} collection", %{admin_conn: admin_conn} do
