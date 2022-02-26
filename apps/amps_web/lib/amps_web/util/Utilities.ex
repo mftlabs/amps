@@ -196,7 +196,7 @@ defmodule AmpsWeb.Util do
             "types" => %{
               "download" => [
                 "fpoll",
-                "bretry",
+                "subs_count",
                 "updated",
                 "topic",
                 "policy",

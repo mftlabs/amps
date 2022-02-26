@@ -127,36 +127,58 @@ defmodule Amps.SvcManager do
           end
 
         :kafka ->
-          init_opts = [
-            group: args["name"],
-            topics: args["topics"],
-            # assignment_received_handler: assignment_received_handler(),
-            # assignments_revoked_handler: assignments_revoked_handler(),
-            handler: types[:kafka],
-            handler_init_args: args
-            # config: consumer_config()
-          ]
-
           provider = DB.find_one("providers", %{"_id" => args["provider"]})
+          auth_opts = AmpsUtil.get_kafka_auth(args, provider)
 
-          config = AmpsUtil.get_kafka_auth(args, provider)
-
-          {
-            Elsa.Supervisor,
-            config: config,
-            endpoints:
-              Enum.map(
-                provider["brokers"],
-                fn %{"host" => host, "port" => port} ->
-                  {host, port}
-                end
-              ),
-            connection: String.to_atom("elsa_" <> args["name"]),
-            group_consumer: init_opts,
-            producer: [
-              topic: "amps.events"
-            ]
+          spec = %{
+            id: name,
+            start:
+              {KafkaEx.ConsumerGroup, :start_link,
+               [
+                 types[:kafka],
+                 args["name"],
+                 args["topics"],
+                 [
+                   uris:
+                     Enum.map(
+                       provider["brokers"],
+                       fn %{"host" => host, "port" => port} ->
+                         {host, port}
+                       end
+                     ),
+                   extra_consumer_args: args
+                 ] ++
+                   auth_opts
+               ]}
           }
+
+          spec
+
+        # init_opts = [
+        #   group: args["name"],
+        #   topics: args["topics"],
+        #   # assignment_received_handler: assignment_received_handler(),
+        #   # assignments_revoked_handler: assignments_revoked_handler(),
+        #   handler: types[:kafka],
+        #   handler_init_args: args
+        #   # config: consumer_config()
+        # ]
+
+        # config = AmpsUtil.get_kafka_auth(args, provider)
+
+        # {
+        #   Elsa.Supervisor,
+        #   config: config,
+        #   endpoints:
+        #     Enum.map(
+        #       provider["brokers"],
+        #       fn %{"host" => host, "port" => port} ->
+        #         {host, port}
+        #       end
+        #     ),
+        #   connection: String.to_atom("elsa_" <> args["name"]),
+        #   group_consumer: init_opts
+        # }
 
         type ->
           {types[type], name: name, parms: args}
@@ -215,7 +237,7 @@ defmodule Amps.SvcManager do
             end
           end)
 
-          {:ok, "Started #{opts["subs_count"]}"}
+          {:ok, "Started #{svcname}"}
         rescue
           e ->
             {:error, e.message}

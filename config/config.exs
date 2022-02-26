@@ -124,8 +124,10 @@ config :mnesiac,
   # defaults to :ram_copies
   schema_type: :disc_copies
 
-config :logger,
-  level: :info
+if config_env() == :prod do
+  config :logger,
+    level: :info
+end
 
 config :amps_web, :pow,
   user: AmpsWeb.Users.User,
@@ -192,6 +194,10 @@ config :ex_aws, :hackney_opts, recv_timeout: 240_000
 #   host: System.get_env("AMPS_S3_HOST") || "localhost",
 #   port: System.get_env("AMPS_S3_PORT") || "9000"
 
+config :kafka_ex,
+  kafka_version: "kayrock",
+  disable_default_worker: true
+
 config :amps,
   sched_interval: 10000,
   retry_delay: 60000,
@@ -218,7 +224,7 @@ config :amps, :services,
   history: Amps.HistoryConsumer,
   sftpd: Amps.SftpServer,
   httpd: Amps.MailboxApi,
-  kafka: Amps.KafkaConsumer,
+  kafka: Amps.GenConsumer,
   s3: Amps.S3Consumer
 
 config :amps, :actions,

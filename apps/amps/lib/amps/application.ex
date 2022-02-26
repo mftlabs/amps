@@ -51,9 +51,9 @@ defmodule Amps.Application do
       {Amps.Cluster, []},
       {Amps.Startup, []},
       AmpsWeb.Vault,
+      Amps.SvcHandler,
       Amps.SvcSupervisor,
       Amps.SvcManager,
-      Amps.ServiceHandler,
       Amps.Scheduler,
       {Amps.HistoryHandler,
        %{

@@ -573,6 +573,13 @@ defmodule AmpsWeb.DataController do
       "accounts" ->
         S3.update_schedule(id)
 
+      "config" ->
+        service = DB.find_one("services", %{"_id" => id})
+
+        if service["name"] == "SYSTEM" do
+          Amps.SvcManager.load_system_parms()
+        end
+
       "services" ->
         service = DB.find_one("services", %{"_id" => id})
 
@@ -590,10 +597,6 @@ defmodule AmpsWeb.DataController do
           if Map.has_key?(types, String.to_atom(service["type"])) do
             Gnat.pub(:gnat, "amps.events.svcs.handler.#{service["name"]}.restart", "")
           end
-        end
-
-        if service["name"] == "SYSTEM" do
-          Amps.SvcManager.load_system_parms()
         end
 
       "actions" ->

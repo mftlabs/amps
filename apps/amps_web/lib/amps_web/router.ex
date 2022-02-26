@@ -70,7 +70,7 @@ defmodule AmpsWeb.Router do
     post("/admin/changepassword/:id", DataController, :change_admin_password)
 
     get("/message_events/history/:msgid", UtilController, :history)
-    get("/message_events/download/:msgid", DataController, :download)
+    get("/message_events/download/:msgid", UtilController, :download)
     post("/workflow", UtilController, :workflow)
     get("/port/:port", UtilController, :in_use)
     post("/service/:name", ServiceController, :handle_service)

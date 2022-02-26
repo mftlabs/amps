@@ -85,12 +85,12 @@ Ext.define("Amps.form.RuleGrid", {
         ? []
         : [
             {
-              xtype: "form",
+              xtype: "container",
+              width: 400,
               layout: {
-                type: "hbox",
+                type: "vbox",
+                align: "stretch",
               },
-              defaults: { margin: 5 },
-
               items: [
                 amfutil.dynamicCreate(
                   amfutil.combo(
@@ -111,56 +111,55 @@ Ext.define("Amps.form.RuleGrid", {
                   ),
                   "rules"
                 ),
+              ],
+            },
 
+            // "->",
+            {
+              xtype: "button",
+              text: "Add to Router",
+              handler: function (scope) {
+                var rule = amfutil.getElementByID("rule").getSelectedRecord();
+                console.log(rule);
+                var error = amfutil.getElementByID("error");
+
+                if (rule) {
+                  var gridstore = scope.up("grid").getStore();
+
+                  var curr = gridstore.getData().items;
+
+                  var present = curr.findIndex(
+                    (rec) => rec.data._id == rule.data._id
+                  );
+
+                  if (present >= 0) {
+                    error.setHtml("Rule is already in router.");
+                  } else {
+                    error.setHtml("");
+
+                    curr.push(rule);
+                    gridstore.loadData(curr);
+                  }
+                } else {
+                  error.setHtml("Select a rule");
+                }
+              },
+            },
+            {
+              xtype: "container",
+              items: [
                 {
-                  xtype: "button",
-                  text: "Add to Router",
-                  handler: function (scope) {
-                    var rule = scope
-                      .up("form")
-                      .down("combobox")
-                      .getSelectedRecord();
-                    console.log(rule);
-                    var error = amfutil.getElementByID("error");
-
-                    if (rule) {
-                      var gridstore = scope.up("grid").getStore();
-
-                      var curr = gridstore.getData().items;
-
-                      var present = curr.findIndex(
-                        (rec) => rec.data._id == rule.data._id
-                      );
-
-                      if (present >= 0) {
-                        error.setHtml("Rule is already in router.");
-                      } else {
-                        error.setHtml("");
-
-                        curr.push(rule);
-                        gridstore.loadData(curr);
-                      }
-                    } else {
-                      error.setHtml("Select a rule");
-                    }
+                  xtype: "component",
+                  style: {
+                    color: "red",
                   },
-                },
-                {
-                  xtype: "container",
-                  items: [
-                    {
-                      xtype: "component",
-                      style: {
-                        color: "red",
-                      },
-                      itemId: "error",
-                      html: "",
-                    },
-                  ],
+                  itemId: "error",
+                  html: "",
                 },
               ],
             },
           ],
+
       enableLocking: true,
       columns: [
         {
@@ -2871,6 +2870,8 @@ Ext.define("Amps.panel.Wizard", {
                 services.types["subscriber"].fields
               );
 
+              fields = fields.filter((field) => field.itemId != "types");
+
               // console.log(action);
               // console.log(topic);
               scope.insert(
@@ -4705,16 +4706,6 @@ Ext.define("Amps.util.Grids", {
                   value: "300",
                 },
                 {
-                  xtype: "textfield",
-                  name: "fpoll",
-                  itemId: "fpoll",
-                  maskRe: /[0-9]/,
-                  fieldLabel: "File Polling Interval(Sec)",
-                  allowBlank: false,
-                  value: "300",
-                },
-
-                {
                   xtype: "numberfield",
                   name: "subs_count",
                   minValue: 1,
@@ -4872,18 +4863,23 @@ Ext.define("Amps.util.Grids", {
           add: {
             process: function (form, values) {
               console.log(values);
-              values.subs_count = values.subs_count.toString();
+              if (values.type == "download") {
+                values.subs_count = values.subs_count.toString();
+              }
               if (values.fmeta) {
                 values.fmeta = JSON.stringify(
                   amfutil.formatArrayField(values.fmeta)
                 );
               }
+              console.log(values);
               return values;
             },
           },
           update: {
             process: function (form, values) {
-              values.subs_count = values.subs_count.toString();
+              if (values.type == "download") {
+                values.subs_count = values.subs_count.toString();
+              }
 
               console.log(values);
               if (values.fmeta) {
@@ -6559,6 +6555,17 @@ Ext.define("Amps.util.Grids", {
         title: "Services",
         window: { width: 600, height: 600 },
         object: "Service",
+        add: {
+          process: function (form, values) {
+            console.log(form);
+            var services = ampsgrids.grids["services"]();
+            if (services.types[values.type].process) {
+              values = services.types[values.type].process(form);
+            }
+
+            return values;
+          },
+        },
 
         update: {
           process: function (form, values) {
@@ -7143,7 +7150,7 @@ Ext.define("Amps.util.Grids", {
     monitoring: () => ({
       view: {
         xtype: "container",
-        layout: "fit",
+        layout: "card",
         itemId: "monitoring",
         items: [
           {

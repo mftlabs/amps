@@ -460,41 +460,42 @@ defmodule AmpsUtil do
         {nil, nil, nil}
       end
 
-    config =
-      case provider["auth"] do
-        "SASL_PLAINTEXT" ->
-          [
-            # ssl: true,
-            sasl:
-              {String.to_atom(provider["mechanism"]), provider["username"], provider["password"]}
-          ]
+    case provider["auth"] do
+      "SASL_PLAINTEXT" ->
+        [
+          auth:
+            {:sasl, String.to_existing_atom(provider["mechanism"]),
+             username: provider["username"], password: provider["password"]}
+        ]
 
-        "SASL_SSL" ->
+      "SASL_SSL" ->
+        [
+          use_ssl: true,
+          ssl_options: [
+            cacertfile: cacertfile,
+            certfile: certfile,
+            keyfile: keyfile
+          ],
+          auth:
+            {:sasl, String.to_existing_atom(provider["mechanism"]),
+             username: provider["username"], password: provider["password"]}
+        ]
+
+      "SSL" ->
+        [
           [
-            ssl: [
+            use_ssl: true,
+            ssl_options: [
               cacertfile: cacertfile,
               certfile: certfile,
               keyfile: keyfile
-              # verify: :verify_peer
-            ],
-            sasl:
-              {String.to_existing_atom(provider["mechanism"]), provider["username"],
-               provider["password"]}
-          ]
-
-        "SSL" ->
-          [
-            ssl: [
-              cacertfile: cacertfile,
-              certfile: certfile,
-              keyfile: keyfile
-              # verify: :verify_peer
             ]
           ]
+        ]
 
-        "NONE" ->
-          []
-      end
+      "NONE" ->
+        []
+    end
   end
 
   def match(file, parms) do
@@ -527,5 +528,22 @@ defmodule AmpsUtil do
         IO.puts("bad regex, failing")
         false
     end
+  end
+
+  def produce(msg) do
+    KafkaEx.create_worker(:pr,
+      uris: [{"localhost", 9092}],
+      auth: {:sasl, :plain, username: "user", password: "bitnami"}
+    )
+
+    KafkaEx.produce(
+      %KafkaEx.Protocol.Produce.Request{
+        topic: "amps.events",
+        partition: 0,
+        required_acks: 1,
+        messages: [%KafkaEx.Protocol.Produce.Message{value: msg}]
+      },
+      worker_name: :pr
+    )
   end
 end

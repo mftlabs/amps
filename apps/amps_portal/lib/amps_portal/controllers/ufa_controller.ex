@@ -231,7 +231,8 @@ defmodule AmpsPortal.UFAController do
   def receive_message({user, rule}, _pid) do
     listening_topic = "_CON.#{nuid()}"
 
-    {stream, consumer} = {"MAILBOX", user.username <> "_" <> rule}
+    {stream, consumer} =
+      AmpsUtil.get_names(%{"name" => user.username <> "_" <> rule, "topic" => "amps.mailbox.*"})
 
     try do
       pid =

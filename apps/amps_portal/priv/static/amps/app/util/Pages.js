@@ -353,7 +353,10 @@ Ext.define("Amps.Pages", {
         add: {
           process: function (form, values) {
             console.log(values);
-            values.subs_count = values.subs_count.toString();
+
+            if (values.type == "download") {
+              values.subs_count = values.subs_count.toString();
+            }
 
             if (values.fmeta) {
               values.fmeta = JSON.stringify(
@@ -366,7 +369,9 @@ Ext.define("Amps.Pages", {
         update: {
           process: function (form, values) {
             console.log(values);
-            values.subs_count = values.subs_count.toString();
+            if (values.type == "download") {
+              values.subs_count = values.subs_count.toString();
+            }
 
             if (values.fmeta) {
               values.fmeta = JSON.stringify(

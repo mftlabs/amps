@@ -14,10 +14,13 @@ defmodule Amps.SvcSupervisor do
     # {Plug.Cowboy, scheme: :http, plug: MyApp, options: [port: 4040]}
     case DynamicSupervisor.start_child(__MODULE__, spec) do
       {:ok, pid} ->
+        IO.inspect(name)
         Process.register(pid, name)
 
+      # Amps.SvcHandler.start_monitor(pid)
+
       {:error, error} ->
-        Logger.debug("Could not start #{name} - Error: #{inspect(error)}")
+        Logger.error("Could not start #{name} - Error: #{inspect(error)}")
     end
   end
 
