@@ -16,14 +16,11 @@ RUN apt-get install build-essential git -y
 RUN mix local.hex --force && \
     mix local.rebar --force
 
-# COPY mix.exs mix.lock config/ ./
-# COPY apps ./apps
-
-
 RUN mix deps.get --only prod && \
     mix deps.compile
 
-# COPY . .
+RUN mix esbuild amps_portal --minify
+RUN mix esbuild amps_web --minify
 
 RUN mix release
 

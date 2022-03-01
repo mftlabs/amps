@@ -17,20 +17,25 @@ config :amps, env: Mix.env()
 # Configures the endpoint
 config :amps_portal, AmpsPortal.Endpoint,
   url: [host: "localhost"],
-  render_errors: [view: AmpsPortal.ErrorView, accepts: ~w(html json), layout: false],
+  render_errors: [
+    view: AmpsPortal.ErrorView,
+    accepts: ~w(html json),
+    layout: false
+  ],
   pubsub_server: AmpsPortal.PubSub,
   live_view: [signing_salt: "IzQCGrqZ"]
 
 # Configure esbuild (the version is required)
 config :esbuild,
-  version: "0.12.18",
+  version: "0.14.23",
   amps_portal: [
     args: ~w(js/app.js --bundle --target=es2016 --outdir=../priv/static/assets),
     cd: Path.expand("../apps/amps_portal/assets", __DIR__),
     env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
   ],
   amps_web: [
-    args: ~w(js/app.js --bundle --target=es2016 --outdir=../priv/static/assets),
+    args:
+      ~w(js/app.js --bundle --target=es2016 --loader:.svg=file --outdir=../priv/static/assets),
     cd: Path.expand("../apps/amps_web/assets", __DIR__),
     env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
   ]
@@ -89,7 +94,11 @@ config :amps_web,
 
 # Configures the endpoint
 config :amps_web, AmpsWeb.Endpoint,
-  render_errors: [view: AmpsWeb.ErrorView, accepts: ~w(html json), layout: false],
+  render_errors: [
+    view: AmpsWeb.ErrorView,
+    accepts: ~w(html json),
+    layout: false
+  ],
   pubsub_server: Amps.PubSub,
   live_view: [signing_salt: "kl+/cr/G"],
   url: [host: System.get_env("AMPS_ADMIN_HOST", "admin.localhost")],

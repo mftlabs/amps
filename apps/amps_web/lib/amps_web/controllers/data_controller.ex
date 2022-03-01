@@ -574,9 +574,9 @@ defmodule AmpsWeb.DataController do
         S3.update_schedule(id)
 
       "config" ->
-        service = DB.find_one("services", %{"_id" => id})
+        config = DB.find_one("config", %{"_id" => id})
 
-        if service["name"] == "SYSTEM" do
+        if config["name"] == "SYSTEM" do
           Amps.SvcManager.load_system_parms()
         end
 
