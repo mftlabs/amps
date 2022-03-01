@@ -17,12 +17,7 @@ jobs:
     - name: Run docker containers
       run: export curdir=$PWD && cd docker && docker-compose -f docker-compose.workflow.yml up -d && docker ps -a && cd $curdir
     - name: Test OpenSearch
-      uses: nev7n/wait_for_response@v1
-      with:
-        url: 'https://localhost:9200/'
-        responseCode: 200
-        timeout: 30000
-        interval: 500
+      run: bash -c 'while [[ "$(curl -sk -u admin:admin -o /dev/null -w ''%{http_code}'' https://localhost:9200)" != "200" ]]; do sleep 5; done'
     - name: Test Vault
       uses: nev7n/wait_for_response@v1
       with:
