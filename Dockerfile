@@ -1,5 +1,11 @@
-FROM elixir:1.12.1 as build
+FROM rockmagicnet/sencha-cmd:6.6.0 as ui-build
+WORKDIR /build
+COPY . .
+RUN cd apps/amps_portal/priv/static/amps && sencha app build development
+RUN cd apps/amps_web/priv/static/frontend && sencha app build development
 
+FROM elixir:1.12.1 as build
+COPY --from=ui-build /build ./build
 ENV MIX_ENV=prod
 
 WORKDIR /build
@@ -10,14 +16,14 @@ RUN apt-get install build-essential git -y
 RUN mix local.hex --force && \
     mix local.rebar --force
 
-COPY mix.exs mix.lock config/ ./
-COPY apps ./apps
+# COPY mix.exs mix.lock config/ ./
+# COPY apps ./apps
 
 
 RUN mix deps.get --only prod && \
     mix deps.compile
 
-COPY . .
+# COPY . .
 
 RUN mix release
 
