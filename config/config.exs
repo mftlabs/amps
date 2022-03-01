@@ -71,9 +71,15 @@ config :amps, :gnat,
 
 config :amps, Amps.Mailer, adapter: Swoosh.Adapters.Local
 
-config :amps, Amps.Cluster, url: "http://localhost:9200"
-# username: "admin",
-# password: "admin"
+config :amps, Amps.Cluster,
+  url: System.get_env("AMPS_OPENSEARCH_ADDR", "https://localhost:9200"),
+  username: System.get_env("AMPS_OPENSEARCH_USERNAME", "admin"),
+  password: System.get_env("AMPS_OPENSEARCH_PASSWORD", "admin"),
+  conn_opts: [
+    transport_opts: [
+      verify: :verify_none
+    ]
+  ]
 
 # Swoosh API client is needed for adapters other than SMTP.
 config :swoosh, :api_client, false

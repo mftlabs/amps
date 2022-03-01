@@ -95,6 +95,7 @@ Ext.define("Amps.form.add", {
             click: function (btn) {
               var scope = btn.up("addform");
               var grid = amfutil.getElementByID("main-grid");
+              var win = btn.up("window");
               var form = btn.up("form").getForm();
               var values = form.getValues();
               console.log(values);
@@ -158,7 +159,7 @@ Ext.define("Amps.form.add", {
                   failure: function (response) {
                     mask.hide();
                     btn.setDisabled(false);
-                    amfutil.onFailure("Failed to Create User", response);
+                    amfutil.onFailure(`Failed to Create ${win.item}`, response);
                   },
                 });
               }

@@ -136,9 +136,14 @@ if config_env() == :prod do
     secret_key_base: secret_key_base
 
   config :amps, Amps.Cluster,
-    url: System.get_env("AMPS_OPENSEARCH_ADDR", "http://localhost:9200"),
+    url: System.get_env("AMPS_OPENSEARCH_ADDR", "https://localhost:9200"),
     username: System.get_env("AMPS_OPENSEARCH_USERNAME", "admin"),
-    password: System.get_env("AMPS_OPENSEARCH_PASSWORD", "admin")
+    password: System.get_env("AMPS_OPENSEARCH_PASSWORD", "admin"),
+    conn_opts: [
+      transport_opts: [
+        verify: :verify_none
+      ]
+    ]
 
   # config :ex_aws, :s3,
   #   access_key_id: "minioadmin",

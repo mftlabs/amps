@@ -18,3 +18,5 @@ keys
 
 vault
 volumes
+
+Mnesia*
