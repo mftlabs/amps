@@ -2064,7 +2064,6 @@ Ext.define("Amps.util.Utilities", {
               headers: {
                 Authorization: localStorage.getItem("access_token"),
               },
-              limitParam: "",
 
               extraParams: { filters: JSON.stringify(filters) },
               reader: {
@@ -2902,8 +2901,13 @@ Ext.define("Amps.util.Utilities", {
   },
 
   renderFileSize: function fileSize(size, m, r) {
+    console.log(r.data.data);
     if (size == null) {
-      size = new Blob([r.data.data]).size;
+      if (r.data.data) {
+        size = new Blob([r.data.data]).size;
+      } else {
+        return "Not Applicable";
+      }
     }
     var i = size == 0 ? 0 : Math.floor(Math.log(size) / Math.log(1000));
     return (

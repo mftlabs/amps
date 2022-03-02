@@ -7284,10 +7284,33 @@ Ext.define("Amps.util.Grids", {
               dblclick: {
                 element: "body",
                 fn: function (grid, rowIndex, e, obj) {
+                  var record = grid.record.data;
+
                   var m = amfutil.getElementByID("monitoring");
                   m.setActiveItem(1);
-                  var list = amfutil.getElementByID("eventlist");
-                  var record = grid.record.data;
+                  var list = amfutil.getElementByID("events");
+                  var logs = amfutil.getElementByID("logs");
+
+                  logs.setStore(
+                    amfutil.createCollectionStore(
+                      "service_logs",
+                      {
+                        name: record.name,
+                      },
+                      {
+                        sorters: [
+                          {
+                            property: "etime",
+                            direction: "DESC",
+                          },
+                        ],
+                      }
+                    )
+                  );
+
+                  var tab = amfutil.getElementByID("tab");
+
+                  tab.setTitle(record.name);
 
                   if (record.type == "subscriber") {
                     list.setStore(
@@ -7305,9 +7328,6 @@ Ext.define("Amps.util.Grids", {
                           ],
                         }
                       )
-                    );
-                    list.setTitle(
-                      "Recent Message Events for Subscriber: " + record.name
                     );
                   } else {
                     list.setStore(
@@ -7327,9 +7347,6 @@ Ext.define("Amps.util.Grids", {
                         }
                       )
                     );
-                    list.setTitle(
-                      "Recent Received Messages for Service: " + record.name
-                    );
                   }
                 },
               },
@@ -7340,10 +7357,8 @@ Ext.define("Amps.util.Grids", {
           },
           {
             xtype: "panel",
-            layout: {
-              type: "vbox",
-              align: "stretch",
-            },
+            itemId: "service",
+            layout: "fit",
             tbar: [
               {
                 text: "Back",
@@ -7355,76 +7370,126 @@ Ext.define("Amps.util.Grids", {
             ],
             items: [
               {
-                xtype: "grid",
-                flex: 1,
-                itemId: "eventlist",
-                columns: [
+                xtype: "tabpanel",
+                itemId: "tab",
+                layout: "fit",
+
+                items: [
                   {
-                    text: "Message ID",
-                    dataIndex: "msgid",
+                    xtype: "grid",
                     flex: 1,
-                    type: "text",
-                  },
-                  {
-                    text: "Parent",
-                    dataIndex: "parent",
-                    flex: 1,
-                    value: "true",
-                    type: "text",
-                  },
-                  {
-                    text: "File Name",
-                    dataIndex: "fname",
-                    flex: 1,
-                    value: "true",
-                    type: "text",
-                  },
-                  {
-                    text: "File Size",
-                    dataIndex: "fsize",
-                    flex: 1,
-                    type: "fileSize",
-                    renderer: amfutil.renderFileSize,
-                  },
-                  {
-                    text: "Event Time",
-                    dataIndex: "etime",
-                    flex: 1,
-                    type: "date",
-                    renderer: function (val) {
-                      var date = new Date(val);
-                      return date.toString();
+
+                    title: "Recent Messages",
+                    itemId: "events",
+                    columns: [
+                      {
+                        text: "Message ID",
+                        dataIndex: "msgid",
+                        flex: 1,
+                        type: "text",
+                      },
+                      {
+                        text: "Parent",
+                        dataIndex: "parent",
+                        flex: 1,
+                        value: "true",
+                        type: "text",
+                      },
+                      {
+                        text: "File Name",
+                        dataIndex: "fname",
+                        flex: 1,
+                        value: "true",
+                        type: "text",
+                      },
+                      {
+                        text: "File Size",
+                        dataIndex: "fsize",
+                        flex: 1,
+                        type: "fileSize",
+                        renderer: amfutil.renderFileSize,
+                      },
+                      {
+                        text: "Event Time",
+                        dataIndex: "etime",
+                        flex: 1,
+                        type: "date",
+                        renderer: function (val) {
+                          var date = new Date(val);
+                          return date.toString();
+                        },
+                      },
+                      {
+                        text: "Status",
+                        dataIndex: "status",
+                        flex: 1,
+                        type: "combo",
+                        options: [
+                          {
+                            field: "started",
+                            label: "Started",
+                          },
+                          {
+                            field: "completed",
+                            label: "Completed",
+                          },
+                          {
+                            field: "received",
+                            label: "Received",
+                          },
+                          {
+                            field: "failed",
+                            label: "Failed",
+                          },
+                        ],
+                      },
+                    ],
+                    bbar: {
+                      xtype: "pagingtoolbar",
+                      displayInfo: true,
                     },
                   },
                   {
-                    text: "Status",
-                    dataIndex: "status",
+                    xtype: "grid",
                     flex: 1,
-                    type: "combo",
-                    options: [
+
+                    title: "Service Logs",
+                    itemId: "logs",
+                    columns: [
                       {
-                        field: "started",
-                        label: "Started",
+                        text: "Service Name",
+                        dataIndex: "name",
+                        flex: 1,
+                        value: "true",
+                        type: "text",
                       },
                       {
-                        field: "completed",
-                        label: "Completed",
+                        text: "Event Time",
+                        dataIndex: "etime",
+                        flex: 1,
+                        type: "date",
+                        renderer: function (val) {
+                          var date = new Date(val);
+                          return date.toString();
+                        },
                       },
                       {
-                        field: "received",
-                        label: "Received",
+                        text: "Status",
+                        dataIndex: "status",
+                        flex: 1,
                       },
                       {
-                        field: "failed",
-                        label: "Failed",
+                        text: "Reason",
+                        dataIndex: "reason",
+                        flex: 1,
                       },
                     ],
+                    bbar: {
+                      xtype: "pagingtoolbar",
+                      displayInfo: true,
+                    },
                   },
                 ],
-                bbar: {
-                  xtype: "pagingtoolbar",
-                  displayInfo: true,
-                },
               },
             ],
           },

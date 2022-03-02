@@ -36,6 +36,15 @@ defmodule Amps.SvcManager do
   end
 
   def handle_call({:stop_service, name}, _from, state) do
+    AmpsEvents.send_history(
+      "amps.events.svcs.#{name}.logs",
+      "service_logs",
+      %{
+        "name" => name,
+        "status" => "stopping"
+      }
+    )
+
     res =
       case service_active?(name) do
         nil ->
@@ -51,7 +60,18 @@ defmodule Amps.SvcManager do
             DynamicSupervisor.terminate_child(Amps.SvcSupervisor, pid)
           end)
 
-          DB.find_one_and_update("services", %{"name" => name}, %{"active" => false})
+          DB.find_one_and_update("services", %{"name" => name}, %{
+            "active" => false
+          })
+
+          AmpsEvents.send_history(
+            "amps.events.svcs.#{name}.logs",
+            "service_logs",
+            %{
+              "name" => name,
+              "status" => "stopped"
+            }
+          )
 
           {:ok, true}
       end
@@ -66,7 +86,10 @@ defmodule Amps.SvcManager do
           res = load_service(name)
           IO.inspect(res)
           res
-          DB.find_one_and_update("services", %{"name" => name}, %{"active" => true})
+
+          DB.find_one_and_update("services", %{"name" => name}, %{
+            "active" => true
+          })
 
         pid ->
           {:error, "Service Already Running #{inspect(pid)}"}
@@ -100,12 +123,22 @@ defmodule Amps.SvcManager do
           ]
 
           if args["tls"] do
-            cert = AmpsUtil.get_key(args["cert"])
-            key = AmpsUtil.get_key(args["key"])
-            cert = X509.Certificate.from_pem!(cert) |> X509.Certificate.to_der()
-            key = X509.PrivateKey.from_pem!(key)
-            keytype = Kernel.elem(key, 0)
-            key = X509.PrivateKey.to_der(key)
+            {cert, key} =
+              try do
+                cert = AmpsUtil.get_key(args["cert"])
+                key = AmpsUtil.get_key(args["key"])
+
+                cert =
+                  X509.Certificate.from_pem!(cert) |> X509.Certificate.to_der()
+
+                key = X509.PrivateKey.from_pem!(key)
+                keytype = Kernel.elem(key, 0)
+                key = X509.PrivateKey.to_der(key)
+                {cert, {keytype, key}}
+              rescue
+                e ->
+                  raise "Error parsing key and/or certificate"
+              end
 
             {Plug.Cowboy,
              scheme: :https,
@@ -115,7 +148,7 @@ defmodule Amps.SvcManager do
                port: args["port"],
                cipher_suite: :strong,
                cert: cert,
-               key: {keytype, key},
+               key: key,
                otp_app: :amps,
                protocol_options: protocol_options
              ]}
@@ -123,7 +156,11 @@ defmodule Amps.SvcManager do
             {Plug.Cowboy,
              scheme: :http,
              plug: types[:httpd],
-             options: [ref: name, port: args["port"], protocol_options: protocol_options]}
+             options: [
+               ref: name,
+               port: args["port"],
+               protocol_options: protocol_options
+             ]}
           end
 
         :kafka ->
@@ -186,7 +223,7 @@ defmodule Amps.SvcManager do
     rescue
       e ->
         Logger.error(Exception.format(:error, e, __STACKTRACE__))
-        {:error, "Invalid Service Opts"}
+        {:error, e}
     end
   end
 
@@ -214,6 +251,15 @@ defmodule Amps.SvcManager do
   def load_service(svcname) do
     Logger.info("load_service loading service #{svcname}")
 
+    AmpsEvents.send_history(
+      "amps.events.svcs.#{svcname}.logs",
+      "service_logs",
+      %{
+        "name" => svcname,
+        "status" => "starting"
+      }
+    )
+
     case AmpsDatabase.get_config(svcname) do
       nil ->
         Logger.info("service not found #{svcname}")
@@ -229,18 +275,33 @@ defmodule Amps.SvcManager do
 
             case get_spec(name, opts) do
               {:error, error} ->
-                Logger.warn("Service #{name} could not be started. Error: #{error}")
+                Logger.warn(
+                  "Service #{name} could not be started. Error: #{inspect(error)}"
+                )
+
                 raise error
 
               spec ->
-                Amps.SvcSupervisor.start_child(name, spec)
+                Amps.SvcSupervisor.start_child(name, spec, parms)
             end
           end)
 
           {:ok, "Started #{svcname}"}
         rescue
           e ->
-            {:error, e.message}
+            error = "#{inspect(e)}"
+
+            AmpsEvents.send_history(
+              "amps.events.svcs.#{svcname}.logs",
+              "service_logs",
+              %{
+                "name" => svcname,
+                "status" => "failed",
+                "reason" => e.message
+              }
+            )
+
+            {:error, e}
         end
     end
   end

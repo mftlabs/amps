@@ -30,7 +30,10 @@ defmodule Amps.Application do
     children = [
       # Start the PubSub system
       {Phoenix.PubSub, name: Amps.PubSub},
-      Supervisor.Spec.worker(Gnat.ConnectionSupervisor, [gnat_supervisor_settings, []]),
+      Supervisor.Spec.worker(Gnat.ConnectionSupervisor, [
+        gnat_supervisor_settings,
+        []
+      ]),
       {
         Mnesiac.Supervisor,
         [
@@ -55,19 +58,43 @@ defmodule Amps.Application do
       Amps.SvcSupervisor,
       Amps.SvcManager,
       Amps.Scheduler,
-      {Amps.HistoryHandler,
-       %{
-         "name" => "event_handler",
-         "subs_count" => 4,
-         "topic" => "amps.events.*"
-       }},
+      %{
+        id: "event_handler",
+        start:
+          {Amps.HistoryHandler, :start_link,
+           [
+             %{
+               "name" => "event_handler",
+               "subs_count" => 8,
+               "topic" => "amps.events.*"
+             }
+           ]}
+      },
+      %{
+        id: "service_logs",
+        start:
+          {Amps.HistoryHandler, :start_link,
+           [
+             %{
+               "name" => "service_logs",
+               "subs_count" => 4,
+               "topic" => "amps.events.svcs.*.logs"
+             }
+           ]}
+      },
 
       # add this to db config...
 
       # worker pool to run python actions
-      :poolboy.child_spec(:worker, Application.get_env(:amps, :pyworker)[:config])
+      :poolboy.child_spec(
+        :worker,
+        Application.get_env(:amps, :pyworker)[:config]
+      )
     ]
 
-    Supervisor.start_link(children, strategy: :one_for_one, name: Amps.Supervisor)
+    Supervisor.start_link(children,
+      strategy: :one_for_one,
+      name: Amps.Supervisor
+    )
   end
 end

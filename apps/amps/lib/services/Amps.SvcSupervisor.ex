@@ -6,7 +6,7 @@ defmodule Amps.SvcSupervisor do
     DynamicSupervisor.start_link(__MODULE__, init_arg, name: __MODULE__)
   end
 
-  def start_child(name, spec) do
+  def start_child(name, spec, config) do
     Logger.info("starting child #{name}")
     spec = Supervisor.child_spec(spec, restart: :transient)
     # mod = String.to_atom("Elixir." <> args["module"])
@@ -17,10 +17,42 @@ defmodule Amps.SvcSupervisor do
         IO.inspect(name)
         Process.register(pid, name)
 
+        AmpsEvents.send_history(
+          "amps.events.svcs.#{config["name"]}.logs",
+          "service_logs",
+          %{
+            "name" => config["name"],
+            "status" => "started"
+          }
+        )
+
       # Amps.SvcHandler.start_monitor(pid)
 
       {:error, error} ->
         Logger.error("Could not start #{name} - Error: #{inspect(error)}")
+
+        # This match pattern worked for kafka errors in my local testing, but I worry it is too specific.
+
+        {:shutdown,
+         {:failed_to_start_child, module,
+          {{:badmatch, {:error, {e, stacktrace}}}, _}}} = error
+
+        error =
+          if e.message do
+            e.message
+          else
+            "#{inspect(error)}"
+          end
+
+        AmpsEvents.send_history(
+          "amps.events.svcs.#{config["name"]}.logs",
+          "service_logs",
+          %{
+            "name" => config["name"],
+            "status" => "failed",
+            "reason" => error
+          }
+        )
     end
   end
 
