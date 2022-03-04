@@ -57,7 +57,6 @@ defmodule AmpsWeb.MixProject do
       {:ex_aws_s3, "~> 2.3.1"},
       {:glob, "~> 1.0"},
       {:httpoison, "~> 1.8"},
-      {:snap, "~> 0.5"},
       {:postgrex, "~> 0.15.10"},
       {:pow, "~> 1.0.25"},
       {:pow_assent, "~> 0.4.12"},
