@@ -37,10 +37,16 @@ defmodule Amps.Defaults do
     {:atomic, :ok} = :mnesia.transaction(fn -> :mnesia.write({:default, key, val}) end)
   end
 
-  def get(key) do
-    with {:atomic, [{:default, key, val}]} <-
+  def get(key, default \\ nil) do
+    with {:atomic, res} <-
            :mnesia.transaction(fn -> :mnesia.read({:default, key}) end) do
-      val
+      case res do
+        [{:default, key, val}] ->
+          val
+
+        [] ->
+          default
+      end
     end
   end
 end

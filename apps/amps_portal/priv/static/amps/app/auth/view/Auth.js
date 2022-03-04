@@ -27,10 +27,17 @@ Ext.define("Amps.Authorized.Viewport", {
       },
       items: [
         {
-          xtype: "container",
-          layout: "center",
+          width: 209,
+          xtype: "component",
+          width: 209,
           region: "west",
-          width: 100,
+          html: '<img src="/resources/images/agiledatainc.png" style="transform: scale(.75);" />',
+        },
+        {
+          xtype: "container",
+          region: "center",
+          layout: "center",
+          flex: 1,
           style: {
             color: "white",
             "font-size": 36,
@@ -45,8 +52,9 @@ Ext.define("Amps.Authorized.Viewport", {
         },
         {
           xtype: "container",
-          region: "center",
-          flex: 1,
+          layout: "center",
+          region: "east",
+          width: 100,
         },
       ],
     },

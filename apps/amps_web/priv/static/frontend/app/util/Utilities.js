@@ -2719,60 +2719,72 @@ Ext.define("Amps.util.Utilities", {
 
     return new Ext.form.Panel({
       defaults: {
-        padding: 5,
+        padding: 20,
         labelWidth: 140,
       },
       itemId: "searchform",
+      scrollable: true,
       items: items,
+      padding: 5,
       buttons: [
         {
           xtype: "button",
           text: "Apply Filter",
           itemId: "applyfilterufarule",
-          handler: function (btn) {
+          handler: async function (btn) {
             var form = btn.up("form").getForm();
             // var dateval = btn.up("form").down("datefiltervalue");
             // console.log(dateval);
             var fields = form.getFields();
             var values = form.getValues();
-            var fields = ampsgrids.grids[route]().subgrids[field].columns;
-            // var fieldKeys = fields.map((field) => field.field);
-            console.log(fields);
-            console.log(values);
-            var filters = {};
-            var gridFilters = grid.getStore().getFilters(); // an Ext.util.FilterCollection
-            fields.forEach((field) => {
-              if (values[field.dataIndex] && values[field.dataIndex] != "") {
-                if (field.type == "date") {
-                  var data = JSON.parse(values[field.dataIndex]);
-                  if (data["$gt"]) {
-                    data["$gt"] = { $date: data["$gt"] };
-                  }
-                  if (data["$lt"]) {
-                    data["$lt"] = { $date: data["$lt"] };
-                  }
-                  filters[field.dataIndex] = data;
-                } else if (field.type == "text") {
-                  gridFilters.add((item) => {
-                    return item.data[field.dataIndex].includes(
+            var config = ampsgrids.grids[route]().subgrids[field];
+            console.log(config);
+            if (config.store) {
+              var filters = amfutil.getFilters(form, config.columns);
+              console.log(filters);
+              config.store(filters).then((store) => {
+                grid.setStore(store);
+              });
+            } else {
+              var fields = config.columns;
+              // var fieldKeys = fields.map((field) => field.field);
+              console.log(fields);
+              console.log(values);
+              var filters = {};
+              var gridFilters = grid.getStore().getFilters(); // an Ext.util.FilterCollection
+              fields.forEach((field) => {
+                if (values[field.dataIndex] && values[field.dataIndex] != "") {
+                  if (field.type == "date") {
+                    var data = JSON.parse(values[field.dataIndex]);
+                    if (data["$gt"]) {
+                      data["$gt"] = { $date: data["$gt"] };
+                    }
+                    if (data["$lt"]) {
+                      data["$lt"] = { $date: data["$lt"] };
+                    }
+                    filters[field.dataIndex] = data;
+                  } else if (field.type == "text") {
+                    gridFilters.add((item) => {
+                      return item.data[field.dataIndex].includes(
+                        values[field.dataIndex]
+                      );
+                    });
+                  } else if (field.type == "fileSize") {
+                    console.log(values[field.dataIndex]);
+                    filters[field.dataIndex] = JSON.parse(
                       values[field.dataIndex]
                     );
-                  });
-                } else if (field.type == "fileSize") {
-                  console.log(values[field.dataIndex]);
-                  filters[field.dataIndex] = JSON.parse(
-                    values[field.dataIndex]
-                  );
-                  console.log(filters);
-                } else {
-                  gridFilters.add((item) => {
-                    return (
-                      item.data[field.dataIndex] == values[field.dataIndex]
-                    );
-                  });
+                    console.log(filters);
+                  } else {
+                    gridFilters.add((item) => {
+                      return (
+                        item.data[field.dataIndex] == values[field.dataIndex]
+                      );
+                    });
+                  }
                 }
-              }
-            });
+              });
+            }
 
             amfutil.getElementByID("searchwindow").close();
             amfutil
@@ -2818,6 +2830,9 @@ Ext.define("Amps.util.Utilities", {
         padding: 5,
         labelWidth: 140,
       },
+      padding: 20,
+      scrollable: true,
+
       itemId: "searchform",
       items: items,
       buttons: [
@@ -2835,33 +2850,7 @@ Ext.define("Amps.util.Utilities", {
             // var fieldKeys = fields.map((field) => field.field);
             console.log(fields);
             console.log(values);
-            var filters = {};
-            fields.forEach((field) => {
-              if (values[field.dataIndex] && values[field.dataIndex] != "") {
-                if (field.type == "date") {
-                  var data = JSON.parse(values[field.dataIndex]);
-                  if (data["$gt"]) {
-                    data["$gt"] = { $date: data["$gt"] };
-                  }
-                  if (data["$lt"]) {
-                    data["$lt"] = { $date: data["$lt"] };
-                  }
-                  filters[field.dataIndex] = data;
-                } else if (field.type == "text") {
-                  filters[field.dataIndex] = {
-                    $regex: values[field.dataIndex],
-                  };
-                } else if (field.type == "fileSize") {
-                  console.log(values[field.dataIndex]);
-                  filters[field.dataIndex] = JSON.parse(
-                    values[field.dataIndex]
-                  );
-                  console.log(filters);
-                } else {
-                  filters[field.dataIndex] = values[field.dataIndex];
-                }
-              }
-            });
+            var filters = amfutil.getFilters(form, fields);
             console.log(filters);
             amfutil.setGridStore(filters, page);
 
@@ -2880,6 +2869,39 @@ Ext.define("Amps.util.Utilities", {
         },
       ],
     });
+  },
+
+  getFilters: function (form, fields) {
+    var values = form.getValues();
+    // var fieldKeys = fields.map((field) => field.field);
+    console.log(fields);
+    console.log(values);
+    var filters = {};
+    fields.forEach((field) => {
+      if (values[field.dataIndex] && values[field.dataIndex] != "") {
+        if (field.type == "date") {
+          var data = JSON.parse(values[field.dataIndex]);
+          if (data["$gt"]) {
+            data["$gt"] = { $date: data["$gt"] };
+          }
+          if (data["$lt"]) {
+            data["$lt"] = { $date: data["$lt"] };
+          }
+          filters[field.dataIndex] = data;
+        } else if (field.type == "text") {
+          filters[field.dataIndex] = {
+            $regex: values[field.dataIndex],
+          };
+        } else if (field.type == "fileSize") {
+          console.log(values[field.dataIndex]);
+          filters[field.dataIndex] = JSON.parse(values[field.dataIndex]);
+          console.log(filters);
+        } else {
+          filters[field.dataIndex] = values[field.dataIndex];
+        }
+      }
+    });
+    return filters;
   },
 
   copyTextdata: function (e) {
@@ -2901,7 +2923,6 @@ Ext.define("Amps.util.Utilities", {
   },
 
   renderFileSize: function fileSize(size, m, r) {
-    console.log(r.data.data);
     if (size == null) {
       if (r.data.data) {
         size = new Blob([r.data.data]).size;

@@ -834,7 +834,7 @@ Ext.define("Amps.consumers.tab", {
                   } else {
                     return;
                   }
-                }, 500);
+                }, 2000);
               }
               timeout();
             },
@@ -4140,70 +4140,6 @@ Ext.define("Amps.util.Grids", {
     //   ],
     //   options: [],
     // }),
-    service_events: () => ({
-      title: "Service Events",
-      // filter: { parent: { $exists: false } },
-      actionIcons: ["searchpanelbtn", "clearfilter", "refreshbtn"],
-      sort: {
-        etime: "DESC",
-      },
-      dblclick: function () {},
-      columns: [
-        {
-          text: "User",
-          dataIndex: "user",
-          flex: 1,
-          value: "true",
-          type: "text",
-        },
-        {
-          text: "Service",
-          dataIndex: "service",
-          flex: 1,
-          value: "true",
-          type: "text",
-        },
-        {
-          text: "Operation",
-          dataIndex: "operation",
-          flex: 1,
-          value: "true",
-          type: "text",
-        },
-
-        {
-          text: "Event Time",
-          dataIndex: "etime",
-          flex: 1,
-          type: "date",
-          renderer: function (val) {
-            var date = new Date(val);
-            return date.toString();
-          },
-        },
-        {
-          text: "Status",
-          dataIndex: "status",
-          flex: 1,
-          type: "combo",
-          options: [
-            {
-              field: "started",
-              label: "Started",
-            },
-            {
-              field: "completed",
-              label: "Completed",
-            },
-            {
-              field: "received",
-              label: "Received",
-            },
-          ],
-        },
-      ],
-      // options: ["reprocess", "reroute"],
-    }),
     message_events: () => ({
       title: "Message Events",
       // filter: { parent: { $exists: false } },
@@ -4256,6 +4192,12 @@ Ext.define("Amps.util.Grids", {
             var date = new Date(val);
             return date.toString();
           },
+        },
+        {
+          text: "Topic",
+          dataIndex: "topic",
+          flex: 1,
+          type: "text",
         },
         {
           text: "Status",
@@ -4593,7 +4535,8 @@ Ext.define("Amps.util.Grids", {
         },
         rules: {
           grid: true,
-          title: "Agent Rules",
+          crud: true,
+          title: "UFA Agent Rules",
           window: { width: 600, height: 600 },
           object: "Agent Rule",
           actionIcons: [
@@ -4650,6 +4593,17 @@ Ext.define("Amps.util.Grids", {
                   title: "File Metadata",
                   types: ["string"],
                   name: "fmeta",
+                },
+                {
+                  xtype: "numberfield",
+                  name: "subs_count",
+                  minValue: 1,
+                  maxValue: 20,
+                  value: 5,
+                  fieldLabel: "Subscriber Count",
+                  tooltip:
+                    "Number of concurrent processes fetching messages when rule is triggered",
+                  allowBlank: false,
                 },
                 {
                   xtype: "radiogroup",
@@ -4863,9 +4817,7 @@ Ext.define("Amps.util.Grids", {
           add: {
             process: function (form, values) {
               console.log(values);
-              if (values.type == "download") {
-                values.subs_count = values.subs_count.toString();
-              }
+              values.subs_count = values.subs_count.toString();
               if (values.fmeta) {
                 values.fmeta = JSON.stringify(
                   amfutil.formatArrayField(values.fmeta)
@@ -4877,9 +4829,7 @@ Ext.define("Amps.util.Grids", {
           },
           update: {
             process: function (form, values) {
-              if (values.type == "download") {
-                values.subs_count = values.subs_count.toString();
-              }
+              values.subs_count = values.subs_count.toString();
 
               console.log(values);
               if (values.fmeta) {
@@ -4932,6 +4882,92 @@ Ext.define("Amps.util.Grids", {
             },
           ],
           options: ["active", "delete"],
+        },
+        logs: {
+          title: "UFA Logs",
+          actionIcons: ["searchpanelbtn", "clearfilter", "refreshbtn"],
+          grid: true,
+          crud: false,
+          store: async function (filters = {}) {
+            var record = await amfutil.getCurrentItem(
+              Ext.util.History.getToken().replace(/(\/logs$)/, "")
+            );
+            console.log(record);
+            return amfutil.createCollectionStore(
+              "ufa_logs",
+              Object.assign(filters, {
+                user: record.username,
+              }),
+
+              {
+                sorters: [
+                  {
+                    property: "etime",
+                    direction: "DESC",
+                  },
+                ],
+              }
+            );
+          },
+          columns: [
+            {
+              text: "Event Time",
+              dataIndex: "etime",
+              flex: 1,
+              type: "date",
+              renderer: function (val) {
+                var date = new Date(val);
+                return date.toString();
+              },
+            },
+            {
+              text: "Operation",
+              dataIndex: "operation",
+              flex: 1,
+              value: "true",
+              type: "text",
+            },
+            {
+              text: "Rule",
+              dataIndex: "rule",
+              flex: 1,
+              value: "true",
+              type: "text",
+            },
+            {
+              text: "Message ID",
+              dataIndex: "msgid",
+              flex: 1,
+              value: "true",
+              type: "text",
+            },
+            {
+              text: "File Name",
+              dataIndex: "fname",
+              flex: 1,
+              type: "text",
+            },
+            {
+              text: "Status",
+              dataIndex: "status",
+              flex: 1,
+              type: "combo",
+              options: [
+                {
+                  field: "started",
+                  label: "Started",
+                },
+                {
+                  field: "completed",
+                  label: "Completed",
+                },
+                {
+                  field: "received",
+                  label: "Received",
+                },
+              ],
+            },
+          ],
         },
       },
     }),

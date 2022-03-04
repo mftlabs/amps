@@ -137,6 +137,17 @@ Ext.define("Amps.Pages", {
                 name: "fmeta",
               },
               {
+                xtype: "numberfield",
+                name: "subs_count",
+                minValue: 1,
+                maxValue: 20,
+                value: 5,
+                fieldLabel: "Subscriber Count",
+                tooltip:
+                  "Number of concurrent processes fetching messages when rule is triggered",
+                allowBlank: false,
+              },
+              {
                 xtype: "radiogroup",
                 fieldLabel: "Acknowledgment Mode",
                 itemId: "ackmode",
@@ -354,9 +365,7 @@ Ext.define("Amps.Pages", {
           process: function (form, values) {
             console.log(values);
 
-            if (values.type == "download") {
-              values.subs_count = values.subs_count.toString();
-            }
+            values.subs_count = values.subs_count.toString();
 
             if (values.fmeta) {
               values.fmeta = JSON.stringify(
@@ -369,9 +378,7 @@ Ext.define("Amps.Pages", {
         update: {
           process: function (form, values) {
             console.log(values);
-            if (values.type == "download") {
-              values.subs_count = values.subs_count.toString();
-            }
+            values.subs_count = values.subs_count.toString();
 
             if (values.fmeta) {
               values.fmeta = JSON.stringify(
@@ -691,6 +698,8 @@ Ext.define("Amps.Pages", {
                   element: "body", //bind to the underlying body property on the panel
                   fn: function (grid, rowIndex, e, obj) {
                     var record = grid.record.data;
+
+                    rulesConfig.store = store;
 
                     var updateForm = Ext.create("Amps.form.update");
                     updateForm.loadForm(

@@ -32,7 +32,9 @@ defmodule Amps.HistoryConsumer do
     consumer = String.replace(safe, "*", "_")
 
     [base, part, _other] = String.split(topic, ".", parts: 3)
+
     stream = AmpsUtil.get_env_parm(:streams, String.to_atom(base <> "." <> part))
+
     {stream, consumer}
   end
 
@@ -49,8 +51,16 @@ defmodule Amps.HistoryConsumer do
     IO.puts("pid #{inspect(pid)}")
 
     {stream, consumer} = AmpsUtil.get_names(opts)
-    AmpsUtil.create_consumer(stream, consumer, opts["topic"], %{deliver_policy: :all})
 
+    listening_topic = "amps.history.#{consumer}"
+
+    AmpsUtil.create_consumer(stream, consumer, opts["topic"], %{
+      deliver_policy: :all,
+      deliver_subject: listening_topic,
+      ack_policy: :all
+    })
+
+    Gnat.sub(pid, self(), listening_topic)
     Logger.info("got stream #{stream} #{consumer}")
     opts = Map.put(opts, "id", name)
 
@@ -67,8 +77,13 @@ defmodule Amps.HistoryConsumer do
     {:noreply, %{cpid: pid, opts: opts}}
   end
 
-  def handle_info({val, _opts}, _state) do
+  def handle_info({:msg, _msg}, state) do
+    {:noreply, state}
+  end
+
+  def handle_info({val, _opts}, state) do
     IO.puts("got event #{inspect(val)}")
+    {:noreply, state}
   end
 end
 
@@ -83,37 +98,91 @@ defmodule Amps.HistoryPullConsumer do
         stream_name: stream_name,
         consumer_name: consumer_name
       }) do
-    Process.link(connection_pid)
-    listening_topic = "_CON.#{nuid()}"
-    IO.puts("handle init #{inspect(connection_pid)}")
+    # Process.link(connection_pid)
+    listening_topic = "amps.history.#{consumer_name}"
     group = String.replace(parms["name"], " ", "_")
-    IO.puts("history group #{group} #{stream_name}  #{consumer_name}")
+    Logger.info("History queue_group #{group} #{stream_name} #{consumer_name}")
+    IO.inspect(listening_topic)
 
     {:ok, _sid} = Gnat.sub(connection_pid, self(), listening_topic, queue_group: group)
 
-    :ok =
-      Gnat.pub(connection_pid, "$JS.API.CONSUMER.MSG.NEXT.#{stream_name}.#{consumer_name}", "1",
-        reply_to: listening_topic
-      )
+    # :ok =
+    #   Gnat.pub(
+    #     connection_pid,
+    #     "$JS.API.CONSUMER.MSG.NEXT.#{stream_name}.#{consumer_name}",
+    #     "1",
+    #     reply_to: listening_topic
+    #   )
 
     state = %{
       parms: parms,
       stream_name: stream_name,
       consumer_name: consumer_name,
-      listening_topic: listening_topic
+      listening_topic: listening_topic,
+      messages: [],
+      index:
+        if parms["receipt"] do
+          parms["index"]
+        else
+          nil
+        end
     }
 
+    schedule_bulk()
     {:ok, state}
   end
 
   def handle_info({:msg, message}, state) do
     parms = state[:parms]
     name = parms["name"]
-    Logger.info("got history message #{name}: #{message.topic} / #{message.body}")
+
+    Logger.debug("got history message #{name}: #{message.topic} / #{message.body}")
+
     data = Poison.decode!(message.body)
-    DB.insert(data["index"], data)
-    Jetstream.ack_next(message, state.listening_topic)
+
+    message =
+      if state.index do
+        {%Snap.Bulk.Action.Create{
+           _index: state.index,
+           doc:
+             Map.merge(data["msg"], %{
+               "status" => "received"
+             })
+         }, message}
+      else
+        {%Snap.Bulk.Action.Create{
+           _index: data["index"],
+           doc: data
+         }, message}
+      end
+
+    state = Map.put(state, :messages, [message | state.messages])
+
     {:noreply, state}
+  end
+
+  def handle_info(:bulk, state) do
+    schedule_bulk()
+
+    state =
+      if Enum.count(state.messages) > 0 do
+        Enum.reduce(state.messages, [], fn {action, _}, acc ->
+          [action | acc]
+        end)
+        |> Snap.Bulk.perform(Amps.Cluster, nil, [])
+
+        {_, msg} = Enum.at(state.messages, 0)
+        Jetstream.ack(msg)
+        Map.put(state, :messages, [])
+      else
+        state
+      end
+
+    {:noreply, state}
+  end
+
+  defp schedule_bulk do
+    Process.send_after(self(), :bulk, Amps.Defaults.get("hinterval", 5_000))
   end
 
   def handle_info(other, state) do

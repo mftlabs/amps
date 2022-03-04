@@ -4,6 +4,8 @@ defmodule AmpsPortal.UFAController do
   import Jetstream
   alias Amps.DB
   require Logger
+  alias Pow.{Config, Plug, Store.CredentialsCache}
+  alias PowPersistentSession.Store.PersistentSessionCache
 
   def get_sched(conn, %{"username" => username}) do
     case Pow.Plug.current_user(conn) do
@@ -54,10 +56,9 @@ defmodule AmpsPortal.UFAController do
           encoded = Jason.encode!(schedule)
 
           AmpsEvents.send_history(
-            "amps.events.svcs",
-            "service_events",
+            "amps.events.ufa.#{user["username"]}.logs",
+            "ufa_logs",
             %{
-              "service" => "ufa",
               "user" => user["username"],
               "status" => "success",
               "operation" => "schedule"
@@ -81,10 +82,9 @@ defmodule AmpsPortal.UFAController do
 
       user ->
         AmpsEvents.send_history(
-          "amps.events.svcs",
-          "service_events",
+          "amps.events.ufa.#{user.username}.logs",
+          "ufa_logs",
           %{
-            "service" => "ufa",
             "user" => user.username,
             "status" => "success",
             "operation" => "heartbeat"
@@ -133,20 +133,19 @@ defmodule AmpsPortal.UFAController do
 
         AmpsEvents.send(msg, %{"output" => topic}, %{})
 
-        AmpsEvents.send_history(
-          "amps.events.messages",
-          "message_events",
-          Map.merge(msg, %{
-            "status" => "received",
-            "output" => topic
-          })
-        )
+        # AmpsEvents.send_history(
+        #   "amps.events.messages",
+        #   "message_events",
+        #   Map.merge(msg, %{
+        #     "status" => "received",
+        #     "output" => topic
+        #   })
+        # )
 
         AmpsEvents.send_history(
-          "amps.events.svcs",
-          "service_events",
+          "amps.events.ufa.#{user.username}.logs",
+          "ufa_logs",
           Map.merge(msg, %{
-            "service" => "ufa",
             "user" => user.username,
             "status" => "success",
             "operation" => "upload"
@@ -165,8 +164,6 @@ defmodule AmpsPortal.UFAController do
       user ->
         case receive_message({user, rule}, self()) do
           {:message, message} ->
-            IO.inspect(message)
-
             msg = Jason.decode!(message.body)["msg"]
 
             conn =
@@ -175,11 +172,11 @@ defmodule AmpsPortal.UFAController do
               |> put_resp_header("amps-message", message.body)
 
             AmpsEvents.send_history(
-              "amps.events.svcs",
-              "service_events",
+              "amps.events.ufa.#{user.username}.logs",
+              "ufa_logs",
               Map.merge(msg, %{
-                "service" => "ufa",
                 "user" => user.username,
+                "rule" => rule,
                 "status" => "started",
                 "operation" => "download"
               })
@@ -202,25 +199,25 @@ defmodule AmpsPortal.UFAController do
   end
 
   def ack(conn, %{"reply" => reply}) do
-    IO.inspect(conn)
-
     case Pow.Plug.current_user(conn) do
       nil ->
         send_resp(conn, 403, "Forbidden")
 
       user ->
         res = Jetstream.ack(%{gnat: Process.whereis(:gnat), reply_to: reply})
-
+        IO.inspect(conn)
         msg = Jason.decode!(get_req_header(conn, "amps-message"))
+        msg = msg["msg"]
+        rule = get_req_header(conn, "amps-rule")
 
         AmpsEvents.send_history(
-          "amps.events.svcs",
-          "service_events",
+          "amps.events.ufa.#{user.username}.logs",
+          "ufa_logs",
           Map.merge(msg, %{
-            "service" => "ufa",
             "user" => user.username,
             "status" => "completed",
-            "operation" => "download"
+            "operation" => "download",
+            "rule" => rule
           })
         )
 
@@ -232,7 +229,10 @@ defmodule AmpsPortal.UFAController do
     listening_topic = "_CON.#{nuid()}"
 
     {stream, consumer} =
-      AmpsUtil.get_names(%{"name" => user.username <> "_" <> rule, "topic" => "amps.mailbox.*"})
+      AmpsUtil.get_names(%{
+        "name" => user.username <> "_" <> rule,
+        "topic" => "amps.mailbox.*"
+      })
 
     try do
       pid =
@@ -370,19 +370,60 @@ defmodule AmpsPortal.UFAController do
 
       user ->
         body = conn.body_params()
-        Amps.DB.find_one_and_update("users", %{"_id" => user.id}, %{"ufa" => body})
+
+        Amps.DB.find_one_and_update("users", %{"_id" => user.id}, %{
+          "ufa" => body
+        })
 
         json(conn, :ok)
     end
   end
 
+  defp store_config(config) do
+    backend = Config.get(config, :cache_store_backend, Pow.Store.Backend.EtsCache)
+
+    [backend: backend, pow_config: config]
+  end
+
+  defp sign_token(conn, token, config) do
+    Plug.sign_token(conn, signing_salt(), token, config)
+  end
+
+  defp signing_salt(), do: Atom.to_string(AmpsPortal.APIAuthPlug)
+
+  defp generate_credentials(conn, user) do
+    config = Pow.Plug.fetch_config(conn)
+    store_config = store_config(config)
+    access_token = Pow.UUID.generate()
+    renewal_token = Pow.UUID.generate()
+    # The store caches will use their default `:ttl` settting. To change the
+    # `:ttl`, `Keyword.put(store_config, :ttl, :timer.minutes(10))` can be
+    # passed in as the first argument instead of `store_config`.
+
+    CredentialsCache.put(
+      store_config,
+      access_token,
+      {user, [renewal_token: renewal_token]}
+    )
+
+    PersistentSessionCache.put(
+      store_config,
+      renewal_token,
+      {user, [access_token: access_token]}
+    )
+
+    {sign_token(conn, access_token, config), sign_token(conn, renewal_token, config)}
+  end
+
   def get_agent(conn, _params) do
+    IO.inspect(conn)
+
     case Pow.Plug.current_user(conn) do
       nil ->
         send_resp(conn, 403, "Forbidden")
 
-      user ->
-        user = Amps.DB.find_one("users", %{"_id" => user.id})
+      userstruct ->
+        user = Amps.DB.find_one("users", %{"_id" => userstruct.id})
         # _host = Application.fetch_env!(:amps_portal, AmpsWeb.Endpoint)[:url]
 
         agentdir = Application.app_dir(:amps_portal, "priv/agents")
@@ -390,6 +431,7 @@ defmodule AmpsPortal.UFAController do
         os = query["os"]
         arch = query["arch"]
         host = query["host"]
+
         {:ok, agentfolder} = Temp.mkdir()
 
         agent =
@@ -423,42 +465,22 @@ defmodule AmpsPortal.UFAController do
             "ufa_agent"
           end
 
-        File.copy(Path.join([agentdir, os, agent]), Path.join(agentfolder, fname))
+        File.copy(
+          Path.join([agentdir, os, agent]),
+          Path.join(agentfolder, fname)
+        )
+
+        token = Phoenix.Token.sign(AmpsPortal.Endpoint, "ufa token", user["_id"])
 
         conf =
           File.read!(Path.join(agentdir, "conf"))
           |> String.replace("{UFA_URL}", host)
+          |> String.replace("{UFA_TOKEN}", token)
+          |> String.replace("{UFA_USERNAME}", user["username"])
 
         # IO.inspect(script)
 
-        IO.inspect(File.write(Path.join(agentfolder, "conf"), conf))
-
-        IO.inspect(File.ls(agentfolder))
-
-        # case os do
-        #   "linux" ->
-
-        #   "windows" ->
-        #     IO.inspect(File.cp_r("./agents/windows", agentfolder))
-
-        #     script =
-        #       File.read!(Path.join(agentfolder, "run.bat"))
-        #       |> String.replace("{ACCOUNT}", account["username"])
-        #       |> String.replace("{KEY}", account["username"])
-        #       |> String.replace(
-        #         "{CRED}",
-        #         AmpsWeb.Encryption.decrypt(account["aws_secret_access_key"])
-        #       )
-        #       |> String.replace("{HOST}", host)
-
-        #     IO.inspect(script)
-        #     IO.inspect(File.write(Path.join(agentfolder, "run.bat"), script))
-
-        #     IO.inspect(File.ls(agentfolder))
-
-        #   "mac" ->
-        #     {"run.sh", "mac_" <> arch <> "_agent"}
-        # end
+        File.write(Path.join(agentfolder, "conf"), conf)
 
         zipname = user["username"] <> "_agent.zip"
 
@@ -472,6 +494,41 @@ defmodule AmpsPortal.UFAController do
 
         send_download(conn, {:file, zip}, disposition: :attachment)
         # json(conn, :ok)
+    end
+  end
+
+  def agent_login(conn, %{"username" => username, "token" => token}) do
+    {:ok, user_id} = Phoenix.Token.verify(AmpsPortal.Endpoint, "ufa token", token, max_age: 86400)
+
+    case DB.find_one("users", %{"_id" => user_id}) do
+      nil ->
+        send_resp(conn, 401, "Invalid Credentials")
+
+      user ->
+        if user["username"] == username do
+          userstruct = AmpsPortal.Users.get_by(%{"username" => user["username"]})
+
+          {a, r} = generate_credentials(conn, userstruct)
+
+          AmpsEvents.send_history(
+            "amps.events.ufa.#{user["username"]}.logs",
+            "ufa_logs",
+            %{
+              "user" => user["username"],
+              "status" => "success",
+              "operation" => "login"
+            }
+          )
+
+          json(conn, %{
+            data: %{
+              access_token: a,
+              renewal_token: r
+            }
+          })
+        else
+          send_resp(conn, 403, "Invalid Credentials")
+        end
     end
   end
 

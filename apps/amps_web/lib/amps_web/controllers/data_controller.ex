@@ -17,6 +17,8 @@ defmodule AmpsWeb.DataController do
   alias Elixlsx.Workbook
   alias Elixlsx.Sheet
 
+  @symbols '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMOPQRSTUVWXYZ$@!@#$%&*'
+
   plug(
     AmpsWeb.EnsureRolePlug,
     :Admin
@@ -66,12 +68,12 @@ defmodule AmpsWeb.DataController do
     obj = Amps.DB.find_one("users", %{"_id" => id})
     _length = 15
 
-    symbols = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMOPQRSTUVWXYZ$@~!@#$%^&*'
-
-    symbol_count = Enum.count(symbols)
+    symbol_count = Enum.count(@symbols)
 
     password =
-      for _ <- 1..15, into: "", do: <<Enum.at(symbols, :crypto.rand_uniform(0, symbol_count))>>
+      for _ <- 1..15,
+          into: "",
+          do: <<Enum.at(@symbols, :crypto.rand_uniform(0, symbol_count))>>
 
     # IO.inspect(password)
     # res = PowResetPassword.Plug.update_user_password(conn, %{"password" => hashed})
@@ -95,15 +97,16 @@ defmodule AmpsWeb.DataController do
     obj = Amps.DB.find_one("users", %{"_id" => id})
     _length = 15
 
-    symbols = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMOPQRSTUVWXYZ$@~!@#$%^&*'
-
-    symbol_count = Enum.count(symbols)
+    symbol_count = Enum.count(@symbols)
 
     password =
-      for _ <- 1..15, into: "", do: <<Enum.at(symbols, :crypto.rand_uniform(0, symbol_count))>>
+      for _ <- 1..15,
+          into: "",
+          do: <<Enum.at(@symbols, :crypto.rand_uniform(0, symbol_count))>>
 
     # IO.inspect(password)
     %{password_hash: hashed} = add_hash(password)
+
     # res = PowResetPassword.Plug.update_user_password(conn, %{"password" => hashed})
 
     Amps.DB.find_one_and_update("users", %{"username" => obj["username"]}, %{
@@ -295,6 +298,7 @@ defmodule AmpsWeb.DataController do
 
   def create_sheet(name, headers, contents) do
     formatted_contents = Enum.map(contents, fn x -> Enum.map(x, fn y -> [y] end) end)
+
     headers |> Enum.map(fn x -> [x, bold: true] end)
     row_data = [headers | formatted_contents]
     _newsheet = %Sheet{name: name, rows: row_data}
@@ -323,7 +327,9 @@ defmodule AmpsWeb.DataController do
     {:ok, {_name, binary}} = Elixlsx.write_to_memory(%Workbook{sheets: sheets}, collection)
 
     conn
-    |> send_download({:binary, binary}, filename: "#{collection}_#{field}_template.xlsx")
+    |> send_download({:binary, binary},
+      filename: "#{collection}_#{field}_template.xlsx"
+    )
   end
 
   def create_sample_sheets(collection, data) do
@@ -333,7 +339,10 @@ defmodule AmpsWeb.DataController do
           data["headers"]
           |> Enum.map(fn x -> [x, bold: true] end)
 
-        [%Sheet{name: collection, rows: [headers]} |> Sheet.set_pane_freeze(1, 0)]
+        [
+          %Sheet{name: collection, rows: [headers]}
+          |> Sheet.set_pane_freeze(1, 0)
+        ]
 
       _ ->
         Enum.reduce(data["types"], [], fn {k, v}, acc ->
@@ -341,7 +350,10 @@ defmodule AmpsWeb.DataController do
             (data["headers"] ++ v)
             |> Enum.map(fn x -> [x, bold: true] end)
 
-          [%Sheet{name: k, rows: [headers]} |> Sheet.set_pane_freeze(1, 0) | acc]
+          [
+            %Sheet{name: k, rows: [headers]} |> Sheet.set_pane_freeze(1, 0)
+            | acc
+          ]
         end)
     end
   end
@@ -394,12 +406,15 @@ defmodule AmpsWeb.DataController do
       |> Elixlsx.write_to_memory(collection)
 
     conn
-    |> send_download({:binary, binary}, filename: "#{collection}_#{Enum.count(rows)}.xlsx")
+    |> send_download({:binary, binary},
+      filename: "#{collection}_#{Enum.count(rows)}.xlsx"
+    )
   end
 
   def write_in_workbook(sheet_name, column_headers, contents) do
     # formatted_contents = Enum.map(contents, fn x  -> Enum.map(x, fn y -> [y, {:bold, false}] end)  end)
     formatted_contents = Enum.map(contents, fn x -> Enum.map(x, fn y -> [y] end) end)
+
     row_data = [column_headers | formatted_contents]
     newsheet = %Sheet{name: sheet_name, rows: row_data}
 
@@ -419,9 +434,16 @@ defmodule AmpsWeb.DataController do
   end
 
   def reprocess(conn, %{"msgid" => msgid}) do
-    obj = Amps.DB.find_one("message_events", %{"msgid" => msgid, "status" => "started"})
+    obj =
+      Amps.DB.find_one("message_events", %{
+        "msgid" => msgid,
+        "status" => "started"
+      })
+
     topic = obj["topic"]
+
     msg = obj |> Map.drop(["status", "action", "topic", "_id", "index", "etime"])
+
     AmpsEvents.send(msg, %{"output" => topic}, %{})
 
     json(conn, :ok)
@@ -432,7 +454,9 @@ defmodule AmpsWeb.DataController do
     body = conn.body_params()
     topic = body["topic"]
     meta = Jason.decode!(body["meta"])
+
     msg = obj |> Map.drop(["status", "action", "topic", "_id", "index", "etime"])
+
     AmpsEvents.send(Map.merge(msg, meta), %{"output" => topic}, %{})
 
     json(conn, :ok)
@@ -449,7 +473,9 @@ defmodule AmpsWeb.DataController do
       body = conn.body_params()
       topic = body["topic"]
       meta = Jason.decode!(body["meta"])
+
       msg = obj |> Map.drop(["status", "action", "topic", "_id", "index", "etime"])
+
       AmpsEvents.send(Map.merge(msg, meta), %{"output" => topic}, %{})
     end)
 
@@ -595,7 +621,11 @@ defmodule AmpsWeb.DataController do
 
         if Map.has_key?(service, "type") do
           if Map.has_key?(types, String.to_atom(service["type"])) do
-            Gnat.pub(:gnat, "amps.events.svcs.handler.#{service["name"]}.restart", "")
+            Gnat.pub(
+              :gnat,
+              "amps.events.svcs.handler.#{service["name"]}.restart",
+              ""
+            )
           end
         end
 
@@ -673,7 +703,11 @@ defmodule AmpsWeb.DataController do
     json(conn, resp)
   end
 
-  def get_field(conn, %{"collection" => collection, "id" => id, "field" => field}) do
+  def get_field(conn, %{
+        "collection" => collection,
+        "id" => id,
+        "field" => field
+      }) do
     data = DB.find_one(collection, %{"_id" => id})
     json(conn, data[field])
   end
@@ -683,7 +717,11 @@ defmodule AmpsWeb.DataController do
     json(conn, streams)
   end
 
-  def add_to_field(conn, %{"collection" => collection, "id" => id, "field" => field}) do
+  def add_to_field(conn, %{
+        "collection" => collection,
+        "id" => id,
+        "field" => field
+      }) do
     Logger.debug("Adding Field")
     body = conn.body_params()
 
@@ -707,7 +745,11 @@ defmodule AmpsWeb.DataController do
     json(conn, result)
   end
 
-  def update_field(conn, %{"collection" => collection, "id" => id, "field" => field}) do
+  def update_field(conn, %{
+        "collection" => collection,
+        "id" => id,
+        "field" => field
+      }) do
     body = conn.body_params()
     DB.find_one_and_update(collection, %{"_id" => id}, %{field => body})
     json(conn, :ok)
@@ -727,7 +769,11 @@ defmodule AmpsWeb.DataController do
       "services" ->
         case field do
           "defaults" ->
-            Application.put_env(:amps, String.to_atom(body["field"]), body["value"])
+            Application.put_env(
+              :amps,
+              String.to_atom(body["field"]),
+              body["value"]
+            )
 
           _ ->
             nil
@@ -817,7 +863,9 @@ defmodule AmpsWeb.Encryption do
       |> binary_part(0, 32)
 
     plaintext = pad(plaintext, 32)
+
     encrypted_text = :crypto.crypto_one_time(:aes_256_cbc, secret_key, iv, plaintext, true)
+
     encrypted_text = iv <> encrypted_text
     :base64.encode(encrypted_text)
   end
@@ -829,7 +877,9 @@ defmodule AmpsWeb.Encryption do
 
     ciphertext = :base64.decode(ciphertext)
     <<iv::binary-16, ciphertext::binary>> = ciphertext
+
     decrypted_text = :crypto.crypto_one_time(:aes_256_cbc, secret_key, iv, ciphertext, false)
+
     unpad(decrypted_text)
   end
 
@@ -918,7 +968,8 @@ defmodule Filter do
 
       date =
         Date.from_iso8601!(
-          Enum.at(pieces, 2) <> "-" <> Enum.at(pieces, 0) <> "-" <> Enum.at(pieces, 1)
+          Enum.at(pieces, 2) <>
+            "-" <> Enum.at(pieces, 0) <> "-" <> Enum.at(pieces, 1)
         )
 
       {:ok, datetime} = DateTime.new!(date, Time.new(0, 0, 0, 0))
@@ -954,7 +1005,10 @@ defmodule S3 do
   def create_schedule(account) do
     schedule = %{
       "account" => %{
-        "stime" => DateTime.utc_now() |> DateTime.truncate(:millisecond) |> DateTime.to_iso8601(),
+        "stime" =>
+          DateTime.utc_now()
+          |> DateTime.truncate(:millisecond)
+          |> DateTime.to_iso8601(),
         "debug" => to_string(account["debug"]),
         "logfile" => account["logpath"],
         "hinterval" => account["hinterval"],
@@ -996,7 +1050,10 @@ defmodule S3 do
 
     schedule = %{
       "account" => %{
-        "stime" => DateTime.utc_now() |> DateTime.truncate(:millisecond) |> DateTime.to_iso8601(),
+        "stime" =>
+          DateTime.utc_now()
+          |> DateTime.truncate(:millisecond)
+          |> DateTime.to_iso8601(),
         "debug" => to_string(account["debug"]),
         "logfile" => account["logpath"],
         "hinterval" => account["hinterval"],
@@ -1008,7 +1065,11 @@ defmodule S3 do
     schedule =
       Enum.reduce(account["rules"], schedule, fn rule, acc ->
         name = rule["name"]
-        rule = rule |> Map.drop(["name"]) |> Map.put("active", to_string(rule["active"]))
+
+        rule =
+          rule
+          |> Map.drop(["name"])
+          |> Map.put("active", to_string(rule["active"]))
 
         rule =
           if Map.has_key?(rule, "regex") do

@@ -12,6 +12,7 @@ Ext.define("Amps.view.main.SearchWindow", {
   minWidth: 646,
   maxWidth: 646,
   minHeight: 400,
+  maxHeight: 800,
   left: -1000,
   top: -1000,
   shadow: true,

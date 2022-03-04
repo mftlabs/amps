@@ -65,8 +65,64 @@ defmodule Amps.Application do
            [
              %{
                "name" => "event_handler",
-               "subs_count" => 8,
+               "subs_count" => 3,
                "topic" => "amps.events.*"
+             }
+           ]}
+      },
+      %{
+        id: "action_handler",
+        start:
+          {Amps.HistoryHandler, :start_link,
+           [
+             %{
+               "name" => "action_handler",
+               "subs_count" => 3,
+               "topic" => "amps.actions.>",
+               "receipt" => true,
+               "index" => "message_events"
+             }
+           ]}
+      },
+      %{
+        id: "service_handler",
+        start:
+          {Amps.HistoryHandler, :start_link,
+           [
+             %{
+               "name" => "service_handler",
+               "subs_count" => 3,
+               "topic" => "amps.svcs.>",
+               "receipt" => true,
+               "index" => "message_events"
+             }
+           ]}
+      },
+      %{
+        id: "mailbox_handler",
+        start:
+          {Amps.HistoryHandler, :start_link,
+           [
+             %{
+               "name" => "mailbox_handler",
+               "subs_count" => 3,
+               "topic" => "amps.mailbox.>",
+               "receipt" => true,
+               "index" => "message_events"
+             }
+           ]}
+      },
+      %{
+        id: "data_handler",
+        start:
+          {Amps.HistoryHandler, :start_link,
+           [
+             %{
+               "name" => "data_handler",
+               "subs_count" => 3,
+               "topic" => "amps.data.>",
+               "receipt" => true,
+               "index" => "message_events"
              }
            ]}
       },
@@ -77,8 +133,20 @@ defmodule Amps.Application do
            [
              %{
                "name" => "service_logs",
-               "subs_count" => 4,
+               "subs_count" => 3,
                "topic" => "amps.events.svcs.*.logs"
+             }
+           ]}
+      },
+      %{
+        id: "ufa_logs",
+        start:
+          {Amps.HistoryHandler, :start_link,
+           [
+             %{
+               "name" => "ufa_logs",
+               "subs_count" => 3,
+               "topic" => "amps.events.ufa.*.logs"
              }
            ]}
       },

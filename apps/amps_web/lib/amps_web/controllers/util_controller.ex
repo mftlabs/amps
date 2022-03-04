@@ -193,8 +193,13 @@ defmodule AmpsWeb.UtilController do
           parents
 
         msgs ->
-          msg = Enum.find(msgs, fn msg -> msg["status"] == "started" end)
+          msg = Enum.at(msgs, 0)
+
+          # if not AmpsUtil.blank?(msg["parent"]) do
           get_parents(msg, msgs ++ parents)
+          # else
+          #   parents
+          # end
       end
     else
       parents
@@ -209,7 +214,7 @@ defmodule AmpsWeb.UtilController do
         children
 
       msgs ->
-        msg = Enum.find(msgs, fn msg -> msg["status"] == "started" end)
+        msg = Enum.at(msgs, 0)
         get_children(msg, children ++ msgs)
     end
   end

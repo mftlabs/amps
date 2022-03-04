@@ -17,7 +17,10 @@ defmodule AmpsPortal.Router do
   pipeline :api_protected do
     plug(:fetch_session)
     plug(:fetch_live_flash)
-    plug(Pow.Plug.RequireAuthenticated, error_handler: AmpsPortal.APIAuthErrorHandler)
+
+    plug(Pow.Plug.RequireAuthenticated,
+      error_handler: AmpsPortal.APIAuthErrorHandler
+    )
   end
 
   scope "/", AmpsPortal do
@@ -29,12 +32,18 @@ defmodule AmpsPortal.Router do
   scope "/api", AmpsPortal do
     pipe_through(:api)
     get("/ampstest", PageController, :execute_test)
-    resources("/session", SessionController, singleton: true, only: [:create, :delete])
+
+    resources("/session", SessionController,
+      singleton: true,
+      only: [:create, :delete]
+    )
+
     post("/session/renew", SessionController, :renew)
     post("/users/reg", UserController, :register)
     get("/users/token/:token", UserController, :parse_user_token)
     post("/users/link/:email", UserController, :send_user_link)
     post("/users/password", UserController, :reset_password)
+    post("/ufa/login", UFAController, :agent_login)
   end
 
   scope "/api", AmpsPortal do

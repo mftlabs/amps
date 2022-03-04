@@ -327,13 +327,13 @@ defmodule Amps.SftpHandler do
       # state = List.keydelete(state, :options, 0)
       AmpsEvents.send(msg, %{"output" => topic}, %{})
 
-      AmpsEvents.send_history(
-        "amps.events.messages",
-        "message_events",
-        Map.merge(msg, %{
-          "status" => "received"
-        })
-      )
+      # AmpsEvents.send_history(
+      #   "amps.events.messages",
+      #   "message_events",
+      #   Map.merge(msg, %{
+      #     "status" => "received"
+      #   })
+      # )
 
       {{:ok, '/'}, state}
     end

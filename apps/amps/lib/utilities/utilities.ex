@@ -57,7 +57,7 @@ defmodule AmpsUtil do
   end
 
   def get_id() do
-    :uuid.uuid_to_string(:uuid.get_v4(), :binary_standard)
+    :uuid.uuid_to_string(:uuid.get_v4(), :binary_nodash)
   end
 
   def parse_edi(msg) do

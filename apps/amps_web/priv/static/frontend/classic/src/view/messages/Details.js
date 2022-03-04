@@ -876,128 +876,85 @@ Ext.define("Amps.view.messages.MessageStatus", {
                 amfutil.redirectTo(route + "/" + record._id);
               },
             },
-          },
-
-          columns: [
-            {
-              dataIndex: "action",
-              text: "Action",
-              flex: 1,
-            },
-            {
-              dataIndex: "msgid",
-              text: "Message ID",
-              flex: 1,
-            },
-            {
-              dataIndex: "reason",
-              text: "Reason",
-              flex: 1,
-            },
-            {
-              dataIndex: "status",
-              text: "Status",
-              flex: 1,
-            },
-            {
-              dataIndex: "etime",
-              text: "Event Time",
-              flex: 1,
-            },
-            {
-              xtype: "actioncolumn",
-              text: "Actions",
-              items: [
+            beforerender: function (scope) {
+              scope.reconfigure(null, [
                 {
-                  iconCls: "x-fa fa-download",
-                  handler: async function (
-                    view,
-                    rowIndex,
-                    colIndex,
-                    item,
-                    e,
-                    rec
-                  ) {
-                    var filename;
-                    var msgbox = Ext.MessageBox.show({
-                      title: "Please wait",
-                      msg: "Downloading...",
-                      progressText: "Downloading...",
-                      width: 300,
-                      progress: true,
-                      closable: false,
-                    });
-                    await amfutil.renew_session();
-                    await fetch(
-                      "/api/message_events/download/" + rec.data.msgid,
-                      {
-                        headers: {
-                          Authorization: localStorage.getItem("access_token"),
-                        },
-                      }
-                    )
-                      .then(async (response) => {
-                        if (response.ok) {
-                          var progress = 0;
-                          var size;
-                          for (let entry of response.headers.entries()) {
-                            if (entry[0] == "content-length") {
-                              size = entry[1];
-                            }
-                            if (entry[0] == "content-disposition") {
-                              filename = entry[1].match(/filename="(.+)"/)[1];
-                            }
-                          }
-                          console.log(size);
-
-                          console.log(response);
-                          const reader = response.body.getReader();
-                          return new ReadableStream({
-                            start(controller) {
-                              return pump();
-                              function pump() {
-                                return reader.read().then(({ done, value }) => {
-                                  // When no more data needs to be consumed, close the stream
-                                  if (done) {
-                                    controller.close();
-                                    return;
-                                  }
-                                  // Enqueue the next data chunk into our target stream
-                                  progress += value.length;
-                                  msgbox.updateProgress(progress / size);
-                                  controller.enqueue(value);
-                                  return pump();
-                                });
-                              }
-                            },
-                          });
-                        } else {
-                          msgbox.close();
-                          Ext.MessageBox.alert(
-                            "Error",
-                            "Failed to Download UFA Agent"
-                          );
-                          throw new Error("Something went wrong");
-                        }
-                      })
-                      .then((stream) => new Response(stream))
-                      .then((response) => response.blob())
-                      .then((blob) => {
-                        const url = URL.createObjectURL(blob);
-                        const link = document.createElement("a");
-                        link.href = url;
-                        link.setAttribute("download", filename);
-                        document.body.appendChild(link);
-                        msgbox.close();
-                        link.click();
-                        link.remove();
-                      })
-                      .catch((err) => console.error(err));
+                  text: "Message ID",
+                  dataIndex: "msgid",
+                  flex: 1,
+                  type: "text",
+                },
+                {
+                  text: "Action",
+                  dataIndex: "action",
+                  flex: 1,
+                  value: "true",
+                  type: "text",
+                },
+                {
+                  text: "Parent",
+                  dataIndex: "parent",
+                  flex: 1,
+                  value: "true",
+                  type: "text",
+                },
+                {
+                  text: "File Name",
+                  dataIndex: "fname",
+                  flex: 1,
+                  value: "true",
+                  type: "text",
+                },
+                {
+                  text: "File Size",
+                  dataIndex: "fsize",
+                  flex: 1,
+                  type: "fileSize",
+                  renderer: amfutil.renderFileSize,
+                },
+                {
+                  text: "Event Time",
+                  dataIndex: "etime",
+                  flex: 1,
+                  type: "date",
+                  renderer: function (val) {
+                    var date = new Date(val);
+                    return date.toString();
                   },
                 },
-              ],
+                {
+                  text: "Topic",
+                  dataIndex: "topic",
+                  flex: 1,
+                  type: "text",
+                },
+                {
+                  text: "Status",
+                  dataIndex: "status",
+                  flex: 1,
+                  type: "combo",
+                  options: [
+                    {
+                      field: "started",
+                      label: "Started",
+                    },
+                    {
+                      field: "completed",
+                      label: "Completed",
+                    },
+                    {
+                      field: "received",
+                      label: "Received",
+                    },
+                    {
+                      field: "failed",
+                      label: "Failed",
+                    },
+                  ],
+                },
+              ]);
             },
-          ],
+          },
         },
       ],
     },

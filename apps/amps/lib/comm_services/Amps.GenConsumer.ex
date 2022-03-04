@@ -72,12 +72,12 @@ defmodule Amps.GenConsumer do
     topic = "amps.svcs.#{opts["name"]}.#{ktopic}"
     AmpsEvents.send(event, %{"output" => topic}, %{})
 
-    AmpsEvents.send_history(
-      "amps.events.messages",
-      "message_events",
-      Map.merge(event, %{
-        "status" => "received"
-      })
-    )
+    # AmpsEvents.send_history(
+    #   "amps.events.messages",
+    #   "message_events",
+    #   Map.merge(event, %{
+    #     "status" => "received"
+    #   })
+    # )
   end
 end

@@ -903,8 +903,8 @@ defmodule Amps.DB do
         query: filters,
         sort: sort,
         from: from,
-        size: size,
-        track_total_hits: true
+        size: size
+        # track_total_hits: true
       }
 
       query(collection, query)
