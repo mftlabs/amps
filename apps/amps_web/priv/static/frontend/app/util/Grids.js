@@ -513,41 +513,45 @@ Ext.define("Amps.window.Workflow", {
               function loadStep(step) {
                 console.log(step);
                 if (step.steps) {
-                  if (step.steps.length && step.steps[0].loop) {
-                    console.log("loop");
-                    console.log(step);
-                    steps.insert({
-                      xtype: "workflowstep",
-                      step: Ext.apply(step, {
-                        step: step.steps[0],
-                      }),
-                      steps: steps,
-                      form: form,
-                    });
-                  } else {
-                    var curr = steps.items.items.length;
-                    var cont = Ext.create({
-                      xtype: "container",
-                      layout: {
-                        type: "hbox",
-                      },
-                      scrollable: "x",
-                      flex: 1,
-                      items: [],
-                    });
+                  var curr = steps.items.items.length;
+                  var cont = Ext.create({
+                    xtype: "container",
+                    layout: {
+                      type: "hbox",
+                    },
+                    scrollable: "x",
+                    flex: 1,
+                    items: [],
+                  });
 
-                    // step.steps.push({
-                    //   steps: [],
-                    //   topic: step.topic,
-                    //   action: { output: step.topic },
-                    // });
+                  // step.steps.push({
+                  //   steps: [],
+                  //   topic: step.topic,
+                  //   action: { output: step.topic },
+                  // });
 
-                    console.log(step);
+                  console.log(step);
 
-                    for (var i = 0; i <= step.steps.length; i++) {
-                      var workflowstep;
-                      var configure;
-                      console.log(form.down("#steps").choices);
+                  for (var i = 0; i <= step.steps.length; i++) {
+                    var workflowstep;
+                    var configure;
+                    console.log(form.down("#steps").choices);
+                    console.log(step.steps.length > 0);
+                    console.log(step.steps);
+                    console.log(step.steps[i]);
+                    var loop = false;
+
+                    if (step.steps.length > 0 && step.steps[0].loop) {
+                      loop = true;
+                      workflowstep = {
+                        xtype: "workflowstep",
+                        step: Ext.apply(step, {
+                          step: step.steps[0],
+                        }),
+                        steps: steps,
+                        form: form,
+                      };
+                    } else {
                       if (i == step.steps.length) {
                         workflowstep = {
                           xtype: "workflowstep",
@@ -568,158 +572,163 @@ Ext.define("Amps.window.Workflow", {
                           form: form,
                         };
                       }
-                      var ws = {
-                        xtype: "container",
-                        layout: {
-                          type: "vbox",
-                          align: "stretch",
-                        },
-                        style: {
-                          "border-style": "solid",
-                          borderColor: "var(--main-color)",
-                        },
-                        currStep: configure ? null : currStep,
-                        listeners: {
-                          afterrender: function (scope) {
-                            console.log(scope.currStep);
-                            if (scope.currStep && scope.currStep.sub) {
-                              var choices = form.down("#steps").choices;
-                              console.log(choices[curr]);
-                              console.log(scope.currStep.sub.name);
-                              console.log(curr);
+                    }
 
-                              if (choices[curr]) {
-                                if (choices[curr] == scope.currStep.sub.name) {
-                                  console.log(scope);
-                                  scope.select();
-                                }
+                    var ws = {
+                      xtype: "container",
+                      layout: {
+                        type: "vbox",
+                        align: "stretch",
+                      },
+                      style: {
+                        "border-style": "solid",
+                        borderColor: loop ? "#eed202" : "var(--main-color)",
+                      },
+                      currStep: configure ? null : currStep,
+                      listeners: {
+                        afterrender: function (scope) {
+                          console.log(scope.currStep);
+                          if (scope.currStep && scope.currStep.sub) {
+                            var choices = form.down("#steps").choices;
+                            console.log(choices[curr]);
+                            console.log(scope.currStep.sub.name);
+                            console.log(curr);
+
+                            if (choices[curr]) {
+                              if (choices[curr] == scope.currStep.sub.name) {
+                                console.log(scope);
+                                scope.select();
                               }
                             }
-                          },
-                        },
-                        select: function () {
-                          cont.items.items.forEach((item) => item.deselect());
-                          var stepcont = form.down("#steps");
-                          // Object.entries(stepcont.choices).forEach((entry) => {
-                          //   if (entry[0] > curr) {
-                          //     delete stepcont.choices[entry[0]];
-                          //   }
-                          // });
-
-                          stepcont.choices[curr] = this.currStep.sub.name;
-
-                          for (
-                            var i = steps.items.items.length;
-                            i > curr;
-                            i--
-                          ) {
-                            steps.remove(i);
                           }
-                          console.log(this.currStep);
-                          loadStep(this.currStep);
-                          this.down("#status").select();
                         },
-                        deselect: function () {
-                          this.down("#status").deselect();
-                        },
-                        // padding: 5,
-                        margin: 5,
-                        items: [
-                          workflowstep,
-                          {
-                            xtype: "container",
-                            layout: {
-                              type: "hbox",
-                              align: "stretch",
-                            },
-                            padding: 10,
-                            ws: ws,
-                            style: {
-                              background: "white",
-                            },
-                            items: [
+                      },
+                      select: function () {
+                        cont.items.items.forEach((item) => item.deselect());
+                        var stepcont = form.down("#steps");
+                        // Object.entries(stepcont.choices).forEach((entry) => {
+                        //   if (entry[0] > curr) {
+                        //     delete stepcont.choices[entry[0]];
+                        //   }
+                        // });
+
+                        stepcont.choices[curr] = this.currStep.sub.name;
+
+                        for (var i = steps.items.items.length; i > curr; i--) {
+                          steps.remove(i);
+                        }
+                        console.log(this.currStep);
+                        loadStep(this.currStep);
+                        this.down("#status").select();
+                      },
+                      deselect: function () {
+                        this.down("#status").deselect();
+                      },
+                      // padding: 5,
+                      margin: 5,
+                      items: [workflowstep].concat(
+                        loop && i == 0
+                          ? []
+                          : [
                               {
-                                flex: 1,
-                                xtype: "button",
-                                disabled: configure,
-                                text: "Map",
-                                handler: function () {
-                                  console.log;
-                                  this.up("container").up("container").select();
-                                },
-                              },
-                              {
-                                flex: 1,
                                 xtype: "container",
-                                layout: "center",
-                                itemId: "status",
-                                select: function () {
-                                  this.setStyle({
-                                    color: "green",
-                                  });
-                                  var ic = this.down("#checkedicon");
-                                  ic.removeCls("fa-circle");
-                                  ic.addCls("fa-check-circle");
-                                  console.log("Selecting");
+                                layout: {
+                                  type: "hbox",
+                                  align: "stretch",
                                 },
-                                deselect: function () {
-                                  this.setStyle({
-                                    color: "grey",
-                                  });
-                                  console.log("Deselcting");
-                                  var ic = this.down("#checkedicon");
-                                  ic.removeCls("fa-check-circle");
-                                  ic.addCls("fa-circle");
-                                },
+                                padding: 10,
+                                ws: ws,
                                 style: {
-                                  color: "white",
+                                  background: "white",
                                 },
                                 items: [
                                   {
-                                    xtype: "component",
-                                    autoEl: "div",
-                                    style: {
-                                      "font-size": "1.5rem",
+                                    flex: 1,
+                                    xtype: "button",
+                                    disabled: configure,
+                                    text: "Map",
+                                    handler: function () {
+                                      console.log;
+                                      this.up("container")
+                                        .up("container")
+                                        .select();
                                     },
-                                    itemId: "checkedicon",
-                                    cls: "x-fa fa-circle",
+                                  },
+                                  {
+                                    flex: 1,
+                                    xtype: "container",
+                                    layout: "center",
+                                    itemId: "status",
+                                    select: function () {
+                                      this.setStyle({
+                                        color: "green",
+                                      });
+                                      var ic = this.down("#checkedicon");
+                                      ic.removeCls("fa-circle");
+                                      ic.addCls("fa-check-circle");
+                                      console.log("Selecting");
+                                    },
+                                    deselect: function () {
+                                      this.setStyle({
+                                        color: "grey",
+                                      });
+                                      console.log("Deselcting");
+                                      var ic = this.down("#checkedicon");
+                                      ic.removeCls("fa-check-circle");
+                                      ic.addCls("fa-circle");
+                                    },
+                                    style: {
+                                      color: "white",
+                                    },
+                                    items: [
+                                      {
+                                        xtype: "component",
+                                        autoEl: "div",
+                                        style: {
+                                          "font-size": "1.5rem",
+                                        },
+                                        itemId: "checkedicon",
+                                        cls: "x-fa fa-circle",
+                                      },
+                                    ],
                                   },
                                 ],
                               },
-                            ],
+                            ]
+                      ),
+                    };
+
+                    cont.insert(ws);
+                    if (loop) {
+                      break;
+                    }
+                  }
+
+                  steps.insert({
+                    xtype: "container",
+                    layout: {
+                      type: "hbox",
+                      align: "stretch",
+                    },
+                    items: [
+                      {
+                        xtype: "container",
+                        style: {
+                          "font-size": "2rem",
+                          "font-weight": "600",
+                        },
+                        layout: "center",
+                        width: 50,
+                        items: [
+                          {
+                            xtype: "component",
+                            html: "#" + (curr + 1),
                           },
                         ],
-                      };
-
-                      cont.insert(ws);
-                    }
-
-                    steps.insert({
-                      xtype: "container",
-                      layout: {
-                        type: "hbox",
-                        align: "stretch",
                       },
-                      items: [
-                        {
-                          xtype: "container",
-                          style: {
-                            "font-size": "2rem",
-                            "font-weight": "600",
-                          },
-                          layout: "center",
-                          width: 50,
-                          items: [
-                            {
-                              xtype: "component",
-                              html: "#" + (curr + 1),
-                            },
-                          ],
-                        },
-                        cont,
-                      ],
-                    });
-                  }
+                      cont,
+                    ],
+                  });
                 } else {
                   console.log("done");
                   steps.insert(
@@ -933,9 +942,9 @@ Ext.define("Amps.container.Workflow.Step", {
         c.insert({
           xtype: "component",
           style: {
-            background: "red",
+            background: "#eed202",
             padding: 10,
-            color: "white",
+            color: "black",
             "font-weight": 400,
           },
           autoEl: "div",
@@ -972,7 +981,7 @@ Ext.define("Amps.container.Workflow.Step", {
                   {
                     xtype: "component",
                     style: {
-                      color: "red",
+                      color: "#eed202",
                     },
                     cls: "x-fa fa-warning",
                   },
@@ -982,7 +991,9 @@ Ext.define("Amps.container.Workflow.Step", {
                 xtype: "container",
                 layout: "center",
                 maxWidth: "100%",
-
+                style: {
+                  "font-weight": "700",
+                },
                 items: [
                   {
                     xtype: "component",
@@ -995,12 +1006,15 @@ Ext.define("Amps.container.Workflow.Step", {
                 xtype: "container",
                 maxWidth: "100%",
                 padding: 10,
+                style: {
+                  "font-weight": "500",
+                },
                 items: [
                   {
                     xtype: "component",
                     maxWidth: "100%",
 
-                    html: "Update previous action, or assign different action to subscriber.",
+                    html: "If desired, ignoring this warning. Otherwise, please update the previous action, or assign a different action to the subscriber.",
                   },
                 ],
               },
@@ -7183,6 +7197,14 @@ Ext.define("Amps.util.Grids", {
     }),
   },
   pages: {
+    system_logs: () => {
+      return {
+        view: {
+          xtype: "tabpanel",
+          title: "System Logs",
+        },
+      };
+    },
     monitoring: () => ({
       view: {
         xtype: "container",

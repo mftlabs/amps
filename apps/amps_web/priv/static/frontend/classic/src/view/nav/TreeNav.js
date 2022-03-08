@@ -24,6 +24,12 @@ Ext.define("Amps.view.nav.TreeNav", {
           text: "Service Monitoring",
         },
         {
+          iconCls: "x-fa fa-cog",
+          leaf: true,
+          rowCls: "system_logs",
+          text: "System Logs",
+        },
+        {
           iconCls: "x-fa fa-bolt",
           leaf: true,
           rowCls: "ui_audit",

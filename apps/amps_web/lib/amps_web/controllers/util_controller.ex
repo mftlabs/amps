@@ -243,14 +243,9 @@ defmodule AmpsWeb.UtilController do
   end
 
   defp find_topics(topic, meta, topics) do
-    IO.inspect(topics)
-    IO.inspect(topic)
-
     if Enum.member?(topics, topic) do
-      IO.inspect(topics)
-      IO.inspect(topic)
-      Logger.warn("Workflow loop detected")
-      {[%{"loop" => true, "topic" => topic}], topics}
+      # Logger.warn("Workflow loop detected")
+      [%{"loop" => true, "topic" => topic}]
     else
       topics = [topic | topics]
 

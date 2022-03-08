@@ -74,6 +74,8 @@ config :amps, :gnat,
   host: String.to_charlist(System.get_env("AMPS_NATS_HOST", "localhost")),
   port: String.to_integer(System.get_env("AMPS_NATS_PORT", "4222"))
 
+config :amps, Amps.Logger, level: :debug, format: "$time $message"
+
 config :amps, Amps.Mailer, adapter: Swoosh.Adapters.Local
 
 config :amps, Amps.Cluster,
@@ -143,6 +145,9 @@ if config_env() == :prod do
   config :logger,
     level: :info
 end
+
+config :logger,
+  utc_log: true
 
 config :amps_web, :pow,
   user: AmpsWeb.Users.User,
@@ -284,6 +289,8 @@ config :amps, :pyworker,
 config :logger, :console,
   format: "$time $metadata[$level] $message\n",
   metadata: [:request_id]
+
+config :logger, :backends, [:console, Amps.Logger]
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason

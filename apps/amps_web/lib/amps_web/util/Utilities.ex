@@ -319,4 +319,8 @@ defmodule AmpsWeb.Util do
       AmpsUtil.delete_consumer(stream, consumer)
     end
   end
+
+  def get_nodes do
+    [node() | Node.list()]
+  end
 end
