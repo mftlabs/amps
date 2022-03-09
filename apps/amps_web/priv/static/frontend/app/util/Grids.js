@@ -3117,6 +3117,91 @@ Ext.define("Amps.panel.Wizard", {
 Ext.define("Amps.util.Grids", {
   singleton: true,
   grids: {
+    system_logs: () => ({
+      title: "System Logs",
+      actionIcons: ["searchpanelbtn", "clearfilter", "refreshbtn"],
+      sort: {
+        etime: "DESC",
+      },
+
+      dblclick: function (record) {
+        console.log(record);
+        var win = new Ext.window.Window({
+          title: `Level: ${record["level"]} | Time: ${record["etime"]}`,
+          width: 700,
+          height: 500,
+          layout: "fit",
+          items: [
+            {
+              xtype: "container",
+              padding: 20,
+              style: {
+                background: "var(--main-color)",
+              },
+              scrollable: true,
+
+              items: [
+                {
+                  xtype: "component",
+
+                  style: {
+                    background: "var(--main-color)",
+                    "white-space": "pre-wrap",
+                    "font-weight": "500",
+                    color: "white",
+                    // "font-size": "1.5rem",
+                  },
+                  html: record["message"],
+                },
+              ],
+            },
+          ],
+        });
+        win.show();
+      },
+      columns: [
+        {
+          text: "Event Time",
+          dataIndex: "etime",
+          type: "date",
+          renderer: function (val) {
+            var date = new Date(val);
+            var milli = val.split(".")[1].substring(0, 3);
+            var str = date.toLocaleString();
+            return (
+              str.substring(0, str.length - 3) + ":" + milli + str.slice(-3)
+            );
+          },
+          width: 200,
+        },
+        {
+          text: "Node",
+          dataIndex: "node",
+          width: 200,
+          type: "aggregate",
+          collection: "system_logs",
+        },
+        {
+          text: "Level",
+          dataIndex: "level",
+          type: "tag",
+          options: [
+            { label: "Info", field: "info" },
+            { label: "Warn", field: "warn" },
+            { label: "Error", field: "error" },
+            { label: "Notice", field: "notice" },
+            { label: "Debug", field: "debug" },
+          ],
+          width: 100,
+        },
+        {
+          text: "Message",
+          dataIndex: "message",
+          flex: 10,
+          type: "text",
+        },
+      ],
+    }),
     ui_audit: () => ({
       title: "Audit Log",
       actionIcons: ["searchpanelbtn", "clearfilter", "refreshbtn"],
@@ -7197,14 +7282,6 @@ Ext.define("Amps.util.Grids", {
     }),
   },
   pages: {
-    system_logs: () => {
-      return {
-        view: {
-          xtype: "tabpanel",
-          title: "System Logs",
-        },
-      };
-    },
     monitoring: () => ({
       view: {
         xtype: "container",

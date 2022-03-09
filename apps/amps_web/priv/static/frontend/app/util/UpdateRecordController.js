@@ -173,9 +173,9 @@ Ext.define("Amps.form.update", {
               });
               mask.show();
               console.log(values);
+              values = btn.up("form").process(btn.up("form"), values);
               values = amfutil.convertNumbers(form, values);
 
-              values = btn.up("form").process(btn.up("form"), values);
               console.log(values);
 
               console.log(values);

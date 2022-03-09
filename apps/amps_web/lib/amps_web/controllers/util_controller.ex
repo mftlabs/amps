@@ -90,6 +90,11 @@ defmodule AmpsWeb.UtilController do
     json(conn, %{"message" => "Welcome to AMPS!"})
   end
 
+  def aggregate_field(conn, %{"collection" => collection, "field" => field}) do
+    values = DB.aggregate_field(collection, field)
+    json(conn, values)
+  end
+
   def startup(conn, _params) do
     body = conn.body_params()
 
@@ -216,6 +221,107 @@ defmodule AmpsWeb.UtilController do
       msgs ->
         msg = Enum.at(msgs, 0)
         get_children(msg, children ++ msgs)
+    end
+  end
+
+  def loop(conn, %{"topic" => topic}) do
+    find_loop(topic, %{}, [])
+  end
+
+  def find_loop(topic, meta, topics) do
+    if Enum.member?(topics, topic) do
+      # Logger.warn("Workflow loop detected")
+      [%{"loop" => true, "topic" => topic}]
+    else
+      topics = [topic | topics]
+
+      subs =
+        DB.find("services", %{
+          type: "subscriber",
+          active: true
+        })
+
+      steps =
+        Enum.reduce(subs, [], fn sub, steps ->
+          if match_topic(sub["topic"], topic) do
+            action = DB.find_one("actions", %{"_id" => sub["handler"]})
+            step = %{"action" => action, "sub" => sub, "topic" => sub["topic"]}
+
+            step =
+              if action["type"] == "router" do
+                # rule = RouterAction.evaluate(action, meta)
+
+                # rule["topic"]
+
+                IO.inspect(topics)
+
+                steps =
+                  Enum.reduce(action["rules"], [], fn id, acc ->
+                    rule = Amps.DB.find_one("rules", %{"_id" => id})
+                    IO.inspect(rule["output"])
+
+                    [
+                      step
+                      |> Map.put(
+                        "action",
+                        Map.merge(action, %{"output" => rule["output"]})
+                      )
+                      |> Map.put(
+                        "steps",
+                        find_loop(rule["output"], Map.merge(meta, %{}), topics)
+                      )
+                      | acc
+                    ]
+                  end)
+
+                IO.inspect(steps)
+
+                step =
+                  step
+                  |> Map.put(
+                    "action",
+                    Map.merge(action, %{"output" => "router"})
+                  )
+                  |> Map.put(
+                    "steps",
+                    steps
+                  )
+
+                step
+              else
+                output = fn action ->
+                  steps = find_loop(action["output"], Map.merge(meta, %{}), topics)
+
+                  step =
+                    step
+                    |> Map.put(
+                      "steps",
+                      steps
+                    )
+
+                  step
+                end
+
+                if Map.has_key?(action, "send_output") do
+                  if(action["send_output"]) do
+                    output.(action)
+                  else
+                    step
+                  end
+                else
+                  if action["output"] do
+                    output.(action)
+                  else
+                    step
+                  end
+                end
+              end
+
+            [step | steps]
+          else
+            steps
+          end
+        end)
     end
   end
 

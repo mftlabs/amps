@@ -9,6 +9,13 @@ defmodule Amps.DB do
     Application.get_env(:amps, :db)
   end
 
+  def aggregate_field(collection, field) do
+    case db() do
+      "es" ->
+        Elastic.aggregate_field(collection, field)
+    end
+  end
+
   def insert(collection, body) do
     case db() do
       "pg" ->
@@ -853,7 +860,7 @@ defmodule Amps.DB do
               %{rows: [], success: true, count: 0}
 
             _ ->
-              error
+              {:error, error}
           end
       end
     end
@@ -907,7 +914,14 @@ defmodule Amps.DB do
         # track_total_hits: true
       }
 
-      query(collection, query)
+      case query(collection, query) do
+        {:error, error} ->
+          Logger.error(error)
+          {:error, error}
+
+        res ->
+          res
+      end
     end
 
     def find(collection, clauses, opts \\ %{}) do
@@ -946,7 +960,8 @@ defmodule Amps.DB do
         nil ->
           nil
 
-        _ ->
+        {:error, error} ->
+          Logger.error(error)
           nil
       end
     end
@@ -973,8 +988,12 @@ defmodule Amps.DB do
 
             {k, v} ->
               k =
-                if k == "$regex" || k == "$gt" || k == "$lt" do
-                  String.replace(k, "$", "")
+                if is_binary(k) do
+                  if String.starts_with?(k, "$") do
+                    String.replace(k, "$", "")
+                  else
+                    k
+                  end
                 else
                   k
                 end
@@ -1010,6 +1029,13 @@ defmodule Amps.DB do
                           "fields" => [
                             k <> ".keyword"
                           ]
+                        }
+                      }
+
+                    %{"in" => val} ->
+                      %{
+                        "terms" => %{
+                          (k <> ".keyword") => val
                         }
                       }
 
@@ -1164,6 +1190,25 @@ defmodule Amps.DB do
         {:error, error} ->
           error
       end
+    end
+
+    def aggregate_field(collection, field, size \\ 10000) do
+      {:ok, result} =
+        Amps.Cluster.post(
+          Path.join(path(collection), "/_search"),
+          %{
+            "aggs" => %{
+              field => %{
+                "terms" => %{"field" => field <> ".keyword", "size" => size}
+              }
+            },
+            "size" => 0
+          }
+        )
+
+      Enum.reduce(result["aggregations"][field]["buckets"], [], fn bucket, acc ->
+        [bucket["key"] | acc]
+      end)
     end
 
     def add_to_field(collection, body, id, field) do

@@ -74,7 +74,7 @@ config :amps, :gnat,
   host: String.to_charlist(System.get_env("AMPS_NATS_HOST", "localhost")),
   port: String.to_integer(System.get_env("AMPS_NATS_PORT", "4222"))
 
-config :amps, Amps.Logger, level: :debug, format: "$time $message"
+config :amps, Amps.Logger, level: :debug, format: "$message"
 
 config :amps, Amps.Mailer, adapter: Swoosh.Adapters.Local
 

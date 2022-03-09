@@ -83,6 +83,36 @@ Ext.define("Amps.widget.Socket", {
 });
 
 const filterTypes = {
+  tag: (field) => {
+    return {
+      xtype: "tagfield",
+      fieldLabel: field.text,
+      name: field.dataIndex,
+      store: field["options"],
+      emptyText: "Filter by " + field.text,
+      displayField: "label",
+      valueField: "field",
+      queryMode: "local",
+      filterPickList: true,
+    };
+  },
+  aggregate: (field) => {
+    return {
+      xtype: "combobox",
+      fieldLabel: field.text,
+      name: field.dataIndex,
+      emptyText: "Filter by " + field.text,
+      listeners: {
+        beforerender: async function (scope) {
+          var res = await amfutil.ajaxRequest({
+            url: `api/${field.collection}/aggregate/${field.dataIndex}`,
+          });
+          var nodes = Ext.decode(res.responseText);
+          scope.setStore(nodes);
+        },
+      },
+    };
+  },
   text: (field) => ({
     xtype: "textfield",
     fieldLabel: field.text,
@@ -93,6 +123,7 @@ const filterTypes = {
     xtype: "checkbox",
     name: field.dataIndex,
     fieldLabel: field.text,
+
     uncheckedValue: false,
     inputValue: true,
     allowBlank: false,
@@ -131,23 +162,6 @@ const filterTypes = {
               format: "d-M-Y",
               padding: { left: 0, top: 0, bottom: 6 },
               listeners: {
-                render: function (datefield) {
-                  var ydate_date = Ext.Date.add(new Date(), Ext.Date.DAY, -1);
-                  var formattedDate = ydate_date
-                    .toLocaleDateString("en-GB", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                      timeZone: server_time_zone,
-                    })
-                    .replace(/ /g, "-");
-                  //console.log(formattedDate);
-                  //console.log(typeof(formattedDate));
-                  datefield.setValue(formattedDate);
-                  datefield.setMaxValue(
-                    Ext.util.Format.date(new Date(), "m/d/Y")
-                  );
-                },
                 specialkey: function (field, e) {
                   if (e.getKey() == e.ENTER) {
                     btn = amfutil.getElementByID("filter_message_activity");
@@ -208,17 +222,6 @@ const filterTypes = {
               format: "H:i:s",
               anchor: "100%",
               listeners: {
-                render: function (timefield) {
-                  var ydate_date = Ext.Date.add(new Date(), Ext.Date.DAY, -1);
-                  var time = ydate_date.toLocaleTimeString("en-GB", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    second: "2-digit",
-                    timeZone: server_time_zone,
-                  });
-                  //console.log('time',time);
-                  //console.log('time',typeof(time));
-                },
                 specialkey: function (field, e) {
                   if (e.getKey() == e.ENTER) {
                     btn = amfutil.getElementByID("filter_message_activity");
@@ -271,25 +274,6 @@ const filterTypes = {
               itemId: "maToDate",
               padding: { left: 0, top: 0, bottom: 6 },
               listeners: {
-                render: function (datefield) {
-                  var ydate_date = Ext.Date.add(new Date(), Ext.Date.DAY);
-                  var ydate_date = Ext.Date.add(
-                    ydate_date,
-                    Ext.Date.MINUTE,
-                    15
-                  );
-                  var formattedDate = ydate_date
-                    .toLocaleDateString("en-GB", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                      timeZone: server_time_zone,
-                    })
-                    .replace(/ /g, "-");
-                  datefield.setValue(formattedDate);
-                  //console.log(formattedDate);
-                  //console.log(typeof(formattedDate));
-                },
                 specialkey: function (field, e) {
                   if (e.getKey() == e.ENTER) {
                     btn = amfutil.getElementByID("filter_message_activity");
@@ -349,21 +333,6 @@ const filterTypes = {
               padding: { left: 4, top: 0, bottom: 0 },
               anchor: "100%",
               listeners: {
-                render: function (timefield) {
-                  var ydate_date = Ext.Date.add(
-                    new Date(),
-                    Ext.Date.MINUTE,
-                    15
-                  );
-                  var time = ydate_date.toLocaleTimeString("en-GB", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    second: "2-digit",
-                    timeZone: server_time_zone,
-                  });
-                  //console.log('time',time);
-                  //console.log('time',typeof(time));
-                },
                 specialkey: function (field, e) {
                   if (e.getKey() == e.ENTER) {
                     btn = amfutil.getElementByID("filter_message_activity");
@@ -2897,7 +2866,7 @@ Ext.define("Amps.util.Utilities", {
           filters[field.dataIndex] = JSON.parse(values[field.dataIndex]);
           console.log(filters);
         } else {
-          filters[field.dataIndex] = values[field.dataIndex];
+          filters[field.dataIndex] = { $in: values[field.dataIndex] };
         }
       }
     });
