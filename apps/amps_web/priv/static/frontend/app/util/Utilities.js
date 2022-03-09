@@ -2813,7 +2813,6 @@ Ext.define("Amps.util.Utilities", {
             var form = btn.up("form").getForm();
             // var dateval = btn.up("form").down("datefiltervalue");
             // console.log(dateval);
-            var fields = form.getFields();
             var values = form.getValues();
             var fields = ampsgrids.grids[route]().columns;
             // var fieldKeys = fields.map((field) => field.field);

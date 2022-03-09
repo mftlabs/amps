@@ -24,7 +24,7 @@ defmodule AmpsPortal.MixProject do
   def application do
     [
       mod: {AmpsPortal.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: [:logger, :runtime_tools, :os_mon]
     ]
   end
 

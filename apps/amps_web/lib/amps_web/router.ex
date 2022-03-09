@@ -108,8 +108,6 @@ defmodule AmpsWeb.Router do
     get("/", PageController, :index)
   end
 
-  redirect("/*path", "/", :permanent)
-
   # Other scopes may use custom stacks.
   # scope "/api", AmpsWeb do
   #   pipe_through :api
@@ -142,4 +140,6 @@ defmodule AmpsWeb.Router do
       forward("/mailbox", Plug.Swoosh.MailboxPreview)
     end
   end
+
+  redirect("/*path", "/", :permanent)
 end
