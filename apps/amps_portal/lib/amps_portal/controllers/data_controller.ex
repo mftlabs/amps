@@ -140,4 +140,24 @@ defmodule AmpsPortal.DataController do
         json(conn, :ok)
     end
   end
+
+  def ufa_logs(conn, _params) do
+    case Pow.Plug.current_user(conn) do
+      nil ->
+        json(
+          conn,
+          %{success: false, count: 0, rows: []}
+        )
+      user ->
+        qp = conn.query_params()
+        IO.inspect(qp)
+        conn = Map.put(conn, :query_params, qp)
+        data = DB.get_rows(conn, %{"collection" => "ufa_logs"})
+
+        json(
+          conn,
+          data
+        )
+    end
+  end
 end
