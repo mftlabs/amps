@@ -297,7 +297,7 @@ defmodule Amps.SvcManager do
               %{
                 "name" => svcname,
                 "status" => "failed",
-                "reason" => e.message
+                "reason" => error
               }
             )
 
