@@ -60,6 +60,7 @@ defmodule AmpsPortal.Router do
     get("/ufa/agent", UFAController, :get_agent)
 
     get("/inbox", DataController, :get_messages)
+    get("/ufa_logs", DataController, :ufa_logs)
     get("/user", UserController, :get)
     put("/user", UserController, :update)
     get("/rules", UFAController, :get_agent_rules)
