@@ -118,6 +118,10 @@ defmodule Amps.SvcHandler do
   def stop_service(svcname) do
     case SvcManager.stop_service(svcname) do
       {:ok, res} ->
+        DB.find_one_and_update("services", %{"name" => svcname}, %{
+          "active" => false
+        })
+
         res
 
       {:error, reason} ->

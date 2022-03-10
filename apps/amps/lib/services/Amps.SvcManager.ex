@@ -60,10 +60,6 @@ defmodule Amps.SvcManager do
             DynamicSupervisor.terminate_child(Amps.SvcSupervisor, pid)
           end)
 
-          DB.find_one_and_update("services", %{"name" => name}, %{
-            "active" => false
-          })
-
           AmpsEvents.send_history(
             "amps.events.svcs.#{name}.logs",
             "service_logs",
@@ -128,8 +124,7 @@ defmodule Amps.SvcManager do
                 cert = AmpsUtil.get_key(args["cert"])
                 key = AmpsUtil.get_key(args["key"])
 
-                cert =
-                  X509.Certificate.from_pem!(cert) |> X509.Certificate.to_der()
+                cert = X509.Certificate.from_pem!(cert) |> X509.Certificate.to_der()
 
                 key = X509.PrivateKey.from_pem!(key)
                 keytype = Kernel.elem(key, 0)
@@ -275,9 +270,7 @@ defmodule Amps.SvcManager do
 
             case get_spec(name, opts) do
               {:error, error} ->
-                Logger.warn(
-                  "Service #{name} could not be started. Error: #{inspect(error)}"
-                )
+                Logger.warn("Service #{name} could not be started. Error: #{inspect(error)}")
 
                 raise error
 

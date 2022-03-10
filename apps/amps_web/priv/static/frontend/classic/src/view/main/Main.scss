@@ -107,6 +107,7 @@ $border-layout-ct-background-color: white;
   .x-grid-cell {
     .actionicon {
       margin-right: 0.5em;
+      width: min-content;
       &.active {
         color: green;
       }
@@ -175,6 +176,23 @@ $border-layout-ct-background-color: white;
   background-color: #32404e;
 }
 
+.secondary-button {
+  &.x-btn-default-small {
+    // color: white;
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+  }
+  &.x-btn-default-medium {
+    // color: white;
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+  }
+  &.x-btn-default-large {
+    // color: white;
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+  }
+}
 
                         
 

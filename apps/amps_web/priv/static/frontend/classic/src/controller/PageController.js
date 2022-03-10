@@ -145,7 +145,7 @@ Ext.define("Amps.controller.PageController", {
           xtype: "actioncolumn",
           text: "Actions",
           dataIndex: "actions",
-          width: 175,
+          width: "min-content",
           items: config.options
             ? config.options.map((option) => amfutil.gridactions[option])
             : [],
