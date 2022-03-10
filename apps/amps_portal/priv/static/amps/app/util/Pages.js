@@ -1269,5 +1269,136 @@ Ext.define("Amps.Pages", {
         },
       };
     },
+
+    ufa_logs: function () {
+      var store = Ext.create("Ext.data.Store", {
+        remoteSort: true,
+        proxy: {
+          type: "rest",
+          url: `/api/ufa_logs`,
+          headers: {
+            Authorization: localStorage.getItem("access_token"),
+          },
+          extraParams: { "filters": JSON.stringify({
+            "user": amfutil.get_user().username,
+          }) },
+          reader: {
+            type: "json",
+            rootProperty: "rows",
+            totalProperty: "count",
+          },
+          listeners: {
+            load: function (data) {
+              console.log(data);
+            },
+            // exception: async function (proxy, response, options, eOpts) {
+            //   console.log("exception");
+            //   if (response.status == 401) {
+            //     await amfutil.renew_session();
+            //     proxy.setHeaders({
+            //       Authorization: localStorage.getItem("access_token"),
+            //     });
+            //     store.reload();
+            //   }
+            // },
+          },
+        },
+        autoLoad: true,
+      });
+
+      store.sort("etime", "DESC");
+
+      console.log(store);
+
+      return {
+        actionbar: [
+          {
+            xtype: "button",
+            iconCls: "x-fa fa-search",
+            handler: function () {
+              store.reload();
+            },
+          },
+          {
+            xtype: "button",
+            iconCls: "x-fa fa-refresh",
+            handler: function () {
+              store.reload();
+            },
+          },
+        ],
+        view: {
+          xtype: "grid",
+
+          title: "UFA Logs",
+
+          store: store,
+
+          columns: [
+            {
+              text: "Event Time",
+              dataIndex: "etime",
+              flex: 1,
+              type: "date",
+              renderer: function (val) {
+                var date = new Date(val);
+                return date.toString();
+              },
+            },
+            {
+              text: "Operation",
+              dataIndex: "operation",
+              flex: 1,
+              value: "true",
+              type: "text",
+            },
+            {
+              text: "Rule",
+              dataIndex: "rule",
+              flex: 1,
+              value: "true",
+              type: "text",
+            },
+            {
+              text: "Message ID",
+              dataIndex: "msgid",
+              flex: 1,
+              value: "true",
+              type: "text",
+            },
+            {
+              text: "File Name",
+              dataIndex: "fname",
+              flex: 1,
+              type: "text",
+            },
+            {
+              text: "Status",
+              dataIndex: "status",
+              flex: 1,
+              type: "combo",
+              options: [
+                {
+                  field: "started",
+                  label: "Started",
+                },
+                {
+                  field: "completed",
+                  label: "Completed",
+                },
+                {
+                  field: "received",
+                  label: "Received",
+                },
+              ],
+            },
+          ],
+          bbar: {
+            xtype: "pagingtoolbar",
+            displayInfo: true,
+          },
+        },
+      };
+    },
   },
 });

@@ -30,6 +30,13 @@ Ext.define("Amps.Authorized.TreeNav", {
           tooltip: "Account",
           // cls: "messages",
         },
+        {
+          iconCls: "x-fa fa-cog",
+          leaf: true,
+          rowCls: "ufa_logs",
+          text: "UFA Logs",
+          tooltip: "UFA Logs",
+        },
       ],
       expanded: true,
     },
