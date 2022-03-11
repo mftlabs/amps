@@ -189,6 +189,7 @@ Ext.define("Amps.Pages", {
             ],
           },
           download: {
+            window: {  height: 300 },
             type: "download",
             name: "Download",
             fields: [
@@ -456,6 +457,7 @@ Ext.define("Amps.Pages", {
                   xtype: "panel",
                   title: "Agent Download",
                   flex: 3,
+                  layout: "fit",
 
                   items: [
                     {
@@ -914,13 +916,7 @@ Ext.define("Amps.Pages", {
 
       return {
         actionbar: [
-          {
-            xtype: "button",
-            iconCls: "x-fa fa-search",
-            handler: function () {
-              store.reload();
-            },
-          },
+          amfutil.searchbtn("main-grid"),
           {
             xtype: "button",
             iconCls: "x-fa fa-refresh",
@@ -928,10 +924,18 @@ Ext.define("Amps.Pages", {
               store.reload();
             },
           },
+          {
+            xtype: "button",
+            itemId: "clearfilter",
+            html: '<img src="resources/images/clear-filters.png" />',
+            handler: "onClearFilter",
+            tooltip: "Clear Filter",
+            style: "cursor:pointer;",
+          },
         ],
         view: {
           xtype: "grid",
-
+          itemId : "main-grid",
           title: "Inbox",
 
           store: store,
@@ -940,6 +944,7 @@ Ext.define("Amps.Pages", {
             {
               text: "File Name",
               dataIndex: "fname",
+              type:"text",
               flex: 1,
             },
             {
@@ -947,16 +952,19 @@ Ext.define("Amps.Pages", {
               dataIndex: "fsize",
               flex: 1,
               renderer: amfutil.renderFileSize,
+              type: "fileSize",
             },
             {
               text: "Mailbox Time",
               dataIndex: "mtime",
               flex: 1,
+              type: "date",
             },
             {
               text: "Status",
               dataIndex: "status",
               flex: 1,
+              type:"text",
             },
             {
               xtype: "actioncolumn",
@@ -1279,9 +1287,7 @@ Ext.define("Amps.Pages", {
           headers: {
             Authorization: localStorage.getItem("access_token"),
           },
-          extraParams: { "filters": JSON.stringify({
-            "user": amfutil.get_user().username,
-          }) },
+          extraParams: {  },
           reader: {
             type: "json",
             rootProperty: "rows",
@@ -1312,28 +1318,31 @@ Ext.define("Amps.Pages", {
 
       return {
         actionbar: [
-          {
-            xtype: "button",
-            iconCls: "x-fa fa-search",
-            handler: function () {
-              store.reload();
-            },
-          },
+          amfutil.searchbtn("main-grid"),
           {
             xtype: "button",
             iconCls: "x-fa fa-refresh",
             handler: function () {
+              console.log(store);
               store.reload();
             },
+          },
+          {
+            xtype: "button",
+            itemId: "clearfilter",
+            html: '<img src="resources/images/clear-filters.png" />',
+            handler: "onClearFilter",
+            tooltip: "Clear Filter",
+            style: "cursor:pointer;",
           },
         ],
         view: {
           xtype: "grid",
-
+          itemId : "main-grid",
           title: "UFA Logs",
 
           store: store,
-
+          
           columns: [
             {
               text: "Event Time",
@@ -1376,21 +1385,7 @@ Ext.define("Amps.Pages", {
               text: "Status",
               dataIndex: "status",
               flex: 1,
-              type: "combo",
-              options: [
-                {
-                  field: "started",
-                  label: "Started",
-                },
-                {
-                  field: "completed",
-                  label: "Completed",
-                },
-                {
-                  field: "received",
-                  label: "Received",
-                },
-              ],
+              type: "text"
             },
           ],
           bbar: {

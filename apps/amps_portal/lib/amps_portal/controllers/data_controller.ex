@@ -2,6 +2,7 @@ defmodule AmpsPortal.DataController do
   use AmpsPortal, :controller
   #import Argon2
   alias Amps.DB
+  alias AmpsPortal.Util
 
   def get_messages(conn, _params) do
     # if vault_collection(collection) do
@@ -22,11 +23,8 @@ defmodule AmpsPortal.DataController do
 
       user ->
         qp = conn.query_params()
-
-        qp = Map.put(qp, "filters", Jason.encode!(%{"mailbox" => user.username}))
-        IO.inspect(qp)
+        qp = Util.create_filter(qp,%{"mailbox" => user.username})
         conn = Map.put(conn, :query_params, qp)
-
         data = DB.get_rows(conn, %{"collection" => "mailbox"})
 
         json(
@@ -151,6 +149,7 @@ defmodule AmpsPortal.DataController do
       user ->
         qp = conn.query_params()
         IO.inspect(qp)
+        qp = Util.create_filter(qp,%{"user" => user.username})
         conn = Map.put(conn, :query_params, qp)
         data = DB.get_rows(conn, %{"collection" => "ufa_logs"})
 

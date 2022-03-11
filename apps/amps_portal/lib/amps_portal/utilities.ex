@@ -72,4 +72,10 @@ defmodule AmpsPortal.Util do
     {stream, consumer} = AmpsUtil.get_names(%{"name" => body["name"], "topic" => body["topic"]})
     AmpsUtil.delete_consumer(stream, consumer)
   end
+
+  def create_filter(qp, filter) do
+    filters = Jason.decode!(Map.get(qp, "filters","{}"))
+
+    Map.put(qp, "filters", Jason.encode!(Map.merge(filters, filter)))
+  end
 end

@@ -785,4 +785,105 @@ Ext.define("Amps.Authorized.PageController", {
     });
     uploadWindow.show();
   },
+
+  onSearchPanel: function (btn) {
+  //  var treenav = Ext.ComponentQuery.query("#treenavigation")[0];
+    //treenav.setSelection(0);
+    console.log(btn.iconCls);
+    console.log("click")
+
+    var window = this.getView().down("searchwindow");
+
+    window.loadForm();
+
+    console.log(this);
+    // window.show();
+    if (!window.isVisible()) {
+      btn.setIconCls("x-fa fa-angle-double-right");
+      window.show();
+      var viewport = amfutil.getElementByID("main-viewport");
+      window.setPosition(
+        amfutil.getElementByID("mainpage").getBox().width -
+          window.getSize().width,
+        0
+      );
+      console.log("showing");
+
+      /*if(currentNode== '0'){
+                  MftDashboard.util.Utilities.loadMessageActivity();
+              }
+              if(currentNode== '1'){
+                  MftDashboard.util.Utilities.loadSessionActivity();
+              }*/
+    } else {
+      // elem2 = Ext.ComponentQuery.query("#searchpanel")[0];
+      // elem2.setHidden(true);
+      btn.setIconCls("x-fa fa-search");
+      window.hide();
+      console.log("hiding");
+    }
+  },
+
+  onClearFilter: function () {
+    amfutil.clearFilter();
+  },
+ /* onSearchPanel: function (btn) {
+    var tokens = Ext.util.History.getToken().split("/");
+    // var treenav = Ext.ComponentQuery.query("#treenavigation")[0];
+    // treenav.setSelection(0);
+    console.log(btn.iconCls);
+    console.log(tokens)
+    var window = amfutil.getElementByID("searchwindow");
+
+    window.loadForm(
+      tokens[0],
+      tokens[2],
+      amfutil.getElementByID(`${tokens[0]}`)
+    );
+
+    console.log(this);
+    // window.show();
+    if (!window.isVisible()) {
+      btn.setIconCls("x-fa fa-angle-double-right");
+      window.show();
+      window.setPosition(
+        amfutil.getElementByID("mainpage1").getBox().width -
+          window.getSize().width,
+        0
+      );
+      console.log("showing");
+
+      /*if(currentNode== '0'){
+                      MftDashboard.util.Utilities.loadMessageActivity();
+                  }
+                  if(currentNode== '1'){
+                      MftDashboard.util.Utilities.loadSessionActivity();
+                  }*/
+   /* } else {
+      // elem2 = Ext.ComponentQuery.query("#searchpanel")[0];
+      // elem2.setHidden(true);
+      btn.setIconCls("x-fa fa-search");
+      window.hide();
+      console.log("hiding");
+    }
+  },
+
+  onClearFilter: async function () {
+    var tokens = Ext.util.History.getToken().split("/");
+    var grid = amfutil.getElementByID(`${tokens[0]}-${tokens[2]}`);
+    var config = ampsgrids.grids[tokens[0]]().subgrids[tokens[2]];
+
+    if (config.store) {
+      config.store().then((store) => {
+        grid.setStore(store);
+      });
+    } else {
+      grid.getStore().clearFilter();
+    }
+    var window = amfutil.getElementByID("searchwindow");
+    window.clearForm();
+    amfutil.getElementByID("searchpanelbtn").setIconCls("x-fa fa-search");
+    window.hide();
+  },
+*/
 });
