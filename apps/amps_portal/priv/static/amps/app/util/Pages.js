@@ -1085,6 +1085,20 @@ Ext.define("Amps.Pages", {
             xtype: "pagingtoolbar",
             displayInfo: true,
           },
+          listeners:{
+            cellcontextmenu: function (
+                table,
+                td,
+                cellIndex,
+                record,
+                tr,
+                rowIndex,
+                e
+            ) {
+              CLIPBOARD_CONTENTS = td.innerText;
+              amfutil.copyTextdata(e);
+            },
+          }
         },
       };
     },
@@ -1392,6 +1406,20 @@ Ext.define("Amps.Pages", {
             xtype: "pagingtoolbar",
             displayInfo: true,
           },
+          listeners:{
+            cellcontextmenu: function (
+                table,
+                td,
+                cellIndex,
+                record,
+                tr,
+                rowIndex,
+                e
+            ) {
+              CLIPBOARD_CONTENTS = td.innerText;
+              amfutil.copyTextdata(e);
+            },
+          }
         },
       };
     },

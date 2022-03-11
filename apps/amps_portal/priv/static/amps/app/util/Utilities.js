@@ -2541,4 +2541,21 @@ const filterTypes = {
       ],
     });
   },
+  copyTextdata: function (e) {
+    var contextMenu = Ext.create("Ext.menu.Menu", {
+      width: 100,
+      items: [
+        {
+          text: "Copy",
+          iconCls: "x-fa fa fa-copy",
+          handler: function () {
+            var input = CLIPBOARD_CONTENTS;
+            navigator.clipboard.writeText(input).then(function () {});
+          },
+        },
+      ],
+    });
+    e.stopEvent();
+    contextMenu.showAt(e.pageX, e.pageY);
+  },
 };
