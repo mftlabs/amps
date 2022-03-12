@@ -84,7 +84,6 @@ Ext.define("Amps.Authorized.Viewport", {
           xtype: "container",
           layout: "fit",
           itemId: "mainpage",
-
           style: {
             // "margin-left": "5",
             // "margin-right": "5",
@@ -157,6 +156,10 @@ Ext.define("Amps.Authorized.Viewport", {
           ],
         },
       ],
+    },
+    {
+      xtype: "searchwindow",
+      itemId: "searchwindow",
     },
   ],
 });
