@@ -15,3 +15,4 @@ export AMPS_SSL_CERT=
 export TZ=America/Chicago
 export ERLPORT_PYTHON=/usr/bin/python
 export MIX_ENV=prod
+export AMPS_NATS_ADDR=http://localhost:8222
