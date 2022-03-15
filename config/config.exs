@@ -119,6 +119,7 @@ config :amps_web, AmpsWeb.Endpoint,
   authmethod: System.get_env("AMPS_AUTH_METHOD") || "db",
   vault_addr: System.get_env("AMPS_VAULT_ADDR", "http://localhost:8200"),
   mongo_addr: System.get_env("AMPS_MONGO_ADDR", "mongodb://localhost:27017/amps"),
+  nats_addr: System.get_env("AMPS_NATS_ADDR", "http://localhost:8222"),
   minio_addr:
     System.get_env("AMPS_S3_SCHEME", "http://") <>
       System.get_env("AMPS_S3_HOST", "localhost") <>
