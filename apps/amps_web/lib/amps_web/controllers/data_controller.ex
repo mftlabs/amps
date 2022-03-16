@@ -850,6 +850,33 @@ defmodule AmpsWeb.DataController do
 
     Enum.member?(collections, collection)
   end
+
+  def system_test() do
+    keys = ["in_bytes", "jetstream.config","start"]
+    data =
+    DB.find("system_monitoring",%{"service_type" => "nats"}, %{"_source" => %{"includes" => Enum.map(keys, fn key ->
+      "system_info." <> key end)}})
+
+  end
+
+  def get_keys(type) do
+    keytypes = %{
+      "nats" => ["in_bytes", "jetstream.config","start"],
+      "opensearch" => []
+    }
+
+    Enum.map(keytypes[type], fn key ->
+      "system_info." <> key
+    end)
+  end
+
+  def get_system_data(conn,%{"type" => type}) do
+    keys = ["in_bytes", "jetstream.config"]
+    data =
+      DB.find("system_monitoring",%{"service_type" => type}, %{"_source" => %{"includes" => get_keys(type)}})
+
+    json(conn,data)
+  end
 end
 
 defmodule AmpsWeb.Encryption do

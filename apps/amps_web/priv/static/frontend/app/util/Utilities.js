@@ -1948,7 +1948,7 @@ Ext.define("Amps.util.Utilities", {
     );
   },
 
-  createPageStore: function (collection, filters = {}, opts = {}) {
+  createPageStore: function (collection, filters = {}, opts = {}, extra = {}) {
     var store = Ext.create(
       "Ext.data.Store",
       Object.assign(
@@ -1960,7 +1960,11 @@ Ext.define("Amps.util.Utilities", {
             headers: {
               Authorization: localStorage.getItem("access_token"),
             },
-            extraParams: { filters: JSON.stringify(filters) },
+            extraParams: {
+              params: JSON.stringify(
+                  Object.assign({ filters: filters }, extra)
+              ),
+            },
             reader: {
               type: "json",
               rootProperty: "rows",
@@ -2012,53 +2016,70 @@ Ext.define("Amps.util.Utilities", {
     return val;
   },
 
-  createCollectionStore: function (collection, filters = {}, opts = {}) {
+  createCollectionStore: function (
+      collection,
+      filters = {},
+      opts = {},
+      extra = {}
+  ) {
     var check = amfutil.stores.find(
-      (store) =>
-        store.config.collection == collection &&
-        amfutil.compareOpts(store.config.filters, filters) &&
-        amfutil.compareOpts(store.config.opts, opts)
+        (store) =>
+            store.config.collection == collection &&
+            amfutil.compareOpts(store.config.filters, filters) &&
+            amfutil.compareOpts(store.config.opts, opts) &&
+            amfutil.compareOpts(store.config.extra, extra)
     );
     if (check) {
       return check.store;
     } else {
       var store = Ext.create(
-        "Ext.data.Store",
-        Object.assign(
-          {
-            remoteSort: true,
-            proxy: {
-              type: "rest",
-              url: `/api/store/${collection}`,
-              headers: {
-                Authorization: localStorage.getItem("access_token"),
-              },
+          "Ext.data.Store",
+          Object.assign(
+              {
+                remoteSort: true,
+                proxy: {
+                  type: "rest",
+                  url: `/api/store/${collection}`,
+                  headers: {
+                    Authorization: localStorage.getItem("access_token"),
+                  },
 
-              extraParams: { filters: JSON.stringify(filters) },
-              reader: {
-                type: "json",
-                rootProperty: "rows",
-                totalProperty: "count",
-              },
-              listeners: {
-                load: function (data) {
-                  console.log(data);
+                  extraParams: {
+                    params: JSON.stringify(
+                        Object.assign({ filters: filters }, extra)
+                    ),
+                  },
+
+                  reader: {
+                    type: "json",
+                    rootProperty: "rows",
+                    totalProperty: "count",
+                  },
+                  listeners: {
+                    load: function (data) {
+                      console.log(data);
+                    },
+                    exception: amfutil.refresh_on_failure,
+                  },
                 },
-                exception: amfutil.refresh_on_failure,
+                autoLoad: true,
               },
-            },
-            autoLoad: true,
-          },
-          opts
-        )
+              opts
+          )
       );
       amfutil.stores.push({
         store: store,
-        config: { collection: collection, filters: filters, opts: opts },
+        config: {
+          collection: collection,
+          filters: filters,
+          opts: opts,
+          extra: extra,
+        },
       });
       return store;
     }
   },
+
 
   createFieldStore: function (collection, id, field, opts = {}) {
     return Ext.create(

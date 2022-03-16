@@ -83,6 +83,8 @@ defmodule AmpsWeb.Router do
     post("/upload/:topic", DataController, :upload)
     post("/event/:topic", DataController, :send_event)
 
+    get("/system/monitoring/:type", DataController, :get_system_data)
+
     get("/agent/download/:id", AgentController, :download_agent)
     get("/rules/fields/:id", DataController, :get_match_fields)
     # get("/:collection", DataController, :get_rows)
@@ -98,6 +100,7 @@ defmodule AmpsWeb.Router do
 
     put("/:collection/:id/:field/:fieldid", DataController, :update_in_field)
     delete("/:collection/:id/:field/:fieldid", DataController, :delete_from_field)
+
 
     # Your protected API endpoints here
   end

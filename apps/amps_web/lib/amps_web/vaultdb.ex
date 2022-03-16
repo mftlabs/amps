@@ -1,5 +1,6 @@
 defmodule VaultDatabase do
   require Logger
+  alias Amps.DB
 
   def host() do
     Application.fetch_env!(:amps_web, AmpsWeb.Endpoint)[:vault_addr]
@@ -168,6 +169,26 @@ defmodule VaultDatabase do
       {:error, error} ->
         Logger.error(error)
         %{rows: [], success: true, count: 0}
+    end
+  end
+
+  def metrics do
+    case get_vault() do
+      {:ok, vault} ->
+        case Vault.request(vault, :get, "/sys/metrics") do
+          {:ok, resp} ->
+            {:ok, resp}
+            DB.insert("service_monitoring", %{
+              "service_type" => "vault",
+              "system_info" => resp
+            })
+
+          {:error, error} ->
+            {:error, error}
+        end
+
+      {:error, error} ->
+        {:error, error}
     end
   end
 end

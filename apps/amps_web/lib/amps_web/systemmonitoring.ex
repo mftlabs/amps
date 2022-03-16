@@ -1,15 +1,14 @@
-defmodule ServiceMonitoring do
+defmodule SystemMonitoring do
   require Logger
   alias Amps.DB
 
 
   def get_nats_info do
-    host = Application.fetch_env!(:amps_web, AmpsWeb.Endpoint)[:nats_addr]
-    url = "http://localhost:8222/varz"
-    response = HTTPoison.get!(url)
+    host = List.to_string(Application.fetch_env!(:amps, :gnat)[:host]) <> ":8222"
+    response = HTTPoison.get!(Path.join(host, "varz"))
     req = Poison.decode!(response.body)
-    #IO.puts(req)
-    DB.insert("service_monitoring", %{
+    IO.inspect(req)
+    DB.insert("system_monitoring", %{
       "service_type" => "nats",
       "system_info" => req
     })
@@ -22,7 +21,7 @@ defmodule ServiceMonitoring do
     response = HTTPoison.get!(url)
     req = Poison.decode!(response.body)
     #IO.puts(req)
-    DB.insert("service_monitoring", %{
+    DB.insert("system_monitoring", %{
       "service_type" => "opensearch",
       "system_info" => req
     })
@@ -34,13 +33,15 @@ defmodule ServiceMonitoring do
     cpu_per_core =
       case :cpu_sup.util([:detailed, :per_cpu]) do
         {:all, 0, 0, []} -> []
-        cores -> Enum.map(cores, fn {n, busy, non_b, _} -> {n, Map.new(busy ++ non_b)} end)
+        cores -> Enum.map(cores, fn {n, busy, non_b, _} -> %{n => Map.new(busy ++ non_b)} end)
       end
 
     disk =
       case :disksup.get_disk_data() do
         [{'none', 0, 0}] -> []
-        other -> other
+        other -> Enum.map(other, fn {partition, size, capacity} ->
+          %{partion: partition, size: size, capacity: capacity}
+        end)
       end
 
    data =  %{
@@ -50,13 +51,14 @@ defmodule ServiceMonitoring do
       cpu_nprocs: :cpu_sup.nprocs(),
       cpu_per_core: cpu_per_core,
       disk: disk,
-      system_mem: :memsup.get_system_memory_data()
+      system_mem: Enum.into(:memsup.get_system_memory_data(),%{})
     }
-    #DB.insert("service_monitoring", %{
-      #"service_type" => "sys_info",
-     # "system_info" => data
-    #})
+    DB.insert("system_monitoring", %{
+      "service_type" => "sys_info",
+     "system_info" => data
+    })
   end
+
 
 
 

@@ -870,8 +870,8 @@ defmodule Amps.DB do
     end
 
     def get_rows(conn, %{
-          "collection" => collection
-        }) do
+      "collection" => collection
+    }) do
       query = conn.query_params()
 
       size =
@@ -890,9 +890,16 @@ defmodule Amps.DB do
 
       # projection = query["projection"]
 
+      params =
+        if query["params"] do
+          Jason.decode!(query["params"])
+        else
+          %{}
+        end
+
       filters =
-        if query["filters"] != nil do
-          Jason.decode!(query["filters"])
+        if params["filters"] != nil do
+          params["filters"]
         else
           %{}
         end
@@ -906,13 +913,34 @@ defmodule Amps.DB do
           []
         end
 
-      query = %{
-        query: filters,
-        sort: sort,
-        from: from,
-        size: size
-        # track_total_hits: true
-      }
+      fields =
+        if params["fields"] do
+          params["fields"]
+        else
+          nil
+        end
+
+      IO.inspect(fields)
+
+      query =
+        if fields do
+          %{
+            query: filters,
+            sort: sort,
+            from: from,
+            size: size,
+            _source: %{"includes" => fields}
+            # track_total_hits: true
+          }
+        else
+          %{
+            query: filters,
+            sort: sort,
+            from: from,
+            size: size
+            # track_total_hits: true
+          }
+        end
 
       case query(collection, query) do
         {:error, error} ->
@@ -923,6 +951,7 @@ defmodule Amps.DB do
           res
       end
     end
+
 
     def find(collection, clauses, opts \\ %{}) do
       %{rows: rows, success: _success, count: _count} =

@@ -10,6 +10,13 @@ Ext.define("Amps.view.nav.TreeNav", {
     root: {
       children: [
         {
+          iconCls: "x-fa fa-dashboard",
+          leaf: true,
+          rowCls: "dashboard",
+          text: "Dashboard",
+          tooltip: "Dashboard",
+          cls: "dashboard",
+        },{
           iconCls: "x-fa fa-envelope",
           leaf: true,
           rowCls: "message_events",

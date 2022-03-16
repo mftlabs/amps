@@ -2513,6 +2513,66 @@ Ext.define("Amps.container.Imports", {
   ],
 });
 
+Ext.define('Amps.container.Dashboard', {
+  extend:'Ext.panel.Panel',
+  minHeight:1200,
+  height:1050,
+  xtype: "dashboardpanel",
+  itemId : "dashboardPanel",
+  title:"Dashboard",
+  requires:[
+    "Ext.resizer.Splitter",
+  ],
+
+  items:[
+    {
+      xtype: 'container',
+      layout:'hbox',
+      height :1,
+    },
+    {
+      xtype:'container',
+      layout:'hbox',
+      padding:10,
+      width:'98%',
+      height:'140',
+      flex:1,
+      items:[
+        {
+          xtype: 'splitter',
+        },{
+          xtype : 'natssysinfo',
+          itemId:'natsinfo',
+          minHeight:'140',
+          splitter:true,
+          flex:1,
+        },
+        
+      ]
+    },
+  ]
+});
+
+Ext.define('Amps.container.NatsSysInfo', {
+  extend:'Ext.panel.Panel',
+  xtype : 'natssysinfo',
+  html:"Nats Info",
+  requires: [
+    "Amps.util.Utilities"
+  ],
+  listeners:{
+    beforerender:function(){
+      var griddata = amfutil.createCollectionStore("system_monitoring", {"service_type": "nats"}, {}, {"fields": ["system_info.in_bytes"]})
+      console.log('griddata',griddata)
+    }
+  },
+
+
+
+
+});
+
+
 Ext.define("Amps.panel.Wizard", {
   xtype: "wizard",
   extend: "Ext.panel.Panel",
@@ -7898,6 +7958,17 @@ Ext.define("Amps.util.Grids", {
         items: [
           {
             xtype: "imports",
+          },
+        ],
+      },
+    }),
+    dashboard: () => ({
+      view: {
+        xtype: "container",
+        layout: "fit",
+        items: [
+          {
+            xtype: "dashboardpanel",
           },
         ],
       },
