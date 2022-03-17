@@ -2538,37 +2538,305 @@ Ext.define('Amps.container.Dashboard', {
       height:'140',
       flex:1,
       items:[
+       
         {
-          xtype: 'splitter',
-        },{
           xtype : 'natssysinfo',
-          itemId:'natsinfo',
+          itemId:'natsindo',
           minHeight:'140',
           splitter:true,
           flex:1,
+
+
         },
-        
+        {
+          xtype : 'systeminfo',
+          itemId:'systeminfo',
+          minHeight:'140',
+          splitter:true,
+          flex:1,
+
+
+        }
       ]
     },
   ]
 });
 
 Ext.define('Amps.container.NatsSysInfo', {
-  extend:'Ext.panel.Panel',
+  extend:'Ext.chart.CartesianChart',
   xtype : 'natssysinfo',
-  html:"Nats Info",
   requires: [
-    "Amps.util.Utilities"
+    "Amps.util.Utilities",
+    'Ext.chart.theme.Muted',
+    'Ext.chart.axis.Numeric3D',
+    'Ext.chart.grid.HorizontalGrid3D',
+    'Ext.chart.axis.Category3D',
+    'Ext.chart.grid.VerticalGrid3D',
+    'Ext.chart.series.Bar3D',
+    'Ext.chart.interactions.ItemHighlight',
+    'Ext.chart.plugin.ItemEvents'
   ],
   listeners:{
     beforerender:function(){
-      var griddata = amfutil.createCollectionStore("system_monitoring", {"service_type": "nats"}, {}, {"fields": ["system_info.in_bytes"]})
+      var fields = [{ name: "in_bytes", mapping: "system_info.in_bytes" },
+        { name: "max_memory", mapping: "system_info.jetstream.config.max_memory" },
+        { name: "in_msgs", mapping: "system_info.in_msgs" },
+        { name: "out_msgs", mapping: "system_info.out_msgs" },
+        { name: "start", mapping: "system_info.start" }];
+
+      var griddata = amfutil.createCollectionStore(
+          "system_monitoring",
+          { service_type: "nats" },
+          { fields: fields },
+          { fields: fields.map((field) => field.mapping) }
+      );
+      this.setStore(griddata)
+        console.log('griddata',griddata)
+    }
+  },
+
+  plugins: {
+    chartitemevents: {
+      moveEvents: true
+    }
+  },
+  theme: 'Muted',
+  interactions: ['itemhighlight'],
+  animation: {
+    duration: 200
+  },
+    axes: [{
+        type: 'numeric3d',
+        minimum: 0,
+        position: 'left',
+        fields: ['out_msgs'],
+        grid: true,
+        title: {
+            text:'Out Messages',
+            font:'13px Helvetica'
+        },
+
+    }, {
+        type: 'category3d',
+        position: 'bottom',
+        fields: ['in_msgs'],
+        title:'In Messages',
+        grid: true,
+        label: {
+            rotate: {
+                degrees: -50
+            },
+            font:'7px Helvetica '
+        },
+    }],
+    series: {
+        type: 'bar3d',
+        stacked: false,
+        xField: 'in_msgs',
+        yField: ['out_msgs'],
+
+        subStyle: {
+            fill: ['#2A4D69'],
+        },
+        highlight: true,
+        style: {
+            inGroupGapWidth: -7,
+            opacity: 0.60
+        },
+        itemId:'tooltip',
+        tooltip:{
+            trackMouse:true,
+            renderer:function(tooltip,record,item){
+              tooltip.setHtml('<strong>'+"Date"+': </strong>'+record.get('start'));
+            }
+        }
+    },
+
+});
+
+Ext.define('Amps.container.NatsSysInfo', {
+  extend:'Ext.chart.CartesianChart',
+  xtype : 'natssysinfo',
+  requires: [
+    "Amps.util.Utilities",
+    'Ext.chart.theme.Muted',
+    'Ext.chart.axis.Numeric3D',
+    'Ext.chart.grid.HorizontalGrid3D',
+    'Ext.chart.axis.Category3D',
+    'Ext.chart.grid.VerticalGrid3D',
+    'Ext.chart.series.Bar3D',
+    'Ext.chart.interactions.ItemHighlight',
+    'Ext.chart.plugin.ItemEvents'
+  ],
+  listeners:{
+    beforerender:function(){
+      var fields = [{ name: "in_bytes", mapping: "system_info.in_bytes" },
+        { name: "max_memory", mapping: "system_info.jetstream.config.max_memory" },
+        { name: "in_msgs", mapping: "system_info.in_msgs" },
+        { name: "out_msgs", mapping: "system_info.out_msgs" },
+        { name: "start", mapping: "system_info.start" }];
+
+      var griddata = amfutil.createCollectionStore(
+          "system_monitoring",
+          { service_type: "nats" },
+          { fields: fields },
+          { fields: fields.map((field) => field.mapping) }
+      );
+      this.setStore(griddata)
       console.log('griddata',griddata)
     }
   },
 
+  plugins: {
+    chartitemevents: {
+      moveEvents: true
+    }
+  },
+  theme: 'Muted',
+  interactions: ['itemhighlight'],
+  animation: {
+    duration: 200
+  },
+  axes: [{
+    type: 'numeric3d',
+    minimum: 0,
+    position: 'left',
+    fields: ['out_msgs'],
+    grid: true,
+    title: {
+      text:'Out Messages',
+      font:'13px Helvetica'
+    },
 
+  }, {
+    type: 'category3d',
+    position: 'bottom',
+    fields: ['in_msgs'],
+    title:'In Messages',
+    grid: true,
+    label: {
+      rotate: {
+        degrees: -50
+      },
+      font:'7px Helvetica '
+    },
+  }],
+  series: {
+    type: 'bar3d',
+    stacked: false,
+    xField: 'in_msgs',
+    yField: ['out_msgs'],
 
+    subStyle: {
+      fill: ['#2A4D69'],
+    },
+    highlight: true,
+    style: {
+      inGroupGapWidth: -7,
+      opacity: 0.60
+    },
+    itemId:'tooltip',
+    tooltip:{
+      trackMouse:true,
+      renderer:function(tooltip,record,item){
+        tooltip.setHtml('<strong>'+"Date"+': </strong>'+record.get('start'));
+      }
+    }
+  },
+
+});
+
+Ext.define('Amps.container.SystemInfo', {
+  extend:'Ext.chart.CartesianChart',
+  xtype : 'systeminfo',
+  requires: [
+    "Amps.util.Utilities",
+    'Ext.chart.theme.Muted',
+    'Ext.chart.axis.Numeric3D',
+    'Ext.chart.grid.HorizontalGrid3D',
+    'Ext.chart.axis.Category3D',
+    'Ext.chart.grid.VerticalGrid3D',
+    'Ext.chart.series.Bar3D',
+    'Ext.chart.interactions.ItemHighlight',
+    'Ext.chart.plugin.ItemEvents'
+  ],
+  listeners:{
+    beforerender:function(){
+      var fields = [{ name: "buffered_memory", mapping: "system_info.system_mem.buffered_memory" },
+        { name: "cached_memory", mapping: "system_info.system_mem.cached_memory" },
+        { name: "free_memory", mapping: "system_info.system_mem.free_memory" },
+        { name: "system_total_memory", mapping: "system_info.system_mem.system_total_memory" },
+        { name: "total_memory", mapping: "system_info.system_mem.total_memory" },
+        { name: "total_swap", mapping: "system_info.system_mem.total_swap" },
+        ];
+
+      var griddata = amfutil.createCollectionStore(
+          "system_monitoring",
+          { service_type: "sys_info" },
+          { fields: fields },
+          { fields: fields.map((field) => field.mapping) }
+      );
+      this.setStore(griddata)
+      console.log('griddata',griddata)
+    }
+  },
+
+  plugins: {
+    chartitemevents: {
+      moveEvents: true
+    }
+  },
+  theme: 'Muted',
+  interactions: ['itemhighlight'],
+  animation: {
+    duration: 200
+  },
+  axes: [{
+    type: 'numeric3d',
+    minimum: 0,
+    position: 'left',
+    fields: ['free_memory'],
+    grid: true,
+    title: {
+      text:'Free Memory',
+      font:'13px Helvetica'
+    },
+
+  }, {
+    type: 'category3d',
+    position: 'bottom',
+    fields: ['system_total_memory'],
+    title:'System Total Memory',
+    grid: true,
+    label: {
+      rotate: {
+        degrees: -50
+      },
+      font:'7px Helvetica '
+    },
+  }],
+  series: {
+    type: 'bar3d',
+    stacked: false,
+    xField: 'system_total_memory',
+    yField: ['free_memory'],
+
+    subStyle: {
+      fill: ['#2A4D69'],
+    },
+    highlight: true,
+    style: {
+      inGroupGapWidth: -7,
+      opacity: 0.60
+    },
+    itemId:'tooltip',
+    tooltip:{
+      trackMouse:true,
+      renderer:function(tooltip,record,item){
+        tooltip.setHtml('<strong>'+"Buffered Memory"+': </strong>'+record.get('buffered_memory'));
+      }
+    }
+  },
 
 });
 

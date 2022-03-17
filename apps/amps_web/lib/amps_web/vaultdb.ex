@@ -178,7 +178,7 @@ defmodule VaultDatabase do
         case Vault.request(vault, :get, "/sys/metrics") do
           {:ok, resp} ->
             {:ok, resp}
-            DB.insert("service_monitoring", %{
+            DB.insert("system_monitoring", %{
               "service_type" => "vault",
               "system_info" => resp
             })
