@@ -13,7 +13,7 @@
    *          "charts"
    *      ]
    */
-  "requires": ["font-awesome"],
+  "requires": ["font-awesome","charts"],
 
   /**
    * The relative path to the application's markup file (html, jsp, asp, etc.).
