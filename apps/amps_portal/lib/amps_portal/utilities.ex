@@ -74,8 +74,10 @@ defmodule AmpsPortal.Util do
   end
 
   def create_filter(qp, filter) do
-    filters = Jason.decode!(Map.get(qp, "filters","{}"))
+    params = Jason.decode!(Map.get(qp, "params", "{}"))
+    filters = Map.get(params, "filters", %{})
 
-    Map.put(qp, "filters", Jason.encode!(Map.merge(filters, filter)))
+    params = Map.put(params, "filters", Map.merge(filters, filter))
+    Map.put(qp, "params", Jason.encode!(params))
   end
 end

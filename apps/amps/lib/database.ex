@@ -870,8 +870,8 @@ defmodule Amps.DB do
     end
 
     def get_rows(conn, %{
-      "collection" => collection
-    }) do
+          "collection" => collection
+        }) do
       query = conn.query_params()
 
       size =
@@ -920,8 +920,6 @@ defmodule Amps.DB do
           nil
         end
 
-      IO.inspect(fields)
-
       query =
         if fields do
           %{
@@ -951,7 +949,6 @@ defmodule Amps.DB do
           res
       end
     end
-
 
     def find(collection, clauses, opts \\ %{}) do
       %{rows: rows, success: _success, count: _count} =

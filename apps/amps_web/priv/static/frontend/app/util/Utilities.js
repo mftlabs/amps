@@ -1516,7 +1516,7 @@ Ext.define("Amps.util.Utilities", {
       url: "/api/store/" + collection,
       method: "GET",
       timeout: 60000,
-      params: { filters: JSON.stringify(filters ? filters : {}) },
+      params: { params: JSON.stringify({ filters: filters ? filters : {} }) },
       headers: {
         Authorization: localStorage.getItem("access_token"),
       },
@@ -1962,7 +1962,7 @@ Ext.define("Amps.util.Utilities", {
             },
             extraParams: {
               params: JSON.stringify(
-                  Object.assign({ filters: filters }, extra)
+                Object.assign({ filters: filters }, extra)
               ),
             },
             reader: {
@@ -2017,55 +2017,55 @@ Ext.define("Amps.util.Utilities", {
   },
 
   createCollectionStore: function (
-      collection,
-      filters = {},
-      opts = {},
-      extra = {}
+    collection,
+    filters = {},
+    opts = {},
+    extra = {}
   ) {
     var check = amfutil.stores.find(
-        (store) =>
-            store.config.collection == collection &&
-            amfutil.compareOpts(store.config.filters, filters) &&
-            amfutil.compareOpts(store.config.opts, opts) &&
-            amfutil.compareOpts(store.config.extra, extra)
+      (store) =>
+        store.config.collection == collection &&
+        amfutil.compareOpts(store.config.filters, filters) &&
+        amfutil.compareOpts(store.config.opts, opts) &&
+        amfutil.compareOpts(store.config.extra, extra)
     );
     if (check) {
       return check.store;
     } else {
       var store = Ext.create(
-          "Ext.data.Store",
-          Object.assign(
-              {
-                remoteSort: true,
-                proxy: {
-                  type: "rest",
-                  url: `/api/store/${collection}`,
-                  headers: {
-                    Authorization: localStorage.getItem("access_token"),
-                  },
-
-                  extraParams: {
-                    params: JSON.stringify(
-                        Object.assign({ filters: filters }, extra)
-                    ),
-                  },
-
-                  reader: {
-                    type: "json",
-                    rootProperty: "rows",
-                    totalProperty: "count",
-                  },
-                  listeners: {
-                    load: function (data) {
-                      console.log(data);
-                    },
-                    exception: amfutil.refresh_on_failure,
-                  },
-                },
-                autoLoad: true,
+        "Ext.data.Store",
+        Object.assign(
+          {
+            remoteSort: true,
+            proxy: {
+              type: "rest",
+              url: `/api/store/${collection}`,
+              headers: {
+                Authorization: localStorage.getItem("access_token"),
               },
-              opts
-          )
+
+              extraParams: {
+                params: JSON.stringify(
+                  Object.assign({ filters: filters }, extra)
+                ),
+              },
+
+              reader: {
+                type: "json",
+                rootProperty: "rows",
+                totalProperty: "count",
+              },
+              listeners: {
+                load: function (data) {
+                  console.log(data);
+                },
+                exception: amfutil.refresh_on_failure,
+              },
+            },
+            autoLoad: true,
+          },
+          opts
+        )
       );
       amfutil.stores.push({
         store: store,
@@ -2079,7 +2079,6 @@ Ext.define("Amps.util.Utilities", {
       return store;
     }
   },
-
 
   createFieldStore: function (collection, id, field, opts = {}) {
     return Ext.create(
@@ -2494,7 +2493,10 @@ Ext.define("Amps.util.Utilities", {
           headers: {
             Authorization: localStorage.getItem("access_token"),
           },
-          extraParams: { filters: JSON.stringify(filters ? filters : {}) },
+          extraParams: {
+            params: JSON.stringify({ filters: filters ? filters : {} }),
+          },
+
           url: `/api/store/${route}`,
           listeners: {
             exception: amfutil.refresh_on_failure,

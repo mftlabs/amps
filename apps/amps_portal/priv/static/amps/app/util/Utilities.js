@@ -576,7 +576,7 @@ Ext.define("Amps.Utilities", {
       url: "/api/" + collection,
       method: "GET",
       timeout: 60000,
-      params: { filters: JSON.stringify(filters ? filters : {}) },
+      params: { params: JSON.stringify({ filters: filters ? filters : {} }) },
       headers: {
         Authorization: localStorage.getItem("access_token"),
       },
@@ -1018,7 +1018,7 @@ Ext.define("Amps.Utilities", {
             headers: {
               Authorization: localStorage.getItem("access_token"),
             },
-            extraParams: { filters: JSON.stringify(filters) },
+            extraParams: { params: JSON.stringify({ filters: filters }) },
             reader: {
               type: "json",
               rootProperty: "rows",
@@ -1118,7 +1118,9 @@ Ext.define("Amps.Utilities", {
               },
               limitParam: "",
 
-              extraParams: { filters: JSON.stringify(filters) },
+              extraParams: {
+                params: JSON.stringify({ filters: filters ? filters : {} }),
+              },
               reader: {
                 type: "json",
                 rootProperty: "rows",
@@ -1445,7 +1447,9 @@ Ext.define("Amps.Utilities", {
           headers: {
             Authorization: localStorage.getItem("access_token"),
           },
-          extraParams: { filters: JSON.stringify(filters ? filters : {}) },
+          extraParams: {
+            params: JSON.stringify({ filters: filters ? filters : {} }),
+          },
           url: `/api/${route}`,
           listeners: {
             exception: amfutil.refresh_on_failure,
@@ -1644,8 +1648,8 @@ Ext.define("Amps.Utilities", {
 
   createFieldSearch: function (route, field, grid) {
     var page = Amps.Pages.pages[route]();
-    console.log(page)
-        var items =
+    console.log(page);
+    var items =
       page.view.columns &&
       page.view.columns.map((field) => {
         if (field.type) {
@@ -1654,7 +1658,7 @@ Ext.define("Amps.Utilities", {
           return;
         }
       });
-    console.log(items)
+    console.log(items);
     return new Ext.form.Panel({
       defaults: {
         padding: 5,
@@ -1815,14 +1819,14 @@ Ext.define("Amps.Utilities", {
     });
   },
 
-  searchbtn : function(gridid) {
+  searchbtn: function (gridid) {
     return {
       xtype: "button",
       iconCls: "x-fa fa-search",
-      itemId : "searchpanelbtn",
+      itemId: "searchpanelbtn",
       handler: "onSearchPanel",
-      gridid : gridid
-    }
+      gridid: gridid,
+    };
   },
   copyTextdata: function (e) {
     var contextMenu = Ext.create("Ext.menu.Menu", {
@@ -2046,7 +2050,6 @@ Ext.define("Amps.Utilities", {
     return h + ":" + m + ":" + s + " ";
   },
 });
-
 
 const filterTypes = {
   tag: (field) => {
