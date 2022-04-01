@@ -23,7 +23,6 @@ RUN cd apps/amps_web/assets && npm install
 
 RUN cd apps/amps_web/assets && node build.js --deploy
 
-RUN mix esbuild amps_web --minify
 
 RUN mix esbuild amps_portal --minify
 
