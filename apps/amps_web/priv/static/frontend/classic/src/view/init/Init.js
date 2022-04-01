@@ -296,7 +296,7 @@ Ext.define("Amps.panel.Startup", {
             var defaultform = scope.up("startup").down("#card-1");
 
             var defaultvalues = amfutil.convertNumbers(
-              defaultform,
+              defaultform.getForm(),
               defaultform.getValues()
             );
             var mask = new Ext.LoadMask({
