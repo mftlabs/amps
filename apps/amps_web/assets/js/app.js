@@ -25,8 +25,6 @@ import "cropperjs/dist/cropper.css";
 import { Socket } from "phoenix";
 import { LiveSocket } from "phoenix_live_view";
 import topbar from "../vendor/topbar";
-import ace from "../vendor/ace";
-import pymode from "../vendor/ace/mode-python";
 import * as monaco from "monaco-editor";
 import Cropper from "cropperjs";
 
