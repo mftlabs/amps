@@ -5,12 +5,12 @@ defmodule Amps.PyService do
     GenServer.start_link(__MODULE__, default)
   end
 
-  def call(msg, parms) do
+  def call(msg, parms, env \\ nil) do
     Task.async(fn ->
       :poolboy.transaction(
         :worker,
         fn pid ->
-          GenServer.call(pid, {:pyrun, msg, parms}, 60000)
+          GenServer.call(pid, {:pyrun, msg, parms, env}, 60000)
         end,
         60000
       )
@@ -31,8 +31,8 @@ defmodule Amps.PyService do
   end
 
   @impl true
-  def handle_call({:pyrun, msg, parms}, _from, _pid) do
-    path = AmpsUtil.get_env(:python_path)
+  def handle_call({:pyrun, msg, parms, env}, _from, _pid) do
+    path = Path.join(AmpsUtil.get_env(:python_path), env)
     tmp = AmpsUtil.get_env(:storage_temp)
     {:ok, pid} = :python.start([{:python_path, to_charlist(path)}])
     IO.inspect(parms)
@@ -42,6 +42,7 @@ defmodule Amps.PyService do
 
     try do
       result = :python.call(pid, module, :run, [jparms])
+      :python.stop(pid)
 
       case result do
         :undefined ->
@@ -60,7 +61,7 @@ defmodule Amps.PyService do
             status = rparm["status"] || "failed"
 
             if status == "failed" do
-              {:reply, {:error, result["reason"]}, pid}
+              {:reply, {:error, rparm["reason"]}, pid}
             else
               {:reply, {:ok, rparm}, pid}
             end

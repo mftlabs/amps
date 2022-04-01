@@ -4,9 +4,46 @@ defmodule Amps.DB do
   alias Amps.DB.Postgres
   alias Amps.DB.MongoDB
   alias Amps.DB.Elastic
+  alias Amps.VaultDatabase
 
   defp db() do
     Application.get_env(:amps, :db)
+  end
+
+  def path(collection) do
+    if Application.get_env(:amps, :env) == :test do
+      "test-" <> collection
+    else
+      collection
+      # if Enum.member?(["config", "demos", "admin"], collection) do
+      #   collection
+      # else
+      #   if Amps.Defaults.get("sandbox") do
+      #     "sb-" <> collection
+      #   else
+      #     collection
+      #   end
+      # end
+    end
+  end
+
+  def vault_collection(collection) do
+    collection = String.split(collection, "-")
+
+    collection =
+      if Enum.count(collection) == 1 do
+        Enum.at(collection, 0)
+      else
+        Enum.at(collection, 1)
+      end
+
+    collections = [
+      "keys",
+      "demos",
+      "tokens"
+    ]
+
+    Enum.member?(collections, collection)
   end
 
   def aggregate_field(collection, field) do
@@ -17,28 +54,36 @@ defmodule Amps.DB do
   end
 
   def insert(collection, body) do
-    case db() do
-      "pg" ->
-        Postgres.create(collection, body)
+    if vault_collection(collection) do
+      VaultDatabase.insert(collection, body)
+    else
+      case db() do
+        "pg" ->
+          Postgres.create(collection, body)
 
-      "mongo" ->
-        MongoDB.create(collection, body)
+        "mongo" ->
+          MongoDB.create(collection, body)
 
-      "es" ->
-        Elastic.insert(collection, body)
+        "es" ->
+          Elastic.insert(collection, body)
+      end
     end
   end
 
   def insert_with_id(collection, body, id) do
-    case db() do
-      "pg" ->
-        Postgres.create(collection, body)
+    if vault_collection(collection) do
+      VaultDatabase.insert_with_id(collection, body, id)
+    else
+      case db() do
+        "pg" ->
+          Postgres.create(collection, body)
 
-      "mongo" ->
-        MongoDB.create(collection, body)
+        "mongo" ->
+          MongoDB.create(collection, body)
 
-      "es" ->
-        Elastic.insert_with_id(collection, body, id)
+        "es" ->
+          Elastic.insert_with_id(collection, body, id)
+      end
     end
   end
 
@@ -53,6 +98,26 @@ defmodule Amps.DB do
 
       "es" ->
         Elastic.delete(collection, clauses)
+    end
+  end
+
+  def delete_by_id(collection, id) do
+    if vault_collection(collection) do
+      {:ok, resp} = VaultDatabase.delete(collection, id)
+      resp
+    else
+      case db() do
+        "pg" ->
+          Postgres.delete_one(collection, %{"_id" => id})
+
+        "mongo" ->
+          clauses = convert_id(%{"_id" => id})
+
+          MongoDB.delete_one(collection, clauses)
+
+        "es" ->
+          Elastic.delete_one(collection, %{"_id" => id})
+      end
     end
   end
 
@@ -81,34 +146,43 @@ defmodule Amps.DB do
   def get_rows(conn, %{
         "collection" => collection
       }) do
-    case db() do
-      "pg" ->
-        Postgres.get_rows(conn, %{
-          "collection" => collection
-        })
+    if vault_collection(collection) do
+      VaultDatabase.get_rows(collection)
+    else
+      case db() do
+        "pg" ->
+          Postgres.get_rows(conn, %{
+            "collection" => collection
+          })
 
-      "mongo" ->
-        MongoDB.get_rows(conn, %{
-          "collection" => collection
-        })
+        "mongo" ->
+          MongoDB.get_rows(conn, %{
+            "collection" => collection
+          })
 
-      "es" ->
-        Elastic.get_rows(conn, %{
-          "collection" => collection
-        })
+        "es" ->
+          Elastic.get_rows(conn, %{
+            "collection" => collection
+          })
+      end
     end
   end
 
   def update(collection, body, id) do
-    case db() do
-      "pg" ->
-        Postgres.update(collection, body, id)
+    if vault_collection(collection) do
+      {:ok, resp} = VaultDatabase.update(collection, body, id)
+      resp
+    else
+      case db() do
+        "pg" ->
+          Postgres.update(collection, body, id)
 
-      "mongo" ->
-        MongoDB.update(collection, body, id)
+        "mongo" ->
+          MongoDB.update(collection, body, id)
 
-      "es" ->
-        Elastic.update(collection, body, id)
+        "es" ->
+          Elastic.update(collection, body, id)
+      end
     end
   end
 
@@ -149,40 +223,86 @@ defmodule Amps.DB do
   end
 
   def find(collection, clauses \\ %{}, opts \\ %{}) do
-    case db() do
-      "pg" ->
-        Postgres.find(collection, clauses)
+    if vault_collection(collection) do
+      VaultDatabase.find(collection)
+    else
+      case db() do
+        "pg" ->
+          Postgres.find(collection, clauses)
 
-      "mongo" ->
-        clauses = convert_id(clauses)
+        "mongo" ->
+          clauses = convert_id(clauses)
 
-        cursor = Mongo.find(:mongo, collection, clauses)
+          cursor = Mongo.find(:mongo, collection, clauses)
 
-        cursor
-        |> Enum.to_list()
+          cursor
+          |> Enum.to_list()
 
-      "es" ->
-        Elastic.find(collection, clauses, opts)
+        "es" ->
+          Elastic.find(collection, clauses, opts)
+      end
+    end
+  end
+
+  def find_by_id(collection, id) do
+    if vault_collection(collection) do
+      {:ok, data} = VaultDatabase.read(collection, id)
+      data
+    else
+      case db() do
+        "pg" ->
+          Postgres.find_one(collection, %{"_id" => id})
+
+        "mongo" ->
+          clauses = convert_id(%{"_id" => id})
+
+          Mongo.find_one(:mongo, collection, clauses)
+
+        "es" ->
+          Elastic.find_one(collection, %{"_id" => id})
+      end
     end
   end
 
   def find_one(collection, clauses) do
-    case db() do
-      "pg" ->
-        Postgres.find_one(collection, clauses)
+    if vault_collection(collection) do
+      {:ok, data} = VaultDatabase.find_one(collection, clauses)
+      data
+    else
+      case db() do
+        "pg" ->
+          Postgres.find_one(collection, clauses)
 
-      "mongo" ->
-        clauses = convert_id(clauses)
+        "mongo" ->
+          clauses = convert_id(clauses)
 
-        Mongo.find_one(:mongo, collection, clauses)
+          Mongo.find_one(:mongo, collection, clauses)
 
-      "es" ->
-        Elastic.find_one(collection, clauses)
+        "es" ->
+          Elastic.find_one(collection, clauses)
+      end
     end
   end
 
   def add_to_field(collection, body, id, field) do
     fieldid = AmpsUtil.get_id()
+    body = Map.put(body, "_id", fieldid)
+
+    case db() do
+      "pg" ->
+        Postgres.add_to_field(collection, body, id, field)
+
+      "mongo" ->
+        MongoDB.add_to_field(collection, body, id, field)
+
+      "es" ->
+        Elastic.add_to_field(collection, body, id, field)
+    end
+
+    fieldid
+  end
+
+  def add_to_field_with_id(collection, body, id, field, fieldid) do
     body = Map.put(body, "_id", fieldid)
 
     case db() do
@@ -838,7 +958,7 @@ defmodule Amps.DB do
     def query(collection, query) do
       case Snap.Search.search(
              Amps.Cluster,
-             path(collection),
+             Amps.DB.path(collection),
              query
            ) do
         {:ok, response} ->
@@ -866,7 +986,7 @@ defmodule Amps.DB do
     end
 
     def delete_index(collection) do
-      Amps.Cluster.delete(path(collection))
+      Amps.Cluster.delete(Amps.DB.path(collection))
     end
 
     def get_rows(conn, %{
@@ -890,9 +1010,16 @@ defmodule Amps.DB do
 
       # projection = query["projection"]
 
+      params =
+        if query["params"] do
+          Jason.decode!(query["params"])
+        else
+          %{}
+        end
+
       filters =
-        if query["filters"] != nil do
-          Jason.decode!(query["filters"])
+        if params["filters"] != nil do
+          params["filters"]
         else
           %{}
         end
@@ -906,13 +1033,34 @@ defmodule Amps.DB do
           []
         end
 
-      query = %{
-        query: filters,
-        sort: sort,
-        from: from,
-        size: size
-        # track_total_hits: true
-      }
+      fields =
+        if params["fields"] do
+          params["fields"]
+        else
+          nil
+        end
+
+      IO.inspect(fields)
+
+      query =
+        if fields do
+          %{
+            query: filters,
+            sort: sort,
+            from: from,
+            size: size,
+            _source: %{"includes" => fields}
+            # track_total_hits: true
+          }
+        else
+          %{
+            query: filters,
+            sort: sort,
+            from: from,
+            size: size
+            # track_total_hits: true
+          }
+        end
 
       case query(collection, query) do
         {:error, error} ->
@@ -969,14 +1117,6 @@ defmodule Amps.DB do
     def find_one_and_update(collection, clauses, body) do
       item = find_one(collection, clauses)
       {:ok, update(collection, body, item["_id"])}
-    end
-
-    def path(collection) do
-      if Application.get_env(:amps, :env) == :test do
-        "test-" <> collection
-      else
-        collection
-      end
     end
 
     def format_search(map) do
@@ -1076,7 +1216,7 @@ defmodule Amps.DB do
     end
 
     def convert_sort(collection, sort) do
-      case Amps.Cluster.get(path(collection)) do
+      case Amps.Cluster.get(Amps.DB.path(collection)) do
         {:error, _e} ->
           []
 
@@ -1104,11 +1244,19 @@ defmodule Amps.DB do
 
             [sortfield | acc]
           end)
+
+        {:ok,
+         %{
+           ^collection => %{
+             "mappings" => %{}
+           }
+         }} ->
+          []
       end
     end
 
     def insert(collection, body) do
-      case Amps.Cluster.post(path(collection) <> "/" <> collection, body, %{
+      case Amps.Cluster.post(Amps.DB.path(collection) <> "/" <> collection, body, %{
              "refresh" => true
            }) do
         {:ok, response} ->
@@ -1120,7 +1268,7 @@ defmodule Amps.DB do
     end
 
     def insert_with_id(collection, body, id) do
-      case Amps.Cluster.put(path(collection) <> "/" <> collection <> "/" <> id, body, %{
+      case Amps.Cluster.put(Amps.DB.path(collection) <> "/" <> collection <> "/" <> id, body, %{
              "refresh" => true
            }) do
         {:ok, response} ->
@@ -1133,10 +1281,12 @@ defmodule Amps.DB do
 
     def update(collection, body, id) do
       body = Map.drop(body, ["_id"])
+      IO.inspect(collection)
+      IO.inspect(id)
 
       case(
         Amps.Cluster.post(
-          path(collection) <> "/_update/" <> id,
+          Amps.DB.path(collection) <> "/_update/" <> id,
           %{
             "doc" => body
           },
@@ -1155,7 +1305,7 @@ defmodule Amps.DB do
 
     def delete(collection, clauses) do
       case Amps.Cluster.post(
-             path(collection) <> "/_delete_by_query",
+             Amps.DB.path(collection) <> "/_delete_by_query",
              %{
                query: convert_search(clauses)
              },
@@ -1174,7 +1324,7 @@ defmodule Amps.DB do
 
     def delete_one(collection, clauses) do
       case Amps.Cluster.post(
-             path(collection) <> "/_delete_by_query",
+             Amps.DB.path(collection) <> "/_delete_by_query",
              %{
                query: convert_search(clauses)
              },
@@ -1195,7 +1345,7 @@ defmodule Amps.DB do
     def aggregate_field(collection, field, size \\ 10000) do
       {:ok, result} =
         Amps.Cluster.post(
-          Path.join(path(collection), "/_search"),
+          Path.join(Amps.DB.path(collection), "/_search"),
           %{
             "aggs" => %{
               field => %{
@@ -1212,12 +1362,13 @@ defmodule Amps.DB do
     end
 
     def add_to_field(collection, body, id, field) do
-      {:ok, _result} =
+      res =
         Amps.Cluster.post(
-          path(collection) <> "/_update_by_query",
+          Amps.DB.path(collection) <> "/_update_by_query",
           %{
             "script" => %{
-              "inline" => "ctx._source.#{field}.add(params.body)",
+              "inline" =>
+                "if (ctx._source.containsKey(\"#{field}\")) {ctx._source.#{field}.add(params.body);} else {ctx._source.#{field} = [params.body];}",
               "params" => %{"body" => body}
             },
             "query" => convert_search(%{"_id" => id})
@@ -1227,10 +1378,17 @@ defmodule Amps.DB do
           }
         )
 
-      find_one(
-        collection,
-        %{"_id" => id}
-      )
+      case res do
+        {:ok, _resp} ->
+          find_one(
+            collection,
+            %{"_id" => id}
+          )
+
+        {:error, error} ->
+          IO.inspect(error)
+          Logger.error(error)
+      end
     end
 
     def get_in_field(collection, id, field, fieldid) do
@@ -1254,7 +1412,7 @@ defmodule Amps.DB do
     def update_in_field(collection, body, id, field, fieldid) do
       {:ok, _result} =
         Amps.Cluster.post(
-          path(collection) <> "/_update_by_query",
+          Amps.DB.path(collection) <> "/_update_by_query",
           %{
             "script" => %{
               "inline" => "
@@ -1283,7 +1441,7 @@ defmodule Amps.DB do
     def delete_from_field(collection, _body, id, field, fieldid) do
       {:ok, _result} =
         Amps.Cluster.post(
-          path(collection) <> "/_update_by_query",
+          Amps.DB.path(collection) <> "/_update_by_query",
           %{
             "script" => %{
               "inline" => "

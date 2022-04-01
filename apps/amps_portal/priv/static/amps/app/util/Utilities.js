@@ -101,6 +101,40 @@ Ext.define("Amps.Utilities", {
     },
   },
 
+  config: {
+    tokens: {
+      window: { width: 500, height: 200 },
+      object: "Auth Token",
+      fields: [
+        {
+          xtype: "textfield",
+          name: "name",
+          fieldLabel: "Token Name",
+          allowBlank: false,
+          listeners: {
+            beforerender: async function (scope) {
+              scope.setListeners({
+                change: async function (cmp, value, oldValue, eOpts) {
+                  await amfutil.duplicateHandler(
+                    cmp,
+                    { "tokens.name": value },
+                    "Token Already Exists",
+                    amfutil.nameValidator
+                  );
+                },
+              });
+            },
+          },
+        },
+      ],
+      add: {
+        process: function (form, values) {
+          return values;
+        },
+      },
+    },
+  },
+
   all_icons: [
     "addnewbtn",
     "searchpanelbtn",
@@ -523,6 +557,41 @@ Ext.define("Amps.Utilities", {
         dcon.insert(length - 1, d);
       }
     });
+  },
+
+  deleteAction: function (title, msg, route, store) {
+    return {
+      iconCls: "x-fa fa-trash",
+      handler: async function (grid, rowIndex, colIndex) {
+        console.log(rowIndex);
+        var rec = grid.getStore().getAt(rowIndex).data;
+        console.log(rec);
+        Ext.Msg.confirm(title, msg, function (btn) {
+          if (btn == "yes") {
+            console.log("yes");
+            amfutil.ajaxRequest({
+              url: `api/${route}/${rec._id}`,
+              method: "delete",
+              success: function () {
+                store.reload();
+              },
+            });
+          }
+        });
+      },
+    };
+  },
+
+  copyToClipboard: function (text) {
+    navigator.clipboard.writeText(text).then(
+      function () {
+        console.log("Async: Copying to clipboard was successful!");
+        Ext.toast("Copied to clipboard");
+      },
+      function (err) {
+        console.error("Async: Could not copy text: ", err);
+      }
+    );
   },
 
   uniqueBucket: async function (cmp, value, oldValue, eOpts) {
@@ -1370,15 +1439,15 @@ Ext.define("Amps.Utilities", {
           console.log(
             "server-side failure with status code " + response.status
           );
-          if ((response.status = 401)) {
+          if (response.status == 401) {
             await amfutil.renew_session();
             request.headers = {
               Authorization: localStorage.getItem("access_token"),
             };
             request.failure = failure;
             response = await Ext.Ajax.request(request);
-            resolve(response);
           }
+          resolve(response);
         }
       );
     });
@@ -1644,8 +1713,8 @@ Ext.define("Amps.Utilities", {
 
   createFieldSearch: function (route, field, grid) {
     var page = Amps.Pages.pages[route]();
-    console.log(page)
-        var items =
+    console.log(page);
+    var items =
       page.view.columns &&
       page.view.columns.map((field) => {
         if (field.type) {
@@ -1654,7 +1723,7 @@ Ext.define("Amps.Utilities", {
           return;
         }
       });
-    console.log(items)
+    console.log(items);
     return new Ext.form.Panel({
       defaults: {
         padding: 5,
@@ -1791,6 +1860,7 @@ Ext.define("Amps.Utilities", {
                   );
                   console.log(filters);
                 } else {
+                  console.log(filters);
                   filters[field.dataIndex] = values[field.dataIndex];
                 }
               }
@@ -1815,14 +1885,14 @@ Ext.define("Amps.Utilities", {
     });
   },
 
-  searchbtn : function(gridid) {
+  searchbtn: function (gridid) {
     return {
       xtype: "button",
       iconCls: "x-fa fa-search",
-      itemId : "searchpanelbtn",
+      itemId: "searchpanelbtn",
       handler: "onSearchPanel",
-      gridid : gridid
-    }
+      gridid: gridid,
+    };
   },
   copyTextdata: function (e) {
     var contextMenu = Ext.create("Ext.menu.Menu", {
@@ -2046,7 +2116,6 @@ Ext.define("Amps.Utilities", {
     return h + ":" + m + ":" + s + " ";
   },
 });
-
 
 const filterTypes = {
   tag: (field) => {

@@ -78,9 +78,7 @@ config :amps_web, AmpsWeb.Endpoint,
   secret_key_base: "FZecDq8oIf+th6OcXfXYy5Y0cZi3QEsVIQsJ/qua2D0nrmE5qw/EDNtWN3j8KBBs",
   watchers: [
     # Start the esbuild watcher by calling Esbuild.install_and_run(:default, args)
-    esbuild:
-      {Esbuild, :install_and_run,
-       [:amps_web, ~w(--sourcemap=inline --watch --external:app.css --loader:.svg=file)]}
+    node: ["build.js", "--watch", cd: Path.expand("../apps/amps_web/assets", __DIR__)]
   ],
   server: true
 

@@ -2,10 +2,10 @@ defmodule KafkaPut do
   require Logger
   alias Amps.DB
 
-  def run(msg, parms, _state) do
-    provider = DB.find_one("providers", %{"_id" => parms["provider"]})
+  def run(msg, parms, {state, env}) do
+    provider = DB.find_one(AmpsUtil.index(env, "providers"), %{"_id" => parms["provider"]})
 
-    auth_opts = AmpsUtil.get_kafka_auth(parms, provider)
+    auth_opts = AmpsUtil.get_kafka_auth(parms, provider, env)
     worker = String.to_atom(parms["name"] <> "-" <> AmpsUtil.get_id())
 
     value =

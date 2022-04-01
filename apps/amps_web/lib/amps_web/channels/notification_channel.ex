@@ -18,19 +18,40 @@ defmodule AmpsWeb.NotificationChannel do
   end
 
   def handle_in("service", %{"name" => name}, socket) do
-    response =
-      case SvcManager.service_active?(name) do
-        nil ->
-          false
+    env = Amps.DB.find_one("admin", %{"_id" => socket.assigns().user_id})["config"]["env"]
 
-        _pid ->
-          true
+    response =
+      if env == "" do
+        case SvcManager.service_active?(name) do
+          nil ->
+            false
+
+          _pid ->
+            true
+        end
+      else
+        case Amps.EnvSvcManager.service_active?(name, env) do
+          nil ->
+            false
+
+          _pid ->
+            true
+        end
       end
 
     {:reply, {:ok, response}, socket}
   end
 
   def handle_in("stream", %{"name" => stream}, socket) do
+    env = Amps.DB.find_one("admin", %{"_id" => socket.assigns().user_id})["config"]["env"]
+
+    stream =
+      if env == "" do
+        stream
+      else
+        String.upcase(env) <> "-" <> stream
+      end
+
     {:ok, %{consumers: consumers}} = Jetstream.API.Consumer.list(:gnat, stream)
 
     consumers =
@@ -49,9 +70,16 @@ defmodule AmpsWeb.NotificationChannel do
   end
 
   def handle_in("consumer", %{"name" => name, "topic" => topic}, socket) do
-    {stream, consumer} = AmpsUtil.get_names(%{"name" => name, "topic" => topic})
-    # IO.inspect("#{stream}, #{consumer}")
-    {:ok, info} = Jetstream.API.Consumer.info(:gnat, stream, consumer)
-    {:reply, {:ok, Integer.to_string(info.num_pending)}, socket}
+    env = Amps.DB.find_one("admin", %{"_id" => socket.assigns().user_id})["config"]["env"]
+    {stream, consumer} = AmpsUtil.get_names(%{"name" => name, "topic" => topic}, env)
+    IO.inspect("ENV")
+
+    case Jetstream.API.Consumer.info(:gnat, stream, consumer) do
+      {:ok, info} ->
+        {:reply, {:ok, Integer.to_string(info.num_pending)}, socket}
+
+      {:error, error} ->
+        {:reply, {:ok, "Error"}, socket}
+    end
   end
 end

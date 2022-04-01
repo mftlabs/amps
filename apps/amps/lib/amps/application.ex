@@ -57,7 +57,8 @@ defmodule Amps.Application do
       Amps.SvcHandler,
       Amps.SvcSupervisor,
       Amps.SvcManager,
-      Amps.Scheduler,
+      Amps.EnvSupervisor,
+      Amps.EnvManager,
       %{
         id: "event_handler",
         start:

@@ -16,7 +16,19 @@ defmodule AmpsPortal.Users do
     Application.get_env(:amps_web, AmpsWeb.Endpoint)[:authmethod]
   end
 
-  def authenticate(body) do
+  def index(config) do
+    case Keyword.get(config, :env) do
+      "" ->
+        "users"
+
+      other ->
+        other <> "-users"
+    end
+  end
+
+  def authenticate(body, config) do
+    IO.inspect("authenticate")
+
     case body["provider"] do
       "google" ->
         google_upsert(body)
@@ -27,7 +39,7 @@ defmodule AmpsPortal.Users do
             AmpsPortal.Users.Vault.authenticate(body)
 
           _ ->
-            AmpsPortal.Users.DB.authenticate(body)
+            AmpsPortal.Users.DB.authenticate(body, config)
         end
     end
 
@@ -54,9 +66,7 @@ defmodule AmpsPortal.Users do
     {:error, :not_implemented}
   end
 
-  def get_by(clauses) do
-    IO.inspect(clauses)
-
+  def get_by(clauses, config \\ nil) do
     filter =
       Enum.reduce(clauses, %{}, fn {key, value}, acc ->
         if key == :id do
@@ -66,7 +76,7 @@ defmodule AmpsPortal.Users do
         end
       end)
 
-    case Amps.DB.find_one("users", filter) do
+    case Amps.DB.find_one(index(config), filter) do
       nil ->
         nil
 
@@ -197,8 +207,9 @@ defmodule AmpsPortal.Users.DB do
   require Logger
   import Argon2
 
-  def authenticate(body) do
-    user = Amps.DB.find_one("users", %{"username" => body["username"]})
+  def authenticate(body, config \\ nil) do
+    IO.inspect(config)
+    user = Amps.DB.find_one(Users.index(config), %{"username" => body["username"]})
 
     case check_pass(user, body["password"], hash_key: "password") do
       {:ok, user} ->
@@ -224,7 +235,7 @@ defmodule AmpsPortal.Users.DB do
       Map.drop(body, ["password"])
       |> Map.drop(["confirmpswd"])
       |> Map.put("password", hashed)
-      |> Map.merge(%{"approved" => false, "role" => "Guest", "provider" => "amps"})
+      |> Map.merge(%{"approved" => false})
 
     id = Amps.DB.insert("users", user)
 
@@ -257,10 +268,8 @@ defmodule AmpsPortal.Users.User do
             lastname: nil,
             username: nil,
             password: nil,
-            approved: nil,
             role: nil,
-            id: nil,
-            provider: nil
+            id: nil
 
   require Pow.Ecto.Schema
   require PowAssent.Ecto.Schema

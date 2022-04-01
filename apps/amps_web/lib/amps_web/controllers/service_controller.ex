@@ -25,7 +25,18 @@ defmodule AmpsWeb.ServiceController do
   end
 
   def handle_service(conn, %{"name" => name, "action" => action}) do
-    Gnat.pub(:gnat, "amps.events.svcs.handler.#{name}.#{action}", "")
+    env = conn.assigns().env
+
+    topic =
+      if env == "" do
+        "amps.events.svcs.handler.#{name}.#{action}"
+      else
+        "amps.#{env}.events.svcs.handler.#{name}.#{action}"
+      end
+
+    IO.inspect(topic)
+
+    Gnat.pub(:gnat, topic, "")
 
     user = Pow.Plug.current_user(conn)
 

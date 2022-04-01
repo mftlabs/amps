@@ -29,6 +29,7 @@ Ext.define("Amps.view.main.Page", {
             {
               xtype: "container",
               itemId: "main-page",
+              autoDestroy: true,
               flex: 1,
               layout: "fit",
             },

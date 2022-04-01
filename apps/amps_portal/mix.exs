@@ -50,7 +50,9 @@ defmodule AmpsPortal.MixProject do
       {:gettext, "~> 0.18"},
       {:jason, "~> 1.2"},
       {:plug_cowboy, "~> 2.5"},
-      {:cors_plug, "~> 2.0"}
+      {:cors_plug, "~> 2.0"},
+      {:argon2_elixir, "~> 2.0"},
+      {:swoosh, "~> 1.3"}
     ]
   end
 
@@ -59,8 +61,8 @@ defmodule AmpsPortal.MixProject do
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     [
-      setup: ["deps.get"],
-      "assets.deploy": ["esbuild default --minify", "phx.digest"]
+      # setup: ["deps.get"],
+      "assets.deploy": ["esbuild amps_portal --minify", "phx.digest"]
     ]
   end
 end

@@ -97,6 +97,98 @@ Ext.define("Amps.view.nav.MainMenu", {
                   handler: "onChangePassword",
                 },
                 {
+                  text: "Change Environment",
+                  iconCls: "x-fa fa-photo",
+                  handler: function () {
+                    var win = new Ext.window.Window({
+                      title: "Change Environment",
+                      width: 300,
+                      height: 200,
+                      modal: true,
+                      layout: "fit",
+                      listeners: {
+                        afterrender: async function () {
+                          this.setLoading(true);
+                          var user = await amfutil.fetch_user();
+                          var form = Ext.create({
+                            xtype: "form",
+
+                            layout: "fit",
+
+                            listeners: {
+                              afterrender: async function () {
+                                this.setLoading(true);
+
+                                var envs = await amfutil.getCollectionData(
+                                  "environments"
+                                );
+                                envs.push({ name: "", desc: "default" });
+                                this.insert({
+                                  xtype: "fieldcontainer",
+                                  layout: {
+                                    type: "vbox",
+                                    align: "stretch",
+                                  },
+                                  padding: 15,
+                                  items: [
+                                    amfutil.localCombo(
+                                      "Environment",
+                                      "env",
+                                      envs,
+                                      "name",
+                                      "desc",
+                                      {
+                                        value: user.config.env,
+                                      }
+                                    ),
+                                  ],
+                                });
+                                this.setLoading(false);
+                              },
+                            },
+                            buttons: [
+                              {
+                                text: "Change Environment",
+                                handler: async function (btn) {
+                                  var win = btn.up("window");
+                                  win.setLoading(true);
+                                  var values = btn.up("form").getValues();
+                                  await amfutil.updateInCollection(
+                                    "admin",
+                                    { config: { env: values.env } },
+                                    user._id,
+                                    function () {
+                                      amfutil.updateEnv();
+
+                                      win.setLoading(false);
+                                      win.hide();
+                                    },
+                                    function () {
+                                      win.setLoading(false);
+                                      Ext.toast(
+                                        "Failed to change environment."
+                                      );
+                                    }
+                                  );
+                                },
+                              },
+                              {
+                                text: "Cancel",
+                                handler: function (btn) {
+                                  btn.up("window").close();
+                                },
+                              },
+                            ],
+                          });
+                          this.insert(form);
+                          this.setLoading(false);
+                        },
+                      },
+                    });
+                    win.show();
+                  },
+                },
+                {
                   text: "Logout",
 
                   iconCls: "x-fa fa-sign-out",

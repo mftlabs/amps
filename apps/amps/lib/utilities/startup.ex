@@ -30,71 +30,38 @@ defmodule Amps.Startup do
     Enum.each(streams, fn {subjects, name} ->
       subjects = Atom.to_string(subjects)
 
-      case Jetstream.API.Stream.info(gnat, name) do
-        {:ok, res} ->
-          Logger.info(name <> " Stream Exists")
-
-        # IO.inspect(res)
-
-        {:error, error} ->
-          # IO.inspect(error)
-          Logger.info("Creating Stream " <> name)
-          subjects = subjects <> ".>"
-
-          case Jetstream.API.Stream.create(gnat, %Jetstream.API.Stream{
-                 name: name,
-                 storage: :file,
-                 subjects: [subjects]
-               }) do
-            {:ok, res} ->
-              Logger.info("Created Stream " <> name)
-
-            # IO.inspect(res)
-
-            {:error, error} ->
-              Logger.info("Couldn't Create Stream " <> name)
-              Logger.error(error)
-
-              # IO.inspect(error)
-          end
-      end
+      create_stream(name, subjects)
     end)
   end
 
-  def create_action_consumers(gnat) do
-    actions = Application.get_env(:amps, :actions)
-    # Logger.info("actions")
-    # IO.inspect(actions)
-    actions = Enum.into(actions, %{})
-    # IO.inspect(actions)
+  def create_stream(name, subjects) do
+    case Jetstream.API.Stream.info(:gnat, name) do
+      {:ok, res} ->
+        Logger.info(name <> " Stream Exists")
 
-    Enum.each(actions, fn {topic, module} ->
-      topic = Atom.to_string(topic)
-      filter = "amps.actions." <> topic <> ".*"
-      name = filter |> String.replace("*", "_") |> String.replace(".", "_")
-      "amps.actions." <> topic <> ".*"
-      # Jetstream.API.Consumer.delete(gnat, "ACTIONS", name)
-      # case Jetstream.API.Consumer.info(gnat, "ACTIONS", name) do
-      #   {:ok, res} ->
-      #     Logger.info("Consumer Data")
-      #     IO.inspect(res)
+      # IO.inspect(res)
 
-      #   {:error, error} ->
-      #     IO.inspect(error)
-      #     Logger.info("Creating Consumer")
+      {:error, error} ->
+        # IO.inspect(error)
+        Logger.info("Creating Stream " <> name)
+        subjects = subjects <> ".>"
 
-      #     case Jetstream.API.Consumer.create(gnat, %Jetstream.API.Consumer{
-      #            name: name,
-      #            stream_name: "ACTIONS",
-      #            filter_subject: filter
-      #          }) do
-      #       {:ok, res} ->
-      #         IO.inspect(res)
+        case Jetstream.API.Stream.create(:gnat, %Jetstream.API.Stream{
+               name: name,
+               storage: :file,
+               subjects: [subjects]
+             }) do
+          {:ok, res} ->
+            Logger.info("Created Stream " <> name)
 
-      #       {:error, error} ->
-      #         IO.inspect(error)
-      #     end
-      # end
-    end)
+          # IO.inspect(res)
+
+          {:error, error} ->
+            Logger.info("Couldn't Create Stream " <> name)
+            Logger.error(error)
+
+            # IO.inspect(error)
+        end
+    end
   end
 end

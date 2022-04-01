@@ -2,13 +2,18 @@ defmodule AmpsPortal.UserController do
   use AmpsPortal, :controller
   import Argon2
   alias Amps.DB
+  alias AmpsPortal.Util
   alias Plug.Conn
   alias Pow.{Config, Plug, Store.Backend.EtsCache, UUID}
   alias PowResetPassword.Ecto.Context, as: ResetPasswordContext
   alias PowResetPassword.Store.ResetTokenCache
 
   def get(conn, _params) do
-    res = Amps.DB.find_one("users", %{"_id" => Pow.Plug.current_user(conn).id})
+    Util.conn_index(conn, "users")
+
+    res =
+      Amps.DB.find_one(Util.conn_index(conn, "users"), %{"_id" => Pow.Plug.current_user(conn).id})
+
     IO.inspect(res)
     json(conn, res)
   end
@@ -28,7 +33,9 @@ defmodule AmpsPortal.UserController do
         body
       end
 
-    {:ok, res} = Amps.DB.find_one_and_update("users", %{"_id" => user.id}, body)
+    {:ok, res} =
+      Amps.DB.find_one_and_update(Util.conn_index(conn, "users"), %{"_id" => user.id}, body)
+
     json(conn, res)
   end
 
@@ -79,9 +86,13 @@ defmodule AmpsPortal.UserController do
         config = Plug.fetch_config(conn)
 
         res =
-          Amps.DB.find_one_and_update("users", %{"username" => user["username"]}, %{
-            "password" => hashed
-          })
+          Amps.DB.find_one_and_update(
+            Util.conn_index(conn, "users"),
+            %{"username" => user["username"]},
+            %{
+              "password" => hashed
+            }
+          )
 
         expire_token(conn, config)
 
@@ -139,5 +150,70 @@ defmodule AmpsPortal.UserController do
     store_config
     |> Keyword.put_new(:backend, Config.get(config, :cache_store_backend, EtsCache))
     |> Keyword.put_new(:pow_config, config)
+  end
+
+  def get_tokens(conn, _params) do
+    case Pow.Plug.current_user(conn) do
+      nil ->
+        send_resp(conn, 401, "Unauthorized")
+
+      user ->
+        user = DB.find_one(Util.conn_index(conn, "users"), %{"username" => user.username})
+        json(conn, user["tokens"])
+    end
+  end
+
+  def create_token(conn, _parms) do
+    case Pow.Plug.current_user(conn) do
+      nil ->
+        send_resp(conn, 401, "Unauthorized")
+
+      user ->
+        user = DB.find_one(Util.conn_index(conn, "users"), %{"username" => user.username})
+        body = conn.body_params()
+        body = Util.before_token_create(body, conn.assigns().env)
+        index = Util.conn_index(conn, "users")
+        fieldid = DB.add_to_field(index, body, user["_id"], "tokens")
+        updated = DB.find_one(index, %{"_id" => user["_id"]})
+        Util.after_token_create(updated, body, conn.assigns().env)
+        json(conn, user["tokens"])
+    end
+  end
+
+  def get_token_secret(conn, %{"id" => id}) do
+    case Pow.Plug.current_user(conn) do
+      nil ->
+        send_resp(conn, 401, "Unauthorized")
+
+      user ->
+        index = Util.conn_index(conn, "users")
+        user = DB.find_one(index, %{"username" => user.username})
+        item = DB.get_in_field(index, user["_id"], "tokens", id)
+        secrets = DB.find_one(Util.conn_index(conn, "tokens"), %{"username" => user["username"]})
+
+        case secrets do
+          nil ->
+            send_resp(conn, 400, "Not Found")
+
+          secrets ->
+            json(conn, secrets[item["id"]])
+        end
+    end
+  end
+
+  def delete_token(conn, %{"id" => id}) do
+    case Pow.Plug.current_user(conn) do
+      nil ->
+        send_resp(conn, 401, "Unauthorized")
+
+      user ->
+        body = conn.body_params()
+        index = Util.conn_index(conn, "users")
+        user = DB.find_one(index, %{"username" => user.username})
+        item = DB.get_in_field(index, user["_id"], "tokens", id)
+        result = DB.delete_from_field(index, body, user["_id"], "tokens", id)
+        Util.after_token_delete(user, item, conn.assigns().env)
+        json(conn, :ok)
+    end
   end
 end

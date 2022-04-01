@@ -2,18 +2,20 @@ defmodule Amps.HistoryHandler do
   use Supervisor
   require Logger
 
-  def start_link(args) do
-    GenServer.start_link(__MODULE__, args)
+  def start_link(args, env \\ "") do
+    IO.inspect(args)
+    IO.inspect(env)
+    GenServer.start_link(__MODULE__, {args, env})
   end
 
-  def init(parms) do
+  def init({parms, env}) do
     count = parms["subs_count"]
 
     children =
       Enum.reduce(1..count, [], fn x, acc ->
         name = String.to_atom(parms["name"] <> Integer.to_string(x))
 
-        [{Amps.HistoryConsumer, name: name, parms: parms} | acc]
+        [{Amps.HistoryConsumer, name: name, parms: parms, env: env} | acc]
       end)
 
     # Now we start the supervisor with the children and a strategy

@@ -47,6 +47,7 @@ defmodule AmpsWeb.MixProject do
       {:esbuild, "~> 0.2", runtime: Mix.env() == :dev},
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry_poller, "~> 1.0"},
+      {:argon2_elixir, "~> 2.0"},
       {:gettext, "~> 0.18"},
       {:amps, in_umbrella: true},
       {:jason, "~> 1.2"},
@@ -69,7 +70,11 @@ defmodule AmpsWeb.MixProject do
       {:x509, "~> 0.8.0"},
       {:master_proxy, "~> 0.1"},
       {:elixlsx, "~> 0.5.1"},
-      {:xlsxir, "~> 1.6.4"}
+      {:xlsxir, "~> 1.6.4"},
+      {:earmark, "~> 1.4"},
+      {:erlport, "~> 0.10.1"},
+      {:swoosh, "~> 1.3"}
+
       # {:uuid, "~> 1.1"}
     ]
   end
@@ -79,8 +84,8 @@ defmodule AmpsWeb.MixProject do
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     [
-      setup: ["deps.get"],
-      "assets.deploy": ["esbuild default --minify", "phx.digest"]
+      setup: ["cmd --cd assets npm install"],
+      "assets.deploy": ["cmd --cd assets node build.js --deploy", "phx.digest"]
     ]
   end
 end

@@ -5,6 +5,7 @@ defmodule AmpsEvents do
     IO.puts("send parms #{inspect(msg)}   #{inspect(parms)}   #{inspect(state)}")
 
     topic = parms["output"]
+
     msg = Map.merge(msg, %{"etime" => AmpsUtil.gettime(), "topic" => topic})
 
     if not AmpsUtil.blank?(topic) do

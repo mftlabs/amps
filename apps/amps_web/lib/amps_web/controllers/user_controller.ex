@@ -3,6 +3,7 @@ defmodule AmpsWeb.UserController do
   alias AmpsWeb.Router.Helpers, as: Routes
   require Vault
   require Logger
+  alias Amps.DB
 
   def host() do
     Application.fetch_env!(:amps_web, AmpsWeb.Endpoint)[:vault_addr]
@@ -22,6 +23,11 @@ defmodule AmpsWeb.UserController do
     {:ok, result} = Mongo.update_one(:mongo, "users", %{"_id" => objectid(id)}, %{"$set": user})
     Logger.debug("Var value: #{inspect(result)}")
     json(conn, "ok")
+  end
+
+  def info(conn, _) do
+    user = Pow.Plug.current_user(conn)
+    json(conn, DB.find_one("admin", %{"_id" => user.id}))
   end
 
   def send_password_email(conn, %{"user" => %{"email" => user_email}}) do

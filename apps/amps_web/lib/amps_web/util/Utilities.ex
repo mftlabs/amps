@@ -9,7 +9,7 @@ defmodule AmpsWeb.Util do
   alias Elixlsx.Workbook
   alias Elixlsx.Sheet
 
-  def headers(collection, field \\ nil) do
+  def headers(collection \\ nil, field \\ nil) do
     headers = %{
       "actions" => %{
         "headers" => ["name", "desc", "type"],
@@ -87,6 +87,11 @@ defmodule AmpsWeb.Util do
         "subgrids" => nil,
         "types" => nil
       },
+      "environments" => %{
+        "headers" => ["name", "desc", "active"],
+        "subgrids" => nil,
+        "types" => nil
+      },
       "fields" => %{
         "headers" => ["field", "desc"],
         "subgrids" => nil,
@@ -149,6 +154,11 @@ defmodule AmpsWeb.Util do
         "subgrids" => nil,
         "types" => nil
       },
+      "scripts" => %{
+        "headers" => ["name", "data"],
+        "subgrids" => nil,
+        "types" => nil
+      },
       "services" => %{
         "headers" => ["name", "desc", "active", "type"],
         "subgrids" => nil,
@@ -204,35 +214,56 @@ defmodule AmpsWeb.Util do
                 "folder",
                 "max"
               ],
-              "upload" => ["fpoll", "fretry", "regex", "fmatch", "fmeta", "ackmode"]
+              "upload" => ["fpoll", "fretry", "regex", "fmatch", "fmeta", "subs_count", "ackmode"]
             }
-          }
+          },
+          "tokens" => %{"headers" => ["name"], "subgrids" => nil, "types" => nil}
         },
         "types" => nil
       }
     }
 
-    if Map.has_key?(headers, collection) do
-      if field do
-        headers[collection]["subgrids"][field]
+    if collection do
+      if Map.has_key?(headers, collection) do
+        if field do
+          headers[collection]["subgrids"][field]
+        else
+          headers[collection]
+        end
       else
-        headers[collection]
+        nil
       end
     else
-      nil
+      headers
     end
   end
 
-  def before_create(collection, body) do
-    case collection do
+  def order() do
+    [
+      "customers",
+      "fields",
+      "keys",
+      "topics",
+      "providers",
+      "users",
+      "rules",
+      "actions",
+      "services",
+      "scheduler",
+      "users/rules"
+    ]
+  end
+
+  def before_create(collection, body, env \\ "") do
+    case String.replace(collection, env <> "-", "") do
       "users" ->
         Map.put(body, "password", nil)
 
       # VaultDatabase.vault_store_key(conn.body_params(), collection, "account", "cred")
       "services" ->
         if body["type"] == "subscriber" do
-          {stream, consumer} = AmpsUtil.get_names(body)
-          AmpsUtil.create_consumer(stream, consumer, body["topic"])
+          {stream, consumer} = AmpsUtil.get_names(body, env)
+          AmpsUtil.create_consumer(stream, consumer, AmpsUtil.env_topic(body["topic"], env))
         end
 
         body
@@ -242,17 +273,30 @@ defmodule AmpsWeb.Util do
     end
   end
 
-  def after_create(collection, body) do
-    case collection do
+  def after_create(collection, body, env \\ "") do
+    case base_index(env, collection) do
       "services" ->
         types = SvcManager.service_types()
 
+        topic =
+          if env == "" do
+            "amps.events.svcs.handler.#{body["name"]}.start"
+          else
+            "amps.#{env}.events.svcs.handler.#{body["name"]}.start"
+          end
+
         if Map.has_key?(types, String.to_atom(body["type"])) do
-          Gnat.pub(:gnat, "amps.events.svcs.handler.#{body["name"]}.start", "")
+          Gnat.pub(:gnat, topic, "")
         end
 
       "scheduler" ->
-        Amps.Scheduler.load(body["name"])
+        case env do
+          "" ->
+            Amps.Scheduler.load(body["name"])
+
+          env ->
+            Amps.EnvScheduler.load(body["name"], env)
+        end
 
       "actions" ->
         if body["type"] == "batch" do
@@ -261,12 +305,31 @@ defmodule AmpsWeb.Util do
 
         body
 
+      "environments" ->
+        Amps.EnvManager.start_env(body["name"])
+
       _ ->
         nil
     end
   end
 
-  def after_field_create(collection, id, field, fieldid, body, updated) do
+  def before_field_create(collection, id, field, body, env) do
+    case collection do
+      "users" ->
+        case field do
+          "tokens" ->
+            AmpsPortal.Util.before_token_create(body, env)
+
+          _ ->
+            body
+        end
+
+      _ ->
+        body
+    end
+  end
+
+  def after_field_create(collection, id, field, fieldid, body, updated, env) do
     case collection do
       "services" ->
         case field do
@@ -281,7 +344,10 @@ defmodule AmpsWeb.Util do
         case field do
           "rules" ->
             body = Map.put(body, "_id", fieldid)
-            AmpsPortal.Util.agent_rule_creation(updated, body)
+            AmpsPortal.Util.agent_rule_creation(updated, body, env)
+
+          "tokens" ->
+            AmpsPortal.Util.after_token_create(updated, body, env)
 
           _ ->
             nil
@@ -322,5 +388,29 @@ defmodule AmpsWeb.Util do
 
   def get_nodes do
     [node() | Node.list()]
+  end
+
+  def index(env, collection) do
+    if Enum.member?(
+         ["config", "demos", "admin", "environments", "system_logs", "ui_audit"],
+         collection
+       ) do
+      collection
+    else
+      if env == "" do
+        collection
+      else
+        env <> "-" <> collection
+      end
+    end
+  end
+
+  def base_index(env, collection) do
+    String.replace(collection, env <> "-", "")
+  end
+
+  def get_logo() do
+    sysconfig = DB.find_one("config", %{"name" => "SYSTEM"})
+    Base.decode64(sysconfig["logo"])
   end
 end

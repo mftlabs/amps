@@ -83,9 +83,14 @@ Ext.define("Amps.Application", {
         } else {
           this.redirectTo("message_events");
         }
+        window.createLangClient(localStorage.getItem("access_token"));
         Ext.create({
           xtype: "app-main",
         });
+
+        // testing = JSON.parse(
+        //   '{"mq_integration":{"test":{"path":"mq_integration/test","size":845},"testme":{"path":"mq_integration/testme","size":851}},"name":{"name":{"name":{"testme":{"path":"name/name/name/testme","size":851}},"name2":{"test":{"path":"name/name/name2/test","size":845}},"test":{"path":"name/name/test","size":845},"testme":{"path":"name/name/testme","size":851}},"test":{"path":"name/test","size":845},"testme":{"path":"name/testme","size":851}},"test":{"path":"test","size":845},"testme":{"path":"testme","size":851}}'
+        // );
       }
     }
     // console.log(

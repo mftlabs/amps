@@ -2,8 +2,8 @@ defmodule SharePoint do
   alias Amps.DB
   require Logger
 
-  def run(msg, parms, _state) do
-    provider = DB.find_one("providers", %{"_id" => parms["provider"]})
+  def run(msg, parms, {state, env}) do
+    provider = DB.find_one(AmpsUtil.index(env, "providers"), %{"_id" => parms["provider"]})
 
     token = get_token(provider)
 

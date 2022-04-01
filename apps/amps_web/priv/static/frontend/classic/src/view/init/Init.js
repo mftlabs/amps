@@ -47,9 +47,11 @@ Ext.define("Amps.panel.Startup", {
               });
             },
             change: async function (cmp, value, oldValue, eOpts) {
-              var duplicate = await amfutil.checkDuplicate({
-                admin: { username: value },
+              var resp = await amfutil.ajaxRequest({
+                url: `api/duplicate_username/${value}`,
               });
+
+              var duplicate = Ext.decode(resp.responseText);
 
               if (duplicate) {
                 cmp.setActiveError("User Already Exists");
@@ -254,6 +256,12 @@ Ext.define("Amps.panel.Startup", {
               fieldLabel: "Script Module Path",
               value: "/data/amps/modules",
             },
+            {
+              xtype: "numberfield",
+              name: "hinterval",
+              fieldLabel: "History Interval",
+              value: "2500",
+            },
           ],
         },
       ],
@@ -286,6 +294,11 @@ Ext.define("Amps.panel.Startup", {
           handler: async function (scope) {
             var rootform = scope.up("startup").down("#card-0");
             var defaultform = scope.up("startup").down("#card-1");
+
+            var defaultvalues = amfutil.convertNumbers(
+              defaultform,
+              defaultform.getValues()
+            );
             var mask = new Ext.LoadMask({
               msg: "Loading...",
               target: scope.up("startup"),
@@ -299,7 +312,7 @@ Ext.define("Amps.panel.Startup", {
               url: "/api/startup",
               jsonData: {
                 root: rootvalues,
-                system: defaultform.getValues(),
+                system: defaultvalues,
               },
               success: function () {
                 Ext.toast("Startup Configuration Successful");

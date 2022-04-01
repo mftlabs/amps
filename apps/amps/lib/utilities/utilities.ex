@@ -1,5 +1,6 @@
 defmodule AmpsUtil do
   alias Amps.DB
+  alias Amps.VaultDatabase
   require Logger
 
   def gettime() do
@@ -102,8 +103,25 @@ defmodule AmpsUtil do
       hdr = String.slice(leader, 0..105)
       sep = String.slice(leader, 3..3)
 
-      [_isa, _, _, _, _, squal, sender, rqual, receiver, date, time, _, _ver, icn, _, _test, _] =
-        String.split(hdr, sep)
+      [
+        _isa,
+        _,
+        _,
+        _,
+        _,
+        squal,
+        sender,
+        rqual,
+        receiver,
+        date,
+        time,
+        _,
+        _ver,
+        icn,
+        _,
+        _test,
+        _
+      ] = String.split(hdr, sep)
 
       tval = date <> ":" <> time
       sender = String.trim(squal <> ":" <> sender)
@@ -251,7 +269,9 @@ defmodule AmpsUtil do
   def rmdir(dirname) do
     case :file.list_dir(dirname) do
       {:ok, names} ->
-        Enum.each(names, fn x -> :file.delete(dirname <> "/" <> to_string(x)) end)
+        Enum.each(names, fn x ->
+          :file.delete(dirname <> "/" <> to_string(x))
+        end)
 
       other ->
         {other}
@@ -367,7 +387,12 @@ defmodule AmpsUtil do
         StringIO.close(ostream)
         Map.merge(msg, %{"msgid" => msgid, "data" => out, "parent" => parent})
       else
-        Map.merge(msg, %{"msgid" => msgid, "fpath" => tfile, "temp" => true, "parent" => parent})
+        Map.merge(msg, %{
+          "msgid" => msgid,
+          "fpath" => tfile,
+          "temp" => true,
+          "parent" => parent
+        })
       end
 
     if not blank?(parms["format"]) do
@@ -381,12 +406,21 @@ defmodule AmpsUtil do
   def blank?(str_or_nil),
     do: "" == str_or_nil |> to_string() |> String.trim()
 
-  def get_names(parms) do
+  def get_names(parms, env \\ "") do
     topic = parms["topic"]
     consumer = parms["name"] |> String.replace(" ", "_") |> String.downcase()
 
     [base, part, _other] = String.split(topic, ".", parts: 3)
+
     stream = AmpsUtil.get_env_parm(:streams, String.to_atom(base <> "." <> part))
+
+    stream =
+      if env == "" do
+        stream
+      else
+        String.upcase(env) <> "-" <> stream
+      end
+
     {stream, consumer}
   end
 
@@ -441,20 +475,29 @@ defmodule AmpsUtil do
   end
 
   def get_key(id) do
-    with {:ok, key} <- VaultDatabase.read("keys", id) do
+    with key <- DB.find_by_id("keys", id) do
       key["data"]
     end
   end
 
-  def get_kafka_auth(args, provider) do
+  def get_key(id, env) do
+    IO.inspect("ID")
+    IO.inspect(id)
+    res = DB.find_by_id(AmpsUtil.index(env, "keys"), id)["data"]
+    IO.puts("Key")
+    IO.inspect(res)
+    res
+  end
+
+  def get_kafka_auth(args, provider, env \\ "") do
     {cacertfile, certfile, keyfile} =
       if String.contains?(provider["auth"], "SSL") do
-        cacertfile = Path.join(AmpsUtil.tempdir(args["name"]), "cacert")
-        File.write(cacertfile, AmpsUtil.get_key(provider["cacert"]))
-        certfile = Path.join(AmpsUtil.tempdir(args["name"]), "cert")
-        File.write(certfile, AmpsUtil.get_key(provider["cert"]))
-        keyfile = Path.join(AmpsUtil.tempdir(args["name"]), "key")
-        File.write(keyfile, AmpsUtil.get_key(provider["key"]))
+        cacertfile = Path.join(AmpsUtil.tempdir(env <> "-" <> args["name"]), "cacert")
+        File.write(cacertfile, AmpsUtil.get_key(provider["cacert"], env))
+        certfile = Path.join(AmpsUtil.tempdir(env <> "-" <> args["name"]), "cert")
+        File.write(certfile, AmpsUtil.get_key(provider["cert"], env))
+        keyfile = Path.join(AmpsUtil.tempdir(env <> "-" <> args["name"]), "key")
+        File.write(keyfile, AmpsUtil.get_key(provider["key"], env))
         {cacertfile, certfile, keyfile}
       else
         {nil, nil, nil}
@@ -545,5 +588,61 @@ defmodule AmpsUtil do
       },
       worker_name: :pr
     )
+  end
+
+  def env_topic(topic, env) do
+    if env == "" do
+      topic
+    else
+      String.split(topic, ".")
+      |> List.insert_at(1, env)
+      |> Enum.join(".")
+    end
+  end
+
+  # def topic_check(topic) do
+  #   if Amps.Defaults.get("sandbox") do
+  #     sandbox_topic(topic)
+  #   else
+  #     topic
+  #   end
+  # end
+
+  def index(env, index) do
+    case env do
+      "" ->
+        index
+
+      env ->
+        env <> "-" <> index
+    end
+  end
+
+  def clear_env(env) do
+    delete_env(env)
+    Amps.EnvManager.load_env(env)
+  end
+
+  def delete_env(env) do
+    {:ok, %{streams: streams}} = Jetstream.API.Stream.list(:gnat)
+
+    Enum.each(streams, fn stream ->
+      if String.starts_with?(stream, String.upcase(env)) do
+        Jetstream.API.Stream.delete(:gnat, stream)
+      end
+    end)
+
+    Amps.DB.delete_index("#{env}-*")
+    Amps.VaultDatabase.delete_env(env)
+
+    File.rm_rf(Path.join(Amps.Defaults.get("python_path"), env))
+
+    Amps.EnvSupervisor.stop_child(env)
+
+    Logger.info("Deleted environment #{env}")
+  end
+
+  def hinterval(default \\ 5_000) do
+    Amps.Defaults.get("hinterval", default)
   end
 end

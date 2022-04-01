@@ -66,9 +66,9 @@ Ext.define("Amps.view.nav.TreeNav", {
         },
 
         {
-          iconCls: "x-fa fa-cogs",
+          iconCls: "x-fa fa-cog",
           rowCls: "configuration",
-          text: "Configuration",
+          text: "Message Configuration",
           selectable: false,
 
           expanded: true,
@@ -115,6 +115,12 @@ Ext.define("Amps.view.nav.TreeNav", {
               text: "Actions",
             },
             {
+              iconCls: "x-fa fa-file-code-o",
+              leaf: true,
+              rowCls: "scripts",
+              text: "Scripts",
+            },
+            {
               iconCls: "x-fa fa-random",
               leaf: true,
               rowCls: "rules",
@@ -139,28 +145,27 @@ Ext.define("Amps.view.nav.TreeNav", {
               text: "Keys",
               tooltip: "Keys",
             },
-
-            // {
-            //   iconCls: "x-fa fa-arrow-down",
-            //   leaf: true,
-            //   rowCls: "subscribers",
-            //   text: "Subscribers",
-            // },
-
-            {
-              iconCls: "x-fa fa-pencil",
-              leaf: true,
-              rowCls: "defaults",
-              text: "Defaults",
-            },
           ],
         },
         {
-          iconCls: "x-fa fa-cogs",
+          iconCls: "x-fa fa-file",
           rowCls: "managedata",
-          text: "Manage Data",
+          text: "Data Configuration",
           expanded: true,
           children: [
+            {
+              iconCls: "x-fa fa-photo",
+              leaf: true,
+              rowCls: "environments",
+              text: "Environments",
+            },
+            {
+              iconCls: "x-fa fa-magic",
+              leaf: true,
+              rowCls: "demos",
+              text: "Demos",
+              tooltip: "Demos",
+            },
             {
               iconCls: "x-fa fa-cloud-upload",
               leaf: true,
@@ -169,6 +174,12 @@ Ext.define("Amps.view.nav.TreeNav", {
               tooltip: "Imports",
             },
           ],
+        },
+        {
+          iconCls: "x-fa fa-pencil",
+          leaf: true,
+          rowCls: "defaults",
+          text: "System Configuration",
         },
         {
           iconCls: "x-fa fa-user-secret",

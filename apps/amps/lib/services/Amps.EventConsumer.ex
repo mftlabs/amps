@@ -6,6 +6,16 @@ defmodule Amps.EventConsumer do
 
   def start_link(args) do
     parms = Enum.into(args, %{})
+
+    parms =
+      case parms[:env] do
+        nil ->
+          Map.put(parms, :env, "")
+
+        _ ->
+          parms
+      end
+
     IO.puts("starting event listener #{inspect(parms)}")
     name = parms[:name]
     IO.puts("first name #{inspect(name)}")
@@ -13,6 +23,7 @@ defmodule Amps.EventConsumer do
   end
 
   def init(opts) do
+    IO.inspect(opts)
     Process.send_after(self(), {:initial_connect, opts[:parms]}, 0)
     {:ok, opts}
   end
@@ -48,10 +59,10 @@ defmodule Amps.EventConsumer do
 
     IO.puts("pid #{inspect(pid)}")
 
-    {stream, consumer} = AmpsUtil.get_names(opts)
+    {stream, consumer} = AmpsUtil.get_names(opts, state.env)
     Logger.info("got stream #{stream} #{consumer}")
 
-    AmpsUtil.create_consumer(stream, consumer, opts["topic"])
+    AmpsUtil.create_consumer(stream, consumer, AmpsUtil.env_topic(opts["topic"], state.env))
 
     opts = Map.put(opts, "id", name)
 
@@ -61,7 +72,8 @@ defmodule Amps.EventConsumer do
         parms: opts,
         connection_pid: pid,
         stream_name: stream,
-        consumer_name: consumer
+        consumer_name: consumer,
+        env: state.env
       }
     )
 
@@ -97,7 +109,8 @@ defmodule Amps.PullConsumer do
         parms: parms,
         connection_pid: connection_pid,
         stream_name: stream_name,
-        consumer_name: consumer_name
+        consumer_name: consumer_name,
+        env: env
       }) do
     # Process.link(connection_pid)
     listening_topic = "_CON.#{nuid()}"
@@ -117,7 +130,8 @@ defmodule Amps.PullConsumer do
       parms: parms,
       stream_name: stream_name,
       consumer_name: consumer_name,
-      listening_topic: listening_topic
+      listening_topic: listening_topic,
+      env: env
     }
 
     {:ok, state}
@@ -159,16 +173,28 @@ defmodule Amps.PullConsumer do
       data ->
         try do
           msg = data["msg"]
-          mctx = data["state"]
+          mctx = {data["state"], state.env}
           action_id = parms["handler"]
-          actparms = AmpsDatabase.get_action_parms(action_id)
+          actparms = Amps.DB.find_by_id(AmpsUtil.index(state.env, "actions"), action_id)
 
-          AmpsEvents.send_history("amps.events.action", "message_events", msg, %{
-            "status" => "started",
-            "topic" => parms["topic"],
-            "action" => actparms["name"],
-            "subscriber" => name
-          })
+          actparms =
+            if actparms["output"] do
+              Map.put(actparms, "output", AmpsUtil.env_topic(actparms["output"], state.env))
+            else
+              actparms
+            end
+
+          AmpsEvents.send_history(
+            AmpsUtil.env_topic("amps.events.action", state.env),
+            "message_events",
+            msg,
+            %{
+              "status" => "started",
+              "topic" => AmpsUtil.env_topic(parms["topic"], state.env),
+              "action" => actparms["name"],
+              "subscriber" => name
+            }
+          )
 
           IO.puts("action parms #{inspect(actparms)}")
           handler = AmpsUtil.get_env_parm(:actions, String.to_atom(actparms["type"]))
@@ -179,15 +205,21 @@ defmodule Amps.PullConsumer do
               Logger.info("action done #{inspect(aparms)}")
               IO.puts("ack next message")
 
-              AmpsEvents.send_history("amps.events.action", "message_events", msg, %{
-                "topic" => parms["topic"],
-                "status" => "completed",
-                "action" => actparms["name"],
-                "subscriber" => name
-              })
+              AmpsEvents.send_history(
+                AmpsUtil.env_topic("amps.events.action", state.env),
+                "message_events",
+                msg,
+                %{
+                  "topic" => AmpsUtil.env_topic(parms["topic"], state.env),
+                  "status" => "completed",
+                  "action" => actparms["name"],
+                  "subscriber" => name
+                }
+              )
           end
         rescue
           error ->
+            IO.inspect(error)
             msg = Jason.decode!(message.body)["msg"]
 
             msg =
@@ -205,7 +237,7 @@ defmodule Amps.PullConsumer do
             Logger.error(Exception.format_stacktrace())
 
             AmpsEvents.send_history(
-              "amps.events.action",
+              AmpsUtil.env_topic("amps.events.action", state.env),
               "message_events",
               msg,
               %{

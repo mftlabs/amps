@@ -1,6 +1,6 @@
 defmodule AmpsPortal.DataController do
   use AmpsPortal, :controller
-  #import Argon2
+  # import Argon2
   alias Amps.DB
   alias AmpsPortal.Util
 
@@ -23,42 +23,9 @@ defmodule AmpsPortal.DataController do
 
       user ->
         qp = conn.query_params()
-        qp = Util.create_filter(qp,%{"mailbox" => user.username})
+        qp = Util.create_filter(qp, %{"mailbox" => user.username})
         conn = Map.put(conn, :query_params, qp)
-        data = DB.get_rows(conn, %{"collection" => "mailbox"})
-
-        json(
-          conn,
-          data
-        )
-    end
-  end
-
-  def get_messages(conn, _params) do
-    # if vault_collection(collection) do
-    #   data = VaultData.get_rows("amps/" <> collection)
-    #   IO.inspect(data)
-
-    #   json(
-    #     conn,
-    #     data
-    #   )
-    # else
-    case Pow.Plug.current_user(conn) do
-      nil ->
-        json(
-          conn,
-          %{success: false, count: 0, rows: []}
-        )
-
-      user ->
-        qp = conn.query_params()
-
-        qp = Map.put(qp, "filters", Jason.encode!(%{"mailbox" => user.username}))
-        IO.inspect(qp)
-        conn = Map.put(conn, :query_params, qp)
-
-        data = DB.get_rows(conn, %{"collection" => "mailbox"})
+        data = DB.get_rows(conn, %{"collection" => Util.conn_index(conn, "mailbox")})
 
         json(
           conn,
@@ -70,9 +37,19 @@ defmodule AmpsPortal.DataController do
   def duplicate(conn, _params) do
     body = conn.body_params()
 
-    duplicate = DB.find_one("users", body) != nil
+    case Pow.Plug.current_user(conn) do
+      nil ->
+        send_resp(conn, 401, "Unauthorized")
 
-    json(conn, duplicate)
+      user ->
+        duplicate =
+          DB.find_one(
+            Util.conn_index(conn, "users"),
+            Map.merge(body, %{"username" => user.username})
+          ) != nil
+
+        json(conn, duplicate)
+    end
   end
 
   def get_mailbox_topics(conn, _params) do
@@ -85,7 +62,7 @@ defmodule AmpsPortal.DataController do
 
       user ->
         topics =
-          DB.find("topics", %{
+          DB.find(Util.conn_index(conn, "topics"), %{
             "type" => "mailbox",
             "topic" => %{"$regex" => "amps.mailbox.#{user.username}.*"}
           })
@@ -103,7 +80,10 @@ defmodule AmpsPortal.DataController do
         send_resp(conn, 403, "Forbidden")
 
       user ->
-        case DB.find_one("mailbox", %{"recipient" => user.username, "msgid" => msgid}) do
+        case DB.find_one(Util.conn_index(conn, "mailbox"), %{
+               "recipient" => user.username,
+               "msgid" => msgid
+             }) do
           nil ->
             send_resp(conn, 404, "Not found")
 
@@ -116,6 +96,7 @@ defmodule AmpsPortal.DataController do
             else
               # if msg["temp"] do
               send_download(conn, {:file, msg["fpath"]}, disposition: :attachment)
+
               # else
               #   root = AmpsUtil.get_env(:storage_root)
 
@@ -134,7 +115,11 @@ defmodule AmpsPortal.DataController do
         send_resp(conn, 403, "Forbidden")
 
       user ->
-        DB.delete_one("mailbox", %{"recipient" => user.username, "msgid" => msgid})
+        DB.delete_one(Util.conn_index(conn, "mailbox"), %{
+          "recipient" => user.username,
+          "msgid" => msgid
+        })
+
         json(conn, :ok)
     end
   end
@@ -146,12 +131,13 @@ defmodule AmpsPortal.DataController do
           conn,
           %{success: false, count: 0, rows: []}
         )
+
       user ->
         qp = conn.query_params()
         IO.inspect(qp)
-        qp = Util.create_filter(qp,%{"user" => user.username})
+        qp = Util.create_filter(qp, %{"user" => user.username})
         conn = Map.put(conn, :query_params, qp)
-        data = DB.get_rows(conn, %{"collection" => "ufa_logs"})
+        data = DB.get_rows(conn, %{"collection" => Util.conn_index(conn, "ufa_logs")})
 
         json(
           conn,

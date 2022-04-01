@@ -42,12 +42,14 @@ defmodule Amps.SftpServer do
   defp dummy_shell(_args, _opts) do
   end
 
-  defp authenticate(handler) do
+  defp authenticate(handler, env) do
+    IO.inspect("authenticate")
+
     fn username, password, peer_address, state ->
       accepted =
         case handler do
           {module, fun} ->
-            apply(module, fun, [username, password, [peer_address: peer_address]])
+            apply(module, fun, [username, password, env])
 
             #          fun ->
             #            fun.(username, password, peer_address: peer_address)
@@ -57,25 +59,28 @@ defmodule Amps.SftpServer do
     end
   end
 
-  defp init_daemon(options) do
+  defp init_daemon(options, env) do
     Logger.info("Starting SFTP daemon on #{options["port"]}")
-    key = AmpsUtil.get_key(options["server_key"])
-    options = Map.put(options, "server_key", key)
+
     IO.inspect(options)
 
     daemon_opts = [
       shell: &dummy_shell/2,
       subsystems: [
         Amps.SftpChannel.subsystem_spec(
-          file_handler: {Amps.SftpHandler, [options: options]},
+          file_handler: {Amps.SftpHandler, [options: options, env: env]},
           cwd: '/'
         )
-      ]
+      ],
+      pk_check_user: true
     ]
 
     name = options["name"] || ""
-    daemon_opts = Keyword.put(daemon_opts, :key_cb, {AmpsKeyCallback, [name]})
-    daemon_opts = Keyword.put(daemon_opts, :pwdfun, authenticate({AmpsAuth, :check_cred}))
+
+    daemon_opts =
+      Keyword.put(daemon_opts, :key_cb, {AmpsKeyCallback, [name, options["server_key"]]})
+
+    daemon_opts = Keyword.put(daemon_opts, :pwdfun, authenticate({AmpsAuth, :check_cred}, env))
 
     case :ssh.daemon(options["port"], daemon_opts) do
       # {:ok, d_ref} ->
@@ -100,16 +105,26 @@ defmodule Amps.SftpServer do
   def init(args) do
     Process.flag(:trap_exit, true)
     options = args[:parms]
+    env = args[:env] || ""
+    IO.inspect(env)
     :ok = :ssh.start()
+    IO.inspect("GETTING KEY")
+    key = AmpsUtil.get_key(options["server_key"], env)
+    IO.puts("KEY")
+    IO.inspect(key)
+
+    options = Map.put(options, "server_key", key)
+    IO.inspect(options)
 
     case options do
       nil ->
-        {:ok, %{options: options, daemons: []}}
+        {:ok, %{options: options, daemons: [], env: env}}
 
-      env ->
-        case init_daemon(env) do
+      opts ->
+        case init_daemon(opts, env) do
           {:ok, pid, ref, options} ->
-            {:ok, %{options: options, daemons: [%{pid: pid, ref: ref, options: options}]}}
+            {:ok,
+             %{options: options, daemons: [%{pid: pid, ref: ref, options: options}], env: env}}
 
           any ->
             any
@@ -170,7 +185,7 @@ defmodule Amps.SftpServer do
   def handle_call({:start_daemon, options}, _from, state) do
     opts = options || state.options
 
-    case init_daemon(opts) do
+    case init_daemon(opts, state.env) do
       {:ok, pid, ref, options} ->
         {:reply, {:ok, pid},
          state |> Map.put(:daemons, [%{pid: pid, ref: ref, options: options} | state.daemons])}
@@ -205,7 +220,7 @@ defmodule Amps.SftpServer do
   def handle_cast({:start_daemon, options}, state) do
     opts = options || state.options
 
-    case init_daemon(opts) do
+    case init_daemon(opts, state.env) do
       {:ok, pid, ref, options} ->
         {:noreply,
          state |> Map.put(:daemons, [%{pid: pid, ref: ref, options: options} | state.daemons])}
@@ -285,6 +300,8 @@ defmodule Amps.SftpHandler do
   def close(io_device, state) do
     # does this get closed on download?  If so we need to check
     # if upload or download
+    IO.inspect(state)
+    IO.inspect("state")
     download = state[:download]
     nstate = List.keystore(state, :download, 0, {:download, nil})
     # download
@@ -304,6 +321,7 @@ defmodule Amps.SftpHandler do
       _result = :file.close(io_device)
       user = to_string(state[:user])
       opt = state[:options]
+      env = state[:env]
       service = opt["name"]
 
       msg = %{
@@ -322,7 +340,14 @@ defmodule Amps.SftpHandler do
       IO.inspect(state)
 
       user = state[:user]
-      topic = "amps.svcs.#{service}.#{user}"
+
+      topic =
+        if env == "" do
+          "amps.svcs.#{service}.#{user}"
+        else
+          "amps.#{env}.svcs.#{service}.#{user}"
+        end
+
       IO.inspect(state)
       # state = List.keydelete(state, :options, 0)
       AmpsEvents.send(msg, %{"output" => topic}, %{})
@@ -549,10 +574,10 @@ defmodule AmpsKeyCallback do
 
     if algorithm == al do
       val = Enum.into(opts, %{})
-      [name] = val[:key_cb_private]
+      [name, key] = val[:key_cb_private]
       # IO.puts("sftp svc: #{name}")
-      cfg = AmpsDatabase.get_config(name)
-      key = AmpsUtil.get_key(cfg["server_key"])
+      # cfg = AmpsDatabase.get_config(name)
+      # key = AmpsUtil.get_key(cfg["server_key"])
       val = key
       [data] = :public_key.pem_decode(val)
       dec = :public_key.pem_entry_decode(data)

@@ -6,7 +6,7 @@ defmodule Amps.GenConsumer do
   require Logger
 
   defmodule State do
-    defstruct messages: [], calls: 0, opts: nil
+    defstruct messages: [], calls: 0, opts: nil, env: ""
   end
 
   # note - messages are delivered in batches
@@ -16,20 +16,28 @@ defmodule Amps.GenConsumer do
   end
 
   def init(_topic, _partition, opts) do
-    {:ok, %State{opts: opts}}
+    case opts do
+      [args, env] ->
+        {:ok, %State{opts: opts, env: env}}
+
+      opts ->
+        {:ok, %State{opts: opts}}
+    end
   end
 
   def handle_message_set(message_set, state) do
     # raise "TEST"
 
     for message <- message_set do
-      handle_message(message, state.opts)
+      handle_message(message, state)
     end
 
     {:async_commit, state}
   end
 
-  def handle_message(msg, opts) do
+  def handle_message(msg, state) do
+    opts = state.opts
+    env = state.env
     msgid = AmpsUtil.get_id()
     fpath = Path.join(AmpsUtil.tempdir(msgid), msgid)
 
@@ -69,7 +77,13 @@ defmodule Amps.GenConsumer do
 
     ktopic = Regex.replace(~r/[.>* -]/, msg.topic, "_")
 
-    topic = "amps.svcs.#{opts["name"]}.#{ktopic}"
+    topic =
+      if env == "" do
+        "amps.svcs.#{opts["name"]}.#{ktopic}"
+      else
+        "amps.#{env}.svcs.#{opts["name"]}.#{ktopic}"
+      end
+
     AmpsEvents.send(event, %{"output" => topic}, %{})
 
     # AmpsEvents.send_history(

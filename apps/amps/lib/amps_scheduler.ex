@@ -30,9 +30,9 @@ defmodule Amps.Scheduler do
     end
   end
 
-  def update(job) do
-    delete_job(String.to_atom(job["name"]))
-    load(job["name"])
+  def update(name) do
+    delete_job(String.to_atom(name))
+    load(name)
   end
 
   defp get_job_config(job) do
@@ -48,7 +48,11 @@ defmodule Amps.Scheduler do
           :inactive
         end,
       task: fn ->
-        AmpsEvents.send(job["meta"], %{"output" => job["topic"]}, %{})
+        AmpsEvents.send(
+          Map.merge(%{"msgid" => AmpsUtil.get_id()}, job["meta"]),
+          %{"output" => job["topic"]},
+          %{}
+        )
       end,
       timezone: :utc
     }

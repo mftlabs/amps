@@ -125,12 +125,13 @@ Ext.define("Amps.controller.PageController", {
 
       var grids = ampsgrids.grids;
       var pages = Object.keys(ampsgrids.pages);
+      var mp = amfutil.getElementByID("main-page");
+      console.log(mp);
+      mp.removeAll(true);
       if (pages.indexOf(route) >= 0) {
         var config = ampsgrids.pages[route]();
         amfutil.getElementByID("page-handler").setActiveItem(1);
-        var mp = amfutil.getElementByID("main-page");
-        console.log(mp);
-        mp.removeAll();
+
         console.log(config.view);
         mp.insert(0, config.view);
       } else {
@@ -144,8 +145,9 @@ Ext.define("Amps.controller.PageController", {
         var column = {
           xtype: "actioncolumn",
           text: "Actions",
-          dataIndex: "actions",
-          width: "min-content",
+          flex: 1,
+          // dataIndex: "actions",
+          width: "max-content",
           items: config.options
             ? config.options.map((option) => amfutil.gridactions[option])
             : [],
@@ -361,6 +363,25 @@ Ext.define("Amps.controller.PageController", {
     });
   },
 
+  getSecret: async function (grid, rowIndex, colIndex) {
+    var rec = grid.getStore().getAt(rowIndex).data;
+    var user = await amfutil.getCurrentItem();
+    var secret = await amfutil.getCollectionData("tokens", {
+      username: user["username"],
+    });
+
+    console.log(secret);
+    navigator.clipboard.writeText(secret[0][rec["id"]]).then(
+      function () {
+        console.log("Async: Copying to clipboard was successful!");
+        Ext.toast("Copied to clipboard");
+      },
+      function (err) {
+        console.error("Async: Could not copy text: ", err);
+      }
+    );
+  },
+
   deleteItem: async function (grid, rowIndex, colIndex) {
     console.log(rowIndex);
     var rec = grid.getStore().getAt(rowIndex);
@@ -441,7 +462,7 @@ Ext.define("Amps.controller.PageController", {
               timeout: 60000,
               params: {},
               jsonData: tokens.length > 1 ? rec.data : {},
-              success: function (response) {
+              success: async function (response) {
                 var data = Ext.decode(response.responseText);
                 mask.hide();
                 amfutil.broadcastEvent("update", {
@@ -452,6 +473,12 @@ Ext.define("Amps.controller.PageController", {
                   html: "<center>Deleted Record</center>",
                   autoCloseDelay: 5000,
                 });
+                console.log(route);
+
+                if (route == "environments") {
+                  await amfutil.updateEnv();
+                }
+
                 if (tokens.length > 1) {
                   // console.log(tokens[2]);
                   // console.log(data);
@@ -570,6 +597,126 @@ Ext.define("Amps.controller.PageController", {
     win.show();
   },
 
+  showReadme: function (grid, rowIndex) {
+    var rec = grid.getStore().getAt(rowIndex);
+    var win = new Ext.window.Window({
+      width: 600,
+      padding: 20,
+      scrollable: true,
+      height: 700,
+      title: "README",
+      layout: "fit",
+      items: [
+        {
+          xtype: "component",
+          html: rec.data.readme,
+        },
+      ],
+    });
+    win.show();
+  },
+
+  loadDemo: function (grid, rowIndex) {
+    var rec = grid.getStore().getAt(rowIndex);
+    var win = new Ext.window.Window({
+      width: 600,
+      height: 200,
+      padding: 20,
+      scrollable: true,
+      title: "Load Demo",
+      layout: "fit",
+      listeners: {
+        afterrender: async function () {
+          this.setLoading(true);
+          var user = await amfutil.fetch_user();
+          var form = Ext.create({
+            xtype: "form",
+
+            layout: "fit",
+
+            listeners: {
+              afterrender: async function () {
+                this.setLoading(true);
+
+                var envs = await amfutil.getCollectionData("environments");
+                envs.push({ name: "", desc: "default" });
+                this.insert({
+                  xtype: "fieldcontainer",
+                  layout: {
+                    type: "vbox",
+                    align: "stretch",
+                  },
+                  padding: 15,
+                  items: [
+                    amfutil.localCombo(
+                      "Environment",
+                      "env",
+                      envs,
+                      "name",
+                      "desc",
+                      {
+                        value: user.config.env,
+                      }
+                    ),
+                  ],
+                });
+                this.setLoading(false);
+              },
+            },
+            buttons: [
+              {
+                text: "Load Into Environment",
+                handler: async function (btn) {
+                  var win = btn.up("window");
+                  win.setLoading(true);
+                  var values = btn.up("form").getValues();
+                  await amfutil.updateInCollection(
+                    "admin",
+                    { config: { env: values.env } },
+                    user._id,
+                    function () {
+                      amfutil.updateEnv();
+                      win.hide();
+                      var importWin = new Ext.window.Window({
+                        title: "Import Demo",
+                        modal: true,
+                        layout: "card",
+                        // closable: false,
+                        width: 0.8 * window.innerWidth,
+                        height: 0.8 * window.innerHeight,
+
+                        items: [
+                          {
+                            xtype: "imports",
+                            imports: rec.data.imports,
+                            scripts: rec.data.scripts,
+                          },
+                        ],
+                      });
+                      importWin.show();
+                    },
+                    function () {
+                      win.setLoading(false);
+                      Ext.toast("Failed to load into environment");
+                    }
+                  );
+                },
+              },
+              {
+                text: "Cancel",
+                handler: function (btn) {
+                  btn.up("window").close();
+                },
+              },
+            ],
+          });
+          this.insert(form);
+          this.setLoading(false);
+        },
+      },
+    });
+    win.show();
+  },
   resetPassword: async function (grid, rowIndex, colIndex, e) {
     var record = grid.getStore().getAt(rowIndex);
 
@@ -599,6 +746,7 @@ Ext.define("Amps.controller.PageController", {
                   method: "GET",
                   url: "/api/users/reset/" + record.data._id,
                   failure: function () {
+                    win.setLoading(false);
                     Ext.toast("Couldn't reset password");
                   },
                 });
@@ -1233,7 +1381,136 @@ Ext.define("Amps.controller.PageController", {
   reprocess: async function (grid, rowIndex, colIndex, e) {
     var record = grid.getStore().getAt(rowIndex).data;
     console.log(record);
-    amfutil.reprocess(grid, record.msgid);
+    amfutil.reprocess(grid, record._id);
+  },
+
+  clearEnv: async function (grid, rowIndex) {
+    var record = grid.getStore().getAt(rowIndex).data;
+
+    Ext.MessageBox.show({
+      title: "Clear Environment",
+      message: `Are you sure you want to clear this environment? This will delete all OpenSearch indexes prefixed ${
+        record.name
+      }-, all Vault keys prefixed with ${
+        record.name
+      }- and all NATS Streams prefixed with ${record.name.toUpperCase()}-`,
+      buttons: Ext.MessageBox.YESNO,
+      defaultFocus: "#no",
+      prompt: false,
+      fn: function (btn) {
+        if (btn == "yes") {
+          var mask = new Ext.LoadMask({
+            msg: "Clearing Environment...",
+            target: amfutil.getElementByID("main-viewport"),
+          });
+          mask.show();
+          grid.setLoading(true);
+          amfutil.ajaxRequest({
+            url: "/api/environments/clear/" + encodeURI(record.name),
+            method: "post",
+            timeout: 60000,
+            success: function (response) {
+              var data = Ext.decode(response.responseText);
+              grid.setLoading(false);
+              mask.hide();
+              var tokens = Ext.util.History.getToken().split("/");
+
+              amfutil.broadcastEvent("update", {
+                page: tokens[0],
+              });
+              Ext.toast({
+                title: "Delete",
+                html: "<center>Cleared Environment</center>",
+                autoCloseDelay: 5000,
+              });
+              if (tokens.length > 1) {
+                // console.log(tokens[2]);
+                // console.log(data);
+                // var rows = data[tokens[2]].map((item) =>
+                //   Object.assign(item, item.parms)
+                // );
+                grid.getStore().reload();
+              } else {
+                grid.getStore().reload();
+              }
+            },
+            failure: function (response) {
+              grid.setLoading(false);
+              amfutil.onFailure("Failed to Clear", response);
+              grid.getStore().reload();
+            },
+          });
+        }
+      },
+    });
+  },
+
+  exportEnv: async function (grid, rowIndex) {
+    var record = grid.getStore().getAt(rowIndex).data;
+
+    var uploadWindow = new Ext.window.Window({
+      title: "Export Environment as Demo",
+      modal: true,
+      width: 600,
+      height: 500,
+      scrollable: true,
+      resizable: false,
+      layout: "fit",
+      padding: 10,
+      items: [
+        {
+          xtype: "form",
+          defaults: {
+            padding: 5,
+            labelWidth: 140,
+          },
+          // layout: {
+          //   type: "vbox",
+          //   align: "stretch",
+          // },
+          scrollable: true,
+          items: [
+            amfutil.text("Name", "name", {
+              allowBlank: false,
+            }),
+            amfutil.text("Description", "desc", {
+              allowBlank: false,
+            }),
+          ],
+
+          buttons: [
+            {
+              text: "Export",
+              formBind: true,
+              handler: function (scope) {
+                var form = this.up("form").getForm();
+                uploadWindow.setLoading(true);
+                var fields = form.getFields();
+                var values = form.getValues();
+                amfutil.download(
+                  "api/environments/export/" + record.name,
+                  "post",
+                  values
+                );
+                uploadWindow.close();
+                // msgbox.anchorTo(Ext.getBody(), "br");
+              },
+            },
+            {
+              text: "Cancel",
+              cls: "button_class",
+              itemId: "cancel",
+              listeners: {
+                click: function (btn) {
+                  uploadWindow.close();
+                },
+              },
+            },
+          ],
+        },
+      ],
+    });
+    uploadWindow.show();
   },
 
   downloadExcelFormat: function (scope) {

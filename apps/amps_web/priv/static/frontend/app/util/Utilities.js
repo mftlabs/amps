@@ -588,6 +588,20 @@ Ext.define("Amps.util.Utilities", {
   stores: [],
 
   gridactions: {
+    loadDemo: {
+      name: "loadMe",
+      tooltip: "Load Demo",
+      iconCls: "x-fa fa-upload actionicon",
+      itemId: "loaddemo",
+      handler: "loadDemo",
+    },
+    readme: {
+      name: "readme",
+      tooltip: "View README",
+      iconCls: "x-fa fa-info-circle actionicon",
+      itemId: "readme",
+      handler: "showReadme",
+    },
     approve: {
       name: "approve_user",
       tooltip: "Approve User",
@@ -690,12 +704,54 @@ Ext.define("Amps.util.Utilities", {
       handler: "sendEvent",
     },
     reroute: {
-      name: "event",
+      name: "reroute",
       iconCls: "x-fa fa-random actionicon",
       itemId: "event",
       tooltip: "Reroute Event to new Topic",
       handler: "reroute",
     },
+    clearenv: {
+      name: "clearenv",
+      iconCls: "x-fa fa-ban actionicon",
+      itemId: "clearenv",
+      tooltip: "Clear Environment",
+      handler: "clearEnv",
+    },
+    exportenv: {
+      name: "exportenv",
+      iconCls: "x-fa fa-download actionicon",
+      itemId: "exportenv",
+      tooltip: "Export Environment as Demo",
+      handler: "exportEnv",
+    },
+    getsecret: {
+      name: "getsecret",
+      iconCls: "x-fa fa-key actionicon",
+      itemId: "getsecret",
+      tooltip: "Get Secret",
+      handler: "getSecret",
+    },
+    //   loop: {
+    //     name: "loop",
+    //     style: {
+    //       width: "min-content",
+    //       height: "min-content",
+    //     },
+    //     iconCls: "x-fa fa-spinner fa-pulse actionicon",
+    //     tooltip: "Loop Detection",
+    //     listeners: {
+    //       render: function (scope) {
+    //         console.log(scope);
+    //         // amfutil.ajaxRequest({
+    //         //   url: "api/loop/"
+    //         // })
+    //       },
+    //     },
+    //     handler: function (grid, rowIndex, colIndex) {
+    //       var rec = grid.getStore().getAt(rowIndex);
+    //       alert("Edit " + rec.get("name"));
+    //     },
+    //   },
   },
 
   all_icons: [
@@ -940,6 +996,8 @@ Ext.define("Amps.util.Utilities", {
       msg,
       response.status == 403
         ? "You have insufficient permissions"
+        : response.responseText
+        ? response.responseText
         : "Unknown Error"
     );
   },
@@ -1095,7 +1153,6 @@ Ext.define("Amps.util.Utilities", {
                   scope.up("form").down("#type").setHtml(sel.data.label);
                 },
               },
-              tooltip: `${config.object} Type`,
             }
           ),
           {
@@ -1221,6 +1278,13 @@ Ext.define("Amps.util.Utilities", {
       await amfutil.socketPromise;
     }
   },
+
+  reloadStores: function () {
+    var stores = Ext.StoreManager.getRange();
+    stores.forEach((store) => store.reload());
+    amfutil.stores.forEach((store) => store.store.reload());
+  },
+
   providercallback: function (params, scope) {
     var session_params = localStorage.getItem("session_params");
     params.session_params = session_params;
@@ -1264,6 +1328,27 @@ Ext.define("Amps.util.Utilities", {
     return JSON.parse(localStorage.getItem("user"));
   },
 
+  fetch_user: async function () {
+    var resp = await amfutil.ajaxRequest({
+      url: "api/user/info",
+    });
+    return Ext.decode(resp.responseText);
+  },
+
+  updateEnv: async function () {
+    var mask = new Ext.LoadMask({
+      msg: "Changing Environment...",
+      target: amfutil.getElementByID("main-viewport"),
+    });
+    mask.show();
+    await amfutil.getElementByID("env").fireEvent("updateenv");
+    amfutil.reloadStores();
+    setTimeout(function () {
+      mask.hide();
+    }, 500);
+    // mask.hide();
+  },
+
   addToCollection: async function (
     collection,
     body,
@@ -1293,7 +1378,7 @@ Ext.define("Amps.util.Utilities", {
   },
 
   updateInCollection: function (collection, body, id, success, failure) {
-    amfutil.ajaxRequest({
+    return amfutil.ajaxRequest({
       headers: {
         Authorization: localStorage.getItem("access_token"),
       },
@@ -1516,7 +1601,7 @@ Ext.define("Amps.util.Utilities", {
       url: "/api/store/" + collection,
       method: "GET",
       timeout: 60000,
-      params: { filters: JSON.stringify(filters ? filters : {}) },
+      params: { params: JSON.stringify({ filters: filters ? filters : {} }) },
       headers: {
         Authorization: localStorage.getItem("access_token"),
       },
@@ -1690,6 +1775,43 @@ Ext.define("Amps.util.Utilities", {
       },
       opts
     );
+  },
+
+  hexToRgb: function (hex) {
+    hex = hex.trim();
+    // Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")
+    var shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+    hex = hex.replace(shorthandRegex, function (m, r, g, b) {
+      return r + r + g + g + b + b;
+    });
+
+    var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    console.log(result);
+    return result
+      ? {
+          r: parseInt(result[1], 16),
+          g: parseInt(result[2], 16),
+          b: parseInt(result[3], 16),
+        }
+      : null;
+  },
+
+  luminance: function (R8bit, G8bit, B8bit) {
+    var RsRGB = R8bit / 255;
+    var GsRGB = G8bit / 255;
+    var BsRGB = B8bit / 255;
+
+    var R =
+      RsRGB <= 0.03928 ? RsRGB / 12.92 : Math.pow((RsRGB + 0.055) / 1.055, 2.4);
+    var G =
+      GsRGB <= 0.03928 ? GsRGB / 12.92 : Math.pow((GsRGB + 0.055) / 1.055, 2.4);
+    var B =
+      BsRGB <= 0.03928 ? BsRGB / 12.92 : Math.pow((BsRGB + 0.055) / 1.055, 2.4);
+
+    // For the sRGB colorspace, the relative luminance of a color is defined as:
+    var L = 0.2126 * R + 0.7152 * G + 0.0722 * B;
+
+    return L;
   },
 
   loadKey: function (fieldLabel, name, opts) {
@@ -1948,11 +2070,12 @@ Ext.define("Amps.util.Utilities", {
     );
   },
 
-  createPageStore: function (collection, filters = {}, opts = {}) {
+  createPageStore: function (collection, filters = {}, opts = {}, extra = {}) {
     var store = Ext.create(
       "Ext.data.Store",
       Object.assign(
         {
+          storeId: "page",
           remoteSort: true,
           proxy: {
             type: "rest",
@@ -1960,7 +2083,11 @@ Ext.define("Amps.util.Utilities", {
             headers: {
               Authorization: localStorage.getItem("access_token"),
             },
-            extraParams: { filters: JSON.stringify(filters) },
+            extraParams: {
+              params: JSON.stringify(
+                Object.assign({ filters: filters }, extra)
+              ),
+            },
             reader: {
               type: "json",
               rootProperty: "rows",
@@ -2012,12 +2139,35 @@ Ext.define("Amps.util.Utilities", {
     return val;
   },
 
-  createCollectionStore: function (collection, filters = {}, opts = {}) {
+  scriptStore: function () {
+    return {
+      storeId: "script",
+      proxy: {
+        type: "ajax",
+        url: "/api/scripts",
+        headers: {
+          Authorization: localStorage.getItem("access_token"),
+        },
+        reader: {
+          type: "json",
+        },
+      },
+      autoLoad: true,
+    };
+  },
+
+  createCollectionStore: function (
+    collection,
+    filters = {},
+    opts = {},
+    extra = {}
+  ) {
     var check = amfutil.stores.find(
       (store) =>
         store.config.collection == collection &&
         amfutil.compareOpts(store.config.filters, filters) &&
-        amfutil.compareOpts(store.config.opts, opts)
+        amfutil.compareOpts(store.config.opts, opts) &&
+        amfutil.compareOpts(store.config.extra, extra)
     );
     if (check) {
       return check.store;
@@ -2034,7 +2184,12 @@ Ext.define("Amps.util.Utilities", {
                 Authorization: localStorage.getItem("access_token"),
               },
 
-              extraParams: { filters: JSON.stringify(filters) },
+              extraParams: {
+                params: JSON.stringify(
+                  Object.assign({ filters: filters }, extra)
+                ),
+              },
+
               reader: {
                 type: "json",
                 rootProperty: "rows",
@@ -2054,7 +2209,12 @@ Ext.define("Amps.util.Utilities", {
       );
       amfutil.stores.push({
         store: store,
-        config: { collection: collection, filters: filters, opts: opts },
+        config: {
+          collection: collection,
+          filters: filters,
+          opts: opts,
+          extra: extra,
+        },
       });
       return store;
     }
@@ -2084,7 +2244,7 @@ Ext.define("Amps.util.Utilities", {
 
   renderListeners: function (render, ar, change) {
     return {
-      afterrender: function (scope) {
+      beforerender: function (scope) {
         var val = scope.getValue();
         render(scope, val);
         if (ar) {
@@ -2234,6 +2394,48 @@ Ext.define("Amps.util.Utilities", {
     };
   },
 
+  customValidation: async function (cmp, value, custom, message, validator) {
+    return new Promise(async (resolve, reject) => {
+      var duplicate = await custom(value);
+
+      if (duplicate) {
+        // cmp.markInvalid(message);
+        // cmp.setActiveError(message);
+
+        // cmp.setValidation(message);
+        cmp.validCheck = message;
+        // cmp.isValid(false);
+      } else {
+        if (validator) {
+          var invalid = validator(cmp.getValue());
+          if (invalid) {
+            // cmp.markInvalid(invalid);
+            // cmp.setActiveError(invalid);
+
+            // cmp.setValidation(invalid);
+            cmp.validCheck = invalid;
+          } else {
+            // cmp.clearInvalid();
+            // cmp.unsetActiveError();
+
+            // cmp.setValidation();
+            cmp.validCheck = true;
+          }
+        } else {
+          // cmp.clearInvalid();
+          // cmp.unsetActiveError();
+
+          // cmp.setValidation();
+          cmp.validCheck = true;
+        }
+      }
+
+      cmp.validate();
+
+      resolve();
+    });
+  },
+
   duplicateHandler: async function (cmp, value, message, validator) {
     return new Promise(async (resolve, reject) => {
       var duplicate = await amfutil.checkDuplicate(value);
@@ -2288,24 +2490,29 @@ Ext.define("Amps.util.Utilities", {
   },
 
   portHandler: async function (cmp, value) {
+    var form = cmp.up("form");
+    var id;
+    if (form.idcheck) {
+      if (form.record && form.record._id) {
+        id = form.record._id;
+      }
+    }
     var response = await amfutil.ajaxRequest({
       url: "/api/port/" + value,
-      method: "GET",
+      method: "POST",
       timeout: 60000,
       headers: {
         Authorization: localStorage.getItem("access_token"),
       },
+      jsonData: id
+        ? {
+            id: id,
+          }
+        : {},
     });
 
     var inUse = Ext.decode(response.responseText);
-    if (inUse) {
-      cmp.setActiveError("Port is in use.");
-      cmp.setValidation("Port is in use.");
-      // cmp.isValid(false);
-    } else {
-      cmp.setActiveError();
-      cmp.setValidation();
-    }
+    return inUse;
   },
 
   getBuckets: async function () {
@@ -2398,15 +2605,15 @@ Ext.define("Amps.util.Utilities", {
           console.log(
             "server-side failure with status code " + response.status
           );
-          if ((response.status = 401)) {
+          if (response.status == 401) {
             await amfutil.renew_session();
             request.headers = {
               Authorization: localStorage.getItem("access_token"),
             };
             request.failure = failure;
             response = await Ext.Ajax.request(request);
-            resolve(response);
           }
+          resolve(response);
         }
       );
     });
@@ -2473,7 +2680,9 @@ Ext.define("Amps.util.Utilities", {
           headers: {
             Authorization: localStorage.getItem("access_token"),
           },
-          extraParams: { filters: JSON.stringify(filters ? filters : {}) },
+          extraParams: {
+            params: JSON.stringify({ filters: filters ? filters : {} }),
+          },
           url: `/api/store/${route}`,
           listeners: {
             exception: amfutil.refresh_on_failure,
@@ -2846,6 +3055,7 @@ Ext.define("Amps.util.Utilities", {
     console.log(values);
     var filters = {};
     fields.forEach((field) => {
+      console.log(field);
       if (values[field.dataIndex] && values[field.dataIndex] != "") {
         if (field.type == "date") {
           var data = JSON.parse(values[field.dataIndex]);
@@ -2864,6 +3074,8 @@ Ext.define("Amps.util.Utilities", {
           console.log(values[field.dataIndex]);
           filters[field.dataIndex] = JSON.parse(values[field.dataIndex]);
           console.log(filters);
+        } else if (field.type == "combo") {
+          filters[field.dataIndex] = values[field.dataIndex];
         } else {
           filters[field.dataIndex] = { $in: values[field.dataIndex] };
         }
@@ -2904,6 +3116,10 @@ Ext.define("Amps.util.Utilities", {
       " " +
       ["B", "kB", "MB", "GB", "TB"][i]
     );
+  },
+
+  capitalize(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
   },
 
   consumerConfig(topicfilter, tooltip) {

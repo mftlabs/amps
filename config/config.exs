@@ -14,6 +14,8 @@ config :amps_portal,
 
 config :amps, env: Mix.env()
 
+config :phoenix, :filter_parameters, ["password", "token", "logo"]
+
 # Configures the endpoint
 config :amps_portal, AmpsPortal.Endpoint,
   url: [host: "localhost"],
@@ -35,7 +37,7 @@ config :esbuild,
   ],
   amps_web: [
     args:
-      ~w(js/app.js --bundle --target=es2016 --loader:.svg=file --outdir=../priv/static/assets),
+      ~w(js/app.js --bundle --target=es2016 --loader:.svg=file --loader:.ttf=file --outdir=../priv/static/assets),
     cd: Path.expand("../apps/amps_web/assets", __DIR__),
     env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
   ]
@@ -62,7 +64,7 @@ config :master_proxy,
       phoenix_endpoint: AmpsWeb.Endpoint
     },
     %{
-      host: ~r/^#{System.get_env("AMPS_HOST", "localhost")}$/,
+      host: ~r/#{System.get_env("AMPS_HOST", "localhost")}$/,
       phoenix_endpoint: AmpsPortal.Endpoint
     }
   ]

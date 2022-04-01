@@ -6,6 +6,16 @@ defmodule Amps.HistoryConsumer do
 
   def start_link(args) do
     parms = Enum.into(args, %{})
+
+    parms =
+      case parms[:env] do
+        nil ->
+          Map.put(parms, :env, "")
+
+        _ ->
+          parms
+      end
+
     IO.puts("starting event listener #{inspect(parms)}")
     name = parms[:name]
     GenServer.start_link(__MODULE__, parms)
@@ -50,11 +60,14 @@ defmodule Amps.HistoryConsumer do
 
     IO.puts("pid #{inspect(pid)}")
 
-    {stream, consumer} = AmpsUtil.get_names(opts)
+    {stream, consumer} = AmpsUtil.get_names(opts, state.env)
+    IO.inspect(stream)
+    IO.inspect(state.env)
+    listening_topic = AmpsUtil.env_topic("amps.history.#{consumer}", state.env)
 
-    listening_topic = "amps.history.#{consumer}"
+    IO.inspect(listening_topic)
 
-    AmpsUtil.create_consumer(stream, consumer, opts["topic"], %{
+    AmpsUtil.create_consumer(stream, consumer, AmpsUtil.env_topic(opts["topic"], state.env), %{
       deliver_policy: :all,
       deliver_subject: listening_topic,
       ack_policy: :all
@@ -70,7 +83,9 @@ defmodule Amps.HistoryConsumer do
         parms: opts,
         connection_pid: pid,
         stream_name: stream,
-        consumer_name: consumer
+        consumer_name: consumer,
+        listening_topic: listening_topic,
+        env: state.env
       }
     )
 
@@ -96,10 +111,11 @@ defmodule Amps.HistoryPullConsumer do
         parms: parms,
         connection_pid: connection_pid,
         stream_name: stream_name,
-        consumer_name: consumer_name
+        consumer_name: consumer_name,
+        listening_topic: listening_topic,
+        env: env
       }) do
     # Process.link(connection_pid)
-    listening_topic = "amps.history.#{consumer_name}"
     group = String.replace(parms["name"], " ", "_")
     Logger.info("History queue_group #{group} #{stream_name} #{consumer_name}")
     IO.inspect(listening_topic)
@@ -120,6 +136,7 @@ defmodule Amps.HistoryPullConsumer do
       consumer_name: consumer_name,
       listening_topic: listening_topic,
       messages: [],
+      env: env,
       index:
         if parms["receipt"] do
           parms["index"]
@@ -143,7 +160,7 @@ defmodule Amps.HistoryPullConsumer do
     message =
       if state.index do
         {%Snap.Bulk.Action.Create{
-           _index: state.index,
+           _index: AmpsUtil.index(state.env, state.index),
            doc:
              Map.merge(data["msg"], %{
                "status" => "received"
@@ -151,7 +168,7 @@ defmodule Amps.HistoryPullConsumer do
          }, message}
       else
         {%Snap.Bulk.Action.Create{
-           _index: data["index"],
+           _index: AmpsUtil.index(state.env, data["index"]),
            doc: data
          }, message}
       end
@@ -182,7 +199,7 @@ defmodule Amps.HistoryPullConsumer do
   end
 
   defp schedule_bulk do
-    Process.send_after(self(), :bulk, Amps.Defaults.get("hinterval", 5_000))
+    Process.send_after(self(), :bulk, AmpsUtil.hinterval())
   end
 
   def handle_info(other, state) do

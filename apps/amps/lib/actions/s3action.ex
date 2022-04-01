@@ -17,10 +17,10 @@ defmodule S3Action do
 
   """
 
-  def run(msg, parms, _state) do
+  def run(msg, parms, {state, env}) do
     Logger.info("S3 Action Called")
 
-    req = req(parms)
+    req = req(parms, env)
 
     try do
       case parms["operation"] do
@@ -47,8 +47,8 @@ defmodule S3Action do
             {:error, {:http_error, 404, _}} ->
               raise "Bucket does not exist"
 
-            _ ->
-              raise "Error fetching get"
+            {:error, error} ->
+              raise "Error #{inspect(error)} "
           end
 
         "put" ->
@@ -112,8 +112,8 @@ defmodule S3Action do
     :ok
   end
 
-  def req(parms) do
-    provider = DB.find_one("providers", %{"_id" => parms["provider"]})
+  def req(parms, env) do
+    provider = DB.find_one(AmpsUtil.index(env, "providers"), %{"_id" => parms["provider"]})
 
     req = [
       access_key_id: provider["key"],

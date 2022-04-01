@@ -1,7 +1,7 @@
 defmodule StringReplaceAction do
   require Logger
 
-  def run(msg, parms, state) do
+  def run(msg, parms, {state, env}) do
     Logger.info("input #{inspect(msg)}")
     {:ok, newmsg} = replace(msg, parms, state)
     Logger.info("output #{inspect(newmsg)}")

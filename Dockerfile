@@ -11,7 +11,7 @@ ENV MIX_ENV=prod
 WORKDIR /build
 RUN apt-get update
 
-RUN apt-get install build-essential git -y
+RUN apt-get install build-essential git npm -y
 
 RUN mix local.hex --force && \
     mix local.rebar --force
@@ -19,15 +19,26 @@ RUN mix local.hex --force && \
 RUN mix deps.get --only prod && \
     mix deps.compile
 
+RUN cd apps/amps_web/assets && npm install
+
+RUN cd apps/amps_web/assets && node build.js --deploy
+
 RUN mix esbuild amps_portal --minify
-RUN mix esbuild amps_web --minify
+
+RUN mix phx.digest
 
 RUN mix release
 
 FROM elixir:1.12.1
-RUN apt-get install python3
+RUN apt-get update
+RUN apt-get install python3 python3-pip -y
+
+
+RUN pip3 install python-jsonrpc-server python-lsp-server tornado "python-lsp-server[all]" "python-lsp-server[yapf]"
 
 ENV ERLPORT_PYTHON=/usr/bin/python3
+
+
 
 # RUN addgroup -S release && \
 #     adduser -S -G release release && \

@@ -94,6 +94,7 @@ Ext.define("Amps.form.config", {
     resolve();
   },
   loadForm: function (config, record, title, route = false, audit = true) {
+    var scope = this;
     return new Promise((resolve, reject) => {
       this.config = config;
       this.record = record;
@@ -126,7 +127,9 @@ Ext.define("Amps.form.config", {
               tooltip: "The ID for this record",
             },
             function (comp, value) {
-              return { collection: { _id: value } };
+              var clause = {};
+              clause[scope.collection] = { _id: value };
+              return clause;
             },
             "ID Already Exists"
           ),

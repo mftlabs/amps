@@ -7,10 +7,13 @@ defmodule AmpsPortal.Router do
     plug(:fetch_live_flash)
     plug(:protect_from_forgery)
     plug(:put_secure_browser_headers)
+    plug(AmpsPortal.EnvPlug)
   end
 
   pipeline :api do
     plug(:accepts, ["json"])
+    plug(AmpsPortal.EnvPlug)
+
     plug(AmpsPortal.APIAuthPlug, otp_app: :amps_portal)
   end
 
@@ -58,6 +61,11 @@ defmodule AmpsPortal.Router do
 
     get("/ufa/download/:rule", UFAController, :handle_download)
     get("/ufa/agent", UFAController, :get_agent)
+    get("/tokens", UserController, :get_tokens)
+    get("/tokens/secret/:id", UserController, :get_token_secret)
+
+    post("/tokens", UserController, :create_token)
+    delete("/tokens/:id", UserController, :delete_token)
 
     get("/inbox", DataController, :get_messages)
     get("/ufa_logs", DataController, :ufa_logs)

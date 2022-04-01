@@ -11,6 +11,7 @@ Ext.application({
     // This will automatically load all classes in the Amps namespace
     // so that application classes do not need to require each other.
     "Amps.*",
+    "Ext.ux.colorpick.Field",
   ],
 
   // The name of the initial view to create.

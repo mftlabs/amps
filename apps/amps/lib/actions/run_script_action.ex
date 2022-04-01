@@ -1,11 +1,11 @@
 defmodule RunScriptAction do
   require Logger
 
-  def run(msg, parms, _state) do
+  def run(msg, parms, {state, env}) do
     result =
       case parms["script_type"] do
         "python" ->
-          Amps.PyService.call(msg, parms)
+          Amps.PyService.call(msg, parms, env)
 
         _ ->
           nil
@@ -40,6 +40,8 @@ defmodule RunScriptAction do
                 }
               )
             end
+
+          IO.inspect(parms)
 
           AmpsEvents.send(event, parms, %{})
         end
