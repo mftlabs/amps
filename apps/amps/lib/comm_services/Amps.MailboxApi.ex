@@ -5,14 +5,28 @@ defmodule Amps.MailboxApi do
   use Plug.Router
   #  use Plug.ErrorHandler
 
+  plug(Plug.Parsers,
+    parsers: [:urlencoded, :multipart],
+    pass: ["*/*"],
+    length: Amps.Defaults.get("max_upload", 15_000_000_000),
+    json_decoder: Jason
+  )
+
   plug(Plug.Logger, log: :debug)
+
   plug(:match)
   plug(:dispatch)
 
   def init(options) do
-    IO.puts("options: #{inspect(options)}")
-    [{"test", "testing"}]
+    opts = Keyword.get(options, :opts, %{})
+    env = Keyword.get(options, :env, "")
+    %{env: env, opts: opts}
     #    Map.put(options, "test", "test")
+  end
+
+  def call(conn, opts) do
+    put_private(conn, :opts, opts)
+    |> super(opts)
   end
 
   get "/mailbox/:mailbox/message/:msgid" do
@@ -34,6 +48,8 @@ defmodule Amps.MailboxApi do
   end
 
   get "/mailbox/:mailbox" do
+    # IO.inspect(opts)
+
     case myauth(conn, mailbox) do
       {:ok, _} ->
         result = AmpsMailbox.list_messages(mailbox, 100)
@@ -47,20 +63,29 @@ defmodule Amps.MailboxApi do
   end
 
   post "/mailbox/:mailbox" do
+    IO.inspect(conn)
+
     IO.puts("opts: #{inspect(opts)}")
     msgid = AmpsUtil.get_id()
     stime = AmpsUtil.gettime()
     temp_file = AmpsUtil.tempdir() <> "/" <> msgid
     IO.puts("temp: #{temp_file}")
 
+    IO.inspect(conn)
+    IO.inspect(conn.body_params())
+
     case myauth(conn, mailbox) do
       {:ok, user} ->
-        msg = get_metadata(conn, user, msgid, stime)
+        msg = get_metadata(conn, user, msgid, stime, temp_file)
 
         case write_file(conn, temp_file) do
           {:error, reason} ->
             # cannot write temp file (500 internal service error)
-            send_resp(conn, 500, Poison.encode!(%{msgid: msgid, status: reason}))
+            send_resp(
+              conn,
+              500,
+              Poison.encode!(%{msgid: msgid, status: reason})
+            )
 
           {:ok, _conn} ->
             # temp file written okay
@@ -68,15 +93,22 @@ defmodule Amps.MailboxApi do
             #            :file.delete(temp_file)
             #            Amps.MqService.send("registerq", msg)
             msg = Map.put(msg, "mailbox", mailbox)
-            service = "httpd"
             user = mailbox
-            topic = "amps.svc.#{service}.#{user}"
+            topic = "amps.svcs.#{conn.private.opts.opts["name"]}.#{user}"
 
-            case Amps.EventPublisher.send(topic, Poison.encode!(msg)) do
+            case AmpsEvents.send(
+                   msg,
+                   %{"output" => AmpsUtil.env_topic(topic, conn.private.opts.env)},
+                   %{}
+                 ) do
               :ok ->
                 # AmpsQueue.commitTx()
                 # register normal completion (201 created)
-                send_resp(conn, 201, Poison.encode!(%{msgid: msgid, status: "accepted"}))
+                send_resp(
+                  conn,
+                  201,
+                  Poison.encode!(%{msgid: msgid, status: "accepted"})
+                )
 
                 #              :error ->
                 # register reports failure (400 bad request)
@@ -109,9 +141,11 @@ defmodule Amps.MailboxApi do
   end
 
   defp myauth(conn, mailbox) do
+    IO.inspect(conn)
+
     case Plug.BasicAuth.parse_basic_auth(conn) do
       {user, cred} ->
-        case AmpsAuth.check_cred(user, cred) do
+        case AmpsAuth.check_cred(user, cred, conn.private.opts.env) do
           true ->
             {:ok, mailbox}
 
@@ -124,7 +158,7 @@ defmodule Amps.MailboxApi do
     end
   end
 
-  defp get_metadata(conn, user, msgid, stime) do
+  defp get_metadata(conn, user, msgid, stime, temp) do
     size =
       Enum.find(conn.req_headers, -1, fn x ->
         String.starts_with?(elem(x, 0), "content-length")
@@ -134,10 +168,10 @@ defmodule Amps.MailboxApi do
 
     msg =
       Enum.filter(conn.req_headers, fn x ->
-        String.starts_with?(elem(x, 0), "amf_")
+        String.starts_with?(elem(x, 0), "amps_")
       end)
       |> Enum.map(fn {x, y} ->
-        key = String.replace(x, "amf_", "")
+        key = String.replace(x, "amps_", "")
         {key, y}
       end)
       |> Enum.into(%{})
@@ -146,15 +180,30 @@ defmodule Amps.MailboxApi do
       :maps.merge(msg, %{
         "msgid" => msgid,
         "user" => user,
-        "fpath" => "temp",
+        "fpath" => temp,
         "temp" => "true",
         "stime" => stime,
         "fsize" => elem(size, 1),
         "ftime" => AmpsUtil.gettime()
       })
 
-    if nmsg["fname"] == "" do
-      Map.put(nmsg, "fname", "message.dat")
+    if nmsg["fname"] == "" || nmsg["fname"] == nil do
+      fname =
+        if conn.body_params() != %Plug.Conn.Unfetched{aspect: :body_params} do
+          if conn.body_params()["upload"] do
+            if Map.has_key?(conn.body_params()["upload"], :filename) do
+              conn.body_params()["upload"].filename
+            end
+          end
+        else
+          Map.put(nmsg, "fname", "message.dat")
+        end
+
+      if fname do
+        Map.put(nmsg, "fname", fname)
+      else
+        nmsg
+      end
     else
       nmsg
     end
@@ -173,6 +222,8 @@ defmodule Amps.MailboxApi do
   end
 
   defp read_body(conn, opts, f) do
+    IO.inspect(conn)
+
     case Plug.Conn.read_body(conn, opts) do
       {:ok, binary, conn} ->
         :file.write(f, binary)

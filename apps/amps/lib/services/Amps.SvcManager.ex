@@ -137,7 +137,7 @@ defmodule Amps.SvcManager do
 
             {Plug.Cowboy,
              scheme: :https,
-             plug: types[:httpd],
+             plug: {types[:httpd], [opts: args]},
              options: [
                ref: name,
                port: args["port"],
@@ -150,7 +150,7 @@ defmodule Amps.SvcManager do
           else
             {Plug.Cowboy,
              scheme: :http,
-             plug: types[:httpd],
+             plug: {types[:httpd], [opts: args]},
              options: [
                ref: name,
                port: args["port"],

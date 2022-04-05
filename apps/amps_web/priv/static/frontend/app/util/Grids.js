@@ -1765,7 +1765,6 @@ Ext.define("Amps.container.Imports", {
       listeners: {
         reconfigure: async function () {
           console.log("reconfigure");
-
           var progress = amfutil.getElementByID("progress");
           var num = 0;
           var length = this.widgets.length;
@@ -1897,12 +1896,14 @@ Ext.define("Amps.container.Imports", {
                     });
 
                     await myForm.loadForm(config, record, false, false, false);
+
                     var win = Ext.create(
                       "Ext.window.Window",
                       Ext.apply(
                         {
                           title: "Edit Data",
                           // modal: true,
+                          loading: true,
                           width: 600,
                           height: 600,
                           closeAction: "method-hide",
@@ -1910,6 +1911,7 @@ Ext.define("Amps.container.Imports", {
                             type: "vbox",
                             align: "stretch",
                           },
+                          renderTo: Ext.getBody(),
                           duplicateCheck: async function () {
                             var refs =
                               this.down("form").query("field[duplicate]");
@@ -2065,6 +2067,7 @@ Ext.define("Amps.container.Imports", {
                           handler: function (scope) {
                             var win = scope.up("container").win;
                             win.duplicateCheck();
+                            console.log(win);
                             win.show();
                           },
                         },
@@ -2076,15 +2079,26 @@ Ext.define("Amps.container.Imports", {
                         win.setValid(valid);
                       },
                     });
-                    win.setStyle({
-                      display: "none",
-                    });
+
+                    // var mask = new Ext.LoadMask({
+                    //   msg: "Loading Entry...",
+                    //   target: win,
+                    // });
                     win.show();
+
+                    // mask.show();
+                    // win.setStyle({
+                    //   display: "none",
+                    // });
+
                     await win.duplicateCheck();
                     win.hide();
-                    win.setStyle({
-                      display: "auto",
-                    });
+
+                    // mask.hide();
+
+                    // win.setStyle({
+                    //   display: "absolute",
+                    // });
                     this.removeAll();
                     this.insert(cont);
                     grid.conts.push(cont);
@@ -3373,22 +3387,21 @@ Ext.define("Amps.panel.Wizard", {
 
               fields = fields.filter((field) => field.itemId != "types");
 
+              fields = amfutil.searchFields(fields, (field) => {
+                console.log(field);
+                if (field.dynamic) {
+                  field = amfutil.dynamicRemove(field);
+                }
+                if (field.name == "handler" || field.name == "topic") {
+                  field.readOnly = true;
+                  field.forceSelection = false;
+                }
+                return field;
+              });
+
               // console.log(action);
               // console.log(topic);
-              scope.insert(
-                0,
-                fields.map((field) => {
-                  console.log(field);
-                  if (field.dynamic) {
-                    field = amfutil.dynamicRemove(field);
-                  }
-                  if (field.name == "handler" || field.name == "topic") {
-                    field.readOnly = true;
-                    field.forceSelection = false;
-                  }
-                  return field;
-                })
-              );
+              scope.insert(0, fields);
             },
           },
         },
@@ -7287,7 +7300,7 @@ Ext.define("Amps.util.Grids", {
             console.log(form);
             var services = ampsgrids.grids["services"]();
             if (services.types[values.type].process) {
-              values = services.types[values.type].process(form);
+              values = services.types[values.type].process(form, values);
             }
 
             return values;
@@ -7303,7 +7316,7 @@ Ext.define("Amps.util.Grids", {
             console.log(form);
             var services = ampsgrids.grids["services"]();
             if (services.types[values.type].process) {
-              values = services.types[values.type].process(form);
+              values = services.types[values.type].process(form, values);
             }
 
             return values;
@@ -7411,6 +7424,18 @@ Ext.define("Amps.util.Grids", {
             field: "httpd",
             label: "HTTP Server",
             iconCls: "x-fa fa-feed",
+            combo: function (combo, service) {
+              return amfutil.combo(
+                "Users",
+                "topicparms",
+                amfutil.createCollectionStore("users", {}, { autoLoad: true }),
+                "username",
+                "username",
+                {
+                  itemId: "topicparms",
+                }
+              );
+            },
             fields: [
               {
                 xtype: "numberfield",
@@ -7593,29 +7618,35 @@ Ext.define("Amps.util.Grids", {
 
                 "actions"
               ),
-              amfutil.dynamicCreate(
-                amfutil.combo(
-                  "Topic",
-                  "topic",
-                  amfutil.createCollectionStore(
-                    "topics",
-                    {},
-                    { autoLoad: true }
-                  ),
-                  "topic",
-                  "topic",
-                  {
-                    tooltip:
-                      "The Topic this subscriber will consumes messages from.",
-
-                    flex: 1,
-                  }
-                ),
-                "topics"
+              amfutil.consumerConfig(
+                async function (scope) {
+                  return {};
+                },
+                `The Topic this subscriber will consumes messages from.`,
+                `This block allows you to configure how the subscriber will consume events from the specified topic. Changing any of these values after creation will result in the creation of a new consumer. (i.e. If the consumer is configured with a Deliver Policy of "All" and 50 messages are consumed, updating the consumer config and leaving the delivery policy of "All" will result in the reprocessing of those messages.) "All" results in a consumption of all events on the topic. "New" results in a consumption of all events created after this configuration was updated. "Last" results in a consumption o fall events starting with the most recent events. "Start Time" allows you to specify a specific starting point for consumption`
               ),
+              // amfutil.dynamicCreate(
+              //   amfutil.combo(
+              //     "Topic",
+              //     "topic",
+              //     amfutil.createCollectionStore(
+              //       "topics",
+              //       {},
+              //       { autoLoad: true }
+              //     ),
+              //     "topic",
+              //     "topic",
+              //     {
+              //       tooltip:
+              //         "The Topic this subscriber will consumes messages from.",
+
+              //       flex: 1,
+              //     }
+              //   ),
+              //   "topics"
+              // ),
             ],
-            process: function (form) {
-              var values = form.getValues();
+            process: function (form, values) {
               values.active = true;
 
               return values;
@@ -8213,12 +8244,8 @@ Ext.define("Amps.util.Grids", {
   pages: {
     scripts: () => ({
       view: {
-        xtype: "panel",
+        xtype: "tabpanel",
         title: "Scripts",
-        layout: {
-          type: "hbox",
-          align: "stretch",
-        },
         listeners: {
           beforedestroy: function () {
             console.log("destroying");
@@ -8226,85 +8253,291 @@ Ext.define("Amps.util.Grids", {
         },
         items: [
           {
+            title: "Editor",
+            layout: {
+              type: "hbox",
+              align: "stretch",
+            },
+            items: [
+              {
+                xtype: "grid",
+                rbar: [
+                  {
+                    iconCls: "x-fa fa-plus",
+                    handler: function () {
+                      var win = new Ext.window.Window({
+                        title: "Create New Script",
+                        width: 600,
+                        height: 250,
+                        layout: "center",
+                        modal: true,
+                        items: [
+                          {
+                            xtype: "form",
+                            items: [
+                              amfutil.duplicateValidation(
+                                {
+                                  xtype: "textfield",
+                                  fieldLabel: "Script Name",
+                                  name: "name",
+                                },
+                                async function (cmp, value) {
+                                  await amfutil.customValidation(
+                                    cmp,
+                                    value,
+                                    async function () {
+                                      var resp = await amfutil.ajaxRequest({
+                                        url: "api/scripts/duplicate/",
+                                        jsonData: {
+                                          name: value,
+                                        },
+                                      });
+                                      return Ext.decode(resp.responseText);
+                                    },
+                                    "Script Already Exists",
+                                    function (val) {
+                                      if (!/^[a-z0-9]+$/i.test(val)) {
+                                        return "Script Name contains invalid characters";
+                                      }
+                                    }
+                                  );
+                                  console.log("checking");
+
+                                  return true;
+                                }
+                              ),
+                            ],
+                            buttons: [
+                              {
+                                text: "Create",
+                                formBind: true,
+                                handler: function (btn) {
+                                  var form = btn.up("form");
+                                  var name = form.getValues().name;
+                                  amfutil.ajaxRequest({
+                                    url: "api/scripts",
+                                    method: "post",
+                                    jsonData: {
+                                      name: name,
+                                      data: "def run (msgdata):\n",
+                                    },
+                                    success: function () {
+                                      Ext.toast("Script Created");
+                                      win.close();
+
+                                      amfutil
+                                        .getElementByID("script")
+                                        .loadScript(name);
+                                      var store = amfutil
+                                        .getElementByID("scriptgrid")
+                                        .getStore();
+
+                                      store.reload();
+                                    },
+                                  });
+                                },
+                              },
+                              {
+                                text: "Cancel",
+                                handler: function () {
+                                  win.hide();
+                                },
+                              },
+                            ],
+                          },
+                        ],
+                      });
+                      win.show();
+                    },
+                  },
+                  {
+                    iconCls: "x-fa fa-refresh",
+                    handler: function () {
+                      var store = amfutil
+                        .getElementByID("scriptgrid")
+                        .getStore();
+                      store.reload();
+                      // store.on(
+                      //   "load",
+                      //   function () {
+                      //     amfutil.getElementByID("script").flushScripts(store);
+                      //   },
+                      //   this,
+                      //   { single: true }
+                      // );
+                    },
+                  },
+                ],
+                flex: 1,
+                itemId: "scriptgrid",
+                store: amfutil.scriptStore(),
+                listeners: {
+                  load: function () {
+                    // amfutil.getElementByID("script").flushScripts(this.getStore());
+                  },
+                  dblclick: {
+                    element: "body", //bind to the underlying body property on the panel
+                    fn: function (grid, rowIndex, e, obj) {
+                      var record = grid.record.data;
+                      amfutil.getElementByID("script").loadScript(record.name);
+                    },
+                  },
+                },
+                columns: [
+                  {
+                    text: "Name",
+                    dataIndex: "name",
+                    flex: 1,
+                  },
+                  {
+                    text: "Size",
+                    dataIndex: "size",
+                    flex: 1,
+                  },
+                  {
+                    xtype: "actioncolumn",
+                    items: [
+                      {
+                        iconCls: "x-fa fa-trash",
+                        handler: function (grid, rowIndex) {
+                          var rec = grid.getStore().getAt(rowIndex);
+                          Ext.MessageBox.show({
+                            title: "Remove Package",
+                            message: `Are you sure you want to delete script ${rec.data.name}?`,
+                            buttons: Ext.MessageBox.YESNO,
+                            defaultFocus: "#no",
+                            prompt: false,
+                            fn: function (btn) {
+                              if (btn == "yes") {
+                                amfutil.ajaxRequest({
+                                  url: `api/scripts/${rec.data.name}`,
+                                  headers: {
+                                    Authorization:
+                                      localStorage.getItem("access_token"),
+                                  },
+                                  method: "DELETE",
+                                  timeout: 60000,
+                                  params: {},
+                                  success: async (resp) => {
+                                    Ext.toast({
+                                      title: "Deleted Script",
+                                      html: "<center>Deleted Script</center>",
+                                      autoCloseDelay: 5000,
+                                    });
+                                    grid.getStore().reload();
+                                  },
+                                  failure: function (resp) {
+                                    Ext.toast({
+                                      title: "Failed to Delete Script",
+                                      html: "<center>Failed to Delete Script</center>",
+                                      autoCloseDelay: 5000,
+                                    });
+                                    grid.getStore().reload();
+                                  },
+                                });
+                              }
+                            },
+                          });
+                        },
+                      },
+                    ],
+                  },
+                ],
+              },
+              {
+                xtype: "splitter",
+              },
+              {
+                xtype: "script",
+                itemId: "script",
+                flex: 3,
+                layout: "fit",
+              },
+            ],
+          },
+          {
             xtype: "grid",
+            title: "Packages",
+            itemId: "deps",
+            scrollable: true,
+            listeners: {
+              cellcontextmenu: function (
+                table,
+                td,
+                cellIndex,
+                record,
+                tr,
+                rowIndex,
+                e
+              ) {
+                CLIPBOARD_CONTENTS = td.innerText;
+                amfutil.copyTextdata(e);
+              },
+            },
             rbar: [
               {
+                xtype: "button",
                 iconCls: "x-fa fa-plus",
                 handler: function () {
                   var win = new Ext.window.Window({
-                    title: "Create New Script",
+                    title: "Add Dependency",
                     width: 600,
-                    height: 250,
-                    layout: "center",
+                    height: 400,
                     modal: true,
+                    layout: "fit",
                     items: [
                       {
                         xtype: "form",
+                        bodyPadding: 15,
+                        defaults: {
+                          labelWidth: 200,
+                        },
+                        scrollable: true,
                         items: [
-                          amfutil.duplicateValidation(
-                            {
-                              xtype: "textfield",
-                              fieldLabel: "Script Name",
-                              name: "name",
-                            },
-                            async function (cmp, value) {
-                              await amfutil.customValidation(
-                                cmp,
-                                value,
-                                async function () {
-                                  var resp = await amfutil.ajaxRequest({
-                                    url: "api/scripts/duplicate/",
-                                    jsonData: {
-                                      name: value,
-                                    },
-                                  });
-                                  return Ext.decode(resp.responseText);
+                          {
+                            xtype: "textfield",
+                            fieldLabel: "Dependency Name",
+                            name: "name",
+                          },
+                          {
+                            xtype: "container",
+                            items: [
+                              {
+                                xtype: "component",
+                                html: "",
+                                itemId: "resp",
+                                style: {
+                                  "white-space": "pre-wrap",
                                 },
-                                "Script Already Exists",
-                                function (val) {
-                                  if (!/^[a-z0-9]+$/i.test(val)) {
-                                    return "Script Name contains invalid characters";
-                                  }
-                                }
-                              );
-                              console.log("checking");
-
-                              return true;
-                            }
-                          ),
+                              },
+                            ],
+                          },
                         ],
                         buttons: [
                           {
-                            text: "Create",
-                            formBind: true,
-                            handler: function (btn) {
-                              var form = btn.up("form");
-                              var name = form.getValues().name;
-                              amfutil.ajaxRequest({
-                                url: "api/scripts",
+                            text: "Install",
+                            handler: async function () {
+                              var form = this.up("form");
+                              var deps = amfutil.getElementByID("deps");
+                              form.setLoading(true);
+                              var values = form.getValues();
+                              console.log(values);
+
+                              var resp = await amfutil.ajaxRequest({
+                                url: "api/deps",
                                 method: "post",
-                                jsonData: {
-                                  name: name,
-                                  data: "def run (msgdata):\n",
-                                },
-                                success: function () {
-                                  Ext.toast("Script Created");
-                                  win.close();
-
-                                  amfutil
-                                    .getElementByID("script")
-                                    .loadScript(name);
-                                  var store = amfutil
-                                    .getElementByID("scriptgrid")
-                                    .getStore();
-
-                                  store.reload();
-                                },
+                                jsonData: values,
                               });
+                              console.log(resp);
+                              var resp = Ext.decode(resp.responseText);
+
+                              amfutil.getElementByID("resp").setHtml(resp);
+                              deps.getStore().reload();
+                              form.setLoading(false);
                             },
                           },
                           {
-                            text: "Cancel",
+                            text: "Close",
                             handler: function () {
                               win.hide();
                             },
@@ -8317,35 +8550,48 @@ Ext.define("Amps.util.Grids", {
                 },
               },
               {
+                xtype: "button",
                 iconCls: "x-fa fa-refresh",
                 handler: function () {
-                  var store = amfutil.getElementByID("scriptgrid").getStore();
-                  store.reload();
-                  // store.on(
-                  //   "load",
-                  //   function () {
-                  //     amfutil.getElementByID("script").flushScripts(store);
-                  //   },
-                  //   this,
-                  //   { single: true }
-                  // );
+                  amfutil.getElementByID("deps").getStore().reload();
                 },
               },
             ],
-            flex: 1,
-            itemId: "scriptgrid",
-            store: amfutil.scriptStore(),
-            listeners: {
-              load: function () {
-                // amfutil.getElementByID("script").flushScripts(this.getStore());
-              },
-              dblclick: {
-                element: "body", //bind to the underlying body property on the panel
-                fn: function (grid, rowIndex, e, obj) {
-                  var record = grid.record.data;
-                  amfutil.getElementByID("script").loadScript(record.name);
+            tbar: [
+              {
+                xtype: "textfield",
+
+                fieldLabel: "Filter",
+                listeners: {
+                  change: function (scope, val) {
+                    var filter = new Ext.util.Filter({
+                      filterFn: function (item) {
+                        return item.data.name.includes(val);
+                      },
+                    });
+
+                    var st = amfutil.getElementByID("deps").getStore();
+                    st.clearFilter();
+                    st.filter(filter);
+                  },
                 },
               },
+            ],
+            store: {
+              proxy: {
+                type: "rest",
+                url: `/api/deps`,
+                headers: {
+                  Authorization: localStorage.getItem("access_token"),
+                },
+                reader: {
+                  type: "json",
+                },
+                listeners: {
+                  exception: amfutil.refresh_on_failure,
+                },
+              },
+              autoLoad: true,
             },
             columns: [
               {
@@ -8354,20 +8600,104 @@ Ext.define("Amps.util.Grids", {
                 flex: 1,
               },
               {
-                text: "Size",
-                dataIndex: "size",
+                text: "Version",
+                dataIndex: "version",
                 flex: 1,
               },
+              {
+                xtype: "actioncolumn",
+                items: [
+                  {
+                    iconCls: "x-fa fa-trash",
+                    handler: function (grid, rowIndex) {
+                      var rec = grid.getStore().getAt(rowIndex);
+
+                      Ext.MessageBox.show({
+                        title: "Remove Package",
+                        message: `Are you sure you want to remove ${rec.data.name}?`,
+                        buttons: Ext.MessageBox.YESNO,
+                        defaultFocus: "#no",
+                        prompt: false,
+                        fn: function (btn) {
+                          if (btn == "yes") {
+                            var win = new Ext.window.Window({
+                              title: "Uninstalling Package",
+                              loading: true,
+                              scrollable: true,
+                              width: 600,
+                              height: 500,
+                              padding: 25,
+                              modal: true,
+                              items: [
+                                {
+                                  xtype: "component",
+                                  itemId: "delresp",
+                                  style: {
+                                    "white-space": "pre-wrap",
+                                  },
+                                },
+                              ],
+                              buttons: [
+                                {
+                                  xtype: "button",
+                                  text: "Close",
+                                  handler: function () {
+                                    win.close();
+                                  },
+                                },
+                              ],
+                              listeners: {
+                                afterrender: function () {
+                                  this.setLoading(true);
+                                  amfutil.ajaxRequest({
+                                    url: `api/deps/${rec.data.name}`,
+                                    headers: {
+                                      Authorization:
+                                        localStorage.getItem("access_token"),
+                                    },
+                                    method: "DELETE",
+                                    timeout: 60000,
+                                    params: {},
+                                    success: async (resp) => {
+                                      this.setLoading(false);
+                                      Ext.toast({
+                                        title: "Uninstalled Dependency",
+                                        html: "<center>Uninstall Dependency</center>",
+                                        autoCloseDelay: 5000,
+                                      });
+                                      var resp = Ext.decode(resp.responseText);
+                                      amfutil
+                                        .getElementByID("delresp")
+                                        .setHtml(resp);
+                                      grid.getStore().reload();
+                                    },
+                                    failure: function (resp) {
+                                      this.setLoading(false);
+                                      var resp = Ext.decode(resp.responseText);
+                                      amfutil
+                                        .getElementByID("delresp")
+                                        .setHtml(resp);
+                                      Ext.toast({
+                                        title:
+                                          "Failed to Uninstalled Dependency",
+                                        html: "<center>Failed to Uninstalled Dependency</center>",
+                                        autoCloseDelay: 5000,
+                                      });
+                                      grid.getStore().reload();
+                                    },
+                                  });
+                                },
+                              },
+                            });
+                            win.show();
+                          }
+                        },
+                      });
+                    },
+                  },
+                ],
+              },
             ],
-          },
-          {
-            xtype: "splitter",
-          },
-          {
-            xtype: "script",
-            itemId: "script",
-            flex: 3,
-            layout: "fit",
           },
         ],
       },

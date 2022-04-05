@@ -1,12 +1,7 @@
 defmodule AmpsWeb.ScriptController do
   use AmpsWeb, :controller
   require Logger
-  import Argon2
-  alias Amps.DB
-  alias AmpsWeb.Encryption
-  alias Amps.SvcManager
-  alias Amps.VaultDatabase
-  alias AmpsWeb.Util
+  alias AmpsWeb.Python
 
   @symbols '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMOPQRSTUVWXYZ$@!@#$%&*'
 
@@ -81,8 +76,71 @@ defmodule AmpsWeb.ScriptController do
     json(conn, :ok)
   end
 
+  def delete(conn, %{"id" => name}) do
+    script = get_path(name, conn.assigns().env)
+    :ok = File.rm(script)
+    json(conn, :ok)
+  end
+
   def get_path(name, env) do
     Path.join([Amps.Defaults.get("python_path"), env, name <> ".py"])
+  end
+
+  def get_deps(conn, _params) do
+    {res, _code} = System.cmd("python", ["-m", "pip", "list"])
+
+    res =
+      res
+      |> String.split("\n")
+      |> List.delete_at(0)
+      |> List.delete_at(0)
+
+    res =
+      res
+      |> List.delete_at(Enum.count(res) - 1)
+      |> Enum.map(fn piece ->
+        [name, version] = String.split(piece, ~r/\s+/)
+        %{"name" => name, "version" => version}
+      end)
+
+    json(conn, res)
+  end
+
+  def install_dep(conn, %{"name" => name}) do
+    args = ["-m", "pip", "install", name]
+    Logger.info("Installing python package #{name}")
+
+    {res, code} = System.cmd("python", args, stderr_to_stdout: true)
+
+    case code do
+      0 ->
+        Logger.info("Successfully Installed python package #{name}")
+
+      _ ->
+        Logger.error("Failed to install python package #{name}")
+    end
+
+    IO.inspect(res)
+    json(conn, res)
+  end
+
+  def uninstall_dep(conn, %{"name" => name}) do
+    Logger.info("Uninstalling python package #{name}")
+
+    {res, code} =
+      System.cmd("python", ["-m", "pip", "uninstall", "-y", name], stderr_to_stdout: true)
+
+    IO.inspect(res)
+
+    case code do
+      0 ->
+        Logger.info("Successfully Uninstalled python package #{name}")
+
+      _ ->
+        Logger.error("Failed to uninstall python package #{name}")
+    end
+
+    json(conn, res)
   end
 
   # def index(conn, _params) do

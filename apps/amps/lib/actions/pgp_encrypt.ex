@@ -1,7 +1,7 @@
 defmodule PGPEncrypt do
   require Logger
 
-  def run(msg, parms, state) do
+  def run(msg, parms, {state, env}) do
     # Logger.info("input #{inspect(msg)}")
 
     {:ok, newmsg} = encrypt(msg, parms, state)

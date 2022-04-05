@@ -4,9 +4,7 @@ import subprocess
 import threading
 import sys
 
-from tornado import ioloop, process, web, websocket
-
-from pyls_jsonrpc import streams
+from pylsp_jsonrpc import streams
 
 import json
 
@@ -50,7 +48,7 @@ class ServerComm():
         # log.info("Spawning pyls subprocess")
 
         # Create an instance of the language server
-        proc = process.Subprocess(
+        proc = subprocess.Popen(
             ['pylsp'],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE
@@ -63,9 +61,9 @@ class ServerComm():
 
         def consume():
             # Start a tornado IOLoop for reading/writing to the process in this thread
-            ioloop.IOLoop()
-            reader = streams.JsonRpcStreamReader(proc.stdout)
-            reader.listen(lambda msg: self.write_message(msg))
+            while True:
+                reader = streams.JsonRpcStreamReader(proc.stdout)
+                reader.listen(lambda msg: self.write_message(msg))
 
         thread = threading.Thread(target=consume)
         thread.daemon = True

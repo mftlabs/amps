@@ -55,7 +55,11 @@ defmodule Amps.EnvSvcManager do
         pids ->
           Enum.each(pids, fn pid ->
             IO.inspect(pid)
-            DynamicSupervisor.terminate_child(String.to_atom("#{state}-svcspvsr"), pid)
+
+            DynamicSupervisor.terminate_child(
+              String.to_atom("#{state}-svcspvsr"),
+              pid
+            )
           end)
 
           AmpsEvents.send_history(
@@ -81,9 +85,13 @@ defmodule Amps.EnvSvcManager do
           IO.inspect(res)
           res
 
-          DB.find_one_and_update(AmpsUtil.index(state, "services"), %{"name" => name}, %{
-            "active" => true
-          })
+          DB.find_one_and_update(
+            AmpsUtil.index(state, "services"),
+            %{"name" => name},
+            %{
+              "active" => true
+            }
+          )
 
         pid ->
           {:error, "Service Already Running #{inspect(pid)}"}
@@ -135,7 +143,7 @@ defmodule Amps.EnvSvcManager do
 
             {Plug.Cowboy,
              scheme: :https,
-             plug: types[:httpd],
+             plug: {types[:httpd], [env: env, opts: args]},
              options: [
                ref: name,
                port: args["port"],
@@ -148,7 +156,7 @@ defmodule Amps.EnvSvcManager do
           else
             {Plug.Cowboy,
              scheme: :http,
-             plug: types[:httpd],
+             plug: {types[:httpd], [env: env, opts: args]},
              options: [
                ref: name,
                port: args["port"],
@@ -157,7 +165,11 @@ defmodule Amps.EnvSvcManager do
           end
 
         :kafka ->
-          provider = DB.find_one(AmpsUtil.index(env, "providers"), %{"_id" => args["provider"]})
+          provider =
+            DB.find_one(AmpsUtil.index(env, "providers"), %{
+              "_id" => args["provider"]
+            })
+
           auth_opts = AmpsUtil.get_kafka_auth(args, provider)
 
           spec = %{

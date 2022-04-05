@@ -104,6 +104,10 @@ defmodule AmpsWeb.Router do
     post("/environments/clear/:name", DataController, :clear_env)
     post("/environments/export/:env", DataController, :export_env)
 
+    get("/deps", ScriptController, :get_deps)
+    post("/deps", ScriptController, :install_dep)
+    delete("/deps/:name", ScriptController, :uninstall_dep)
+
     post("/scripts/duplicate/", ScriptController, :duplicate)
     resources("/scripts/", ScriptController, except: [:new, :edit])
 

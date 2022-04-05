@@ -2244,7 +2244,7 @@ Ext.define("Amps.util.Utilities", {
 
   renderListeners: function (render, ar, change) {
     return {
-      beforerender: function (scope) {
+      afterrender: function (scope) {
         var val = scope.getValue();
         render(scope, val);
         if (ar) {
@@ -3084,9 +3084,8 @@ Ext.define("Amps.util.Utilities", {
     return filters;
   },
 
-  copyTextdata: function (e) {
+  copyTextdata: function (e, extra = []) {
     var contextMenu = Ext.create("Ext.menu.Menu", {
-      width: 100,
       items: [
         {
           text: "Copy",
@@ -3096,7 +3095,7 @@ Ext.define("Amps.util.Utilities", {
             navigator.clipboard.writeText(input).then(function () {});
           },
         },
-      ],
+      ].concat(extra),
     });
     e.stopEvent();
     contextMenu.showAt(e.pageX, e.pageY);
@@ -3122,13 +3121,15 @@ Ext.define("Amps.util.Utilities", {
     return str.charAt(0).toUpperCase() + str.slice(1);
   },
 
-  consumerConfig(topicfilter, tooltip) {
+  consumerConfig(topicfilter, tooltip, msg = null) {
     return {
       xtype: "fieldset",
       title: "Consumer Config",
       items: [
         amfutil.infoBlock(
-          'Certain rules, actions, or services require the creation of a topic consumer which determines which subset of events to process. This block allows for the configuration of that subscriber and changing any of these values after creation will result in the creation of a new consumer. (i.e. If the consumer is configured with a Deliver Policy of "All" and 50 messages are consumed, updating the consumer config and leaving the delivery policy of "All" will result in the reprocessing of those messages.)'
+          msg
+            ? msg
+            : 'Certain rules, actions, or services require the creation of a topic consumer which determines which subset of events to process. This block allows for the configuration of that subscriber and changing any of these values after creation will result in the creation of a new consumer. (i.e. If the consumer is configured with a Deliver Policy of "All" and 50 messages are consumed, updating the consumer config and leaving the delivery policy of "All" will result in the reprocessing of those messages.)'
         ),
         {
           xtype: "displayfield",

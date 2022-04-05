@@ -26,3 +26,4 @@ erl_crash.dump
 /docker/amps_ufa.tar.gz
 /Mnesia*
 
+apps/amps_web/priv/static/images/logo

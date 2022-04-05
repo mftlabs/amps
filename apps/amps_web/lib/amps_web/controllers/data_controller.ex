@@ -737,15 +737,10 @@ defmodule AmpsWeb.DataController do
         service = DB.find_one(collection, %{"_id" => id})
 
         if service["type"] == "subscriber" do
-          if old["topic"] != service["topic"] do
-            {stream, consumer} = AmpsUtil.get_names(body, conn.assigns().env)
-            AmpsUtil.delete_consumer(stream, consumer)
+          if service["updated"] do
+            Util.delete_config_consumer(body, conn.assigns().env)
 
-            AmpsUtil.create_consumer(
-              stream,
-              consumer,
-              AmpsUtil.env_topic(service["topic"], conn.assigns().env)
-            )
+            Util.create_config_consumer(body, conn.assigns().env)
           end
         end
 
@@ -816,8 +811,7 @@ defmodule AmpsWeb.DataController do
         end
 
         if object["type"] == "subscriber" do
-          {stream, consumer} = AmpsUtil.get_names(object)
-          AmpsUtil.delete_consumer(stream, consumer)
+          Util.delete_config_consumer(object, conn.assigns().env)
         end
 
       "actions" ->

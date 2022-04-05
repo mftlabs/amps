@@ -2,9 +2,9 @@ defmodule SftpAction do
   require Logger
 
   @doc """
-  
+
   sftp client action parms may contain the following...
-  
+
   connect_timeout - opt
   host - required
   password - opt or key_name
@@ -12,10 +12,10 @@ defmodule SftpAction do
   operation_timeout - opt
   port - required
   user - required
-  
+
   """
 
-  def run(msg, parms, _state) do
+  def run(msg, parms, {state, env}) do
     Logger.info("SFTP action called")
 
     config = get_config(parms)

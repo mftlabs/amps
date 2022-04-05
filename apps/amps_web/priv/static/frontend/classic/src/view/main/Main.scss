@@ -192,6 +192,29 @@ $border-layout-ct-background-color: white;
     background-color: var(--secondary-color);
     border-color: var(--secondary-color);
   }
+
+  &.x-btn-default-toolbar-small {
+    .x-btn-icon-el-default-toolbar-small {
+      color: white;
+    }
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+  }
+  &.x-btn-default-toolbar-medium {
+    .x-btn-icon-el-default-toolbar-medium {
+      color: white;
+    }
+    color: white;
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+  }
+  &.x-btn-default-toolbar-large {
+    .x-btn-icon-el-default-toolbar-large {
+      color: white;
+    }
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+  }
 }
 
                         

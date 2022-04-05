@@ -262,8 +262,8 @@ defmodule AmpsWeb.Util do
       # VaultDatabase.vault_store_key(conn.body_params(), collection, "account", "cred")
       "services" ->
         if body["type"] == "subscriber" do
-          {stream, consumer} = AmpsUtil.get_names(body, env)
-          AmpsUtil.create_consumer(stream, consumer, AmpsUtil.env_topic(body["topic"], env))
+          create_config_consumer(body, env)
+          body
         end
 
         body
@@ -277,6 +277,10 @@ defmodule AmpsWeb.Util do
     case base_index(env, collection) do
       "services" ->
         types = SvcManager.service_types()
+
+        DB.find_one_and_update(Util.index(env, "services"), %{"name" => body["name"]}, %{
+          "updated" => false
+        })
 
         topic =
           if env == "" do
@@ -412,5 +416,31 @@ defmodule AmpsWeb.Util do
   def get_logo() do
     sysconfig = DB.find_one("config", %{"name" => "SYSTEM"})
     Base.decode64(sysconfig["logo"])
+  end
+
+  def create_config_consumer(body, env \\ nil) do
+    {stream, consumer} =
+      AmpsUtil.get_names(%{"name" => body["name"], "topic" => body["topic"]}, env)
+
+    opts =
+      if body["policy"] == "by_start_time" do
+        %{
+          deliver_policy: String.to_atom(body["policy"]),
+          opt_start_time: body["start_time"]
+        }
+      else
+        %{
+          deliver_policy: String.to_atom(body["policy"])
+        }
+      end
+
+    AmpsUtil.create_consumer(stream, consumer, AmpsUtil.env_topic(body["topic"], env), opts)
+  end
+
+  def delete_config_consumer(body, env \\ nil) do
+    {stream, consumer} =
+      AmpsUtil.get_names(%{"name" => body["name"], "topic" => body["topic"]}, env)
+
+    AmpsUtil.delete_consumer(stream, consumer)
   end
 end
