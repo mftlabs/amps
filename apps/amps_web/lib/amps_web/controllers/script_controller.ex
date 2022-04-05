@@ -87,7 +87,7 @@ defmodule AmpsWeb.ScriptController do
   end
 
   def get_deps(conn, _params) do
-    {res, _code} = System.cmd("python", ["-m", "pip", "list"])
+    {res, _code} = System.cmd("python3", ["-m", "pip", "list"])
 
     res =
       res
@@ -110,7 +110,7 @@ defmodule AmpsWeb.ScriptController do
     args = ["-m", "pip", "install", name]
     Logger.info("Installing python package #{name}")
 
-    {res, code} = System.cmd("python", args, stderr_to_stdout: true)
+    {res, code} = System.cmd("python3", args, stderr_to_stdout: true)
 
     case code do
       0 ->
@@ -128,7 +128,7 @@ defmodule AmpsWeb.ScriptController do
     Logger.info("Uninstalling python package #{name}")
 
     {res, code} =
-      System.cmd("python", ["-m", "pip", "uninstall", "-y", name], stderr_to_stdout: true)
+      System.cmd("python3", ["-m", "pip", "uninstall", "-y", name], stderr_to_stdout: true)
 
     IO.inspect(res)
 

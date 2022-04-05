@@ -1507,6 +1507,7 @@ Ext.define("Amps.Pages", {
       console.log(store);
 
       return {
+        sorters: [{ property: "etime", direction: "DESC" }],
         actionbar: [
           amfutil.searchbtn("main-grid"),
           {

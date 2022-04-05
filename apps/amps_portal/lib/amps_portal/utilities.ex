@@ -118,7 +118,7 @@ defmodule AmpsPortal.Util do
   def create_filter(qp, filter) do
     filters = Jason.decode!(Map.get(qp, "filters", "{}"))
 
-    Map.put(qp, "filters", Jason.encode!(Map.merge(filters, filter)))
+    Map.put(qp, "params", Jason.encode!(%{filters: Map.merge(filters, filter)}))
   end
 
   def conn_index(conn, index) do

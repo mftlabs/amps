@@ -1502,6 +1502,7 @@ Ext.define("Amps.Utilities", {
 
   setGridStore: function (filters, config) {
     // console.log(filters);
+    console.log(config);
     var route = Ext.util.History.currentToken;
     var grid = amfutil.getElementByID("main-grid");
     grid.setStore(
@@ -1509,6 +1510,7 @@ Ext.define("Amps.Utilities", {
         start: 0,
         limit: 25,
         remoteSort: true,
+        sorters: config["sorters"] ? config["sorters"] : [],
         proxy: {
           type: "rest",
           headers: {

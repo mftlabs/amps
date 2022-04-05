@@ -27,3 +27,4 @@ erl_crash.dump
 /Mnesia*
 
 apps/amps_web/priv/static/images/logo
+apps/amps_portal/priv/static/images/logo
