@@ -65,25 +65,26 @@ defmodule AmpsWeb.ScriptController do
     resp = File.mkdir_p!(Path.dirname(script))
     IO.inspect(resp)
     IO.inspect(script)
-data =
-    if body["data"] && body["data"] != "" do
-      body["data"]
-    else
-      if body["template"] do
-        template =
-          DB.find_one(Util.index(conn.assigns().env, "templates"), %{"name" => body["template"]})
 
-        case template do
-          nil ->
-            "import json\nimport os\nimport uuid\n\n# msgdata is a JSON encoded object with two keys:\n# \"msg\" which contains the message data and\n# \"action\" which contains the action configuration.\n# extra is a JSON encoded object with the extra parameters specified in the action configuration\n\n\ndef run(msgdata):\n    msgdata = json.loads(msgdata)\n    msg = msgdata[\"msg\"]\n    parms = msgdata[\"parms\"]\n    sysparms = msgdata[\"sysparms\"]\n\n    output = action(msg, parms, sysparms)\n    return json.dumps(output)\n\n\ndef action(msg, parms, sysparms):\n    try:\n        # Action Here\n        return {\"status\": \"completed\"}\n    except Exception as e:\n        return {\"status\": \"failed\", \"reason\": str(e)}\n"
-
-          template ->
-            template["data"]
-        end
+    data =
+      if body["data"] && body["data"] != "" do
+        body["data"]
       else
-        "import json\nimport os\nimport uuid\n\n# msgdata is a JSON encoded object with two keys:\n# \"msg\" which contains the message data and\n# \"action\" which contains the action configuration.\n# extra is a JSON encoded object with the extra parameters specified in the action configuration\n\n\ndef run(msgdata):\n    msgdata = json.loads(msgdata)\n    msg = msgdata[\"msg\"]\n    parms = msgdata[\"parms\"]\n    sysparms = msgdata[\"sysparms\"]\n\n    output = action(msg, parms, sysparms)\n    return json.dumps(output)\n\n\ndef action(msg, parms, sysparms):\n    try:\n        # Action Here\n        return {\"status\": \"completed\"}\n    except Exception as e:\n        return {\"status\": \"failed\", \"reason\": str(e)}\n"
+        if body["template"] do
+          template =
+            DB.find_one(Util.index(conn.assigns().env, "templates"), %{"name" => body["template"]})
+
+          case template do
+            nil ->
+              "import json\nimport os\nimport uuid\n\n# msgdata is a JSON encoded object with two keys:\n# \"msg\" which contains the message data and\n# \"action\" which contains the action configuration.\n# extra is a JSON encoded object with the extra parameters specified in the action configuration\n\n\ndef run(msgdata):\n    msgdata = json.loads(msgdata)\n    msg = msgdata[\"msg\"]\n    parms = msgdata[\"parms\"]\n    sysparms = msgdata[\"sysparms\"]\n\n    output = action(msg, parms, sysparms)\n    return json.dumps(output)\n\n\ndef action(msg, parms, sysparms):\n    try:\n        # Action Here\n        return {\"status\": \"completed\"}\n    except Exception as e:\n        return {\"status\": \"failed\", \"reason\": str(e)}\n"
+
+            template ->
+              template["data"]
+          end
+        else
+          "import json\nimport os\nimport uuid\n\n# msgdata is a JSON encoded object with two keys:\n# \"msg\" which contains the message data and\n# \"action\" which contains the action configuration.\n# extra is a JSON encoded object with the extra parameters specified in the action configuration\n\n\ndef run(msgdata):\n    msgdata = json.loads(msgdata)\n    msg = msgdata[\"msg\"]\n    parms = msgdata[\"parms\"]\n    sysparms = msgdata[\"sysparms\"]\n\n    output = action(msg, parms, sysparms)\n    return json.dumps(output)\n\n\ndef action(msg, parms, sysparms):\n    try:\n        # Action Here\n        return {\"status\": \"completed\"}\n    except Exception as e:\n        return {\"status\": \"failed\", \"reason\": str(e)}\n"
+        end
       end
-    end
 
     resp = File.write(script, data)
     IO.inspect(resp)
@@ -120,8 +121,8 @@ data =
       res
       |> List.delete_at(Enum.count(res) - 1)
       |> Enum.map(fn piece ->
-        [name, version] = String.split(piece, ~r/\s+/)
-        %{"name" => name, "version" => version}
+        pieces = String.split(piece, ~r/\s+/)
+        %{"name" => Enum.at(pieces, 0), "version" => Enum.at(pieces, 1)}
       end)
 
     json(conn, res)
