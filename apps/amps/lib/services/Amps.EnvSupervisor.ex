@@ -120,7 +120,19 @@ defmodule Amps.EnvSupervisor do
         "subs_count" => 3,
         "topic" => "amps.mailbox.>",
         "receipt" => true,
-        "index" => "message_events"
+        "index" => ["message_events", "mailbox"],
+        "doc" => fn topic, data ->
+          pieces =
+            String.split(topic, ".")
+            |> Enum.take(-2)
+
+          Map.merge(data, %{
+            "recipient" => Enum.at(pieces, 0),
+            "status" => "mailboxed",
+            "mailbox" => Enum.at(pieces, 1),
+            "mtime" => DateTime.utc_now() |> DateTime.to_iso8601()
+          })
+        end
       },
       %{
         "name" => "data_handler",

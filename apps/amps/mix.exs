@@ -65,7 +65,8 @@ defmodule Amps.MixProject do
         github: "datapio/opencore", ref: "main", sparse: "apps/datapio_cluster"
       },
       {:mnesiac, git: "https://github.com/aram0112/mnesiac"},
-      {:kafka_ex, git: "https://github.com/aram0112/kafka_ex"}
+      {:kafka_ex, git: "https://github.com/aram0112/kafka_ex"},
+      {:cors_plug, "~> 2.0"}
     ]
   end
 

@@ -175,14 +175,10 @@ defmodule Amps.PullConsumer do
           msg = data["msg"]
           mctx = {data["state"], state.env}
           action_id = parms["handler"]
-          actparms = Amps.DB.find_by_id(AmpsUtil.index(state.env, "actions"), action_id)
 
           actparms =
-            if actparms["output"] do
-              Map.put(actparms, "output", AmpsUtil.env_topic(actparms["output"], state.env))
-            else
-              actparms
-            end
+            Amps.DB.find_by_id(AmpsUtil.index(state.env, "actions"), action_id)
+            |> AmpsUtil.convert_output(state.env)
 
           AmpsEvents.send_history(
             AmpsUtil.env_topic("amps.events.action", state.env),

@@ -109,9 +109,10 @@ defmodule Amps.EnvSvcManager do
   def get_spec(name, args, env) do
     types = service_types()
     IO.inspect(args)
+    type = String.to_atom(args["type"])
 
     try do
-      case String.to_atom(args["type"]) do
+      case type do
         #      :sftpd ->
         #        {types[:sftpd], name: name, parms: args}
 
@@ -157,6 +158,55 @@ defmodule Amps.EnvSvcManager do
             {Plug.Cowboy,
              scheme: :http,
              plug: {types[:httpd], [env: env, opts: args]},
+             options: [
+               ref: name,
+               port: args["port"],
+               protocol_options: protocol_options
+             ]}
+          end
+
+        :gateway ->
+          IO.inspect(args)
+
+          protocol_options = [
+            idle_timeout: args["idle_timeout"],
+            request_timeout: args["request_timeout"],
+            max_keepalive: args["max_keepalive"]
+          ]
+
+          if args["tls"] do
+            {cert, key} =
+              try do
+                cert = AmpsUtil.get_key(args["cert"], env)
+                key = AmpsUtil.get_key(args["key"], env)
+
+                cert = X509.Certificate.from_pem!(cert) |> X509.Certificate.to_der()
+
+                key = X509.PrivateKey.from_pem!(key)
+                keytype = Kernel.elem(key, 0)
+                key = X509.PrivateKey.to_der(key)
+                {cert, {keytype, key}}
+              rescue
+                e ->
+                  raise "Error parsing key and/or certificate"
+              end
+
+            {Plug.Cowboy,
+             scheme: :https,
+             plug: {types[:gateway], [env: env, opts: args]},
+             options: [
+               ref: name,
+               port: args["port"],
+               cipher_suite: :strong,
+               cert: cert,
+               key: key,
+               otp_app: :amps,
+               protocol_options: protocol_options
+             ]}
+          else
+            {Plug.Cowboy,
+             scheme: :http,
+             plug: {types[:gateway], [env: env, opts: args]},
              options: [
                ref: name,
                port: args["port"],

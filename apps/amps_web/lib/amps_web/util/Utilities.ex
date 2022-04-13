@@ -33,14 +33,10 @@ defmodule AmpsWeb.Util do
             "output",
             "store_headers",
             "format",
-            "headers",
-            "oauth",
-            "oauthurl",
-            "oauthuser",
-            "oauthpassword"
+            "headers"
           ],
           "kafkaput" => ["provider", "topic"],
-          "mailbox" => ["recipient", "format"],
+          "mailbox" => ["recipient", "mailbox", "format"],
           "pgpdecrypt" => ["key", "passphrase", "verify", "signing_key", "format", "output"],
           "pgpencrypt" => [
             "key",
@@ -52,7 +48,16 @@ defmodule AmpsWeb.Util do
             "output"
           ],
           "router" => ["parse_edi", "rules"],
-          "runscript" => ["script_type", "module", "send_output", "output", "format", "parms"],
+          "runscript" => [
+            "script_type",
+            "module",
+            "send_output",
+            "output",
+            "format",
+            "use_provider",
+            "provider",
+            "parms"
+          ],
           "s3" => [
             "provider",
             "operation",
@@ -83,7 +88,7 @@ defmodule AmpsWeb.Util do
         }
       },
       "customers" => %{
-        "headers" => ["name", "phone", "email", "active"],
+        "headers" => ["name", "phone", "email"],
         "subgrids" => nil,
         "types" => nil
       },
@@ -106,6 +111,7 @@ defmodule AmpsWeb.Util do
         "headers" => ["name", "desc", "type"],
         "subgrids" => nil,
         "types" => %{
+          "generic" => ["values"],
           "kafka" => [
             "brokers",
             "auth",
@@ -116,19 +122,7 @@ defmodule AmpsWeb.Util do
             "cert",
             "key"
           ],
-          "s3" => [
-            "provider",
-            "scheme",
-            "host",
-            "port",
-            "region",
-            "key",
-            "secret",
-            "proxy",
-            "proxy_url",
-            "proxy_username",
-            "proxy_password"
-          ],
+          "s3" => ["provider", "scheme", "host", "port", "region", "key", "secret"],
           "sharepoint" => ["tenant", "client_id", "client_secret"]
         }
       },
@@ -138,21 +132,13 @@ defmodule AmpsWeb.Util do
         "types" => nil
       },
       "scheduler" => %{
-        "headers" => [
-          "name",
-          "active",
-          "type",
-          "time",
-          "daily",
-          "weekdays",
-          "value",
-          "unit",
-          "days",
-          "topic",
-          "meta"
-        ],
+        "headers" => ["name", "active", "topic", "meta", "type"],
         "subgrids" => nil,
-        "types" => nil
+        "types" => %{
+          "daily" => ["time", "daily", "weekdays"],
+          "days" => ["time", "days"],
+          "timer" => ["value", "unit"]
+        }
       },
       "scripts" => %{
         "headers" => ["name", "data"],
@@ -163,6 +149,17 @@ defmodule AmpsWeb.Util do
         "headers" => ["name", "desc", "active", "type"],
         "subgrids" => nil,
         "types" => %{
+          "gateway" => [
+            "port",
+            "idle_timeout",
+            "request_timeout",
+            "max_keepalive",
+            "tls",
+            "cert",
+            "key",
+            "router",
+            "communication"
+          ],
           "httpd" => [
             "port",
             "idle_timeout",
@@ -175,8 +172,13 @@ defmodule AmpsWeb.Util do
           ],
           "kafka" => ["provider", "topics", "format", "communication"],
           "sftpd" => ["port", "server_key", "communication"],
-          "subscriber" => ["subs_count", "handler", "topic"]
+          "subscriber" => ["subs_count", "handler", "updated", "policy", "start_time"]
         }
+      },
+      "templates" => %{
+        "headers" => ["name", "desc", "data"],
+        "subgrids" => nil,
+        "types" => nil
       },
       "topics" => %{
         "headers" => ["type", "topic", "desc"],
@@ -200,6 +202,11 @@ defmodule AmpsWeb.Util do
           "ufa/max"
         ],
         "subgrids" => %{
+          "mailboxes" => %{
+            "headers" => ["name", "desc"],
+            "subgrids" => nil,
+            "types" => nil
+          },
           "rules" => %{
             "headers" => ["name", "type", "active"],
             "subgrids" => nil,
@@ -208,6 +215,7 @@ defmodule AmpsWeb.Util do
                 "fpoll",
                 "subs_count",
                 "updated",
+                "mailbox",
                 "topic",
                 "policy",
                 "start_time",
@@ -250,7 +258,9 @@ defmodule AmpsWeb.Util do
       "actions",
       "services",
       "scheduler",
-      "users/rules"
+      "templates",
+      "users/rules",
+      "users/mailboxes"
     ]
   end
 
@@ -278,9 +288,11 @@ defmodule AmpsWeb.Util do
       "services" ->
         types = SvcManager.service_types()
 
-        DB.find_one_and_update(Util.index(env, "services"), %{"name" => body["name"]}, %{
-          "updated" => false
-        })
+        if body["type"] == "subscriber" do
+          DB.find_one_and_update(Util.index(env, "services"), %{"name" => body["name"]}, %{
+            "updated" => false
+          })
+        end
 
         topic =
           if env == "" do
@@ -311,6 +323,79 @@ defmodule AmpsWeb.Util do
 
       "environments" ->
         Amps.EnvManager.start_env(body["name"])
+
+      _ ->
+        nil
+    end
+  end
+
+  def before_update(collection, id, body, env, old) do
+    case base_index(env, collection) do
+      "actions" ->
+        case old["type"] do
+          "batch" ->
+            Util.delete_batch_consumer(old)
+            body
+
+          _ ->
+            body
+        end
+
+      _ ->
+        body
+    end
+  end
+
+  def after_update(collection, id, body, env, old) do
+    case base_index(env, collection) do
+      "config" ->
+        config = DB.find_one("config", %{"_id" => id})
+
+        if config["name"] == "SYSTEM" do
+          Amps.SvcManager.load_system_parms()
+        end
+
+      "services" ->
+        service = DB.find_one(collection, %{"_id" => id})
+
+        if service["type"] == "subscriber" do
+          if service["updated"] do
+            Util.delete_config_consumer(old, env)
+
+            Util.create_config_consumer(body, env)
+          end
+        end
+
+        types = SvcManager.service_types()
+
+        if Map.has_key?(service, "type") do
+          if Map.has_key?(types, String.to_atom(service["type"])) do
+            Gnat.pub(
+              :gnat,
+              AmpsUtil.env_topic(
+                "amps.events.svcs.handler.#{service["name"]}.restart",
+                env
+              ),
+              ""
+            )
+          end
+        end
+
+      "actions" ->
+        # _action = DB.find_one(Util.index(conn.assigns().env, "actions"), %{"_id" => id})
+
+        if body["type"] == "batch" do
+          Util.create_batch_consumer(body)
+        end
+
+      "scheduler" ->
+        case env do
+          "" ->
+            Amps.Scheduler.update(body["name"])
+
+          env ->
+            Amps.EnvScheduler.update(body["name"], env)
+        end
 
       _ ->
         nil
@@ -442,5 +527,41 @@ defmodule AmpsWeb.Util do
       AmpsUtil.get_names(%{"name" => body["name"], "topic" => body["topic"]}, env)
 
     AmpsUtil.delete_consumer(stream, consumer)
+  end
+
+  def test() do
+    service = %{
+      "router" => [
+        %{
+          "method" => "POST",
+          "path" => "place/it",
+          "script" => %{
+            "module" => "sqlpost",
+            "parms" => %{},
+            "provider" => "cw-DAYABhcJry1M9LMrG",
+            "script_type" => "python",
+            "use_provider" => true
+          }
+        },
+        %{
+          "method" => "GET",
+          "path" => "place/it/:table/:id",
+          "script" => %{
+            "module" => "sqlget",
+            "parms" => %{},
+            "provider" => "cw-DAYABhcJry1M9LMrG",
+            "script_type" => "python",
+            "use_provider" => true
+          }
+        }
+      ],
+      "name" => "httpapi"
+    }
+
+    Plug.Cowboy.http(Amps.Gateway, [env: "giftshop", opts: service],
+      ref: "test",
+      port: 4444,
+      otp_app: :amps
+    )
   end
 end

@@ -47,6 +47,7 @@ defmodule AmpsPortal.Router do
     post("/users/link/:email", UserController, :send_user_link)
     post("/users/password", UserController, :reset_password)
     post("/ufa/login", UFAController, :agent_login)
+    get("/duplicate_username/:username", UserController, :duplicate_username)
   end
 
   scope "/api", AmpsPortal do
@@ -62,12 +63,15 @@ defmodule AmpsPortal.Router do
     get("/ufa/download/:rule", UFAController, :handle_download)
     get("/ufa/agent", UFAController, :get_agent)
     get("/tokens", UserController, :get_tokens)
+    resources("/mailboxes", MailboxController, except: [:new, :edit])
     get("/tokens/secret/:id", UserController, :get_token_secret)
 
     post("/tokens", UserController, :create_token)
     delete("/tokens/:id", UserController, :delete_token)
 
     get("/inbox", DataController, :get_messages)
+    get("/inbox/:mailbox", DataController, :get_messages)
+
     get("/ufa_logs", DataController, :ufa_logs)
     get("/user", UserController, :get)
     put("/user", UserController, :update)

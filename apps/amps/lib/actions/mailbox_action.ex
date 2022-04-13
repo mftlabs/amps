@@ -3,25 +3,29 @@ defmodule MailboxAction do
 
   def run(msg, parms, {state, env}) do
     recipient = parms["recipient"] || "unknown"
+    mailbox = parms["mailbox"]
 
-    case AmpsAuth.mailbox_info(recipient, env) do
+    case AmpsAuth.mailbox_info(recipient, mailbox, env) do
       nil ->
-        Logger.warning("mailbox not found for #{recipient}")
+        Logger.warning("mailbox #{mailbox} not found for #{recipient}")
         {:error, "recipient does not have a registered mailbox #{recipient}"}
 
       _found ->
         newmsg =
           Map.merge(msg, %{
-            "recipient" => recipient,
-            "status" => "mailboxed",
-            "fname" => AmpsUtil.format(parms["format"], msg),
-            "mtime" => DateTime.utc_now() |> DateTime.to_iso8601()
+            "fname" => AmpsUtil.format(parms["format"], msg)
           })
 
-        AmpsMailbox.add_message(recipient, newmsg, env)
+        AmpsEvents.send(
+          newmsg,
+          %{"output" => AmpsUtil.env_topic("amps.mailbox.#{recipient}.#{mailbox}", env)},
+          state
+        )
+
+        # AmpsMailbox.add_message(recipient, newmsg, env)
         Logger.warning("put message in mailbox #{recipient}")
 
-        {:ok, "mailboxed with recipient #{recipient}"}
+        {:ok, "mailboxed with recipient #{recipient} to mailbox #{mailbox}"}
     end
   end
 end

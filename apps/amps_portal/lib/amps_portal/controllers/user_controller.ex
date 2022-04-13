@@ -216,4 +216,11 @@ defmodule AmpsPortal.UserController do
         json(conn, :ok)
     end
   end
+
+  def duplicate_username(conn, %{"username" => username}) do
+    body = conn.body_params()
+    duplicate = DB.find_one(Util.conn_index(conn, "users"), %{"username" => username}) != nil
+
+    json(conn, duplicate)
+  end
 end

@@ -4,16 +4,58 @@ defmodule AmpsPortal.DataController do
   alias Amps.DB
   alias AmpsPortal.Util
 
-  def get_messages(conn, _params) do
-    # if vault_collection(collection) do
-    #   data = VaultData.get_rows("amps/" <> collection)
-    #   IO.inspect(data)
+  def get_mailboxes(conn, _params) do
+    case Pow.Plug.current_user(conn) do
+      nil ->
+        send_resp(conn, 401, "Unauthorized")
 
-    #   json(
-    #     conn,
-    #     data
-    #   )
-    # else
+      user ->
+        user = DB.find_one(Util.conn_index(conn, "users"), %{"username" => user.username})
+        json(conn, user["mailboxes"] || [])
+    end
+  end
+
+  def get_messages(conn, %{"mailbox" => mailbox}) do
+    case Pow.Plug.current_user(conn) do
+      nil ->
+        json(
+          conn,
+          %{success: false, count: 0, rows: []}
+        )
+
+      user ->
+        user = DB.find_one(Util.conn_index(conn, "users"), %{"username" => user.username})
+
+        mailbox =
+          Enum.find(user["mailboxes"], fn mb ->
+            mb["name"] == mailbox
+          end)
+
+        case mailbox do
+          nil ->
+            send_resp(conn, 404, "Mailbox not found")
+
+          mailbox ->
+            qp = conn.query_params()
+
+            qp =
+              Util.create_filter(qp, %{
+                "recipient" => user["username"],
+                "mailbox" => mailbox["name"]
+              })
+
+            conn = Map.put(conn, :query_params, qp)
+            data = DB.get_rows(conn, %{"collection" => Util.conn_index(conn, "mailbox")})
+
+            json(
+              conn,
+              data
+            )
+        end
+    end
+  end
+
+  def get_messages(conn, _params) do
     case Pow.Plug.current_user(conn) do
       nil ->
         json(
@@ -23,7 +65,7 @@ defmodule AmpsPortal.DataController do
 
       user ->
         qp = conn.query_params()
-        qp = Util.create_filter(qp, %{"mailbox" => user.username})
+        qp = Util.create_filter(qp, %{"recipient" => user.username})
         conn = Map.put(conn, :query_params, qp)
         data = DB.get_rows(conn, %{"collection" => Util.conn_index(conn, "mailbox")})
 

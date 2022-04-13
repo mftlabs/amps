@@ -81,9 +81,9 @@ defmodule AmpsPortal.Util do
   def after_token_create(user, body, env) do
     tokenid = body["id"]
     index = index(env, "tokens")
-    data = Jason.encode!(%{"uid" => user["_id"], "id" => tokenid})
+    data = Jason.encode!(%{"uid" => user["username"]})
 
-    secret = Phoenix.Token.sign(AmpsPortal.Endpoint, "auth token", data)
+    secret = Phoenix.Token.sign(AmpsPortal.Endpoint, "auth", data)
 
     case DB.find_one(index, %{"username" => user["username"]}) do
       nil ->
@@ -132,6 +132,29 @@ defmodule AmpsPortal.Util do
 
       other ->
         other <> "-" <> index
+    end
+  end
+
+  def verify_token(tokenid, token, env) do
+    {:ok, parms} = Phoenix.Token.verify(AmpsPortal.Endpoint, "auth", token, max_age: :infinity)
+    %{"uid" => username} = Jason.decode!(parms)
+
+    case DB.find_one(index(env, "tokens"), %{"username" => username}) do
+      nil ->
+        nil
+
+      secrets ->
+        if secrets[tokenid] == token do
+          case DB.find_one(index(env, "users"), %{"username" => username}) do
+            nil ->
+              nil
+
+            user ->
+              user["username"]
+          end
+        else
+          nil
+        end
     end
   end
 end

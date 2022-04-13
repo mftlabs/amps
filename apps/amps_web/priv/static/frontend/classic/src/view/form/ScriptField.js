@@ -18,6 +18,9 @@ Ext.define("Amps.container.Script", {
     // this.insert(cmp);
     console.log("inserted");
   },
+  setReadOnly: function (readOnly) {
+    this.editor.updateOptions({ readOnly: readOnly });
+  },
   setValue: function (val) {
     if (this.editor) {
       this.editor.getModel().setValue(val);
@@ -50,12 +53,13 @@ Ext.define("Amps.container.Script", {
         model: window.monaco.editor.createModel(
           this.value,
           "python",
-          window.monaco.Uri.parse(`inmemory://${this.name}.py`)
+          window.monaco.Uri.parse(`inmemory://${amfutil.uuid()}${this.name}.py`)
         ),
         glyphMargin: true,
         lightbulb: {
           enabled: true,
         },
+        readOnly: this.readOnly,
         fixedOverflowWidgets: true,
         padding: {
           top: 15,

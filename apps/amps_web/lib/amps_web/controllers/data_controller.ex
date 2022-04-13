@@ -702,82 +702,26 @@ defmodule AmpsWeb.DataController do
 
   def update(conn, %{"collection" => collection, "id" => id}) do
     old = DB.find_by_id(collection, id)
-    base_index = Util.base_index(conn.assigns().env, collection)
+    body = conn.body_params()
 
-    body =
-      case base_index do
-        "actions" ->
-          case old["type"] do
-            "batch" ->
-              Util.delete_batch_consumer(old)
-              conn.body_params()
-
-            _ ->
-              conn.body_params()
-          end
-
-        _ ->
-          conn.body_params()
-      end
+    body = Util.before_update(collection, id, body, conn.assigns().env, old)
 
     result = DB.update(collection, body, id)
 
-    case base_index do
-      "accounts" ->
-        S3.update_schedule(id)
+    Util.after_update(collection, id, body, conn.assigns().env, old)
 
-      "config" ->
-        config = DB.find_one("config", %{"_id" => id})
+    json(conn, result)
+  end
 
-        if config["name"] == "SYSTEM" do
-          Amps.SvcManager.load_system_parms()
-        end
+  def update_with_id(conn, %{"collection" => collection, "id" => id}) do
+    old = DB.find_by_id(collection, id)
+    body = conn.body_params()
 
-      "services" ->
-        service = DB.find_one(collection, %{"_id" => id})
+    body = Util.before_update(collection, id, body, conn.assigns().env, old)
 
-        if service["type"] == "subscriber" do
-          if service["updated"] do
-            Util.delete_config_consumer(body, conn.assigns().env)
+    {:ok, result} = DB.insert_with_id(collection, body, id)
 
-            Util.create_config_consumer(body, conn.assigns().env)
-          end
-        end
-
-        types = SvcManager.service_types()
-
-        if Map.has_key?(service, "type") do
-          if Map.has_key?(types, String.to_atom(service["type"])) do
-            Gnat.pub(
-              :gnat,
-              AmpsUtil.env_topic(
-                "amps.events.svcs.handler.#{service["name"]}.restart",
-                conn.assigns().env
-              ),
-              ""
-            )
-          end
-        end
-
-      "actions" ->
-        # _action = DB.find_one(Util.index(conn.assigns().env, "actions"), %{"_id" => id})
-
-        if body["type"] == "batch" do
-          Util.create_batch_consumer(body)
-        end
-
-      "scheduler" ->
-        case conn.assigns().env do
-          "" ->
-            Amps.Scheduler.update(body["name"])
-
-          env ->
-            Amps.EnvScheduler.update(body["name"], env)
-        end
-
-      _ ->
-        nil
-    end
+    Util.after_update(collection, id, body, conn.assigns().env, old)
 
     json(conn, result)
   end
@@ -795,7 +739,7 @@ defmodule AmpsWeb.DataController do
           "mailbox" => object["username"]
         })
 
-        rules = object["rules"]
+        rules = object["rules"] || []
 
         Enum.each(rules, fn rule ->
           if rule["type"] == "download" do

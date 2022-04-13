@@ -52,8 +52,8 @@ Ext.define("Amps.view.nav.TreeNav", {
               iconCls: "x-fa fa-id-card-o",
               leaf: true,
               rowCls: "customers",
-              text: "Customers",
-              tooltip: "Customers",
+              text: "Groups",
+              tooltip: "Groups",
             },
             {
               iconCls: "x-fa fa-users",
@@ -74,11 +74,10 @@ Ext.define("Amps.view.nav.TreeNav", {
           expanded: true,
           children: [
             {
-              iconCls: "x-fa fa-calendar",
+              iconCls: "x-fa fa-edit",
               leaf: true,
-              rowCls: "scheduler",
-              text: "Scheduler",
-              tooltip: "Scheduler",
+              rowCls: "topics",
+              text: "Topics",
             },
             {
               iconCls: "x-fa fa-cogs",
@@ -88,18 +87,10 @@ Ext.define("Amps.view.nav.TreeNav", {
               tooltip: "Providers",
             },
             {
-              iconCls: "x-fa fa-chevron-circle-right",
+              iconCls: "x-fa fa-tasks",
               leaf: true,
-              rowCls: "workflows",
-              text: "Workflows",
-              tooltip: "Workflows",
-            },
-            {
-              iconCls: "x-fa fa-columns",
-              leaf: true,
-              rowCls: "wizard",
-              text: "Wizard",
-              tooltip: "Wizard",
+              rowCls: "actions",
+              text: "Actions",
             },
             {
               iconCls: "x-fa fa-cog",
@@ -109,16 +100,16 @@ Ext.define("Amps.view.nav.TreeNav", {
               tooltip: "Services",
             },
             {
-              iconCls: "x-fa fa-tasks",
-              leaf: true,
-              rowCls: "actions",
-              text: "Actions",
-            },
-            {
               iconCls: "x-fa fa-file-code-o",
               leaf: true,
               rowCls: "scripts",
               text: "Scripts",
+            },
+            {
+              iconCls: "x-fa fa-code",
+              leaf: true,
+              rowCls: "templates",
+              text: "Templates",
             },
             {
               iconCls: "x-fa fa-random",
@@ -133,17 +124,18 @@ Ext.define("Amps.view.nav.TreeNav", {
               text: "Metadata Fields",
             },
             {
-              iconCls: "x-fa fa-edit",
-              leaf: true,
-              rowCls: "topics",
-              text: "Topics",
-            },
-            {
               iconCls: "x-fa fa-key",
               leaf: true,
               rowCls: "keys",
               text: "Keys",
               tooltip: "Keys",
+            },
+            {
+              iconCls: "x-fa fa-calendar",
+              leaf: true,
+              rowCls: "scheduler",
+              text: "Jobs",
+              tooltip: "Scheduler",
             },
           ],
         },
@@ -165,6 +157,28 @@ Ext.define("Amps.view.nav.TreeNav", {
               rowCls: "demos",
               text: "Demos",
               tooltip: "Demos",
+            },
+          ],
+        },
+        {
+          iconCls: "x-fa fa-th-large",
+          rowCls: "tools",
+          text: "Tools",
+          expanded: true,
+          children: [
+            {
+              iconCls: "x-fa fa-chevron-circle-right",
+              leaf: true,
+              rowCls: "workflows",
+              text: "Workflows",
+              tooltip: "Workflows",
+            },
+            {
+              iconCls: "x-fa fa-columns",
+              leaf: true,
+              rowCls: "wizard",
+              text: "Wizard",
+              tooltip: "Wizard",
             },
             {
               iconCls: "x-fa fa-cloud-upload",

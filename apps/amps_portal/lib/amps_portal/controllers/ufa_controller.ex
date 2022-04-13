@@ -512,58 +512,54 @@ defmodule AmpsPortal.UFAController do
   end
 
   def agent_login(conn, %{"username" => username, "token" => token, "tokenid" => tokenid}) do
-    {:ok, parms} = Phoenix.Token.verify(AmpsPortal.Endpoint, "auth token", token)
-    %{"uid" => user_id, "id" => tid} = Jason.decode!(parms)
+    {:ok, parms} = Phoenix.Token.verify(AmpsPortal.Endpoint, "auth", token, max_age: :infinity)
+    %{"uid" => username} = Jason.decode!(parms)
 
-    if tid == tokenid do
-      case DB.find_one(Util.conn_index(conn, "tokens"), %{"username" => username}) do
-        nil ->
-          send_resp(conn, 401, "Invalid Credentials")
+    case DB.find_one(Util.conn_index(conn, "tokens"), %{"username" => username}) do
+      nil ->
+        send_resp(conn, 401, "Invalid Credentials")
 
-        secrets ->
-          if secrets[tid] == token do
-            case DB.find_one(Util.conn_index(conn, "users"), %{"_id" => user_id}) do
-              nil ->
-                send_resp(conn, 401, "Invalid Credentials")
+      secrets ->
+        if secrets[tokenid] == token do
+          case DB.find_one(Util.conn_index(conn, "users"), %{"username" => username}) do
+            nil ->
+              send_resp(conn, 401, "Invalid Credentials")
 
-              user ->
-                if user["username"] == username do
-                  userstruct =
-                    AmpsPortal.Users.get_by(%{"username" => user["username"]},
-                      env: conn.assigns().env
-                    )
-
-                  {a, r} = generate_credentials(conn, userstruct)
-
-                  AmpsEvents.send_history(
-                    AmpsUtil.env_topic(
-                      "amps.events.ufa.#{user["username"]}.logs",
-                      conn.assigns().env
-                    ),
-                    "ufa_logs",
-                    %{
-                      "user" => user["username"],
-                      "status" => "success",
-                      "operation" => "login"
-                    }
+            user ->
+              if user["username"] == username do
+                userstruct =
+                  AmpsPortal.Users.get_by(%{"username" => user["username"]},
+                    env: conn.assigns().env
                   )
 
-                  json(conn, %{
-                    data: %{
-                      access_token: a,
-                      renewal_token: r
-                    }
-                  })
-                else
-                  send_resp(conn, 403, "Invalid Credentials")
-                end
-            end
-          else
-            send_resp(conn, 401, "Invalid Credentials")
+                {a, r} = generate_credentials(conn, userstruct)
+
+                AmpsEvents.send_history(
+                  AmpsUtil.env_topic(
+                    "amps.events.ufa.#{user["username"]}.logs",
+                    conn.assigns().env
+                  ),
+                  "ufa_logs",
+                  %{
+                    "user" => user["username"],
+                    "status" => "success",
+                    "operation" => "login"
+                  }
+                )
+
+                json(conn, %{
+                  data: %{
+                    access_token: a,
+                    renewal_token: r
+                  }
+                })
+              else
+                send_resp(conn, 403, "Invalid Credentials")
+              end
           end
-      end
-    else
-      send_resp(conn, 401, "Invalid Credentials")
+        else
+          send_resp(conn, 401, "Invalid Credentials")
+        end
     end
   end
 

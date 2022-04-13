@@ -1,5 +1,6 @@
 defmodule Amps.PyService do
   use GenServer
+  alias Amps.DB
 
   def start_link(default) when is_list(default) do
     GenServer.start_link(__MODULE__, default)
@@ -32,6 +33,17 @@ defmodule Amps.PyService do
 
   @impl true
   def handle_call({:pyrun, msg, parms, env}, _from, _pid) do
+    parms =
+      if parms["use_provider"] do
+        Map.put(
+          parms,
+          "provider",
+          DB.find_one(AmpsUtil.index(env, "providers"), %{"_id" => parms["provider"]})
+        )
+      else
+        parms
+      end
+
     path = Path.join(AmpsUtil.get_env(:python_path), env)
     tmp = AmpsUtil.get_env(:storage_temp)
     {:ok, pid} = :python.start([{:python_path, to_charlist(path)}])

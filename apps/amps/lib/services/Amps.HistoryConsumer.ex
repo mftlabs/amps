@@ -142,6 +142,12 @@ defmodule Amps.HistoryPullConsumer do
           parms["index"]
         else
           nil
+        end,
+      doc:
+        if parms["doc"] do
+          parms["doc"]
+        else
+          nil
         end
     }
 
@@ -156,21 +162,47 @@ defmodule Amps.HistoryPullConsumer do
     Logger.debug("got history message #{name}: #{message.topic} / #{message.body}")
 
     data = Poison.decode!(message.body)
+    IO.inspect(data)
 
     message =
       if state.index do
-        {%Snap.Bulk.Action.Create{
-           _index: AmpsUtil.index(state.env, state.index),
-           doc:
-             Map.merge(data["msg"], %{
-               "status" => "received"
-             })
-         }, message}
+        doc =
+          if state.doc do
+            state.doc.(message.topic, data["msg"])
+          else
+            Map.merge(data["msg"], %{
+              "status" => "received"
+            })
+          end
+
+        if is_list(state.index) do
+          actions =
+            Enum.reduce(state.index, [], fn index, acc ->
+              [
+                %Snap.Bulk.Action.Create{
+                  _index: AmpsUtil.index(state.env, index),
+                  doc: doc
+                }
+                | acc
+              ]
+            end)
+
+          {actions, message}
+        else
+          {[
+             %Snap.Bulk.Action.Create{
+               _index: AmpsUtil.index(state.env, state.index),
+               doc: doc
+             }
+           ], message}
+        end
       else
-        {%Snap.Bulk.Action.Create{
-           _index: AmpsUtil.index(state.env, data["index"]),
-           doc: data
-         }, message}
+        {[
+           %Snap.Bulk.Action.Create{
+             _index: AmpsUtil.index(state.env, data["index"]),
+             doc: data
+           }
+         ], message}
       end
 
     state = Map.put(state, :messages, [message | state.messages])
@@ -183,8 +215,10 @@ defmodule Amps.HistoryPullConsumer do
 
     state =
       if Enum.count(state.messages) > 0 do
-        Enum.reduce(state.messages, [], fn {action, _}, acc ->
-          [action | acc]
+        Enum.reduce(state.messages, [], fn {actions, _}, acc ->
+          Enum.reduce(actions, acc, fn action, acc ->
+            [action | acc]
+          end)
         end)
         |> Snap.Bulk.perform(Amps.Cluster, nil, [])
 

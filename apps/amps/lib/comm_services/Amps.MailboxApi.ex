@@ -4,6 +4,7 @@ defmodule Amps.MailboxApi do
   """
   use Plug.Router
   #  use Plug.ErrorHandler
+  plug(CORSPlug)
 
   plug(Plug.Parsers,
     parsers: [:urlencoded, :multipart],
@@ -141,16 +142,20 @@ defmodule Amps.MailboxApi do
   end
 
   defp myauth(conn, mailbox) do
-    IO.inspect(conn)
-
     case Plug.BasicAuth.parse_basic_auth(conn) do
       {user, cred} ->
-        case AmpsAuth.check_cred(user, cred, conn.private.opts.env) do
-          true ->
+        IO.inspect(user)
+        IO.inspect(cred)
+
+        case AmpsPortal.Util.verify_token(user, cred, conn.private.opts.env) do
+          nil ->
+            {:error, "Access to mailbox [#{mailbox}] denied to user [#{user}]"}
+
+          user ->
             {:ok, mailbox}
 
           false ->
-            {:error, "Access to mailbox [#{mailbox}] denied to user [#{user}]"}
+            nil
         end
 
       :error ->
@@ -196,7 +201,7 @@ defmodule Amps.MailboxApi do
             end
           end
         else
-          Map.put(nmsg, "fname", "message.dat")
+          "message.dat"
         end
 
       if fname do

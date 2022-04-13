@@ -645,4 +645,12 @@ defmodule AmpsUtil do
   def hinterval(default \\ 5_000) do
     Amps.Defaults.get("hinterval", default)
   end
+
+  def convert_output(parms, env) do
+    if parms["output"] do
+      Map.put(parms, "output", AmpsUtil.env_topic(parms["output"], env))
+    else
+      parms
+    end
+  end
 end

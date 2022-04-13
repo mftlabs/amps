@@ -2,6 +2,8 @@ defmodule AmpsWeb.ScriptController do
   use AmpsWeb, :controller
   require Logger
   alias AmpsWeb.Python
+  alias Amps.DB
+  alias AmpsWeb.Util
 
   @symbols '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMOPQRSTUVWXYZ$@!@#$%&*'
 
@@ -55,16 +57,35 @@ defmodule AmpsWeb.ScriptController do
     end
   end
 
-  def create(conn, %{"name" => name}) do
-    script = get_path(name, conn.assigns().env)
+  def create(conn, _params) do
     body = conn.body_params()
+    name = body["name"]
+    script = get_path(name, conn.assigns().env)
 
     resp = File.mkdir_p!(Path.dirname(script))
     IO.inspect(resp)
     IO.inspect(script)
-    IO.inspect(body["data"])
+data =
+    if body["data"] && body["data"] != "" do
+      body["data"]
+    else
+      if body["template"] do
+        template =
+          DB.find_one(Util.index(conn.assigns().env, "templates"), %{"name" => body["template"]})
 
-    resp = File.write(script, body["data"])
+        case template do
+          nil ->
+            "import json\nimport os\nimport uuid\n\n# msgdata is a JSON encoded object with two keys:\n# \"msg\" which contains the message data and\n# \"action\" which contains the action configuration.\n# extra is a JSON encoded object with the extra parameters specified in the action configuration\n\n\ndef run(msgdata):\n    msgdata = json.loads(msgdata)\n    msg = msgdata[\"msg\"]\n    parms = msgdata[\"parms\"]\n    sysparms = msgdata[\"sysparms\"]\n\n    output = action(msg, parms, sysparms)\n    return json.dumps(output)\n\n\ndef action(msg, parms, sysparms):\n    try:\n        # Action Here\n        return {\"status\": \"completed\"}\n    except Exception as e:\n        return {\"status\": \"failed\", \"reason\": str(e)}\n"
+
+          template ->
+            template["data"]
+        end
+      else
+        "import json\nimport os\nimport uuid\n\n# msgdata is a JSON encoded object with two keys:\n# \"msg\" which contains the message data and\n# \"action\" which contains the action configuration.\n# extra is a JSON encoded object with the extra parameters specified in the action configuration\n\n\ndef run(msgdata):\n    msgdata = json.loads(msgdata)\n    msg = msgdata[\"msg\"]\n    parms = msgdata[\"parms\"]\n    sysparms = msgdata[\"sysparms\"]\n\n    output = action(msg, parms, sysparms)\n    return json.dumps(output)\n\n\ndef action(msg, parms, sysparms):\n    try:\n        # Action Here\n        return {\"status\": \"completed\"}\n    except Exception as e:\n        return {\"status\": \"failed\", \"reason\": str(e)}\n"
+      end
+    end
+
+    resp = File.write(script, data)
     IO.inspect(resp)
     json(conn, :ok)
   end

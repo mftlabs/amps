@@ -32,9 +32,11 @@ Ext.define("Amps.Unauthorized.Signup", {
             });
           },
           change: async function (cmp, value, oldValue, eOpts) {
-            var duplicate = await amfutil.checkDuplicate({
-              users: { username: value },
+            var resp = await amfutil.ajaxRequest({
+              url: "/api/duplicate_username/" + value,
             });
+
+            var duplicate = Ext.decode(resp.responseText);
 
             if (duplicate) {
               cmp.setActiveError("User Already Exists");
@@ -79,7 +81,7 @@ Ext.define("Amps.Unauthorized.Signup", {
       },
       {
         xtype: "textfield",
-        name: "passwd",
+        name: "password",
         itemId: "passwd",
         inputType: "password",
         fieldLabel: "Password",
@@ -123,7 +125,7 @@ Ext.define("Amps.Unauthorized.Signup", {
       },
       {
         xtype: "textfield",
-        name: "confpasswd",
+        name: "confirmpswd",
         itemId: "confpasswd",
         inputType: "password",
         maskRe: /[^\^ ]/,

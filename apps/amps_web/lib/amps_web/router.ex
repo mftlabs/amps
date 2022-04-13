@@ -112,8 +112,9 @@ defmodule AmpsWeb.Router do
     resources("/scripts/", ScriptController, except: [:new, :edit])
 
     resources("/:collection/", DataController, except: [:new, :edit])
-    post("/:collection/:id", DataController, :create_with_id)
-    post("/:collection/:id/:field/:fieldid", DataController, :add_to_field_with_id)
+    post("/:collection/create/:id", DataController, :create_with_id)
+    post("/:collection/:id", DataController, :update_with_id)
+    post("/:collection/:id/:field/create/:fieldid", DataController, :add_to_field_with_id)
 
     get("/:collection/:id/:field", DataController, :get_field)
     put("/:collection/:id/:field", DataController, :update_field)

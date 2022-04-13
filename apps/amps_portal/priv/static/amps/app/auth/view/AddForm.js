@@ -122,6 +122,7 @@ Ext.define("Amps.form.add", {
                   btn.up("window").close();
                 },
                 failure: function (response) {
+                  console.log("fail");
                   mask.hide();
                   btn.setDisabled(false);
                   amfutil.onFailure("Failed to Create User", response);

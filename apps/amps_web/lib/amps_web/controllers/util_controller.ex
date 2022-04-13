@@ -114,8 +114,9 @@ defmodule AmpsWeb.UtilController do
     end
   end
 
+  @spec execute_test(Plug.Conn.t(), any) :: Plug.Conn.t()
   def execute_test(conn, _params) do
-    json(conn, %{"message" => "Welcome to AMPS!"})
+    send_file(conn, 200, "mix.exs")
   end
 
   def aggregate_field(conn, %{"collection" => collection, "field" => field}) do

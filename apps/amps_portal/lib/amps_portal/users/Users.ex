@@ -228,6 +228,7 @@ defmodule AmpsPortal.Users.DB do
   end
 
   def create(body) do
+    IO.inspect(body)
     password = body["password"]
     %{password_hash: hashed} = add_hash(password)
 

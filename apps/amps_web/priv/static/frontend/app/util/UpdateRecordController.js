@@ -202,7 +202,7 @@ Ext.define("Amps.form.update", {
                   Authorization: localStorage.getItem("access_token"),
                 },
                 url: "/api/" + route,
-                method: "PUT",
+                method: config.overwrite ? "POST" : "PUT",
                 timeout: 60000,
                 params: {},
                 jsonData: values,
@@ -501,7 +501,20 @@ Ext.define("Amps.util.UpdateRecordController", {
             cls: "ufa-grid",
             itemId: gridid,
             field: field,
-
+            listeners: {
+              cellcontextmenu: function (
+                table,
+                td,
+                cellIndex,
+                record,
+                tr,
+                rowIndex,
+                e
+              ) {
+                CLIPBOARD_CONTENTS = td.innerText;
+                amfutil.copyTextdata(e);
+              },
+            },
             plugins: ["gridfilters"],
             loading: true,
             columns: actioncolumn
@@ -1263,7 +1276,7 @@ Ext.define("Amps.util.UpdateRecordController", {
                   Authorization: localStorage.getItem("access_token"),
                 },
                 url: "/api/" + Ext.util.History.getToken(),
-                method: "PUT",
+                method: "POST",
                 timeout: 60000,
                 params: {},
                 jsonData: data,
@@ -1604,7 +1617,7 @@ Ext.define("Amps.util.UpdateRecordController", {
                   Authorization: localStorage.getItem("access_token"),
                 },
                 url: "/api/" + route + "/" + record._id,
-                method: "PUT",
+                method: "POST",
                 timeout: 60000,
                 params: {},
                 jsonData: user,

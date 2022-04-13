@@ -247,6 +247,7 @@ config :amps, :services,
   history: Amps.HistoryConsumer,
   sftpd: Amps.SftpServer,
   httpd: Amps.MailboxApi,
+  gateway: Amps.Gateway,
   kafka: Amps.GenConsumer,
   s3: Amps.S3Consumer
 

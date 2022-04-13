@@ -83,18 +83,21 @@ Ext.define("Amps.widget.Socket", {
 });
 
 const filterTypes = {
-  tag: (field) => {
-    return {
-      xtype: "tagfield",
-      fieldLabel: field.text,
-      name: field.dataIndex,
-      store: field["options"],
-      emptyText: "Filter by " + field.text,
-      displayField: "label",
-      valueField: "field",
-      queryMode: "local",
-      filterPickList: true,
-    };
+  tag: (field, opts = {}) => {
+    return Object.assign(
+      {
+        xtype: "tagfield",
+        fieldLabel: field.text,
+        name: field.dataIndex,
+        store: field["options"],
+        emptyText: "Filter by " + field.text,
+        displayField: "label",
+        valueField: "field",
+        queryMode: "local",
+        filterPickList: true,
+      },
+      opts
+    );
   },
   aggregate: (field) => {
     return {
@@ -2132,6 +2135,7 @@ Ext.define("Amps.util.Utilities", {
           val = val && y[entry[0]] == x[entry[0]];
         }
       });
+      return val && Object.keys(x).length == Object.keys(y).length;
     } else {
       val = false;
     }
@@ -2497,22 +2501,26 @@ Ext.define("Amps.util.Utilities", {
         id = form.record._id;
       }
     }
-    var response = await amfutil.ajaxRequest({
-      url: "/api/port/" + value,
-      method: "POST",
-      timeout: 60000,
-      headers: {
-        Authorization: localStorage.getItem("access_token"),
-      },
-      jsonData: id
-        ? {
-            id: id,
-          }
-        : {},
-    });
+    if (value) {
+      var response = await amfutil.ajaxRequest({
+        url: "/api/port/" + value,
+        method: "POST",
+        timeout: 60000,
+        headers: {
+          Authorization: localStorage.getItem("access_token"),
+        },
+        jsonData: id
+          ? {
+              id: id,
+            }
+          : {},
+      });
 
-    var inUse = Ext.decode(response.responseText);
-    return inUse;
+      var inUse = Ext.decode(response.responseText);
+      return inUse;
+    } else {
+      return false;
+    }
   },
 
   getBuckets: async function () {
@@ -2612,6 +2620,8 @@ Ext.define("Amps.util.Utilities", {
             };
             request.failure = failure;
             response = await Ext.Ajax.request(request);
+          } else {
+            failure(response);
           }
           resolve(response);
         }
@@ -3117,14 +3127,23 @@ Ext.define("Amps.util.Utilities", {
     );
   },
 
-  capitalize(str) {
+  capitalize: (str) => {
     return str.charAt(0).toUpperCase() + str.slice(1);
   },
 
-  consumerConfig(topicfilter, tooltip, msg = null) {
+  consumerConfig: (topicbuilder, tooltip, msg = null) => {
+    var tb = topicbuilder(function (scope, val) {
+      var updated = this.up("fieldset").down("#updated");
+      updated.update();
+    });
+    console.log(tb);
     return {
       xtype: "fieldset",
       title: "Consumer Config",
+      layout: {
+        type: "vbox",
+        align: "stretch",
+      },
       items: [
         amfutil.infoBlock(
           msg
@@ -3144,28 +3163,14 @@ Ext.define("Amps.util.Utilities", {
           },
           submitValue: true,
         },
-        amfutil.dynamicCreate(
-          amfutil.combo("Topic", "topic", null, "topic", "topic", {
-            tooltip: tooltip,
-            listeners: {
-              beforerender: async function (scope) {
-                var filter = await topicfilter(scope);
-                console.log(filter);
-                var store = {
-                  type: "chained",
-                  source: amfutil.createCollectionStore("topics", filter),
-                };
-
-                scope.setStore(store);
-              },
-              change: function (scope, val) {
-                var updated = this.up("fieldset").down("#updated");
-                updated.update();
-              },
-            },
-          }),
-          "topics"
-        ),
+        {
+          xtype: "fieldcontainer",
+          layout: {
+            type: "vbox",
+            align: "stretch",
+          },
+          items: tb,
+        },
         amfutil.combo(
           "Deliver Policy",
           "policy",

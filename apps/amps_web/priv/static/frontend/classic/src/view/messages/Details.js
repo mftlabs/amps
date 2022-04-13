@@ -701,7 +701,10 @@ Ext.define("Amps.view.messages.MessageDetails", {
       items.push({
         xtype: "displayfield",
         fieldLabel: entry[0],
-        value: entry[1],
+        value:
+          typeof entry[1] === "object" && entry[1] !== null
+            ? JSON.stringify(entry[1])
+            : entry[1],
         flex: 1,
       });
       if (items.length == 3) {

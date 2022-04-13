@@ -202,6 +202,7 @@ Ext.define("Amps.panel.Script", {
     return this.scripts[this.currScript];
   },
   toggleScript: function (name) {
+    console.log(name);
     if (this.currScript) {
       this.currentScript().state = this.editor.saveViewState();
     }

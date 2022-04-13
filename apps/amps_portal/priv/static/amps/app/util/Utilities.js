@@ -133,6 +133,63 @@ Ext.define("Amps.Utilities", {
         },
       },
     },
+    mailboxes: {
+      title: "Mailboxes",
+      object: "Mailbox",
+      grid: true,
+      audit: true,
+      crud: true,
+
+      actionIcons: [
+        "addnewbtn",
+        "searchpanelbtn",
+        "clearfilter",
+        "refreshbtn",
+        "export",
+      ],
+      fields: [
+        {
+          xtype: "textfield",
+          name: "name",
+          fieldLabel: "Name",
+          allowBlank: false,
+          listeners: {
+            beforerender: async function (scope) {
+              scope.setListeners({
+                change: async function (cmp, value, oldValue, eOpts) {
+                  await amfutil.duplicateHandler(
+                    cmp,
+                    { "mailboxes.name": value },
+                    "Mailbox Already Exists",
+                    amfutil.nameValidator
+                  );
+                },
+              });
+            },
+          },
+        },
+        {
+          xtype: "textfield",
+          name: "desc",
+          fieldLabel: "Description",
+          // allowBlank: false,
+        },
+      ],
+      columns: [
+        {
+          text: "Name",
+          dataIndex: "name",
+          type: "text",
+          flex: 1,
+        },
+        {
+          text: "Description",
+          dataIndex: "desc",
+          type: "text",
+          flex: 1,
+        },
+      ],
+    },
   },
 
   all_icons: [
@@ -1216,7 +1273,6 @@ Ext.define("Amps.Utilities", {
   renderListeners: function (render, ar, change) {
     return {
       afterrender: function (scope) {
-        console.log(scope);
         var val = scope.getValue();
         render(scope, val);
         if (ar) {
@@ -1228,6 +1284,9 @@ Ext.define("Amps.Utilities", {
         if (change) {
           change(scope, val);
         }
+        console.log(scope);
+
+        console.log(val);
       },
     };
   },
@@ -1446,6 +1505,8 @@ Ext.define("Amps.Utilities", {
             };
             request.failure = failure;
             response = await Ext.Ajax.request(request);
+          } else {
+            failure(response);
           }
           resolve(response);
         }
@@ -1720,7 +1781,12 @@ Ext.define("Amps.Utilities", {
       page.view.columns &&
       page.view.columns.map((field) => {
         if (field.type) {
-          return filterTypes[field.type](field);
+          console.log(field);
+          if (field.searchOpts) {
+            return filterTypes[field.type](field, field.searchOpts);
+          } else {
+            return filterTypes[field.type](field);
+          }
         } else {
           return;
         }
@@ -1812,7 +1878,11 @@ Ext.define("Amps.Utilities", {
       page.view.columns &&
       page.view.columns.map((field) => {
         if (field.type) {
-          return filterTypes[field.type](field);
+          if (field.searchOpts) {
+            return filterTypes[field.type](field, field.searchOpts);
+          } else {
+            return filterTypes[field.type](field);
+          }
         } else {
           return;
         }
@@ -1887,6 +1957,31 @@ Ext.define("Amps.Utilities", {
     });
   },
 
+  addbtn: function (config, store, field) {
+    return {
+      xtype: "button",
+      iconCls: "x-fa fa-plus",
+      handler: function () {
+        var win = Ext.create("Amps.form.add", config.window);
+        win.loadForm(
+          config.object,
+          config.fields,
+          (form, values) => {
+            if (config.add && config.add.process) {
+              values = config.add.process(form, values);
+            }
+            return values;
+          },
+          field,
+          function () {
+            store.reload();
+          }
+        );
+        win.show();
+      },
+    };
+  },
+
   searchbtn: function (gridid) {
     return {
       xtype: "button",
@@ -1914,6 +2009,19 @@ Ext.define("Amps.Utilities", {
     contextMenu.showAt(e.pageX, e.pageY);
   },
 
+  fieldStore(field) {
+    return {
+      proxy: {
+        type: "ajax",
+        url: "api/" + field,
+        headers: {
+          Authorization: localStorage.getItem("access_token"),
+        },
+      },
+      autoLoad: true,
+    };
+  },
+
   renderFileSize: function fileSize(size) {
     var i = size == 0 ? 0 : Math.floor(Math.log(size) / Math.log(1000));
     return (
@@ -1923,7 +2031,42 @@ Ext.define("Amps.Utilities", {
     );
   },
 
-  consumerConfig(store, tooltip) {
+  updateHandler: function (config) {
+    return {
+      element: "body", //bind to the underlying body property on the panel
+      fn: async function (grid, rowIndex, e, obj) {
+        var record = grid.record.data;
+
+        var user = await amfutil.userInfo();
+        var updateForm = Ext.create("Amps.form.update", {
+          entity: user,
+        });
+        updateForm.loadForm(config, record, false);
+        var win = new Ext.window.Window({
+          modal: true,
+          minWidth: 500,
+          width: 600,
+          minHeight: 600,
+          height: 600,
+          title: `Update ${config.object}`,
+          // maxHeight: 600,
+          scrollable: true,
+          // resizable: false,
+          layout: "fit",
+          items: [updateForm],
+        });
+        console.log(win);
+        win.show();
+      },
+    };
+  },
+
+  consumerConfig: (topicbuilder, tooltip, msg = null) => {
+    var tb = topicbuilder(function (scope, val) {
+      var updated = this.up("fieldset").down("#updated");
+      updated.update();
+    });
+    console.log(tb);
     return {
       xtype: "fieldset",
       title: "Consumer Config",
@@ -1933,7 +2076,9 @@ Ext.define("Amps.Utilities", {
       },
       items: [
         amfutil.infoBlock(
-          'Certain rules, actions, or services require the creation of a topic consumer which determines which subset of events to process. This block allows for the configuration of that subscriber and changing any of these values after creation will result in the creation of a new consumer. (i.e. If the consumer is configured with a Deliver Policy of "All" and 50 messages are consumed, updating the consumer config and leaving the delivery policy of "All" will result in the reprocessing of those messages.)'
+          msg
+            ? msg
+            : 'Certain rules, actions, or services require the creation of a topic consumer which determines which subset of events to process. This block allows for the configuration of that subscriber and changing any of these values after creation will result in the creation of a new consumer. (i.e. If the consumer is configured with a Deliver Policy of "All" and 50 messages are consumed, updating the consumer config and leaving the delivery policy of "All" will result in the reprocessing of those messages.)'
         ),
         {
           xtype: "displayfield",
@@ -1949,52 +2094,45 @@ Ext.define("Amps.Utilities", {
           submitValue: true,
         },
         {
-          xtype: "combobox",
-          fieldLabel: "Mailbox Topic",
-          name: "topic",
-          valueField: "topic",
-          displayField: "topic",
-          store: store,
-          allowBlank: false,
-          listeners: {
-            change: function (scope) {
-              var updated = scope.up("fieldset").down("#updated");
-              updated.update();
-            },
+          xtype: "fieldcontainer",
+          layout: {
+            type: "vbox",
+            align: "stretch",
           },
+          items: tb,
         },
-        {
-          xtype: "combobox",
-          fieldLabel: "Deliver Policy",
-          name: "policy",
-          allowBlank: false,
-          valueField: "field",
-          displayField: "label",
-          store: [
+        amfutil.combo(
+          "Deliver Policy",
+          "policy",
+          [
             { field: "all", label: "All" },
             { field: "new", label: "New" },
             { field: "last", label: "Last" },
             { field: "by_start_time", label: "Start Time" },
           ],
-          listeners: amfutil.renderListeners(
-            function (scope, val) {
-              var conts = ["by_start_time"];
+          "field",
+          "label",
+          {
+            listeners: amfutil.renderListeners(
+              function (scope, val) {
+                var conts = ["by_start_time"];
 
-              conts.forEach((cont) => {
-                console.log(cont);
-                var c = scope.up("fieldset").down("#" + cont);
-                console.log(c);
-                c.setHidden(val != cont);
-                c.setDisabled(val != cont);
-              });
-            },
-            null,
-            function (scope) {
-              var updated = scope.up("fieldset").down("#updated");
-              updated.update();
-            }
-          ),
-        },
+                conts.forEach((cont) => {
+                  console.log(cont);
+                  var c = scope.up("fieldset").down("#" + cont);
+                  console.log(c);
+                  c.setHidden(val != cont);
+                  c.setDisabled(val != cont);
+                });
+              },
+              null,
+              function (scope) {
+                var updated = scope.up("fieldset").down("#updated");
+                updated.update();
+              }
+            ),
+          }
+        ),
         {
           xtype: "fieldcontainer",
           itemId: "by_start_time",
@@ -2120,18 +2258,21 @@ Ext.define("Amps.Utilities", {
 });
 
 const filterTypes = {
-  tag: (field) => {
-    return {
-      xtype: "tagfield",
-      fieldLabel: field.text,
-      name: field.dataIndex,
-      store: field["options"],
-      emptyText: "Filter by " + field.text,
-      displayField: "label",
-      valueField: "field",
-      queryMode: "local",
-      filterPickList: true,
-    };
+  tag: (field, opts = {}) => {
+    return Object.assign(
+      {
+        xtype: "tagfield",
+        fieldLabel: field.text,
+        name: field.dataIndex,
+        store: field["options"],
+        emptyText: "Filter by " + field.text,
+        displayField: "label",
+        valueField: "field",
+        queryMode: "local",
+        filterPickList: true,
+      },
+      opts
+    );
   },
   aggregate: (field) => {
     return {

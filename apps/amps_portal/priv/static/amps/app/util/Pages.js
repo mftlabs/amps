@@ -221,10 +221,42 @@ Ext.define("Amps.Pages", {
               //   fieldLabel: "Get Failure Retry Wait",
               //   value: "5",
               // },
-              amfutil.consumerConfig(
-                amfutil.mailboxTopics(),
-                "The user mailbox topic from which to consume files"
-              ),
+              amfutil.consumerConfig(function (topichandler) {
+                return [
+                  amfutil.combo("Mailbox", "mailbox", null, "name", "name", {
+                    listeners: {
+                      beforerender: async function (scope) {
+                        var user = await amftil.userInfo();
+                        this.setStore(
+                          amfutil.createFieldStore(
+                            "users",
+                            user["_id"],
+                            "mailboxes"
+                          )
+                        );
+                      },
+                      change: async function (scope, val) {
+                        var form = scope.up("form");
+                        var user = await amftil.userInfo();
+
+                        if (val) {
+                          var topic = scope.up("fieldcontainer").down("#topic");
+                          topic.setValue(
+                            `amps.mailbox.${user["username"]}.${val}`
+                          );
+                        }
+                      },
+                    },
+                  }),
+                  amfutil.text("Mailbox Topic", "topic", {
+                    readOnly: true,
+                    itemId: "topic",
+                    listeners: {
+                      change: topichandler,
+                    },
+                  }),
+                ];
+              }, "The user mailbox topic from which to consume files"),
               {
                 xtype: "textfield",
                 name: "folder",
@@ -762,12 +794,14 @@ Ext.define("Amps.Pages", {
               listeners: {
                 dblclick: {
                   element: "body", //bind to the underlying body property on the panel
-                  fn: function (grid, rowIndex, e, obj) {
+                  fn: async function (grid, rowIndex, e, obj) {
                     var record = grid.record.data;
 
                     rulesConfig.store = store;
-
-                    var updateForm = Ext.create("Amps.form.update");
+                    var user = await amfutil.userInfo();
+                    var updateForm = Ext.create("Amps.form.update", {
+                      entity: user,
+                    });
                     updateForm.loadForm(
                       rulesConfig,
                       record,
@@ -944,6 +978,12 @@ Ext.define("Amps.Pages", {
     inbox: function () {
       var store = Ext.create("Ext.data.Store", {
         remoteSort: true,
+        sorters: [
+          {
+            property: "mtime",
+            direction: "DESC",
+          },
+        ],
         proxy: {
           type: "rest",
           url: `/api/inbox`,
@@ -973,11 +1013,6 @@ Ext.define("Amps.Pages", {
         },
         autoLoad: true,
       });
-
-      store.sort("mtime", "DESC");
-
-      console.log(store);
-
       return {
         actionbar: [
           amfutil.searchbtn("main-grid"),
@@ -999,12 +1034,29 @@ Ext.define("Amps.Pages", {
         ],
         view: {
           xtype: "grid",
-          itemId: "main-grid",
           title: "Inbox",
-
           store: store,
-
+          itemId: "main-grid",
           columns: [
+            {
+              text: "Mailbox",
+              dataIndex: "mailbox",
+              type: "tag",
+              searchOpts: {
+                store: {
+                  proxy: {
+                    type: "ajax",
+                    url: "api/mailboxes",
+                    headers: {
+                      Authorization: localStorage.getItem("access_token"),
+                    },
+                  },
+                  autoLoad: true,
+                },
+                displayField: "name",
+                valueField: "name",
+              },
+            },
             {
               text: "File Name",
               dataIndex: "fname",
@@ -1162,6 +1214,87 @@ Ext.define("Amps.Pages", {
               CLIPBOARD_CONTENTS = td.innerText;
               amfutil.copyTextdata(e);
             },
+          },
+        },
+      };
+    },
+    mailboxes: function () {
+      var config = amfutil.config.mailboxes;
+      var store = Ext.create("Ext.data.Store", {
+        remoteSort: true,
+        proxy: {
+          type: "rest",
+          url: `/api/mailboxes`,
+          headers: {
+            Authorization: localStorage.getItem("access_token"),
+          },
+          reader: {
+            type: "json",
+            rootProperty: "rows",
+            totalProperty: "count",
+          },
+          listeners: {
+            load: function (data) {
+              console.log(data);
+            },
+            // exception: async function (proxy, response, options, eOpts) {
+            //   console.log("exception");
+            //   if (response.status == 401) {
+            //     await amfutil.renew_session();
+            //     proxy.setHeaders({
+            //       Authorization: localStorage.getItem("access_token"),
+            //     });
+            //     store.reload();
+            //   }
+            // },
+          },
+        },
+        autoLoad: true,
+      });
+      return {
+        actionbar: [
+          amfutil.addbtn(config, store, "mailboxes"),
+          // amfutil.searchbtn("main-grid"),
+          {
+            xtype: "button",
+            iconCls: "x-fa fa-refresh",
+            handler: function () {
+              store.reload();
+            },
+          },
+          // {
+          //   xtype: "button",
+          //   itemId: "clearfilter",
+          //   html: '<img src="resources/images/clear-filters.png" />',
+          //   handler: "onClearFilter",
+          //   tooltip: "Clear Filter",
+          //   style: "cursor:pointer;",
+          // },
+        ],
+        view: {
+          xtype: "grid",
+          title: config.title,
+          store: store,
+          itemId: "main-grid",
+          columns: config.columns,
+          bbar: {
+            xtype: "pagingtoolbar",
+            displayInfo: true,
+          },
+          listeners: {
+            cellcontextmenu: function (
+              table,
+              td,
+              cellIndex,
+              record,
+              tr,
+              rowIndex,
+              e
+            ) {
+              CLIPBOARD_CONTENTS = td.innerText;
+              amfutil.copyTextdata(e);
+            },
+            dblclick: amfutil.updateHandler(config),
           },
         },
       };

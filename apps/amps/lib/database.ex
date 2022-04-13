@@ -1197,11 +1197,19 @@ defmodule Amps.DB do
                       }
                   end
                 else
-                  %{
-                    match: %{
-                      k => v
+                  if is_list(v) do
+                    %{
+                      terms: %{
+                        k => v
+                      }
                     }
-                  }
+                  else
+                    %{
+                      match: %{
+                        k => v
+                      }
+                    }
+                  end
                 end
             end
 
