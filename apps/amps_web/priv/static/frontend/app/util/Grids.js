@@ -7988,7 +7988,7 @@ Ext.define("Amps.util.Grids", {
                 "actions"
               ),
               amfutil.consumerConfig(
-                async function (scope, topichandler) {
+                function (topichandler) {
                   return [
                     amfutil.dynamicCreate(
                       amfutil.combo(
