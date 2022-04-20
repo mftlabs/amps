@@ -642,7 +642,7 @@ Ext.define("Amps.util.Utilities", {
         return "actionicon " + style;
       },
     },
-    active: {
+    archive: {
       name: "toggle_archive",
       tooltip: "Toggle Archive",
       itemId: "archive",

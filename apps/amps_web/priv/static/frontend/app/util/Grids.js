@@ -3644,7 +3644,7 @@ Ext.define("Amps.util.Grids", {
         "refreshbtn",
         "export",
       ],
-      options: ["active", "clearenv", "exportenv", "delete"],
+      options: ["archive", "clearenv", "exportenv", "delete"],
 
       columns: [
         {
