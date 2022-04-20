@@ -48,11 +48,21 @@ defmodule Amps.Scheduler do
           :inactive
         end,
       task: fn ->
+        msg =
+          Map.merge(
+            %{"msgid" => AmpsUtil.get_id(), "action" => "Job: " <> job["name"] <> "Execution"},
+            job["meta"]
+          )
+
+        {msg, sid} = AmpsEvents.start_session(msg, %{"service" => "Job: " <> job["name"]}, "")
+
         AmpsEvents.send(
-          Map.merge(%{"msgid" => AmpsUtil.get_id()}, job["meta"]),
+          msg,
           %{"output" => job["topic"]},
           %{}
         )
+
+        AmpsEvents.end_session(sid, "")
       end,
       timezone: :utc
     }
