@@ -270,80 +270,84 @@ defmodule Amps.Gateway do
   end
 
   def do_action(msg, route, conn) do
+    {msg, sid} = AmpsEvents.start_session(msg, %{"service" => msg["service"]}, conn.private.env)
+
     actparms =
       DB.find_by_id(AmpsUtil.index(conn.private.env, "actions"), route["action"])
       |> AmpsUtil.convert_output(conn.private.env)
 
-    if actparms do
-      try do
-        AmpsEvents.send_history(
-          AmpsUtil.env_topic("amps.events.action", conn.private.env),
-          "message_events",
-          msg,
-          %{
-            "status" => "started"
-          }
-        )
+    conn =
+      if actparms do
+        try do
+          AmpsEvents.send_history(
+            AmpsUtil.env_topic("amps.events.action", conn.private.env),
+            "message_events",
+            msg,
+            %{
+              "status" => "started"
+            }
+          )
 
-        handler = AmpsUtil.get_env_parm(:actions, String.to_atom(actparms["type"]))
+          handler = AmpsUtil.get_env_parm(:actions, String.to_atom(actparms["type"]))
 
-        case handler.run(msg, actparms, {%{}, conn.private.env}) do
-          {:ok, res} ->
-            AmpsEvents.send_history(
-              AmpsUtil.env_topic("amps.events.action", conn.private.env),
-              "message_events",
-              msg,
-              %{
-                "status" => "completed",
-                "action" => actparms["name"]
-              }
-            )
+          case handler.run(msg, actparms, {%{}, conn.private.env}) do
+            {:ok, res} ->
+              AmpsEvents.send_history(
+                AmpsUtil.env_topic("amps.events.action", conn.private.env),
+                "message_events",
+                msg,
+                %{
+                  "status" => "completed",
+                  "action" => actparms["name"]
+                }
+              )
 
-            IO.inspect(res)
+              if Map.has_key?(res, "response") do
+                response = res["response"]
 
-            if Map.has_key?(res, "response") do
-              response = res["response"]
+                conn =
+                  if Map.has_key?(response, "headers") do
+                    Enum.reduce(response["headers"], conn, fn {k, v}, conn ->
+                      put_resp_header(conn, k, v)
+                    end)
+                  else
+                    conn
+                  end
 
-              conn =
-                if Map.has_key?(response, "headers") do
-                  Enum.reduce(response["headers"], conn, fn {k, v}, conn ->
-                    put_resp_header(conn, k, v)
-                  end)
-                else
-                  conn
+                case response do
+                  %{"data" => data} ->
+                    send_resp(conn, 200, Poison.encode!(data))
+
+                  %{"fpath" => fpath} ->
+                    Plug.Conn.send_file(conn, 200, fpath)
                 end
-
-              case response do
-                %{"data" => data} ->
-                  send_resp(conn, 200, Poison.encode!(data))
-
-                %{"fpath" => fpath} ->
-                  Plug.Conn.send_file(conn, 200, fpath)
+              else
+                send_resp(conn, 200, Poison.encode!(%{"status" => "completed"}))
               end
-            else
-              send_resp(conn, 200, Poison.encode!(%{"status" => "completed"}))
-            end
 
-          {:sent, topic} ->
-            AmpsEvents.send_history(
-              AmpsUtil.env_topic("amps.events.action", conn.private.env),
-              "message_events",
-              msg,
-              %{
-                "status" => "completed",
-                "action" => actparms["name"]
-              }
-            )
+            {:sent, topic} ->
+              AmpsEvents.send_history(
+                AmpsUtil.env_topic("amps.events.action", conn.private.env),
+                "message_events",
+                msg,
+                %{
+                  "status" => "completed",
+                  "action" => actparms["name"]
+                }
+              )
 
-            send_resp(conn, 200, "Sent to topic #{topic}")
+              send_resp(conn, 200, "Sent to topic #{topic}")
+          end
+        rescue
+          e ->
+            handle_error(conn, e, msg)
         end
-      rescue
-        e ->
-          handle_error(conn, e, msg)
+      else
+        handle_error(conn, "Action not found", msg)
       end
-    else
-      handle_error(conn, "Action not found", msg)
-    end
+
+    AmpsEvents.end_session(sid, conn.private.env)
+    conn
   end
 
   def handle_error(conn, e, msg) do

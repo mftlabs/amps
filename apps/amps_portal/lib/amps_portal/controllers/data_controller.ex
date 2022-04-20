@@ -137,7 +137,27 @@ defmodule AmpsPortal.DataController do
               )
             else
               # if msg["temp"] do
-              send_download(conn, {:file, msg["fpath"]}, disposition: :attachment)
+              stream = AmpsUtil.stream(msg, conn.assigns().env)
+
+              conn =
+                conn
+                |> put_resp_header(
+                  "content-disposition",
+                  "attachment; filename=#{msg["fname"] || "download"}"
+                )
+                |> send_chunked(200)
+
+              Enum.reduce_while(stream, conn, fn chunk, conn ->
+                case Plug.Conn.chunk(conn, chunk) do
+                  {:ok, conn} ->
+                    {:cont, conn}
+
+                  {:error, :closed} ->
+                    {:halt, conn}
+                end
+              end)
+
+              # send_download(conn, {:file, msg["fpath"]}, disposition: :attachment)
 
               # else
               #   root = AmpsUtil.get_env(:storage_root)

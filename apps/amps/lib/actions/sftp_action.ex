@@ -2,9 +2,9 @@ defmodule SftpAction do
   require Logger
 
   @doc """
-
+  
   sftp client action parms may contain the following...
-
+  
   connect_timeout - opt
   host - required
   password - opt or key_name
@@ -12,7 +12,7 @@ defmodule SftpAction do
   operation_timeout - opt
   port - required
   user - required
-
+  
   """
 
   def run(msg, parms, {state, env}) do
@@ -25,7 +25,7 @@ defmodule SftpAction do
       {:ok, conn} ->
         AmpsEvents.session_debug(__MODULE__, session, %{text: "sftp connected/logged in"})
 
-        case deliver_sftp([msg], parms, conn) do
+        case deliver_sftp([msg], parms, conn, env) do
           :ok ->
             Logger.info("SFTP session ended successfully")
             AmpsEvents.session_debug(__MODULE__, session, %{text: "session ended normally"})
@@ -69,12 +69,12 @@ defmodule SftpAction do
     end
   end
 
-  defp deliver_sftp([], _parms, _conn) do
+  defp deliver_sftp([], _parms, _conn, env) do
     Logger.info("sftp done")
     :ok
   end
 
-  defp deliver_sftp([msg | tail], parms, conn) do
+  defp deliver_sftp([msg | tail], parms, conn, env) do
     Logger.info("sending sftp message #{inspect(msg)}")
     fspec = parms["format"] || "{fname}"
 
@@ -88,7 +88,7 @@ defmodule SftpAction do
       |> Stream.into(SFTPClient.stream_file!(conn, fpath))
       |> Stream.run()
 
-    deliver_sftp(tail, parms, conn)
+    deliver_sftp(tail, parms, conn, env)
   end
 end
 

@@ -82,7 +82,9 @@ defmodule AmpsWeb.UtilController do
 
     duplicate =
       Enum.reduce(body, true, fn {collection, clauses}, acc ->
-        acc && DB.find_one(Util.index(conn.assigns().env, collection), clauses) != nil
+        acc &&
+          DB.find_one(Util.index(conn.assigns().env, collection), clauses) !=
+            nil
       end)
 
     json(conn, duplicate)
@@ -181,7 +183,10 @@ defmodule AmpsWeb.UtilController do
   end
 
   def download(conn, %{"msgid" => msgid}) do
-    case DB.find_one(AmpsWeb.Util.index(conn.assigns().env, "message_events"), %{"msgid" => msgid}) do
+    case DB.find_one(
+           AmpsWeb.Util.index(conn.assigns().env, "message_events"),
+           %{"msgid" => msgid}
+         ) do
       nil ->
         send_resp(conn, 404, "Not found")
 
@@ -211,7 +216,49 @@ defmodule AmpsWeb.UtilController do
 
   def history(conn, %{"msgid" => msgid}) do
     env = conn.assigns().env
-    json(conn, get_history(msgid, env))
+    rows = get_history(msgid, env)
+
+    rows =
+      Enum.sort(rows, fn e1, e2 ->
+        e1["etime"] <= e2["etime"]
+      end)
+
+    {rows, idx} =
+      Enum.reduce(rows, {%{}, 0}, fn row, {sessions, idx} ->
+        case row["sid"] do
+          nil ->
+            {Map.put(sessions, idx, row), idx + 1}
+
+          sid ->
+            session =
+              Enum.find(sessions, fn {idx, session} ->
+                session["sid"] == sid
+              end)
+
+            IO.inspect(row["msgid"] == msgid)
+
+            case session do
+              nil ->
+                session = DB.find_one(Util.index(env, "sessions"), %{"sid" => sid})
+
+                {Map.put(sessions, idx + 1, Map.merge(session, %{"rows" => [row]})), idx + 1}
+
+              {idx, session} ->
+                {Map.put(
+                   sessions,
+                   idx,
+                   Map.put(session, "rows", session["rows"] ++ [row])
+                 ), idx}
+            end
+        end
+      end)
+
+    rows =
+      Enum.map(rows, fn {k, v} ->
+        v
+      end)
+
+    json(conn, rows)
   end
 
   def get_history(msgid, env) do
@@ -322,7 +369,9 @@ defmodule AmpsWeb.UtilController do
 
         step
       else
-        topics = topics ++ [%{"topic" => sub["topic"], "sub" => sub, "action" => action}]
+        topics =
+          topics ++
+            [%{"topic" => sub["topic"], "sub" => sub, "action" => action}]
 
         output = fn action ->
           find_topic_loop(action["output"], Map.merge(meta, %{}), topics)
@@ -403,7 +452,9 @@ defmodule AmpsWeb.UtilController do
 
                 step
               else
-                topics = topics ++ [%{"topic" => topic, "sub" => sub, "action" => action}]
+                topics =
+                  topics ++
+                    [%{"topic" => topic, "sub" => sub, "action" => action}]
 
                 output = fn action ->
                   find_topic_loop(
@@ -500,6 +551,7 @@ defmodule AmpsWeb.UtilController do
       Enum.reduce(subs, [], fn sub, steps ->
         if match_topic(sub["topic"], topic) do
           action = DB.find_one(Util.index(env, "actions"), %{"_id" => sub["handler"]})
+
           step = %{"action" => action, "sub" => sub, "topic" => sub["topic"]}
 
           step =
@@ -557,7 +609,13 @@ defmodule AmpsWeb.UtilController do
 
                   IO.inspect(meta)
 
-                  steps = find_topics(action["output"], Map.merge(meta, %{}), topics, env)
+                  steps =
+                    find_topics(
+                      action["output"],
+                      Map.merge(meta, %{}),
+                      topics,
+                      env
+                    )
 
                   step =
                     step

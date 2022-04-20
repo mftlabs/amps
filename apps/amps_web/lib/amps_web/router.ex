@@ -21,7 +21,6 @@ defmodule AmpsWeb.Router do
   pipeline :api_protected do
     plug(:fetch_session)
     plug(:fetch_live_flash)
-
     plug(AmpsWeb.EnvPlug)
     plug(Pow.Plug.RequireAuthenticated, error_handler: AmpsWeb.APIAuthErrorHandler)
   end
@@ -84,6 +83,8 @@ defmodule AmpsWeb.Router do
     get("/loop/:sub", UtilController, :loop)
 
     post("/port/:port", UtilController, :in_use)
+    post("/env/:name", EnvironmentController, :handle_env)
+    get("/env/:name", EnvironmentController, :ping_env)
     post("/service/:name", ServiceController, :handle_service)
     get("/service/:name", ServiceController, :ping_service)
     post("/msg/reprocess/:msgid", DataController, :reprocess)
@@ -110,6 +111,8 @@ defmodule AmpsWeb.Router do
 
     post("/scripts/duplicate/", ScriptController, :duplicate)
     resources("/scripts/", ScriptController, except: [:new, :edit])
+
+    get("/pyservices", ScriptController, :get_services)
 
     resources("/:collection/", DataController, except: [:new, :edit])
     post("/:collection/create/:id", DataController, :create_with_id)

@@ -65,7 +65,7 @@ defmodule AmpsWeb.Endpoint do
   plug(Plug.Parsers,
     parsers: [:urlencoded, :multipart, :json],
     pass: ["*/*"],
-    # length: 1_073_741_824,
+    length: 5_368_709_120,
     json_decoder: Phoenix.json_library()
   )
 

@@ -107,25 +107,6 @@ defmodule AmpsWeb.Util do
         "subgrids" => nil,
         "types" => nil
       },
-      "providers" => %{
-        "headers" => ["name", "desc", "type"],
-        "subgrids" => nil,
-        "types" => %{
-          "generic" => ["values"],
-          "kafka" => [
-            "brokers",
-            "auth",
-            "mechanism",
-            "username",
-            "password",
-            "cacert",
-            "cert",
-            "key"
-          ],
-          "s3" => ["provider", "scheme", "host", "port", "region", "key", "secret"],
-          "sharepoint" => ["tenant", "client_id", "client_secret"]
-        }
-      },
       "rules" => %{
         "headers" => ["name", "desc", "output", "patterns"],
         "subgrids" => nil,
@@ -252,15 +233,14 @@ defmodule AmpsWeb.Util do
       "fields",
       "keys",
       "topics",
-      "providers",
       "users",
       "rules",
+      "users/rules",
+      "users/mailboxes",
       "actions",
       "services",
       "scheduler",
-      "templates",
-      "users/rules",
-      "users/mailboxes"
+      "templates"
     ]
   end
 
@@ -271,7 +251,7 @@ defmodule AmpsWeb.Util do
 
       # VaultDatabase.vault_store_key(conn.body_params(), collection, "account", "cred")
       "services" ->
-        if body["type"] == "subscriber" do
+        if body["type"] == "subscriber" || (body["type"] == "pyservice" && body["receive"]) do
           create_config_consumer(body, env)
           body
         end
@@ -288,7 +268,7 @@ defmodule AmpsWeb.Util do
       "services" ->
         types = SvcManager.service_types()
 
-        if body["type"] == "subscriber" do
+        if body["type"] == "subscriber" || (body["type"] == "pyservice" && body["receive"]) do
           DB.find_one_and_update(Util.index(env, "services"), %{"name" => body["name"]}, %{
             "updated" => false
           })
@@ -322,7 +302,7 @@ defmodule AmpsWeb.Util do
         body
 
       "environments" ->
-        Amps.EnvManager.start_env(body["name"])
+        Gnat.pub(:gnat, "amps.events.env.handler.#{body["name"]}.start", "")
 
       _ ->
         nil
@@ -353,12 +333,24 @@ defmodule AmpsWeb.Util do
 
         if config["name"] == "SYSTEM" do
           Amps.SvcManager.load_system_parms()
+          archive = Amps.Defaults.get("archive")
+
+          if old["archive"] != archive do
+            action =
+              if archive do
+                "start"
+              else
+                "stop"
+              end
+
+            Gnat.pub(:gnat, "amps.events.archive.handler.#{action}", "")
+          end
         end
 
       "services" ->
         service = DB.find_one(collection, %{"_id" => id})
 
-        if service["type"] == "subscriber" do
+        if service["type"] == "subscriber" || (body["type"] == "pyservice" && body["receive"]) do
           if service["updated"] do
             Util.delete_config_consumer(old, env)
 
@@ -380,6 +372,24 @@ defmodule AmpsWeb.Util do
             )
           end
         end
+
+      "environments" ->
+        envaction =
+          if body["active"] do
+            "start"
+          else
+            "stop"
+          end
+
+        archaction =
+          if body["active"] && body["archive"] do
+            "start"
+          else
+            "stop"
+          end
+
+        Gnat.pub(:gnat, "amps.events.env.handler.#{body["name"]}.#{envaction}", "")
+        Gnat.pub(:gnat, "amps.events.archive.handler.#{archaction}.#{body["name"]}", "")
 
       "actions" ->
         # _action = DB.find_one(Util.index(conn.assigns().env, "actions"), %{"_id" => id})
@@ -480,13 +490,13 @@ defmodule AmpsWeb.Util do
   end
 
   def index(env, collection) do
-    if Enum.member?(
-         ["config", "demos", "admin", "environments", "system_logs", "ui_audit"],
-         collection
-       ) do
+    if env == "" do
       collection
     else
-      if env == "" do
+      if Enum.member?(
+           ["config", "demos", "admin", "environments", "system_logs", "ui_audit", "providers"],
+           collection
+         ) do
         collection
       else
         env <> "-" <> collection

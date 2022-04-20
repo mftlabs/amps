@@ -450,7 +450,7 @@ Ext.define("Amps.util.UpdateRecordController", {
     var details = Ext.create("Amps.view.messages.MessageActivity");
     console.log(details);
     delete record.id;
-    // amfutil.showItemButtons(route);
+    amfutil.showItemButtons(route);
     details.loadMessageActivity(record);
 
     return details;

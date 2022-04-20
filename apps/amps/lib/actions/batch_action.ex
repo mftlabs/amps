@@ -21,8 +21,7 @@ defmodule BatchAction do
         "topic" ->
           listening_topic = "_CON.#{nuid()}"
 
-          {stream, consumer} =
-            AmpsUtil.get_names(%{"name" => parms["name"], "topic" => parms["input"]}, env)
+          {stream, consumer} = AmpsUtil.get_names(%{"name" => parms["name"], "topic" => parms["input"]}, env)
 
           AmpsWeb.DataController.create_batch_consumer(parms)
 
@@ -71,12 +70,7 @@ defmodule BatchAction do
         file = File.stream!(fpath)
 
         Enum.map(messages, fn msg ->
-          data =
-            if msg["fpath"] do
-              File.read!(msg["fpath"])
-            else
-              msg["data"]
-            end
+          data = AmpsUtil.get_data(msg, env)
 
           data <> parms["delimiter"]
         end)
@@ -128,8 +122,7 @@ defmodule BatchAction do
     group = String.replace(parms["name"], " ", "_")
     # consumer_name = get_consumer(parms, consumer_name)
 
-    {:ok, _sid} =
-      Gnat.sub(consumer.connection_pid, self(), consumer.listening_topic, queue_group: group)
+    {:ok, _sid} = Gnat.sub(consumer.connection_pid, self(), consumer.listening_topic, queue_group: group)
   end
 
   @spec get_messages(

@@ -163,10 +163,13 @@ defmodule AmpsWeb.DataController do
 
   @spec upload(Plug.Conn.t(), map) :: Plug.Conn.t()
   def upload(conn, %{"topic" => topic, "file" => file, "meta" => meta}) do
+    user = Pow.Plug.current_user(conn)
+
     msgid = AmpsUtil.get_id()
     dir = AmpsUtil.tempdir(msgid)
     fpath = Path.join(dir, msgid)
-    File.cp(file.path, fpath)
+    res = File.cp(file.path, fpath)
+    IO.inspect(res)
     info = File.stat!(fpath)
     meta = Jason.decode!(meta)
 
@@ -177,12 +180,17 @@ defmodule AmpsWeb.DataController do
           "fname" => file.filename,
           "fpath" => fpath,
           "fsize" => info.size,
-          "ftime" => DateTime.to_iso8601(DateTime.utc_now())
+          "ftime" => DateTime.to_iso8601(DateTime.utc_now()),
+          "user" => user.username,
+          "service" => "Topic Upload"
         },
         meta
       )
 
+    {msg, sid} = AmpsEvents.start_session(msg, %{"service" => "Topic Upload"}, conn.assigns().env)
+
     AmpsEvents.send(msg, %{"output" => AmpsUtil.env_topic(topic, conn.assigns().env)}, %{})
+    AmpsEvents.end_session(sid, conn.assigns().env)
     json(conn, :ok)
   end
 
@@ -492,12 +500,22 @@ defmodule AmpsWeb.DataController do
   end
 
   def send_event(conn, %{"topic" => topic, "meta" => meta}) do
+    user = Pow.Plug.current_user(conn)
+
     msgid = AmpsUtil.get_id()
     dir = AmpsUtil.tempdir(msgid)
     _fpath = Path.join(dir, msgid)
-    meta = Map.merge(%{"msgid" => msgid}, Jason.decode!(meta))
 
-    AmpsEvents.send(meta, %{"output" => AmpsUtil.env_topic(topic, conn.assigns().env)}, %{})
+    meta =
+      Map.merge(
+        %{"msgid" => msgid, "user" => user, "service" => "Topic Event"},
+        Jason.decode!(meta)
+      )
+
+    {msg, sid} = AmpsEvents.start_session(meta, %{"service" => "Topic Event"}, conn.assigns().env)
+
+    AmpsEvents.send(msg, %{"output" => AmpsUtil.env_topic(topic, conn.assigns().env)}, %{})
+    AmpsEvents.end_session(sid, conn.assigns().env)
     json(conn, :ok)
   end
 
@@ -512,7 +530,10 @@ defmodule AmpsWeb.DataController do
 
     msg = obj |> Map.drop(["status", "action", "topic", "_id", "index", "etime"])
 
+    {msg, sid} = AmpsEvents.start_session(msg, %{"service" => "Reprocess"}, conn.assigns().env)
+
     AmpsEvents.send(msg, %{"output" => topic}, %{})
+    AmpsEvents.end_session(sid, conn.assigns().env)
 
     json(conn, :ok)
   end
@@ -584,7 +605,7 @@ defmodule AmpsWeb.DataController do
     readme = "# #{demo["name"]}\n## #{demo["desc"]}"
     IO.inspect(readme)
     File.write!(Path.join(dir, "README.md"), readme)
-    File.cp_r!(Path.join(Amps.Defaults.get("python_path"), env), Path.join(dir, "scripts"))
+    File.cp_r!(AmpsUtil.get_mod_path(env), Path.join(dir, "scripts"))
 
     files = File.ls!(dir) |> Enum.map(&String.to_charlist/1)
 
@@ -602,8 +623,10 @@ defmodule AmpsWeb.DataController do
     meta = Jason.decode!(body["meta"])
 
     msg = obj |> Map.drop(["status", "action", "topic", "_id", "index", "etime"])
+    {msg, sid} = AmpsEvents.start_session(msg, %{"service" => "Reroute"}, conn.assigns().env)
 
     AmpsEvents.send(Map.merge(msg, meta), %{"output" => topic}, %{})
+    AmpsEvents.end_session(sid, conn.assigns().env)
 
     json(conn, :ok)
   end
@@ -754,7 +777,7 @@ defmodule AmpsWeb.DataController do
           Gnat.pub(:gnat, "amps.events.svcs.handler.#{object["name"]}.stop", "")
         end
 
-        if object["type"] == "subscriber" do
+        if object["type"] == "subscriber" || (object["type"] == "pyservice" && object["receive"]) do
           Util.delete_config_consumer(object, conn.assigns().env)
         end
 
@@ -771,7 +794,8 @@ defmodule AmpsWeb.DataController do
 
     case base_index do
       "environments" ->
-        AmpsUtil.delete_env(object["name"])
+        Gnat.pub(:gnat, "amps.events.env.handler.#{object["name"]}.destroy", "")
+        Gnat.pub(:gnat, "amps.events.archive.handler.stop.#{object["name"]}", "")
 
       _ ->
         nil

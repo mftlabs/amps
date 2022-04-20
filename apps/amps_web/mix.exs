@@ -72,7 +72,13 @@ defmodule AmpsWeb.MixProject do
       {:elixlsx, "~> 0.5.1"},
       {:xlsxir, "~> 1.6.4"},
       {:earmark, "~> 1.4"},
-      {:erlport, "~> 0.10.1"},
+      {:erlport,
+       [
+         env: :prod,
+         override: true,
+         git: "https://github.com/aram0112/erlport.git",
+         branch: "master"
+       ]},
       {:swoosh, "~> 1.3"}
 
       # {:uuid, "~> 1.1"}

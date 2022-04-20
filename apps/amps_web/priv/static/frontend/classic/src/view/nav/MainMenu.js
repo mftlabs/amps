@@ -120,7 +120,8 @@ Ext.define("Amps.view.nav.MainMenu", {
                                 this.setLoading(true);
 
                                 var envs = await amfutil.getCollectionData(
-                                  "environments"
+                                  "environments",
+                                  { active: true }
                                 );
                                 envs.push({ name: "", desc: "default" });
                                 this.insert({

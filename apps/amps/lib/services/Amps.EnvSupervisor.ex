@@ -13,6 +13,7 @@ defmodule Amps.EnvSupervisor do
     env = config["name"]
     # {Plug.Cowboy, scheme: :http, plug: MyApp, options: [port: 4040]}
     history = history_children(env)
+    archive = archive_children(env)
     IO.inspect(history)
 
     children = [
@@ -44,7 +45,7 @@ defmodule Amps.EnvSupervisor do
          ) do
       {:ok, pid} ->
         Process.register(pid, name)
-        File.mkdir_p!(Path.join(Amps.Defaults.get("python_path"), env))
+        File.mkdir_p!(AmpsUtil.get_mod_path(env, []))
 
       # AmpsEvents.send_history(
       #   "amps.events.svcs.#{config["name"]}.logs",
@@ -85,12 +86,18 @@ defmodule Amps.EnvSupervisor do
   end
 
   def stop_child(env) do
-    case Process.whereis(:"env-#{env}") do
-      nil ->
-        Logger.info("Environment #{env} not running")
+    try do
+      case Process.whereis(:"env-#{env}") do
+        nil ->
+          Logger.info("Environment #{env} not running")
+          {:error, "Not Running"}
 
-      pid ->
-        DynamicSupervisor.terminate_child(__MODULE__, pid)
+        pid ->
+          {:ok, DynamicSupervisor.terminate_child(__MODULE__, pid)}
+      end
+    rescue
+      e ->
+        {:error, e}
     end
   end
 
@@ -163,6 +170,58 @@ defmodule Amps.EnvSupervisor do
           id: child["name"],
           start:
             {Amps.HistoryHandler, :start_link,
+             [
+               child,
+               env
+             ]}
+        }
+        | acc
+      ]
+    end)
+  end
+
+  def archive_children(env) do
+    children = [
+      %{
+        "name" => "action_archiver",
+        "subs_count" => 3,
+        "topic" => "amps.actions.>",
+        "receipt" => true,
+        "index" => "archive_events"
+      },
+      %{
+        "name" => "service_archiver",
+        "subs_count" => 3,
+        "topic" => "amps.svcs.>",
+        "receipt" => true,
+        "index" => "archive_events"
+      },
+      %{
+        "name" => "mailbox_archiver",
+        "subs_count" => 3,
+        "topic" => "amps.mailbox.>",
+        "receipt" => true,
+        "index" => ["archive_events", "mailbox"]
+      },
+      %{
+        "name" => "data_archiver",
+        "subs_count" => 3,
+        "topic" => "amps.data.>",
+        "receipt" => true,
+        "index" => "archive_events"
+      }
+    ]
+
+    Enum.reduce(children, [], fn child, acc ->
+      child =
+        child
+        |> Map.put("name", env <> "_" <> child["name"])
+
+      [
+        %{
+          id: child["name"],
+          start:
+            {Amps.ArchiveHandler, :start_link,
              [
                child,
                env

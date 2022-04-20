@@ -36,6 +36,12 @@ defmodule Amps.Logger do
     else
       if node(gl) == node() do
         application = Keyword.get(md, :application)
+        sid = Keyword.get(md, :sid, "")
+
+        meta = %{
+          application: application,
+          sid: sid
+        }
 
         state =
           if application != :snap do
@@ -51,12 +57,16 @@ defmodule Amps.Logger do
 
             message = %Snap.Bulk.Action.Create{
               _index: "system_logs",
-              doc: %{
-                level: level,
-                node: node(),
-                message: msg,
-                etime: etime
-              }
+              doc:
+                Map.merge(
+                  meta,
+                  %{
+                    level: level,
+                    node: node(),
+                    message: msg,
+                    etime: etime
+                  }
+                )
             }
 
             Map.put(state, :messages, [message | state.messages])

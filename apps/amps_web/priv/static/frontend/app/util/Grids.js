@@ -334,11 +334,23 @@ Ext.define("Amps.window.Workflow", {
                   beforerender: function (scope) {
                     var type = scope.up("window").type;
                     if (type == "service") {
-                      var cb = ampsgrids.grids
-                        .services()
-                        .types[rec.type].combo(rec);
-                      console.log(cb);
-                      scope.insert(cb);
+                      if (rec.type == "pyservice") {
+                        if (rec["send_output"]) {
+                          scope.insert({
+                            xtype: "displayfield",
+                            value: rec["output"],
+                            submitValue: true,
+                            name: "topicparms",
+                            fieldLabel: "Output Topic",
+                          });
+                        }
+                      } else {
+                        var cb = ampsgrids.grids
+                          .services()
+                          .types[rec.type].combo(rec);
+                        console.log(cb);
+                        scope.insert(cb);
+                      }
                     } else if (type == "ufa") {
                       scope.insert({
                         xtype: "displayfield",
@@ -472,17 +484,20 @@ Ext.define("Amps.window.Workflow", {
               var topic;
               if (form.up("window").type == "service") {
                 var service = rec;
-
                 var final = form.getForm().findField("topicparms").getValue();
 
-                console.log(fields.items);
-                var services = ampsgrids.grids.services();
+                if (service.type == "pyservice") {
+                  topic = final;
+                } else {
+                  console.log(fields.items);
+                  var services = ampsgrids.grids.services();
 
-                if (services.types[service.type].format) {
-                  final = services.types[service.type].format(final);
+                  if (services.types[service.type].format) {
+                    final = services.types[service.type].format(final);
+                  }
+                  console.log(final);
+                  topic = "amps.svcs." + service.name + "." + final;
                 }
-                console.log(final);
-                topic = "amps.svcs." + service.name + "." + final;
               } else {
                 topic = form.getValues().topic;
               }
@@ -1303,13 +1318,17 @@ Ext.define("Amps.container.Workflow", {
             iconCls: "x-fa fa-play-circle",
             text: "Visualize",
             load: function (rec) {
-              this.setHandler(function () {
-                var win = Ext.create({
-                  xtype: "wfwindow",
-                  service: rec,
+              if (rec.type == "pyservice" && !rec["send_output"]) {
+                this.setDisabled(true);
+              } else {
+                this.setHandler(function () {
+                  var win = Ext.create({
+                    xtype: "wfwindow",
+                    service: rec,
+                  });
+                  win.show();
                 });
-                win.show();
-              });
+              }
             },
           },
           onWidgetAttach: function (col, widget, rec) {
@@ -2903,15 +2922,11 @@ Ext.define("Amps.container.Imports", {
                                     win.setValid(valid);
                                   },
                                 });
-                                win.setStyle({
-                                  display: "none",
-                                });
+
                                 win.show();
                                 await win.duplicateCheck();
                                 win.hide();
-                                win.setStyle({
-                                  display: "auto",
-                                });
+
                                 this.removeAll();
                                 this.insert(cont);
                                 grid.conts.push(cont);
@@ -3548,7 +3563,9 @@ Ext.define("Amps.panel.Wizard", {
           if (topicval.existing) {
             topic.setValue(topicval.existing);
           } else {
-            topic.setValue(topicform.down("textfield[name=topic]").getValue());
+            topic.setValue(
+              topicform.down("displayfield[name=topic]").getValue()
+            );
           }
         },
       },
@@ -3631,6 +3648,92 @@ Ext.define("Amps.util.Grids", {
 
       columns: [
         {
+          text: "Status",
+          xtype: "socketcolumn",
+          config: function (data, widget) {
+            return {
+              event: "environment",
+              payload: { name: data.name },
+              cond: function () {
+                var page =
+                  Ext.util.History.getToken().split("/")[0] == "environments";
+                var visible = widget
+                  .up("grid")
+                  .getStore()
+                  .findRecord("_id", data["_id"]);
+
+                if (!visible) {
+                  widget.destroy();
+                }
+
+                return page && visible;
+              },
+              callback: function (widget, payload) {
+                var handler = function () {
+                  var action = payload ? "stop" : "start";
+
+                  amfutil.ajaxRequest({
+                    url: "/api/env/" + data.name,
+                    jsonData: {
+                      action: action,
+                    },
+                    method: "POST",
+                    timeout: 60000,
+                    success: function (res) {
+                      Ext.toast(
+                        (payload ? "Stopping" : "Starting") + " " + data.name
+                      );
+
+                      clicked = true;
+                    },
+                    failure: function (res) {
+                      console.log("failed");
+                      clicked = true;
+                    },
+                  });
+                };
+                widget.removeAll();
+                widget.insert({
+                  xtype: "container",
+
+                  cls: "widgetbutton",
+                  layout: { type: "hbox", align: "stretch" },
+                  defaults: {
+                    padding: 5,
+                  },
+                  listeners: {
+                    render: function (scope) {
+                      scope.getEl().on("click", handler);
+                    },
+                  },
+                  items: [
+                    {
+                      xtype: "component",
+                      cls: `x-fa fa-${payload ? "stop" : "play"}-circle`,
+                    },
+                    {
+                      xtype: "component",
+                      html: payload ? "Stop" : "Start",
+                    },
+                    {
+                      xtype: "container",
+                      layout: "center",
+                      items: [
+                        {
+                          xtype: "component",
+                          html: `<div class="led ${
+                            payload ? "green" : "red"
+                          }"></div>`,
+                        },
+                      ],
+                    },
+                  ],
+                });
+              },
+            };
+          },
+        },
+        {
           text: "Name",
           dataIndex: "name",
           flex: 1,
@@ -3667,7 +3770,8 @@ Ext.define("Amps.util.Grids", {
 
           allowBlank: false,
         },
-        amfutil.check("Active", "active"),
+        amfutil.check("Active", "active", { value: true }),
+        amfutil.check("Archive", "archive", { value: true }),
       ],
     }),
     demos: () => ({
@@ -3822,10 +3926,7 @@ Ext.define("Amps.util.Grids", {
           dataIndex: "etime",
           flex: 1,
           type: "date",
-          renderer: function (val) {
-            var date = new Date(val);
-            return date.toString();
-          },
+          renderer: amfutil.dateRenderer(),
         },
       ],
     }),
@@ -4232,6 +4333,169 @@ Ext.define("Amps.util.Grids", {
                 tooltip:
                   "The Client Secret or Application Password for your Microsoft Azure Active Directory Application",
               },
+            ],
+          },
+          archive: {
+            field: "archive",
+            label: "Archive",
+            fields: [
+              amfutil.localCombo(
+                "Archive Type",
+                "atype",
+                [{ field: "s3", label: "S3" }],
+                "field",
+                "label",
+                {
+                  listeners: amfutil.renderListeners(function (scope, val) {
+                    var providers = ["s3"];
+
+                    providers.forEach((provider) => {
+                      var c = amfutil.getElementByID(provider);
+                      c.setHidden(provider != val);
+                      c.setDisabled(provider != val);
+                    });
+                  }),
+                }
+              ),
+              amfutil.renderContainer("s3", [
+                amfutil.localCombo(
+                  "S3 Service",
+                  "provider",
+                  ["AWS", "Minio"],
+                  null,
+                  null,
+                  {
+                    tooltip: "The S3 service that you are using",
+                    listeners: amfutil.renderListeners(function render(
+                      scope,
+                      val
+                    ) {
+                      var comps = ["Minio", "AWS"];
+
+                      comps.forEach((name) => {
+                        var component = scope.up("form").down("#" + name);
+                        component.setHidden(val != name);
+                        component.setDisabled(val != name);
+                      });
+                    }),
+                  }
+                ),
+                {
+                  xtype: "fieldset",
+                  hidden: true,
+                  disabled: true,
+                  title: "Minio",
+
+                  itemId: "Minio",
+                  items: [
+                    amfutil.localCombo(
+                      "Scheme",
+                      "scheme",
+                      [
+                        {
+                          value: "http://",
+                          label: "HTTP",
+                        },
+                        {
+                          value: "https://",
+                          label: "HTTPS",
+                        },
+                      ],
+                      "value",
+                      "label",
+                      {
+                        tooltip: "The Scheme your Minio instance uses",
+                      }
+                    ),
+
+                    {
+                      xtype: "textfield",
+                      tooltip: "The URL Host for your Minio instance",
+                      itemId: "host",
+                      name: "host",
+                      fieldLabel: "Host",
+                      vtype: "ipandhostname",
+                    },
+                    {
+                      xtype: "textfield",
+                      tooltip: "The Port your Minio instance is running on.",
+                      itemId: "port",
+                      name: "port",
+                      fieldLabel: "Port",
+                      maskRe: /[0-9]/,
+                    },
+                  ],
+                },
+                {
+                  xtype: "fieldset",
+
+                  title: "AWS",
+                  itemId: "AWS",
+                  hidden: true,
+                  disabled: true,
+                  items: [
+                    amfutil.localCombo(
+                      "Region",
+                      "region",
+                      [
+                        "us-east-2",
+                        "us-east-1",
+                        "us-west-1",
+                        "us-west-2",
+                        "af-south-1",
+                        "ap-east-1",
+                        "ap-south-1",
+                        "ap-northeast-3",
+                        "ap-northeast-2",
+                        "ap-southeast-1",
+                        "ap-southeast-2",
+                        "ap-northeast-1",
+                        "ca-central-1",
+                        "cn-north-1",
+                        "cn-northwest-1",
+                        "eu-central-1",
+                        "eu-west-1",
+                        "eu-west-2",
+                        "eu-west-3",
+                        "eu-north-1",
+                        "eu-south-1",
+                        "me-south-1",
+                        "sa-east-1",
+                        "us-gov-west-1",
+                        "us-gov-east-1",
+                      ],
+                      null,
+                      null,
+                      {
+                        tooltip:
+                          "The AWS Region your S3 Buckets are hosted on.",
+                      }
+                    ),
+                  ],
+                },
+                {
+                  xtype: "textfield",
+                  name: "key",
+                  fieldLabel: "Access Id",
+                  tooltip: "Your S3 Access Key ID Credential",
+                  allowBlank: false,
+                },
+                {
+                  xtype: "textfield",
+                  name: "secret",
+                  fieldLabel: "Access Key",
+                  inputType: "password",
+                  tooltip: "Your S3 Secret Access Key Credential",
+                  allowBlank: false,
+                },
+                {
+                  xtype: "textfield",
+                  name: "bucket",
+                  fieldLabel: "Bucket",
+                  allowBlank: false,
+                  tooltip: "The bucket to use for archiving.",
+                },
+              ]),
             ],
           },
           generic: {
@@ -4877,14 +5141,14 @@ Ext.define("Amps.util.Grids", {
           type: "text",
         },
         {
-          text: "File Name",
+          text: "Message Name",
           dataIndex: "fname",
           flex: 1,
           value: "true",
           type: "text",
         },
         {
-          text: "File Size",
+          text: "Message Size",
           dataIndex: "fsize",
           flex: 1,
           type: "fileSize",
@@ -4895,10 +5159,7 @@ Ext.define("Amps.util.Grids", {
           dataIndex: "etime",
           flex: 1,
           type: "date",
-          renderer: function (val) {
-            var date = new Date(val);
-            return date.toString();
-          },
+          renderer: amfutil.dateRenderer,
         },
         {
           text: "Topic",
@@ -6313,10 +6574,10 @@ Ext.define("Amps.util.Grids", {
           // },
           runscript: {
             field: "runscript",
-            label: "Run Script",
+            label: "Run Lambda",
             fields: [
               amfutil.combo(
-                "Script Type",
+                "Lambda Type",
                 "script_type",
                 [
                   { field: "python", label: "Python" },
@@ -6330,7 +6591,7 @@ Ext.define("Amps.util.Grids", {
                 }
               ),
               amfutil.combo(
-                "Script Name",
+                "Lambda Name",
                 "module",
                 amfutil.scriptStore(),
                 "name",
@@ -7412,12 +7673,13 @@ Ext.define("Amps.util.Grids", {
         },
 
         {
-          xtype: "textfield",
+          xtype: "displayfield",
           tooltip: "The topic being created",
           readOnly: true,
           name: "topic",
           fieldLabel: "Topic",
           pieces: [],
+          submitValue: true,
           allowBlank: false,
           resetTopic: function () {
             this.pieces[1] = " ";
@@ -7791,7 +8053,7 @@ Ext.define("Amps.util.Grids", {
           },
           httpd: {
             field: "httpd",
-            label: "HTTP Server",
+            label: "Mailbox Api",
             iconCls: "x-fa fa-feed",
             combo: function (combo, service) {
               return amfutil.combo(
@@ -8038,6 +8300,75 @@ Ext.define("Amps.util.Grids", {
               return values;
             },
           },
+          // pyservice: {
+          //   field: "pyservice",
+          //   label: "Custom Python Service",
+          //   fields: [
+          //     amfutil.combo(
+          //       "Service",
+          //       "service",
+          //       amfutil.pyserviceStore(),
+          //       "name",
+          //       "name"
+          //     ),
+          //     {
+          //       xtype: "parmfield",
+          //       title: "Config",
+          //       name: "config",
+          //       tooltip: "Additional Config to be passed to your service.",
+          //     },
+          //     amfutil.check("Receive Messages", "receive", {
+          //       listeners: amfutil.renderListeners(function (scope, val) {
+          //         console.log(val);
+          //         var out = scope.up("form").down("#receive_parms");
+          //         out.setHidden(!val);
+          //         out.setDisabled(!val);
+          //       }),
+          //     }),
+          //     amfutil.renderContainer("receive_parms", [
+          //       amfutil.consumerConfig(
+          //         function (topichandler) {
+          //           return [
+          //             amfutil.dynamicCreate(
+          //               amfutil.combo(
+          //                 "Topic",
+          //                 "topic",
+          //                 amfutil.createCollectionStore("topics"),
+          //                 "topic",
+          //                 "topic",
+          //                 {
+          //                   tooltip: "The topic to subscriber to",
+          //                   listeners: {
+          //                     change: topichandler,
+          //                   },
+          //                 }
+          //               ),
+          //               "topics"
+          //             ),
+          //           ];
+          //         },
+          //         `The Topic this subscriber will consumes messages from.`,
+          //         `This block allows you to configure how the subscriber will consume events from the specified topic. Changing any of these values after creation will result in the creation of a new consumer. (i.e. If the consumer is configured with a Deliver Policy of "All" and 50 messages are consumed, updating the consumer config and leaving the delivery policy of "All" will result in the reprocessing of those messages.) "All" results in a consumption of all events on the topic. "New" results in a consumption of all events created after this configuration was updated. "Last" results in a consumption o fall events starting with the most recent events. "Start Time" allows you to specify a specific starting point for consumption`
+          //       ),
+          //     ]),
+
+          //     amfutil.check("Send Output", "send_output", {
+          //       itemId: "send_output",
+          //       listeners: amfutil.renderListeners(function (scope, val) {
+          //         var out = scope.up("form").down("#output_parms");
+          //         out.setHidden(!val);
+          //         out.setDisabled(!val);
+          //       }),
+          //     }),
+          //     amfutil.renderContainer("output_parms", [amfutil.outputTopic()]),
+          //   ],
+          //   process: function (form, values) {
+          //     values.active = true;
+          //     values.config = amfutil.formatArrayField(values.config);
+
+          //     return values;
+          //   },
+          // },
           //   defaults: {
           //     type: "defaults",
           //     name: "Defaults",
@@ -9183,6 +9514,12 @@ Ext.define("Amps.util.Grids", {
                   return {
                     event: "service",
                     payload: { name: data.name },
+                    cond: function () {
+                      return (
+                        Ext.util.History.getToken().split("/")[0] ==
+                        "monitoring"
+                      );
+                    },
                     callback: function (widget, payload) {
                       var handler = function () {
                         var action = payload ? "stop" : "start";
@@ -9258,6 +9595,12 @@ Ext.define("Amps.util.Grids", {
                   if (data.type == "subscriber" || data.type == "history") {
                     return {
                       event: "consumer",
+                      cond: function () {
+                        return (
+                          Ext.util.History.getToken().split("/")[0] ==
+                          "monitoring"
+                        );
+                      },
                       payload: { name: data.name, topic: data.topic },
                     };
                   }
@@ -9662,14 +10005,10 @@ Ext.define("Amps.util.Grids", {
         //   },
         // ],
         view: {
-          xtype: "panel",
+          xtype: "tabpanel",
           scrollable: true,
           title: "System Configuration",
           // padding: 20,
-          layout: {
-            type: "hbox",
-            // align: "stretch",
-          },
           bodyPadding: 20,
 
           defaults: {
@@ -9678,6 +10017,7 @@ Ext.define("Amps.util.Grids", {
           items: [
             {
               xtype: "form",
+              title: "System Settings",
               flex: 1,
 
               loadConfig: async function () {
@@ -9699,11 +10039,6 @@ Ext.define("Amps.util.Grids", {
               },
               items: [
                 {
-                  xtype: "component",
-                  autoEl: "h2",
-                  html: "System Settings",
-                },
-                {
                   xtype: "fieldcontainer",
                   layout: {
                     type: "vbox",
@@ -9713,6 +10048,11 @@ Ext.define("Amps.util.Grids", {
                     labelWidth: 200,
                   },
                   items: [
+                    {
+                      xtype: "hidden",
+                      name: "name",
+                      value: "SYSTEM",
+                    },
                     amfutil.text("Module Path", "python_path"),
                     amfutil.text("Permanent Storage Root", "storage_root"),
                     amfutil.text("Temp Storage Path", "storage_temp"),
@@ -9723,6 +10063,37 @@ Ext.define("Amps.util.Grids", {
                       fieldLabel: "History Interval",
                       allowBlank: false,
                     },
+                    {
+                      xtype: "numberfield",
+                      name: "TTL (days)",
+                      fieldLabel: "Time to Live(Days)",
+                      allowBlank: false,
+                    },
+                    amfutil.check("Archive Messages", "archive", {
+                      listeners: amfutil.renderListeners(function (scope, val) {
+                        var a = amfutil.getElementByID("archive");
+                        a.setHidden(!val);
+                        a.setDisabled(!val);
+                      }),
+                    }),
+                    amfutil.dynamicCreate(
+                      amfutil.combo(
+                        "Archive Provider",
+                        "aprovider",
+                        amfutil.createCollectionStore("providers", {
+                          type: "archive",
+                        }),
+                        "_id",
+                        "name"
+                      ),
+                      "providers",
+                      {
+                        itemId: "archive",
+                        defaults: {
+                          labelWidth: 200,
+                        },
+                      }
+                    ),
                     {
                       xtype: "displayfield",
                       name: "modifiedby",
@@ -9739,6 +10110,7 @@ Ext.define("Amps.util.Grids", {
               buttons: [
                 {
                   xtype: "button",
+                  formBind: true,
                   text: "Update",
                   handler: function (scope) {
                     var form = scope.up("form");
@@ -9759,7 +10131,7 @@ Ext.define("Amps.util.Grids", {
                         Authorization: localStorage.getItem("access_token"),
                       },
                       url: "/api/config/" + id,
-                      method: "PUT",
+                      method: "POST",
                       timeout: 60000,
                       params: {},
                       jsonData: values,
@@ -9785,6 +10157,7 @@ Ext.define("Amps.util.Grids", {
             },
             {
               xtype: "panel",
+              title: "Logo",
               flex: 1,
               items: [
                 {

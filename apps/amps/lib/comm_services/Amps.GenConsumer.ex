@@ -64,6 +64,8 @@ defmodule Amps.GenConsumer do
         data
       )
 
+    {event, sid} = AmpsEvents.start_session(event, %{"service" => state.opts["name"]}, env)
+
     fname =
       if not AmpsUtil.blank?(opts["format"]) do
         AmpsUtil.format(opts["format"], event)
@@ -86,6 +88,7 @@ defmodule Amps.GenConsumer do
 
     AmpsEvents.send(event, %{"output" => topic}, %{})
 
+    AmpsEvents.end_session(sid, env)
     # AmpsEvents.send_history(
     #   "amps.events.messages",
     #   "message_events",

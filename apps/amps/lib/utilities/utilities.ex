@@ -283,7 +283,7 @@ defmodule AmpsUtil do
   def format(format, msg) do
     {:ok, c} = Regex.compile("\{(.*?)\}")
     rlist = Regex.scan(c, format)
-    IO.puts("format #{format} #{inspect(rlist)}")
+    # IO.puts("format #{format} #{inspect(rlist)}")
     check(rlist, msg, format)
   end
 
@@ -294,7 +294,7 @@ defmodule AmpsUtil do
   defp check([head | tail], msg, fname) do
     dt = DateTime.utc_now()
     [pat, name] = head
-    IO.puts("format #{pat} #{name}")
+    # IO.puts("format #{pat} #{name}")
 
     case name do
       "YYYY" ->
@@ -351,10 +351,9 @@ defmodule AmpsUtil do
     String.replace(fname, pat, strval)
   end
 
-  def get_stream(msg) do
+  def get_stream(msg, env) do
     if Map.has_key?(msg, "data") do
-      {:ok, stream} = msg["data"] |> StringIO.open()
-      is = stream |> IO.binstream(:line)
+      is = stream(msg, env)
 
       {:ok, ostream} = StringIO.open("")
       os = ostream |> IO.binstream(:line)
@@ -364,17 +363,75 @@ defmodule AmpsUtil do
       msgid = AmpsUtil.get_id()
       tfile = AmpsUtil.tempdir() <> "/" <> msgid <> ".out"
 
-      {File.stream!(msg["fpath"]), File.stream!(tfile), {nil, tfile}}
+      {stream(msg, env), File.stream!(tfile), {nil, tfile}}
     end
   end
 
-  def get_istream(msg) do
+  def stream(msg, env, chunk_size \\ nil) do
     if Map.has_key?(msg, "data") do
       {:ok, stream} = msg["data"] |> StringIO.open()
       stream |> IO.binstream(:line)
     else
-      File.stream!(msg["fpath"])
+      if File.exists?(msg["fpath"]) do
+        if chunk_size do
+          File.stream!(msg["fpath"], [read_ahead: chunk_size], chunk_size)
+        else
+          File.stream!(msg["fpath"])
+        end
+      else
+        Logger.debug("Attempting to Stream Message #{msg["msgid"]} from Archive")
+        Amps.ArchiveConsumer.stream(msg, env, chunk_size)
+      end
     end
+  end
+
+  def local_file(msg, env) do
+    try do
+      if File.exists?(msg["fpath"]) do
+        msg["fpath"]
+      else
+        Logger.debug("Attempting to Retrive Data for Message #{msg["msgid"]} from Archive")
+
+        Amps.ArchiveConsumer.stream(msg, env)
+        |> Stream.into(File.stream!(msg["fpath"]))
+        |> Stream.run()
+      end
+
+      msg["fpath"]
+    rescue
+      _e ->
+        false
+    end
+  end
+
+  def get_data(msg, env) do
+    if Map.has_key?(msg, "data") do
+      msg["data"]
+    else
+      if File.exists?(msg["fpath"]) do
+        File.read!(msg["fpath"])
+      else
+        Logger.debug("Attempting to Get Data for Message #{msg["msgid"]} from Archive")
+        Amps.ArchiveConsumer.get(msg, env)
+      end
+    end
+  end
+
+  def get_size(msg, env) do
+    if Map.has_key?(msg, "data") do
+      byte_size(msg["data"])
+    else
+      if File.exists?(msg["fpath"]) do
+        File.state!(msg["fpath"]).size
+      else
+        Amps.ArchiveConsumer.size(msg, env)
+      end
+    end
+  end
+
+  def get_local_file(msg, env) do
+    msg = Jason.decode!(msg)
+    local_file(msg, env)
   end
 
   def get_output_msg(msg, {ostream, tfile}, parms \\ %{}) do
@@ -609,12 +666,17 @@ defmodule AmpsUtil do
   # end
 
   def index(env, index) do
-    case env do
-      "" ->
+    if env == "" do
+      index
+    else
+      if Enum.member?(
+           ["config", "demos", "admin", "environments", "system_logs", "ui_audit", "providers"],
+           index
+         ) do
         index
-
-      env ->
+      else
         env <> "-" <> index
+      end
     end
   end
 
@@ -651,6 +713,35 @@ defmodule AmpsUtil do
       Map.put(parms, "output", AmpsUtil.env_topic(parms["output"], env))
     else
       parms
+    end
+  end
+
+  def test do
+    parms = %{
+      "name" => "DonationForm",
+      "service" => "webapp",
+      "config" => %{
+        "port" => 8484
+      },
+      "receive" => true,
+      "topic" => "amps.actions.runscript.test",
+      "policy" => "all",
+      "send_output" => true,
+      "output" => "amps.mailbox.gw01.Outbox"
+    }
+
+    AmpsWeb.Util.create_config_consumer(parms, "gwdemo")
+
+    {:ok, pid} = Amps.PyProcess.start_link(parms: parms, env: "gwdemo")
+  end
+
+  def get_mod_path(env \\ "", paths \\ [""]) do
+    case env do
+      "" ->
+        Path.join([Amps.Defaults.get("python_path")] ++ paths)
+
+      env ->
+        Path.join([Amps.Defaults.get("python_path"), "env", env] ++ paths)
     end
   end
 end

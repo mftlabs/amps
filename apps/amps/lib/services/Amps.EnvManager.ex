@@ -45,7 +45,7 @@ defmodule Amps.EnvManager do
   #   )
 
   #   res =
-  #     case service_active?(name) do
+  #     case env_active?(name) do
   #       nil ->
   #         IO.inspect("not running")
   #         {:error, "Service Not Running"}
@@ -76,7 +76,7 @@ defmodule Amps.EnvManager do
 
   def handle_call({:start_env, name}, _from, state) do
     res =
-      case service_active?(name) do
+      case env_active?(name) do
         nil ->
           res = load_env(name)
           IO.inspect(res)
@@ -261,6 +261,7 @@ defmodule Amps.EnvManager do
         try do
           create_streams(name)
           Amps.EnvSupervisor.start_child(String.to_atom("env-" <> opts["name"]), opts)
+          Gnat.pub(:gnat, "amps.events.archive.handler.start.#{name}", "")
 
           {:ok, "Started #{name}"}
         rescue
@@ -320,7 +321,7 @@ defmodule Amps.EnvManager do
     end
   end
 
-  def service_active?(name) do
+  def env_active?(name) do
     case Amps.DB.find_one("environments", %{"name" => name}) do
       nil ->
         Logger.info("Environment not found #{name}")

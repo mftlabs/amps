@@ -249,7 +249,7 @@ config :amps, :services,
   httpd: Amps.MailboxApi,
   gateway: Amps.Gateway,
   kafka: Amps.GenConsumer,
-  s3: Amps.S3Consumer
+  pyservice: Amps.PyProcess
 
 config :amps, :actions,
   strrepl: StringReplaceAction,

@@ -126,12 +126,17 @@ defmodule AmpsPortal.Util do
   end
 
   def index(env, index) do
-    case env do
-      "" ->
+    if env == "" do
+      index
+    else
+      if Enum.member?(
+           ["config", "demos", "admin", "environments", "system_logs", "ui_audit", "providers"],
+           index
+         ) do
         index
-
-      other ->
-        other <> "-" <> index
+      else
+        env <> "-" <> index
+      end
     end
   end
 

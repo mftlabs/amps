@@ -16,36 +16,50 @@ defmodule AmpsWeb.EnvPlug do
         conn
 
       user ->
-        env = DB.find_one("admin", %{"username" => user.username})["config"]["env"]
+        userparms = DB.find_one("admin", %{"username" => user.username})
+        env = userparms["config"]["env"]
 
-        if env == "" do
-          assign(conn, :env, env)
-        else
-          case DB.find_one("environments", %{"name" => env}) do
-            nil ->
-              DB.find_one_and_update("admin", %{"username" => user.username}, %{
-                "config" => %{"env" => ""}
-              })
+        if userparms do
+          if env == "" do
+            assign(conn, :env, env)
+          else
+            case DB.find_one("environments", %{"name" => env, "active" => true}) do
+              nil ->
+                DB.find_one_and_update("admin", %{"username" => user.username}, %{
+                  "config" => %{"env" => ""}
+                })
 
-              assign(conn, :env, "")
+                res =
+                  AmpsWeb.Endpoint.broadcast("notifications", userparms["username"], %{
+                    env: "reset"
+                  })
 
-            obj ->
-              pp = conn.params()
+                IO.inspect("RESET")
+                IO.inspect(res)
+                assign(conn, :env, "")
 
-              conn =
-                if Map.has_key?(pp, "collection") do
-                  pp =
-                    Map.merge(pp, %{
-                      "collection" => AmpsWeb.Util.index(env, pp["collection"])
-                    })
+              obj ->
+                pp = conn.params()
 
-                  Map.put(conn, :params, pp)
-                else
-                  conn
-                end
+                conn =
+                  if Map.has_key?(pp, "collection") do
+                    pp =
+                      Map.merge(pp, %{
+                        "collection" => AmpsWeb.Util.index(env, pp["collection"])
+                      })
 
-              assign(conn, :env, env)
+                    Map.put(conn, :params, pp)
+                  else
+                    conn
+                  end
+
+                assign(conn, :env, env)
+            end
           end
+        else
+          conn
+          |> send_resp(401, "Unauthenticated")
+          |> halt()
         end
     end
   end

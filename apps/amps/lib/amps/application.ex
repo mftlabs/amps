@@ -57,6 +57,7 @@ defmodule Amps.Application do
       Amps.SvcHandler,
       Amps.SvcSupervisor,
       Amps.SvcManager,
+      Amps.EnvHandler,
       Amps.EnvSupervisor,
       Amps.EnvManager,
       %{
@@ -163,6 +164,8 @@ defmodule Amps.Application do
              }
            ]}
       },
+      Amps.ArchiveSupervisor,
+      Amps.ArchiveManager,
 
       # add this to db config...
 

@@ -1090,7 +1090,7 @@ defmodule Amps.DB do
 
     def find_one(collection, clauses, opts \\ %{}) do
       case query(
-             collection,
+             Amps.DB.path(collection),
              Map.merge(
                %{
                  query: convert_search(clauses),
@@ -1264,7 +1264,7 @@ defmodule Amps.DB do
     end
 
     def insert(collection, body) do
-      case Amps.Cluster.post(Amps.DB.path(collection) <> "/" <> collection, body, %{
+      case Amps.Cluster.post(Amps.DB.path(collection) <> "/_doc", body, %{
              "refresh" => true
            }) do
         {:ok, response} ->
@@ -1276,7 +1276,7 @@ defmodule Amps.DB do
     end
 
     def insert_with_id(collection, body, id) do
-      case Amps.Cluster.put(Amps.DB.path(collection) <> "/" <> collection <> "/" <> id, body, %{
+      case Amps.Cluster.put(Amps.DB.path(collection) <> "/_doc/" <> id, body, %{
              "refresh" => true
            }) do
         {:ok, response} ->
@@ -1289,8 +1289,6 @@ defmodule Amps.DB do
 
     def update(collection, body, id) do
       body = Map.drop(body, ["_id"])
-      IO.inspect(collection)
-      IO.inspect(id)
 
       case(
         Amps.Cluster.post(

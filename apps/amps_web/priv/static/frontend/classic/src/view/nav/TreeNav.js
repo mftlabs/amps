@@ -80,13 +80,6 @@ Ext.define("Amps.view.nav.TreeNav", {
               text: "Topics",
             },
             {
-              iconCls: "x-fa fa-cogs",
-              leaf: true,
-              rowCls: "providers",
-              text: "Providers",
-              tooltip: "Providers",
-            },
-            {
               iconCls: "x-fa fa-tasks",
               leaf: true,
               rowCls: "actions",
@@ -145,6 +138,13 @@ Ext.define("Amps.view.nav.TreeNav", {
           text: "Data Configuration",
           expanded: true,
           children: [
+            {
+              iconCls: "x-fa fa-cogs",
+              leaf: true,
+              rowCls: "providers",
+              text: "Providers",
+              tooltip: "Providers",
+            },
             {
               iconCls: "x-fa fa-photo",
               leaf: true,

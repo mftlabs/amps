@@ -156,13 +156,23 @@ defmodule Amps.HistoryPullConsumer do
   end
 
   def handle_info({:msg, message}, state) do
+    data = Poison.decode!(message.body)
+    msg = data["msg"]
+    # AmpsEvents.send_history(
+    #   AmpsUtil.env_topic("amps.events.action", state.env),
+    #   "message_events",
+    #   msg,
+    #   %{
+    #     "status" => "started",
+    #     "topic" => AmpsUtil.env_topic(parms["topic"], state.env),
+    #     "action" => actparms["name"],
+    #     "subscriber" => name
+    #   }
+    # )
     parms = state[:parms]
     name = parms["name"]
 
     Logger.debug("got history message #{name}: #{message.topic} / #{message.body}")
-
-    data = Poison.decode!(message.body)
-    IO.inspect(data)
 
     message =
       if state.index do

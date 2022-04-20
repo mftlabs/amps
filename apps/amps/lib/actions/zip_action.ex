@@ -9,7 +9,7 @@ defmodule ZipAction do
   end
 
   def zip(msg, parms, {state, env}) do
-    is = AmpsUtil.get_istream(msg)
+    is = AmpsUtil.stream(msg, env)
     opts = []
 
     if not AmpsUtil.blank?(parms["password"]) do

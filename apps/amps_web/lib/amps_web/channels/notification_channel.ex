@@ -42,6 +42,19 @@ defmodule AmpsWeb.NotificationChannel do
     {:reply, {:ok, response}, socket}
   end
 
+  def handle_in("environment", %{"name" => name}, socket) do
+    response =
+      case Amps.EnvManager.env_active?(name) do
+        nil ->
+          false
+
+        _pid ->
+          true
+      end
+
+    {:reply, {:ok, response}, socket}
+  end
+
   def handle_in("stream", %{"name" => stream}, socket) do
     env = Amps.DB.find_one("admin", %{"_id" => socket.assigns().user_id})["config"]["env"]
 
@@ -72,7 +85,6 @@ defmodule AmpsWeb.NotificationChannel do
   def handle_in("consumer", %{"name" => name, "topic" => topic}, socket) do
     env = Amps.DB.find_one("admin", %{"_id" => socket.assigns().user_id})["config"]["env"]
     {stream, consumer} = AmpsUtil.get_names(%{"name" => name, "topic" => topic}, env)
-    IO.inspect("ENV")
 
     case Jetstream.API.Consumer.info(:gnat, stream, consumer) do
       {:ok, info} ->
@@ -81,5 +93,10 @@ defmodule AmpsWeb.NotificationChannel do
       {:error, error} ->
         {:reply, {:ok, "Error"}, socket}
     end
+  end
+
+  def handle_out(event, msg, socket) do
+    push(socket, event, msg)
+    {:noreply, socket}
   end
 end

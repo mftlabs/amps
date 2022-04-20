@@ -44,7 +44,7 @@ defmodule Amps.PyService do
         parms
       end
 
-    path = Path.join(AmpsUtil.get_env(:python_path), env)
+    path = AmpsUtil.get_mod_path(env)
     tmp = AmpsUtil.get_env(:storage_temp)
     {:ok, pid} = :python.start([{:python_path, to_charlist(path)}])
     IO.inspect(parms)

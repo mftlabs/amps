@@ -262,6 +262,13 @@ Ext.define("Amps.panel.Startup", {
               fieldLabel: "History Interval",
               value: "2500",
             },
+            {
+              xtype: "numberfield",
+              name: "TTL (days)",
+              fieldLabel: "Time to Live(Days)",
+              allowBlank: false,
+              value: "60",
+            },
           ],
         },
       ],

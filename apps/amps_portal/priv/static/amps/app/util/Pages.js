@@ -1149,7 +1149,7 @@ Ext.define("Amps.Pages", {
                           msgbox.close();
                           Ext.MessageBox.alert(
                             "Error",
-                            "Failed to Download UFA Agent"
+                            "Failed to Download Message"
                           );
                           throw new Error("Something went wrong");
                         }

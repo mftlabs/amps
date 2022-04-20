@@ -2,7 +2,7 @@ defmodule UnzipAction do
   def run(msg, parms, {state, env}) do
     _tmpdir = AmpsUtil.tempdir(msg[:session])
 
-    input = %{msg: msg, parms: parms}
+    input = %{msg: msg, parms: parms, env: env}
 
     {:ok, pid} =
       :python.start([{:python_path, to_charlist(Application.app_dir(:amps, "priv/py/actions"))}])

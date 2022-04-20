@@ -171,8 +171,10 @@ defmodule Amps.PullConsumer do
         {:noreply, state}
 
       data ->
+        {msg, sid} =
+          AmpsEvents.start_session(data["msg"], %{"service" => parms["name"]}, state.env)
+
         try do
-          msg = data["msg"]
           mctx = {data["state"], state.env}
           action_id = parms["handler"]
 
@@ -216,7 +218,6 @@ defmodule Amps.PullConsumer do
         rescue
           error ->
             IO.inspect(error)
-            msg = Jason.decode!(message.body)["msg"]
 
             msg =
               if is_map(msg) do
@@ -229,8 +230,7 @@ defmodule Amps.PullConsumer do
             action_id = parms["handler"]
             actparms = AmpsDatabase.get_action_parms(action_id)
             IO.puts("ack next message after action error")
-            Logger.warning("action failed #{inspect(error)}")
-            Logger.error(Exception.format_stacktrace())
+            Logger.error("Action Failed\n" <> Exception.format(:error, error, __STACKTRACE__))
 
             AmpsEvents.send_history(
               AmpsUtil.env_topic("amps.events.action", state.env),
@@ -243,6 +243,8 @@ defmodule Amps.PullConsumer do
               }
             )
         end
+
+        AmpsEvents.end_session(sid, state.env)
 
         Jetstream.ack_next(message, state.listening_topic)
         {:noreply, state}

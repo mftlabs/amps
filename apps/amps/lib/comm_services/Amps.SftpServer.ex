@@ -115,15 +115,10 @@ defmodule Amps.SftpServer do
     Process.flag(:trap_exit, true)
     options = args[:parms]
     env = args[:env] || ""
-    IO.inspect(env)
     :ok = :ssh.start()
-    IO.inspect("GETTING KEY")
     key = AmpsUtil.get_key(options["server_key"], env)
-    IO.puts("KEY")
-    IO.inspect(key)
 
     options = Map.put(options, "server_key", key)
-    IO.inspect(options)
 
     case options do
       nil ->
@@ -212,8 +207,6 @@ defmodule Amps.SftpServer do
   end
 
   def terminate(reason, state) do
-    IO.inspect(reason)
-
     state.daemons
     |> Enum.each(fn d ->
       :ssh.stop_daemon(d.pid)
@@ -272,7 +265,6 @@ defmodule Amps.SftpChannel do
   end
 
   def init(options) do
-    IO.inspect(options)
     :ssh_sftpd.init(options)
   end
 
@@ -330,8 +322,6 @@ defmodule Amps.SftpHandler do
   def close(io_device, state) do
     # does this get closed on download?  If so we need to check
     # if upload or download
-    IO.inspect(state)
-    IO.inspect("state")
     download = state[:download]
     nstate = List.keystore(state, :download, 0, {:download, nil})
     # download
@@ -367,6 +357,8 @@ defmodule Amps.SftpHandler do
         "user" => user
       }
 
+      {msg, sid} = AmpsEvents.start_session(msg, %{"service" => service}, state[:env])
+
       IO.inspect(state)
 
       user = state[:user]
@@ -382,6 +374,7 @@ defmodule Amps.SftpHandler do
 
       IO.inspect(state)
       # state = List.keydelete(state, :options, 0)
+
       AmpsEvents.send(msg, %{"output" => topic}, %{})
       AmpsEvents.send(msg, %{"output" => mailboxtopic}, %{})
 
@@ -392,7 +385,7 @@ defmodule Amps.SftpHandler do
       #     "status" => "received"
       #   })
       # )
-
+      AmpsEvents.end_session(sid, state[:env])
       {{:ok, '/'}, state}
     end
   end

@@ -8,13 +8,7 @@ defmodule KafkaPut do
     auth_opts = AmpsUtil.get_kafka_auth(parms, provider, env)
     worker = String.to_atom(parms["name"] <> "-" <> AmpsUtil.get_id())
 
-    value =
-      if msg["data"] do
-        msg["data"]
-      else
-        {:ok, binary} = File.read(msg["fpath"])
-        binary
-      end
+    value = AmpsUtil.get_data(msg, env)
 
     KafkaEx.create_worker(
       worker,

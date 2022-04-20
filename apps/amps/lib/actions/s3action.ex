@@ -19,8 +19,9 @@ defmodule S3Action do
 
   def run(msg, parms, {state, env}) do
     Logger.info("S3 Action Called")
+    provider = DB.find_one(AmpsUtil.index(env, "providers"), %{"_id" => parms["provider"]})
 
-    req = req(parms, env)
+    req = req(provider, env)
 
     try do
       case parms["operation"] do
@@ -64,12 +65,11 @@ defmodule S3Action do
               ExAws.S3.put_object(
                 parms["bucket"],
                 Path.join(parms["prefix"], msg["fname"]),
-                msg["data"]
+                AmpsUtil.get_data(msg, env)
               )
               |> ExAws.request(req)
             else
-              msg["fpath"]
-              |> S3.Upload.stream_file()
+              AmpsUtil.stream(msg, env)
               |> S3.upload(parms["bucket"], Path.join(parms["prefix"], msg["fname"]))
               |> ExAws.request(req)
             end
@@ -112,9 +112,7 @@ defmodule S3Action do
     :ok
   end
 
-  def req(parms, env) do
-    provider = DB.find_one(AmpsUtil.index(env, "providers"), %{"_id" => parms["provider"]})
-
+  def req(provider, env) do
     req = [
       access_key_id: provider["key"],
       secret_access_key: provider["secret"]

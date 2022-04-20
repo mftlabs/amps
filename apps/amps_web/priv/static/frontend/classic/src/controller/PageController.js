@@ -62,6 +62,11 @@ Ext.define("Amps.controller.PageController", {
 
   beforeItemPage: function (collection, id, action) {
     console.log("before");
+    var gridmask = new Ext.LoadMask({
+      msg: "Please wait...",
+      target: amfutil.getElementByID("main-grid"),
+    });
+    gridmask.show();
     var tokens = Ext.util.History.getToken().split("/");
     var mask = new Ext.LoadMask({
       msg: "Please wait...",
@@ -80,11 +85,16 @@ Ext.define("Amps.controller.PageController", {
         var obj = Ext.decode(response.responseText);
 
         updateformutil.updateRecord(obj);
+        gridmask.destroy();
         mask.destroy();
         action.resume();
       },
       failure: function (response) {
         action.stop();
+        gridmask.destroy();
+
+        mask.destroy();
+
         console.log(response);
       },
     });
@@ -201,13 +211,14 @@ Ext.define("Amps.controller.PageController", {
             element: "body", //bind to the underlying body property on the panel
             fn: function (grid, rowIndex, e, obj) {
               var record = grid.record.data;
-              console.log(config);
+              console.log(obj);
               console.log(config.dblclick);
               if (config.dblclick) {
                 config.dblclick(record);
               } else {
                 amfutil.redirectTo(route + "/" + record._id);
               }
+              grid.setLoading(false);
             },
           },
           cellcontextmenu: function (
@@ -317,6 +328,80 @@ Ext.define("Amps.controller.PageController", {
       failure: function (response) {
         mask.hide();
         amfutil.onFailure("Failed to Set Active", response);
+        grid.getStore().reload();
+      },
+    });
+  },
+
+  toggleArchive: function (grid, rowIndex, colIndex) {
+    var route = Ext.util.History.getToken();
+    var tokens = route.split("/");
+    var rec = grid.getStore().getAt(rowIndex);
+    var data = rec.data;
+    if (tokens.length > 1) {
+      if (rec.data.parms) {
+        Object.keys(rec.data.parms).forEach((key) => {
+          delete data[key];
+        });
+      }
+    }
+    delete data["id"];
+    var mask = new Ext.LoadMask({
+      msg: "Please wait...",
+      target: grid,
+    });
+
+    data.archive = !data.archive;
+
+    var status;
+
+    if (data.archive) {
+      status = "Toggled Archive On";
+    } else {
+      status = "Toggled Archive Off";
+    }
+
+    mask.show();
+    var id;
+    id = rec.data._id;
+    amfutil.ajaxRequest({
+      url:
+        tokens.length > 1
+          ? "/api/" + route + "/" + id
+          : "/api/" + route + "/" + id,
+      headers: {
+        Authorization: localStorage.getItem("access_token"),
+      },
+      method: "PUT",
+      timeout: 60000,
+      params: {},
+      jsonData: data,
+      success: function (response) {
+        console.log(response);
+        var data = Ext.decode(response.responseText);
+        mask.hide();
+        amfutil.broadcastEvent("update", {
+          page: Ext.util.History.getToken(),
+        });
+        Ext.toast({
+          title: "Success",
+          html: `<center>${status}</center>`,
+          autoCloseDelay: 3000,
+        });
+        if (tokens.length > 1) {
+          console.log(tokens[2]);
+          console.log(data);
+          var rows = data[tokens[2]].map((item) =>
+            Object.assign(item, item.parms)
+          );
+          grid.getStore().loadData(rows);
+        } else {
+          grid.getStore().reload();
+        }
+      },
+      failure: function (response) {
+        mask.hide();
+        amfutil.onFailure("Failed to Toggle Archive", response);
         grid.getStore().reload();
       },
     });
