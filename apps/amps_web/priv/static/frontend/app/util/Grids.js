@@ -10060,7 +10060,7 @@ Ext.define("Amps.util.Grids", {
                     {
                       xtype: "numberfield",
                       name: "hinterval",
-                      fieldLabel: "History Interval",
+                      fieldLabel: "History Interval(ms)",
                       allowBlank: false,
                     },
                     {

@@ -23,7 +23,7 @@ defmodule MailboxAction do
         )
 
         # AmpsMailbox.add_message(recipient, newmsg, env)
-        Logger.warning("put message in mailbox #{recipient}")
+        Logger.info("put message in mailbox #{recipient}")
 
         {:ok, "mailboxed with recipient #{recipient} to mailbox #{mailbox}"}
     end
