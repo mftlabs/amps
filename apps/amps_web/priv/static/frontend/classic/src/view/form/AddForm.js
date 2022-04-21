@@ -73,7 +73,16 @@ Ext.define("Amps.form.add", {
     {
       xtype: "form",
       entity: null,
-
+      getInvalidFields: function () {
+        var invalidFields = [];
+        Ext.suspendLayouts();
+        this.form.getFields().filterBy(function (field) {
+          if (field.validate()) return;
+          invalidFields.push(field);
+        });
+        Ext.resumeLayouts(true);
+        return invalidFields;
+      },
       bodyPadding: 10,
       defaults: {
         padding: 5,
@@ -172,7 +181,9 @@ Ext.define("Amps.form.add", {
           itemId: "accounts_cancel",
           listeners: {
             click: function (btn) {
-              this.up("window").close();
+              var fields = this.up("form").getInvalidFields();
+              console.log(fields);
+              // this.up("window").close();
             },
           },
         },

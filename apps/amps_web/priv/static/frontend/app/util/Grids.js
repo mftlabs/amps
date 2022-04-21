@@ -4374,16 +4374,24 @@ Ext.define("Amps.util.Grids", {
 
                       comps.forEach((name) => {
                         var component = scope.up("form").down("#" + name);
-                        component.setHidden(val != name);
+                        console.log(component);
+                        component.setDisabled(false);
+
+                        component.setHidden(false);
+                      });
+
+                      comps.forEach((name) => {
+                        var component = scope.up("form").down("#" + name);
+                        console.log(component);
                         component.setDisabled(val != name);
+
+                        component.setHidden(val != name);
                       });
                     }),
                   }
                 ),
                 {
                   xtype: "fieldset",
-                  hidden: true,
-                  disabled: true,
                   title: "Minio",
 
                   itemId: "Minio",
@@ -4428,11 +4436,8 @@ Ext.define("Amps.util.Grids", {
                 },
                 {
                   xtype: "fieldset",
-
                   title: "AWS",
                   itemId: "AWS",
-                  hidden: true,
-                  disabled: true,
                   items: [
                     amfutil.localCombo(
                       "Region",
@@ -4465,11 +4470,7 @@ Ext.define("Amps.util.Grids", {
                         "us-gov-east-1",
                       ],
                       null,
-                      null,
-                      {
-                        tooltip:
-                          "The AWS Region your S3 Buckets are hosted on.",
-                      }
+                      null
                     ),
                   ],
                 },
