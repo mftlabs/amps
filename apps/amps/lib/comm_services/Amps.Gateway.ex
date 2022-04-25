@@ -380,7 +380,7 @@ defmodule Amps.Gateway do
             {:error, "Access Denied"}
 
           user ->
-            {:ok, user}
+            {:ok, user["username"]}
         end
 
       :error ->

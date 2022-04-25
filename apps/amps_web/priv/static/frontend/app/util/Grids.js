@@ -5137,8 +5137,36 @@ Ext.define("Amps.util.Grids", {
         {
           text: "Parent",
           dataIndex: "parent",
+          xtype: "widgetcolumn",
           flex: 1,
           value: "true",
+          widget: {
+            xtype: "button",
+          },
+          onWidgetAttach: function (col, widget, rec) {
+            var scope = this;
+            console.log("attach");
+            if (rec.data.parent == "" || !rec.data.parent) {
+              widget.setDisabled(true);
+              widget.setText("New Message");
+            } else {
+              widget.setDisabled(false);
+
+              widget.setHandler(async function () {
+                console.log(rec.data);
+                var rows = await amfutil.getCollectionData("message_events", {
+                  msgid: rec.data.parent,
+                  status: "received",
+                });
+                msg = rows[0];
+                scope
+                  .up("app-main")
+                  .getController()
+                  .redirectTo(`message_events/${msg["_id"]}`);
+                return false;
+              });
+            }
+          },
           type: "text",
         },
         {
@@ -9744,69 +9772,14 @@ Ext.define("Amps.util.Grids", {
 
                     title: "Recent Messages",
                     itemId: "events",
-                    columns: [
-                      {
-                        text: "Message ID",
-                        dataIndex: "msgid",
-                        flex: 1,
-                        type: "text",
+                    listeners: {
+                      beforerender: function () {
+                        this.reconfigure(
+                          null,
+                          ampsgrids.grids.message_events().columns
+                        );
                       },
-                      {
-                        text: "Parent",
-                        dataIndex: "parent",
-                        flex: 1,
-                        value: "true",
-                        type: "text",
-                      },
-                      {
-                        text: "File Name",
-                        dataIndex: "fname",
-                        flex: 1,
-                        value: "true",
-                        type: "text",
-                      },
-                      {
-                        text: "File Size",
-                        dataIndex: "fsize",
-                        flex: 1,
-                        type: "fileSize",
-                        renderer: amfutil.renderFileSize,
-                      },
-                      {
-                        text: "Event Time",
-                        dataIndex: "etime",
-                        flex: 1,
-                        type: "date",
-                        renderer: function (val) {
-                          var date = new Date(val);
-                          return date.toString();
-                        },
-                      },
-                      {
-                        text: "Status",
-                        dataIndex: "status",
-                        flex: 1,
-                        type: "combo",
-                        options: [
-                          {
-                            field: "started",
-                            label: "Started",
-                          },
-                          {
-                            field: "completed",
-                            label: "Completed",
-                          },
-                          {
-                            field: "received",
-                            label: "Received",
-                          },
-                          {
-                            field: "failed",
-                            label: "Failed",
-                          },
-                        ],
-                      },
-                    ],
+                    },
                     bbar: {
                       xtype: "pagingtoolbar",
                       displayInfo: true,

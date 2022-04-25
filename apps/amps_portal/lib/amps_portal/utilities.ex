@@ -155,7 +155,7 @@ defmodule AmpsPortal.Util do
               nil
 
             user ->
-              user["username"]
+              user
           end
         else
           nil

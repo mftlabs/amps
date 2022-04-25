@@ -16,9 +16,13 @@ defmodule AmpsMailbox do
     end
   end
 
-  def delete_message(mailbox, msgid, env \\ "") do
+  def delete_message(user, mailbox, msgid, env \\ "") do
     result =
-      DB.delete_one(AmpsUtil.index(env, "mailbox"), %{"mailbox" => mailbox, "msgid" => msgid})
+      DB.delete_one(AmpsUtil.index(env, "mailbox"), %{
+        "recipient" => user,
+        "mailbox" => mailbox,
+        "msgid" => msgid
+      })
 
     IO.inspect(result)
     :ok
@@ -119,7 +123,7 @@ defmodule AmpsMailbox do
     # |> Enum.to_list()
     DB.find(AmpsUtil.index(env, "mailbox"), %{"recipient" => user, "mailbox" => mailbox}, %{
       size: limit,
-      sort: [%{mtime: "asc"}]
+      sort: %{mtime: "desc"}
     })
   end
 end

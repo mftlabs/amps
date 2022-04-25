@@ -1058,6 +1058,12 @@ Ext.define("Amps.Pages", {
               },
             },
             {
+              text: "Message ID",
+              dataIndex: "msgid",
+              type: "text",
+              flex: 1,
+            },
+            {
               text: "File Name",
               dataIndex: "fname",
               type: "text",

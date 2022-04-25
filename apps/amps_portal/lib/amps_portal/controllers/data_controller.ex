@@ -143,7 +143,7 @@ defmodule AmpsPortal.DataController do
                 conn
                 |> put_resp_header(
                   "content-disposition",
-                  "attachment; filename=#{msg["fname"] || "download"}"
+                  "attachment; filename=\"#{msg["fname"] || "download"}\""
                 )
                 |> send_chunked(200)
 

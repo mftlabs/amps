@@ -26,34 +26,16 @@ defmodule Amps.MailboxApi do
   end
 
   def call(conn, opts) do
-    put_private(conn, :opts, opts)
+    put_private(conn, :env, opts.env)
+    |> put_private(:opts, opts.opts)
     |> super(opts)
   end
 
-  get "/mailbox/:mailbox/message/:msgid" do
-    case myauth(conn, mailbox) do
-      {:ok, _} ->
-        case AmpsMailbox.get_message(mailbox, msgid) do
-          nil ->
-            send_resp(conn, 401, Poison.encode!(%{error: "message not found"}))
-
-          msg ->
-            path = AmpsUtil.get_env(:storage_root, "") <> "/" <> msg["fpath"]
-            Plug.Conn.send_file(conn, 200, path)
-        end
-
-      {:error, reason} ->
-        # auth failure (401 unauthorized)
-        send_resp(conn, 401, Poison.encode!(%{error: reason}))
-    end
-  end
-
-  get "/mailbox/:mailbox" do
+  get "/mailbox/:user" do
     # IO.inspect(opts)
-
-    case myauth(conn, mailbox) do
+    case myauth(conn, user) do
       {:ok, _} ->
-        result = AmpsMailbox.list_messages(mailbox, 100)
+        result = AmpsMailbox.get_mailboxes(user, conn.private.env)
         # list successful (200 ok)
         send_resp(conn, 200, Poison.encode!(result))
 
@@ -63,7 +45,56 @@ defmodule Amps.MailboxApi do
     end
   end
 
-  post "/mailbox/:mailbox" do
+  get "/mailbox/:user/:mailbox/message/:msgid" do
+    case myauth(conn, user, mailbox) do
+      {:ok, _} ->
+        case AmpsMailbox.get_message(user, mailbox, msgid, conn.private.env) do
+          nil ->
+            send_resp(conn, 401, Poison.encode!(%{error: "message not found"}))
+
+          msg ->
+            stream = AmpsUtil.stream(msg, conn.private.env)
+
+            conn =
+              conn
+              |> put_resp_header(
+                "content-disposition",
+                "attachment; filename=\"#{msg["fname"] || "download"}\""
+              )
+              |> send_chunked(200)
+
+            Enum.reduce_while(stream, conn, fn chunk, conn ->
+              case Plug.Conn.chunk(conn, chunk) do
+                {:ok, conn} ->
+                  {:cont, conn}
+
+                {:error, :closed} ->
+                  {:halt, conn}
+              end
+            end)
+        end
+
+      {:error, reason} ->
+        # auth failure (401 unauthorized)
+        send_resp(conn, 401, Poison.encode!(%{error: reason}))
+    end
+  end
+
+  get "/mailbox/:user/:mailbox" do
+    # IO.inspect(opts)
+    case myauth(conn, user, mailbox) do
+      {:ok, _} ->
+        result = AmpsMailbox.list_messages(user, mailbox, 100, conn.private.env)
+        # list successful (200 ok)
+        send_resp(conn, 200, Poison.encode!(result))
+
+      {:error, reason} ->
+        # auth failure (401 unauthorized)
+        send_resp(conn, 401, Poison.encode!(%{error: reason}))
+    end
+  end
+
+  post "/mailbox/:user/:mailbox" do
     IO.inspect(conn)
 
     IO.puts("opts: #{inspect(opts)}")
@@ -75,7 +106,7 @@ defmodule Amps.MailboxApi do
     IO.inspect(conn)
     IO.inspect(conn.body_params())
 
-    case myauth(conn, mailbox) do
+    case myauth(conn, user, mailbox) do
       {:ok, user} ->
         msg = get_metadata(conn, user, msgid, stime, temp_file)
 
@@ -90,21 +121,35 @@ defmodule Amps.MailboxApi do
 
           {:ok, _conn} ->
             # temp file written okay
+            {msg, sid} =
+              AmpsEvents.start_session(
+                msg,
+                %{"service" => conn.private.opts["name"]},
+                conn.private.env
+              )
+
             msg = Map.put(msg, "header", "")
             #            :file.delete(temp_file)
             #            Amps.MqService.send("registerq", msg)
             msg = Map.put(msg, "mailbox", mailbox)
-            user = mailbox
-            topic = "amps.svcs.#{conn.private.opts.opts["name"]}.#{user}"
 
-            case AmpsEvents.send(
-                   msg,
-                   %{"output" => AmpsUtil.env_topic(topic, conn.private.opts.env)},
-                   %{}
-                 ) do
-              :ok ->
+            topic =
+              AmpsUtil.env_topic(
+                "amps.svcs.#{conn.private.opts["name"]}.#{user}",
+                conn.private.env
+              )
+
+            mailboxtopic = AmpsUtil.env_topic("amps.mailbox.#{user}.#{mailbox}", conn.private.env)
+
+            svced = AmpsEvents.send(msg, %{"output" => topic}, %{})
+            mailboxed = AmpsEvents.send(msg, %{"output" => mailboxtopic}, %{})
+
+            case {svced, mailboxed} do
+              {:ok, :ok} ->
                 # AmpsQueue.commitTx()
                 # register normal completion (201 created)
+                AmpsEvents.end_session(sid, conn.private.env)
+
                 send_resp(
                   conn,
                   201,
@@ -123,10 +168,10 @@ defmodule Amps.MailboxApi do
     end
   end
 
-  delete "/mailbox/:mailbox/message/:msgid" do
-    case myauth(conn, mailbox) do
+  delete "/mailbox/:user/:mailbox/message/:msgid" do
+    case myauth(conn, user, mailbox) do
       {:ok, _} ->
-        AmpsMailbox.delete_message(mailbox, msgid)
+        AmpsMailbox.delete_message(user, mailbox, msgid, conn.private.env)
         # delete successful (200 ok)
         send_resp(conn, 200, Poison.encode!(%{msgid: msgid, status: "deleted"}))
 
@@ -139,28 +184,6 @@ defmodule Amps.MailboxApi do
   match _ do
     # uri not matched (404 not found)
     send_resp(conn, 404, "HTTP request not supported")
-  end
-
-  defp myauth(conn, mailbox) do
-    case Plug.BasicAuth.parse_basic_auth(conn) do
-      {user, cred} ->
-        IO.inspect(user)
-        IO.inspect(cred)
-
-        case AmpsPortal.Util.verify_token(user, cred, conn.private.opts.env) do
-          nil ->
-            {:error, "Access to mailbox [#{mailbox}] denied to user [#{user}]"}
-
-          user ->
-            {:ok, mailbox}
-
-          false ->
-            nil
-        end
-
-      :error ->
-        {:error, "Authorization denied - invalid HTTP auth header"}
-    end
   end
 
   defp get_metadata(conn, user, msgid, stime, temp) do
@@ -189,7 +212,8 @@ defmodule Amps.MailboxApi do
         "temp" => "true",
         "stime" => stime,
         "fsize" => elem(size, 1),
-        "ftime" => AmpsUtil.gettime()
+        "ftime" => AmpsUtil.gettime(),
+        "service" => conn.private.opts["name"]
       })
 
     if nmsg["fname"] == "" || nmsg["fname"] == nil do
@@ -241,6 +265,44 @@ defmodule Amps.MailboxApi do
 
       {:error, term} ->
         {:error, term}
+    end
+  end
+
+  defp myauth(conn, username, mailbox \\ nil) do
+    case Plug.BasicAuth.parse_basic_auth(conn) do
+      {id, secret} ->
+        case AmpsPortal.Util.verify_token(id, secret, conn.private.env) do
+          nil ->
+            {:error, "Access Denied"}
+
+          user ->
+            if username == user["username"] do
+              if mailbox do
+                mailbox =
+                Enum.find(user["mailboxes"], nil, fn mb ->
+                  IO.inspect(mailbox)
+                  mb["name"] == mailbox
+                end)
+
+              case mailbox do
+                nil ->
+                  {:error, "Mailbox does not exist"}
+
+                mailbox ->
+                  {:ok, user["username"]}
+              end
+              else
+                {:ok, user["username"]}
+              end
+            else
+              {:error, "Forbidden"}
+            end
+
+
+        end
+
+      :error ->
+        {:error, "Authorization denied - invalid HTTP auth header"}
     end
   end
 end

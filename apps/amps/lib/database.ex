@@ -259,7 +259,7 @@ defmodule Amps.DB do
           Mongo.find_one(:mongo, collection, clauses)
 
         "es" ->
-          Elastic.find_one(collection, %{"_id" => id})
+          Elastic.find_by_id(collection, id)
       end
     end
   end
@@ -1086,6 +1086,21 @@ defmodule Amps.DB do
         )
 
       rows
+    end
+
+    def find_by_id(collection, id, opts \\ %{}) do
+      case Amps.Cluster.get(Path.join([Amps.DB.path(collection), "_doc", id])) do
+        {:ok, resp} ->
+          if resp["found"] do
+            Map.put(resp["_source"], "_id", id)
+          else
+            nil
+          end
+
+        {:error, error} ->
+          Logger.error(error)
+          nil
+      end
     end
 
     def find_one(collection, clauses, opts \\ %{}) do

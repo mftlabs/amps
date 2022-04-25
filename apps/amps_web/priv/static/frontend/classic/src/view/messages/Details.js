@@ -1013,79 +1013,10 @@ Ext.define("Amps.view.messages.MessageStatus", {
                   },
                 },
                 beforerender: function (scope) {
-                  scope.reconfigure(null, [
-                    {
-                      text: "Message ID",
-                      dataIndex: "msgid",
-                      flex: 1,
-                      type: "text",
-                    },
-                    {
-                      text: "Action",
-                      dataIndex: "action",
-                      flex: 1,
-                      value: "true",
-                      type: "text",
-                    },
-                    {
-                      text: "Parent",
-                      dataIndex: "parent",
-                      flex: 1,
-                      value: "true",
-                      type: "text",
-                    },
-                    {
-                      text: "File Name",
-                      dataIndex: "fname",
-                      flex: 1,
-                      value: "true",
-                      type: "text",
-                    },
-                    {
-                      text: "File Size",
-                      dataIndex: "fsize",
-                      flex: 1,
-                      type: "fileSize",
-                      renderer: amfutil.renderFileSize,
-                    },
-                    {
-                      text: "Event Time",
-                      dataIndex: "etime",
-                      flex: 1,
-                      type: "date",
-                      renderer: amfutil.dateRenderer,
-                    },
-                    {
-                      text: "Topic",
-                      dataIndex: "topic",
-                      flex: 1,
-                      type: "text",
-                    },
-                    {
-                      text: "Status",
-                      dataIndex: "status",
-                      flex: 1,
-                      type: "combo",
-                      options: [
-                        {
-                          field: "started",
-                          label: "Started",
-                        },
-                        {
-                          field: "completed",
-                          label: "Completed",
-                        },
-                        {
-                          field: "received",
-                          label: "Received",
-                        },
-                        {
-                          field: "failed",
-                          label: "Failed",
-                        },
-                      ],
-                    },
-                  ]);
+                  scope.reconfigure(
+                    null,
+                    ampsgrids.grids.message_events().columns
+                  );
                 },
               },
             },
