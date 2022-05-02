@@ -672,11 +672,13 @@ Ext.define("Amps.view.messages.MessageDetails", {
   xtype: "messagedetails",
   title: "Message Details",
   //scrollable:true,
-  collapsible: true,
+  // layout: "fit",
 
   loadDetails: async function (record) {
     console.log(record);
-    this.removeAll();
+    console.log(this.down());
+    var c = this.down("container");
+    c.removeAll();
     var filters = { msgid: record.msgid };
 
     var statuses = await amfutil.getCollectionData("message_status", filters);
@@ -799,7 +801,8 @@ Ext.define("Amps.view.messages.MessageDetails", {
       items.push(f);
       if (items.length == 3) {
         hbox.items = items;
-        this.insert(hbox);
+        c.insert(hbox);
+
         delete hbox.items;
         items = [];
       } else if (i == entries.length - 1) {
@@ -814,14 +817,19 @@ Ext.define("Amps.view.messages.MessageDetails", {
           });
         }
         hbox.items = items;
-        this.insert(hbox);
+        c.insert(hbox);
         delete hbox.items;
         items = [];
       }
     }
   },
 
-  items: [],
+  items: [
+    {
+      xtype: "container",
+      padding: 3,
+    },
+  ],
 });
 
 Ext.define("Amps.view.messages.MessageStatus", {
@@ -1029,10 +1037,15 @@ Ext.define("Amps.view.messages.MessageStatus", {
                 beforerender: function (scope) {
                   var config = ampsgrids.grids.system_logs();
                   scope.reconfigure(null, config.columns);
+                  var config = ampsgrids.grids.system_logs();
                   this.setListeners({
                     dblclick: {
                       element: "body", //bind to the underlying body property on the panel
-                      fn: config.dblclick,
+                      fn: function (grid, rowIndex, e, obj) {
+                        var record = grid.record.data;
+                        console.log(record);
+                        config.dblclick(record);
+                      },
                     },
                   });
                 },

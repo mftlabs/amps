@@ -76,7 +76,7 @@ defmodule AmpsWeb.MixProject do
        [
          env: :prod,
          override: true,
-         git: "https://github.com/aram0112/erlport.git",
+         git: "https://github.com/erlport/erlport.git",
          branch: "master"
        ]},
       {:swoosh, "~> 1.3"}

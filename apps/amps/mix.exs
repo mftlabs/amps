@@ -40,7 +40,6 @@ defmodule Amps.MixProject do
       {:swoosh, "~> 1.3"},
       {:plug_cowboy, "~> 2.0"},
       {:uuid, "~> 2.0", hex: :uuid_erl},
-      {:sched_ex, "~> 1.0"},
       {:poison, "~> 3.1"},
       {:mongodb_driver, "~> 0.7"},
       {:export, "~> 0.0.7"},
@@ -48,7 +47,7 @@ defmodule Amps.MixProject do
        [
          env: :prod,
          override: true,
-         git: "https://github.com/aram0112/erlport.git",
+         git: "https://github.com/erlport/erlport.git",
          branch: "master"
        ]},
       {:poolboy, "~> 1.5"},
@@ -58,10 +57,8 @@ defmodule Amps.MixProject do
       {:jetstream, path: "./jetstream"},
       {:pythra, git: "https://github.com/aram0112/pythra.git"},
       {:gnat, "~> 1.4"},
-      {:ldap_ex, "~> 0.2.2"},
       {:httpoison, "~> 1.8"},
       {:zstream, "~> 0.6.0"},
-      {:elsa, "~> 1.0.0-rc.3"},
       {:ex_aws, "~> 2.0"},
       {:ex_aws_s3, "~> 2.0"},
       {:quantum, "~> 3.0"},
@@ -74,6 +71,9 @@ defmodule Amps.MixProject do
       {:mnesiac, git: "https://github.com/aram0112/mnesiac"},
       {:kafka_ex, git: "https://github.com/aram0112/kafka_ex"},
       {:cors_plug, "~> 2.0"}
+      # {:ex_json_schema, "~> 0.9.1"},
+      # {:xml_builder, "~> 2.1"},
+      # {:jsonpatch, "~> 0.12.0"}
     ]
   end
 

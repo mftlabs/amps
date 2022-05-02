@@ -508,7 +508,7 @@ defmodule AmpsWeb.DataController do
 
     meta =
       Map.merge(
-        %{"msgid" => msgid, "user" => user, "service" => "Topic Event"},
+        %{"msgid" => msgid, "user" => user.username, "service" => "Topic Event"},
         Jason.decode!(meta)
       )
 
@@ -779,6 +779,19 @@ defmodule AmpsWeb.DataController do
 
         if object["type"] == "subscriber" || (object["type"] == "pyservice" && object["receive"]) do
           Util.delete_config_consumer(object, conn.assigns().env)
+        end
+
+        if object["type"] == "gateway" do
+          mod =
+          case conn.assigns().env do
+            "" ->
+              :"Amps.Gateway.#{object["name"]}"
+            env ->
+              :"Amps.Gateway.#{env}.#{object["name"]}"
+          end
+
+          :code.delete(mod)
+          :code.purge(mod)
         end
 
       "actions" ->

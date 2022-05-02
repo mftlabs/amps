@@ -174,6 +174,14 @@ defmodule Amps.EnvSvcManager do
             max_keepalive: args["max_keepalive"]
           ]
 
+          [{plug, _}] =
+            EEx.eval_file(Path.join([:code.priv_dir(:amps), "gateway", "Amps.Gateway.eex"]),
+              name: args["name"],
+              router: args["router"],
+              env: env,
+            )
+            |> Code.compile_string("Amps.Gateway.eex")
+
           if args["tls"] do
             {cert, key} =
               try do
@@ -193,7 +201,7 @@ defmodule Amps.EnvSvcManager do
 
             {Plug.Cowboy,
              scheme: :https,
-             plug: {types[:gateway], [env: env, opts: args]},
+             plug: {plug, [env: env, opts: args]},
              options: [
                ref: name,
                port: args["port"],
@@ -206,7 +214,7 @@ defmodule Amps.EnvSvcManager do
           else
             {Plug.Cowboy,
              scheme: :http,
-             plug: {types[:gateway], [env: env, opts: args]},
+             plug: {plug, [env: env, opts: args]},
              options: [
                ref: name,
                port: args["port"],

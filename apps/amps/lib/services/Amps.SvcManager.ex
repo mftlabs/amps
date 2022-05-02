@@ -212,6 +212,63 @@ defmodule Amps.SvcManager do
         #   group_consumer: init_opts
         # }
 
+        :gateway ->
+          IO.inspect(args)
+
+          protocol_options = [
+            idle_timeout: args["idle_timeout"],
+            request_timeout: args["request_timeout"],
+            max_keepalive: args["max_keepalive"]
+          ]
+
+          [{plug, _}] =
+            EEx.eval_file(Path.join([:code.priv_dir(:amps), "gateway", "Amps.Gateway.eex"]),
+              name: args["name"],
+              router: args["router"],
+              env: nil
+            )
+           |> Code.compile_string("Amps.Gateway.eex")
+
+          if args["tls"] do
+            {cert, key} =
+              try do
+                cert = AmpsUtil.get_key(args["cert"])
+                key = AmpsUtil.get_key(args["key"])
+
+                cert = X509.Certificate.from_pem!(cert) |> X509.Certificate.to_der()
+
+                key = X509.PrivateKey.from_pem!(key)
+                keytype = Kernel.elem(key, 0)
+                key = X509.PrivateKey.to_der(key)
+                {cert, {keytype, key}}
+              rescue
+                e ->
+                  raise "Error parsing key and/or certificate"
+              end
+
+            {Plug.Cowboy,
+             scheme: :https,
+             plug: {plug, [opts: args]},
+             options: [
+               ref: name,
+               port: args["port"],
+               cipher_suite: :strong,
+               cert: cert,
+               key: key,
+               otp_app: :amps,
+               protocol_options: protocol_options
+             ]}
+          else
+            {Plug.Cowboy,
+             scheme: :http,
+             plug: {plug, [opts: args]},
+             options: [
+               ref: name,
+               port: args["port"],
+               protocol_options: protocol_options
+             ]}
+          end
+
         type ->
           {types[type], name: name, parms: args}
       end

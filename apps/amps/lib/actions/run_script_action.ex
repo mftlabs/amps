@@ -32,16 +32,22 @@ defmodule RunScriptAction do
         if parms["send_output"] do
           msgid = AmpsUtil.get_id()
           newmsg = rparm["msg"]
-          IO.inspect(newmsg)
 
           event =
             if newmsg do
-              msg
-              |> Map.merge(newmsg)
-              |> Map.merge(%{
-                "msgid" => msgid,
-                "parent" => msg["msgid"]
-              })
+              msg =
+                msg
+                |> Map.merge(newmsg)
+                |> Map.merge(%{
+                  "msgid" => msgid,
+                  "parent" => msg["msgid"]
+                })
+
+              if newmsg["data"] do
+                Map.drop(msg, ["fpath", "fsize"])
+              else
+                Map.drop(msg, ["data"])
+              end
             else
               Map.merge(
                 msg,

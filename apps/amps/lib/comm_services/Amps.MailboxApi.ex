@@ -32,7 +32,6 @@ defmodule Amps.MailboxApi do
   end
 
   get "/mailbox/:user" do
-    # IO.inspect(opts)
     case myauth(conn, user) do
       {:ok, _} ->
         result = AmpsMailbox.get_mailboxes(user, conn.private.env)
@@ -45,49 +44,31 @@ defmodule Amps.MailboxApi do
     end
   end
 
-  get "/mailbox/:user/:mailbox/message/:msgid" do
-    case myauth(conn, user, mailbox) do
-      {:ok, _} ->
-        case AmpsMailbox.get_message(user, mailbox, msgid, conn.private.env) do
-          nil ->
-            send_resp(conn, 401, Poison.encode!(%{error: "message not found"}))
-
-          msg ->
-            stream = AmpsUtil.stream(msg, conn.private.env)
-
-            conn =
-              conn
-              |> put_resp_header(
-                "content-disposition",
-                "attachment; filename=\"#{msg["fname"] || "download"}\""
-              )
-              |> send_chunked(200)
-
-            Enum.reduce_while(stream, conn, fn chunk, conn ->
-              case Plug.Conn.chunk(conn, chunk) do
-                {:ok, conn} ->
-                  {:cont, conn}
-
-                {:error, :closed} ->
-                  {:halt, conn}
-              end
-            end)
-        end
-
-      {:error, reason} ->
-        # auth failure (401 unauthorized)
-        send_resp(conn, 401, Poison.encode!(%{error: reason}))
-    end
-  end
-
   get "/mailbox/:user/:mailbox" do
     # IO.inspect(opts)
     case myauth(conn, user, mailbox) do
       {:ok, _} ->
-        result = AmpsMailbox.list_messages(user, mailbox, 100, conn.private.env)
-        # list successful (200 ok)
-        send_resp(conn, 200, Poison.encode!(result))
+        limit = conn.query_params()["limit"]
 
+        limit =
+          if limit do
+            try do
+              String.to_integer(limit)
+            rescue _ ->
+              {:error, "Invalid parameter: \"limit\" must be textual representation of an integer."}
+            end
+          else
+            100
+          end
+        case limit do
+          {:error, e} ->
+            send_resp(conn, 400, e)
+          limit ->
+            result = AmpsMailbox.list_messages(user, mailbox, limit, conn.private.env)
+            count = Enum.count(result)
+            # list successful (200 ok)
+            send_resp(conn, 200, Poison.encode!(%{count: count, messages: result}))
+        end
       {:error, reason} ->
         # auth failure (401 unauthorized)
         send_resp(conn, 401, Poison.encode!(%{error: reason}))
@@ -160,6 +141,41 @@ defmodule Amps.MailboxApi do
                 # register reports failure (400 bad request)
                 #                send_resp(conn, 400, Poison.encode!(%{msgid: msgid, status: "rejected"}))
             end
+        end
+
+      {:error, reason} ->
+        # auth failure (401 unauthorized)
+        send_resp(conn, 401, Poison.encode!(%{error: reason}))
+    end
+  end
+
+  get "/mailbox/:user/:mailbox/message/:msgid" do
+    case myauth(conn, user, mailbox) do
+      {:ok, _} ->
+        case AmpsMailbox.get_message(user, mailbox, msgid, conn.private.env) do
+          nil ->
+            send_resp(conn, 404, Poison.encode!(%{error: "Message Not Found"}))
+
+          msg ->
+            stream = AmpsUtil.stream(msg, conn.private.env)
+
+            conn =
+              conn
+              |> put_resp_header(
+                "content-disposition",
+                "attachment; filename=\"#{msg["fname"] || "download"}\""
+              )
+              |> send_chunked(200)
+
+            Enum.reduce_while(stream, conn, fn chunk, conn ->
+              case Plug.Conn.chunk(conn, chunk) do
+                {:ok, conn} ->
+                  {:cont, conn}
+
+                {:error, :closed} ->
+                  {:halt, conn}
+              end
+            end)
         end
 
       {:error, reason} ->
@@ -253,18 +269,27 @@ defmodule Amps.MailboxApi do
   defp read_body(conn, opts, f) do
     IO.inspect(conn)
 
-    case Plug.Conn.read_body(conn, opts) do
-      {:ok, binary, conn} ->
-        :file.write(f, binary)
+    case conn.body_params() do
+      %Plug.Conn.Unfetched{aspect: :body_params} ->
+        case Plug.Conn.read_body(conn, opts) do
+          {:ok, binary, conn} ->
+            :file.write(f, binary)
+            :file.close(f)
+            {:ok, conn}
+
+          {:more, binary, conn} ->
+            :file.write(f, binary)
+            read_body(conn, opts, f)
+
+          {:error, term} ->
+            {:error, term}
+        end
+
+      res ->
+        {_key, %Plug.Upload{path: path}} = Enum.at(res, 0)
+        :file.copy(path, f)
         :file.close(f)
         {:ok, conn}
-
-      {:more, binary, conn} ->
-        :file.write(f, binary)
-        read_body(conn, opts, f)
-
-      {:error, term} ->
-        {:error, term}
     end
   end
 
@@ -279,26 +304,24 @@ defmodule Amps.MailboxApi do
             if username == user["username"] do
               if mailbox do
                 mailbox =
-                Enum.find(user["mailboxes"], nil, fn mb ->
-                  IO.inspect(mailbox)
-                  mb["name"] == mailbox
-                end)
+                  Enum.find(user["mailboxes"], nil, fn mb ->
+                    IO.inspect(mailbox)
+                    mb["name"] == mailbox
+                  end)
 
-              case mailbox do
-                nil ->
-                  {:error, "Mailbox does not exist"}
+                case mailbox do
+                  nil ->
+                    {:error, "Mailbox does not exist"}
 
-                mailbox ->
-                  {:ok, user["username"]}
-              end
+                  mailbox ->
+                    {:ok, user["username"]}
+                end
               else
                 {:ok, user["username"]}
               end
             else
               {:error, "Forbidden"}
             end
-
-
         end
 
       :error ->

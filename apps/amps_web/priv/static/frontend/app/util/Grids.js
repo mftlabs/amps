@@ -398,7 +398,7 @@ Ext.define("Amps.window.Workflow", {
                             amfutil.combo(
                               "Field",
                               "field",
-                              amfutil.createCollectionStore("fields"),
+                              "metadata",
                               "field",
                               "desc",
                               {
@@ -3760,7 +3760,7 @@ Ext.define("Amps.util.Grids", {
             };
           },
           "Environment Already Exists",
-          amfutil.nameValidator
+          amfutil.nameLowerCaseValidator
         ),
         {
           xtype: "textfield",
@@ -4997,18 +4997,15 @@ Ext.define("Amps.util.Grids", {
             arrayfield: "Metadata",
             tooltip: "Any additional metadata to send along with the message",
             arrayfields: [
-              {
-                xtype: "textfield",
-                name: "field",
-                fieldLabel: "Field",
-                labelWidth: 35,
-              },
+              amfutil.combo("Field", "field", "metadata", "field", "desc", {
+                labelWidth: 50,
+              }),
               {
                 xtype: "textfield",
 
                 name: "value",
                 fieldLabel: "Value",
-                labelWidth: 35,
+                labelWidth: 50,
               },
             ],
           },
@@ -7971,7 +7968,14 @@ Ext.define("Amps.util.Grids", {
                   amfutil.localCombo(
                     "Method",
                     "method",
-                    ["GET", "POST", "PUT", "DELETE"],
+                    [
+                      { label: "GET", field: "get" },
+                      { label: "POST", field: "post" },
+                      { label: "PUT", field: "put" },
+                      { label: "DELETE", field: "delete" },
+                    ],
+                    "field",
+                    "label",
                     {
                       tooltip: "The HTTP Method for the request.",
                       allowBlank: false,
@@ -8329,160 +8333,160 @@ Ext.define("Amps.util.Grids", {
               return values;
             },
           },
-          // pyservice: {
-          //   field: "pyservice",
-          //   label: "Custom Python Service",
-          //   fields: [
-          //     amfutil.combo(
-          //       "Service",
-          //       "service",
-          //       amfutil.pyserviceStore(),
-          //       "name",
-          //       "name"
-          //     ),
-          //     {
-          //       xtype: "parmfield",
-          //       title: "Config",
-          //       name: "config",
-          //       tooltip: "Additional Config to be passed to your service.",
-          //     },
-          //     amfutil.check("Receive Messages", "receive", {
-          //       listeners: amfutil.renderListeners(function (scope, val) {
-          //         console.log(val);
-          //         var out = scope.up("form").down("#receive_parms");
-          //         out.setHidden(!val);
-          //         out.setDisabled(!val);
-          //       }),
-          //     }),
-          //     amfutil.renderContainer("receive_parms", [
-          //       amfutil.consumerConfig(
-          //         function (topichandler) {
-          //           return [
-          //             amfutil.dynamicCreate(
-          //               amfutil.combo(
-          //                 "Topic",
-          //                 "topic",
-          //                 amfutil.createCollectionStore("topics"),
-          //                 "topic",
-          //                 "topic",
-          //                 {
-          //                   tooltip: "The topic to subscriber to",
-          //                   listeners: {
-          //                     change: topichandler,
-          //                   },
-          //                 }
-          //               ),
-          //               "topics"
-          //             ),
-          //           ];
-          //         },
-          //         `The Topic this subscriber will consumes messages from.`,
-          //         `This block allows you to configure how the subscriber will consume events from the specified topic. Changing any of these values after creation will result in the creation of a new consumer. (i.e. If the consumer is configured with a Deliver Policy of "All" and 50 messages are consumed, updating the consumer config and leaving the delivery policy of "All" will result in the reprocessing of those messages.) "All" results in a consumption of all events on the topic. "New" results in a consumption of all events created after this configuration was updated. "Last" results in a consumption o fall events starting with the most recent events. "Start Time" allows you to specify a specific starting point for consumption`
-          //       ),
-          //     ]),
+          pyservice: {
+            field: "pyservice",
+            label: "Custom Python Service",
+            fields: [
+              amfutil.combo(
+                "Service",
+                "service",
+                amfutil.pyserviceStore(),
+                "name",
+                "name"
+              ),
+              {
+                xtype: "parmfield",
+                title: "Config",
+                name: "config",
+                tooltip: "Additional Config to be passed to your service.",
+              },
+              amfutil.check("Receive Messages", "receive", {
+                listeners: amfutil.renderListeners(function (scope, val) {
+                  console.log(val);
+                  var out = scope.up("form").down("#receive_parms");
+                  out.setHidden(!val);
+                  out.setDisabled(!val);
+                }),
+              }),
+              amfutil.renderContainer("receive_parms", [
+                amfutil.consumerConfig(
+                  function (topichandler) {
+                    return [
+                      amfutil.dynamicCreate(
+                        amfutil.combo(
+                          "Topic",
+                          "topic",
+                          amfutil.createCollectionStore("topics"),
+                          "topic",
+                          "topic",
+                          {
+                            tooltip: "The topic to subscriber to",
+                            listeners: {
+                              change: topichandler,
+                            },
+                          }
+                        ),
+                        "topics"
+                      ),
+                    ];
+                  },
+                  `The Topic this subscriber will consumes messages from.`,
+                  `This block allows you to configure how the subscriber will consume events from the specified topic. Changing any of these values after creation will result in the creation of a new consumer. (i.e. If the consumer is configured with a Deliver Policy of "All" and 50 messages are consumed, updating the consumer config and leaving the delivery policy of "All" will result in the reprocessing of those messages.) "All" results in a consumption of all events on the topic. "New" results in a consumption of all events created after this configuration was updated. "Last" results in a consumption o fall events starting with the most recent events. "Start Time" allows you to specify a specific starting point for consumption`
+                ),
+              ]),
 
-          //     amfutil.check("Send Output", "send_output", {
-          //       itemId: "send_output",
-          //       listeners: amfutil.renderListeners(function (scope, val) {
-          //         var out = scope.up("form").down("#output_parms");
-          //         out.setHidden(!val);
-          //         out.setDisabled(!val);
-          //       }),
-          //     }),
-          //     amfutil.renderContainer("output_parms", [amfutil.outputTopic()]),
-          //   ],
-          //   process: function (form, values) {
-          //     values.active = true;
-          //     values.config = amfutil.formatArrayField(values.config);
+              amfutil.check("Send Output", "send_output", {
+                itemId: "send_output",
+                listeners: amfutil.renderListeners(function (scope, val) {
+                  var out = scope.up("form").down("#output_parms");
+                  out.setHidden(!val);
+                  out.setDisabled(!val);
+                }),
+              }),
+              amfutil.renderContainer("output_parms", [amfutil.outputTopic()]),
+            ],
+            process: function (form, values) {
+              values.active = true;
+              values.config = amfutil.formatArrayField(values.config);
 
-          //     return values;
-          //   },
-          // },
-          //   defaults: {
-          //     type: "defaults",
-          //     name: "Defaults",
-          //     iconCls: "x-fa fa-pencil",
-          //     singleton: true,
-          //     fields: [
-          //       {
-          //         // Fieldset in Column 1 - collapsible via toggle button
-          //         xtype: "fieldset",
-          //         title: "Default Values",
-          //         row: true,
+              return values;
+            },
+          },
+          defaults: {
+            type: "defaults",
+            name: "Defaults",
+            iconCls: "x-fa fa-pencil",
+            singleton: true,
+            fields: [
+              {
+                // Fieldset in Column 1 - collapsible via toggle button
+                xtype: "fieldset",
+                title: "Default Values",
+                row: true,
 
-          //         itemId: "defaults",
-          //         collapsible: true,
-          //         onAdd: function (component, position) {
-          //           // component.setTitle("Match Pattern" + position);
-          //           console.log(component);
-          //           console.log(position);
-          //         },
-          //         items: [
-          //           {
-          //             xtype: "button",
-          //             text: "Add",
-          //             handler: function (button, event) {
-          //               var formpanel = button.up();
+                itemId: "defaults",
+                collapsible: true,
+                onAdd: function (component, position) {
+                  // component.setTitle("Match Pattern" + position);
+                  console.log(component);
+                  console.log(position);
+                },
+                items: [
+                  {
+                    xtype: "button",
+                    text: "Add",
+                    handler: function (button, event) {
+                      var formpanel = button.up();
 
-          //               formpanel.insert(
-          //                 formpanel.items.length - 1,
-          //                 Ext.create("Amps.form.Defaults", {
-          //                   title: "Default Value",
-          //                 })
-          //               );
-          //             },
-          //           },
-          //         ],
-          //       },
-          //     ],
+                      formpanel.insert(
+                        formpanel.items.length - 1,
+                        Ext.create("Amps.form.Defaults", {
+                          title: "Default Value",
+                        })
+                      );
+                    },
+                  },
+                ],
+              },
+            ],
 
-          //     load: function (form, record) {
-          //       console.log(form);
-          //       console.log(record);
-          //       delete record._id;
-          //       delete record.name;
-          //       delete record.desc;
-          //       delete record.type;
+            load: function (form, record) {
+              console.log(form);
+              console.log(record);
+              delete record._id;
+              delete record.name;
+              delete record.desc;
+              delete record.type;
 
-          //       var defaults = Object.entries(record).map((entry) => {
-          //         return { field: entry[0], value: entry[1] };
-          //       });
+              var defaults = Object.entries(record).map((entry) => {
+                return { field: entry[0], value: entry[1] };
+              });
 
-          //       defaults.forEach(function (def) {
-          //         var dcon = form.down("#defaults");
-          //         var length = dcon.items.length;
-          //         var d = Ext.create("Amps.form.Defaults");
-          //         d.down("#field").setValue(def.field);
-          //         d.down("#value").setValue(def.value);
-          //         dcon.insert(length - 1, d);
-          //       });
-          //     },
+              defaults.forEach(function (def) {
+                var dcon = form.down("#defaults");
+                var length = dcon.items.length;
+                var d = Ext.create("Amps.form.Defaults");
+                d.down("#field").setValue(def.field);
+                d.down("#value").setValue(def.value);
+                dcon.insert(length - 1, d);
+              });
+            },
 
-          //     process: function (form) {
-          //       var values = form.getValues();
-          //       var defaults = values.defaults
-          //         ? Array.isArray(values.defaults)
-          //           ? values.defaults.map((defaultobj) => {
-          //               return JSON.parse(defaultobj);
-          //             })
-          //           : [JSON.parse(values.defaults)]
-          //         : [];
-          //       var processed = {};
+            process: function (form) {
+              var values = form.getValues();
+              var defaults = values.defaults
+                ? Array.isArray(values.defaults)
+                  ? values.defaults.map((defaultobj) => {
+                      return JSON.parse(defaultobj);
+                    })
+                  : [JSON.parse(values.defaults)]
+                : [];
+              var processed = {};
 
-          //       defaults.forEach((def) => {
-          //         processed[def.field] = def.value;
-          //       });
+              defaults.forEach((def) => {
+                processed[def.field] = def.value;
+              });
 
-          //       delete values.field;
-          //       delete values.value;
-          //       delete values.defaults;
+              delete values.field;
+              delete values.value;
+              delete values.defaults;
 
-          //       Object.assign(values, processed);
-          //       console.log(values);
+              Object.assign(values, processed);
+              console.log(values);
 
-          //       return values;
-          //     },
-          //   },
+              return values;
+            },
+          },
         },
         actionIcons: [
           "addnewbtn",
@@ -9031,14 +9035,14 @@ Ext.define("Amps.util.Grids", {
             xtype: "textfield",
             name: "name",
             fieldLabel: "Name",
-            tooltip: "Unique Environment Name",
+            tooltip: "Unique Template Name",
           },
           function (cmp, value, oldValue, eOpts) {
             return {
-              environments: amfutil.duplicateIdCheck({ name: value }, cmp),
+              templates: amfutil.duplicateIdCheck({ name: value }, cmp),
             };
           },
-          "Environment Already Exists",
+          "Template Already Exists",
           amfutil.nameValidator
         ),
         {
@@ -9544,6 +9548,7 @@ Ext.define("Amps.util.Grids", {
                     event: "service",
                     payload: { name: data.name },
                     cond: function () {
+                      console.log("cond");
                       return (
                         Ext.util.History.getToken().split("/")[0] ==
                         "monitoring"
@@ -9774,10 +9779,11 @@ Ext.define("Amps.util.Grids", {
                     itemId: "events",
                     listeners: {
                       beforerender: function () {
-                        this.reconfigure(
-                          null,
-                          ampsgrids.grids.message_events().columns
-                        );
+                        var config = ampsgrids.grids.message_events();
+                        this.reconfigure(null, config.columns);
+                        // this.setListeners({
+                        //   dblclick: config.dblclick,
+                        // });
                       },
                     },
                     bbar: {
@@ -9791,6 +9797,21 @@ Ext.define("Amps.util.Grids", {
 
                     title: "Service Logs",
                     itemId: "logs",
+                    listeners: {
+                      beforerender: function () {
+                        var config = ampsgrids.grids.system_logs();
+                        this.setListeners({
+                          dblclick: {
+                            element: "body", //bind to the underlying body property on the panel
+                            fn: function (grid, rowIndex, e, obj) {
+                              var record = grid.record.data;
+                              console.log(record);
+                              config.dblclick(record);
+                            },
+                          },
+                        });
+                      },
+                    },
                     columns: [
                       {
                         text: "Service Name",

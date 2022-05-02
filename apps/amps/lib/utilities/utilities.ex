@@ -732,7 +732,7 @@ defmodule AmpsUtil do
 
     AmpsWeb.Util.create_config_consumer(parms, "gwdemo")
 
-    {:ok, pid} = Amps.PyProcess.start_link(parms: parms, env: "gwdemo")
+    {:ok, pid} = Amps.PyProcess.start_link(parms: parms, env: "gwdemo", name: :gwdemo)
   end
 
   def get_mod_path(env \\ "", paths \\ [""]) do
@@ -744,4 +744,6 @@ defmodule AmpsUtil do
         Path.join([Amps.Defaults.get("python_path"), "env", env] ++ paths)
     end
   end
+
+
 end

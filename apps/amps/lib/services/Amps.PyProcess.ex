@@ -57,6 +57,111 @@
 #   end
 # end
 
+defmodule Amps.PyProcess.Logger do
+  require Logger
+
+  def start_link(args) do
+    parms = Enum.into(args, %{})
+
+    parms =
+      case parms[:env] do
+        nil ->
+          Map.put(parms, :env, "")
+
+        _ ->
+          parms
+      end
+
+    IO.puts("starting event listener #{inspect(parms)}")
+    {:ok, pid} = GenServer.start_link(__MODULE__, parms)
+  end
+
+  def init(state) do
+    {:ok, state}
+  end
+
+  def handle_info({:log, {level, message}}, state) do
+    Logger.log(level, message)
+    {:noreply, state}
+  end
+
+  def handle_info(other, state) do
+    {:noreply, state}
+  end
+end
+
+defmodule Amps.PyProcess.New do
+  require Logger
+
+  def start_link(args) do
+    parms = Enum.into(args, %{})
+
+    parms =
+      case parms[:env] do
+        nil ->
+          Map.put(parms, :env, "")
+
+        _ ->
+          parms
+      end
+
+    IO.puts("starting event listener #{inspect(parms)}")
+    {:ok, pid} = GenServer.start_link(__MODULE__, parms)
+  end
+
+  def init(state) do
+    {:ok, state}
+  end
+
+  def handle_info({:new, msg}, state) do
+    parms = state.parms
+    Logger.debug("Handling new message in service #{parms["name"]}")
+    msg = Jason.decode!(msg)
+
+    {msg, sid} =
+      AmpsEvents.start_session(
+        msg,
+        %{"service" => parms["name"]},
+        state.env
+      )
+
+    env = state.env
+
+    msg = Map.merge(msg, %{"service" => parms["name"]})
+
+    msg =
+      if msg["user"] do
+        msg
+      else
+        Map.put(msg, "user", "#{parms["name"]} generated")
+      end
+
+    IO.inspect(msg)
+    IO.inspect(parms)
+    IO.inspect(env)
+
+    if parms["send_output"] do
+      AmpsEvents.send(
+        msg,
+        parms,
+        %{}
+      )
+    else
+      Logger.warn(
+        "Attempted to Send Message in Service #{parms["name"]} when \"Send Output\" disabled."
+      )
+    end
+
+    AmpsEvents.end_session(sid, env)
+
+    {:noreply, state}
+  end
+
+  def handle_info(other, state) do
+    {:noreply, state}
+  end
+end
+
 defmodule Amps.PyProcess do
   use GenServer
   require Logger
@@ -125,12 +230,19 @@ defmodule Amps.PyProcess do
     IO.inspect(pid)
 
     svc = String.to_atom(parms["service"])
+    {:ok, new_handler} = Amps.PyProcess.New.start_link(parms: parms, env: env)
+    {:ok, log_handler} = Amps.PyProcess.Logger.start_link(parms: parms, env: env)
+
+    IO.inspect(new_handler)
+    IO.inspect(log_handler)
 
     service =
       :pythra.init(pid, svc, svc, [], [
         {:parms, Jason.encode!(parms)},
         {:pid, self()},
-        {:env, env}
+        {:env, env},
+        {:handler, new_handler},
+        {:lhandler, log_handler}
       ])
 
     process = %{
@@ -142,6 +254,9 @@ defmodule Amps.PyProcess do
       parms: parms,
       process: process,
       listening_topic: listening_topic,
+      new_handler: new_handler,
+      log_handler: log_handler,
+
       env: env,
       sid: nil
     }
@@ -198,15 +313,21 @@ defmodule Amps.PyProcess do
   end
 
   def send_message(msg, parms) do
-    IO.inspect(parms)
+    IO.puts("SENDING MESSAGE")
     msg = Jason.decode!(msg)
     parms = Jason.decode!(parms)
 
-    AmpsEvents.send(
-      msg,
-      parms,
-      %{}
-    )
+    if parms["send_output"] do
+      AmpsEvents.send(
+        msg,
+        parms,
+        %{}
+      )
+    else
+      Logger.warn(
+        "Attempted to Send Message in Service #{parms["name"]} when \"Send Output\" disabled."
+      )
+    end
   end
 
   def new_message(msg, parms, env) do
@@ -227,11 +348,17 @@ defmodule Amps.PyProcess do
         env
       )
 
-    AmpsEvents.send(
-      msg,
-      parms,
-      %{}
-    )
+    if parms["send_output"] do
+      AmpsEvents.send(
+        msg,
+        parms,
+        %{}
+      )
+    else
+      Logger.warn(
+        "Attempted to Send Message in Service #{parms["name"]} when \"Send Output\" disabled."
+      )
+    end
 
     AmpsEvents.end_session(sid, env)
   end
@@ -299,10 +426,36 @@ defmodule Amps.PyProcess do
     {:noreply, state}
   end
 
-  def handle_info({:send, message}, state) do
-    :pythra.method(state.process.pid, state.process.service, :receive, [
-      {:data, message}
-    ])
+  def handle_info({:new, msg}, state) do
+    msg = Jason.decode!(msg)
+
+    parms = state.parms
+
+    env = state.env
+    IO.inspect(msg)
+    IO.inspect(parms)
+    IO.inspect(env)
+
+    {msg, sid} =
+      AmpsEvents.start_session(
+        msg,
+        %{"service" => parms["name"]},
+        env
+      )
+
+    if parms["send_output"] do
+      Logger.warn(
+        "Attempted to Send Message in Service #{parms["name"]} when \"Send Output\" disabled."
+      )
+    else
+      AmpsEvents.send(
+        msg,
+        parms,
+        %{}
+      )
+    end
+
+    AmpsEvents.end_session(sid, env)
 
     {:noreply, state}
   end

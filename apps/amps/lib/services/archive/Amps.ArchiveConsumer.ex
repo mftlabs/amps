@@ -215,6 +215,30 @@ defmodule Amps.ArchiveConsumer do
   end
 end
 
+defmodule NackError do
+  defexception message: "Error Archiving to S3"
+
+  def exception(message) do
+    IO.inspect(message)
+
+    case message do
+      nil ->
+        %NackError{}
+
+      message ->
+        cond do
+          is_atom(message) ->
+            %NackError{message: Atom.to_string(message)}
+          is_binary(message) ->
+            %NackError{message: message}
+          true ->
+            %NackError{}
+        end
+
+    end
+  end
+end
+
 defmodule Amps.ArchivePullConsumer do
   use GenServer
   require Logger
@@ -284,20 +308,27 @@ defmodule Amps.ArchivePullConsumer do
         )
         |> ExAws.request(req)
       else
-        msg["fpath"]
-        |> S3.Upload.stream_file()
-        |> S3.upload(provider["bucket"], apath)
-        |> ExAws.request(req)
+        if msg["fpath"] do
+          msg["fpath"]
+          |> S3.Upload.stream_file()
+          |> S3.upload(provider["bucket"], apath)
+          |> ExAws.request(req)
+        else
+          {:ok, :no_data}
+        end
       end
 
     case resp do
+      {:ok, :no_data} ->
+        Logger.info("No Data to Archive")
+
       {:ok, resp} ->
         Logger.info("Uploaded")
         {:ok, resp}
 
       {:error, error} ->
-        Logger.error(error)
-        {:error, error}
+        raise NackError, error
+        # {:error, error}
     end
   end
 
@@ -309,28 +340,48 @@ defmodule Amps.ArchivePullConsumer do
       parms = state[:parms]
       name = parms["name"]
 
-      IO.puts("ARCHIVE")
-      IO.inspect(msg)
+      try do
+        archive = Amps.DB.find_one("providers", %{"_id" => Amps.Defaults.get("aprovider")})
 
-      archive = Amps.DB.find_one("providers", %{"_id" => Amps.Defaults.get("aprovider")})
+        case archive["atype"] do
+          "s3" ->
+            s3_archive(msg, archive, state.env)
 
-      case archive["atype"] do
-        "s3" ->
-          s3_archive(msg, archive, state.env)
+          _ ->
+            nil
+        end
 
-        _ ->
-          nil
+
+        Logger.info("Archived Message #{msg["msgid"]}")
+
+        Jetstream.ack(message)
+        Amps.ArchiveHandler.reset_failure(state.handler)
+      rescue
+        e in NackError ->
+          e
+
+          failures = Amps.ArchiveHandler.add_failure(state.handler)
+          Logger.error("Archive Failed for message #{msg["msgid"]}\nS3 Issue #{e.message} - Will Retry.\n" <> Exception.format(:error, e, __STACKTRACE__))
+
+          backoff =
+            if failures > 10 do
+              10000
+            else
+              failures * 1000
+            end
+          Process.sleep(backoff)
+          Jetstream.nack(message)
+        e ->
+          Logger.error("Archive Failed: Error parsing message #{msg["msgid"]}, skipping message.\n" <> Exception.format(:error, e, __STACKTRACE__))
+          Jetstream.ack(message)
       end
 
-      Logger.info("Archived Message #{msg["msgid"]}")
-
-      Jetstream.ack(message)
-      failures = Amps.ArchiveHandler.reset_failure(state.handler)
     rescue
-      e ->
+      e in NackError ->
+        e
+
         failures = Amps.ArchiveHandler.add_failure(state.handler)
-        IO.puts("FAILURES")
-        IO.inspect(failures)
+        Logger.error("Archive Failed\nS3 Issue #{e.message} - Will Retry.\n" <> Exception.format(:error, e, __STACKTRACE__))
 
         backoff =
           if failures > 10 do
@@ -338,11 +389,11 @@ defmodule Amps.ArchivePullConsumer do
           else
             failures * 1000
           end
-
-        Logger.error("Archive Failed\n" <> Exception.format(:error, e, __STACKTRACE__))
         Process.sleep(backoff)
-
         Jetstream.nack(message)
+      e ->
+        Logger.error("Archive Failed: Invalid Message, skipping message.\n" <> Exception.format(:error, e, __STACKTRACE__))
+        Jetstream.ack(message)
     end
 
     {:noreply, state}

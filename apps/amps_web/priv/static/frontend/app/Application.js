@@ -84,6 +84,28 @@ Ext.define("Amps.Application", {
           this.redirectTo("message_events");
         }
         window.createLangClient(localStorage.getItem("access_token"));
+        Ext.create("Ext.data.Store", {
+          storeId: "metadata",
+          proxy: {
+            type: "ajax",
+            headers: {
+              Authorization: localStorage.getItem("access_token"),
+            },
+            url: "/api/fields",
+            reader: {
+              type: "json",
+              rootProperty: function (data) {
+                var mapping = amfutil.mapping;
+                return data.rows.concat(
+                  Object.entries(mapping).map((m) => {
+                    return { field: m[0], desc: m[1].label };
+                  })
+                );
+              },
+            },
+          },
+          autoLoad: true,
+        });
         Ext.create({
           xtype: "app-main",
         });

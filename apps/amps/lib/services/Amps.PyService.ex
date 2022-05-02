@@ -46,15 +46,26 @@ defmodule Amps.PyService do
 
     path = AmpsUtil.get_mod_path(env)
     tmp = AmpsUtil.get_env(:storage_temp)
-    {:ok, pid} = :python.start([{:python_path, to_charlist(path)}])
+    # {:ok, pid} = :python.start([{:python_path, to_charlist(path)}])
     IO.inspect(parms)
     module = String.to_atom(parms["module"])
     xparm = %{:msg => msg, :parms => parms, :sysparms => %{"tempdir" => tmp}}
     jparms = Poison.encode!(xparm)
 
+
+    {:ok, pid} =
+    :pythra.start_link([String.to_charlist(path)])
+
+
+    action =
+      :pythra.init(pid, module, module, [], [
+        {:msgdata, jparms},
+      ])
+
     try do
-      result = :python.call(pid, module, :run, [jparms])
-      :python.stop(pid)
+      result = :pythra.method(pid, action, :__run__, [])
+      IO.inspect(result)
+      :pythra.stop(pid)
 
       case result do
         :undefined ->

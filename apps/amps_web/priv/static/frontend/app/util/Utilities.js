@@ -78,13 +78,7 @@ Ext.define("Amps.widget.Socket", {
       };
     }
 
-    var check = (scope.timer = amfutil.socketLoop(
-      event,
-      parms,
-      cb,
-      cond,
-      time
-    ));
+    scope.timer = amfutil.socketLoop(event, parms, cb, cond, time);
   },
 });
 
@@ -683,10 +677,10 @@ Ext.define("Amps.util.Utilities", {
       tooltip: "Click here to reprocess message",
       handler: "reprocess",
       isActionDisabled: function (v, r, c, i, record) {
-        if (record.data.topic) {
-          return false;
-        } else {
+        if (!record.data.topic || record.data.synch) {
           return true;
+        } else {
+          return false;
         }
       },
     },
@@ -813,6 +807,11 @@ Ext.define("Amps.util.Utilities", {
     user: { label: "User" },
     _id: { label: "Database ID" },
     index: { label: "Database Index" },
+    method: { label: "Request Method" },
+    request_path: { label: "Request Path" },
+    route_path: { label: "Route Path" },
+    stime: { label: "Status Time" },
+    path_params: { label: "Path Params" },
   },
 
   getElementByID: function (itemid) {
@@ -1477,6 +1476,21 @@ Ext.define("Amps.util.Utilities", {
     }
   },
 
+  nameLowerCaseValidator(val) {
+    var regex = new RegExp("(\\s|-)");
+    // Check for white space
+    if (regex.test(val)) {
+      //alert();
+      return "Names cannot contain spaces or hyphens.";
+    }
+
+    var lower = new RegExp("^[a-z_]+$");
+
+    if (!lower.test(val)) {
+      return "Name can only contain lowercase letters and underscores.";
+    }
+  },
+
   formatMatchPatterns(values) {
     var patterns = values
       ? Array.isArray(values)
@@ -1804,6 +1818,8 @@ Ext.define("Amps.util.Utilities", {
     var timer = setInterval(function () {
       if (cond()) {
         broadcast();
+      } else {
+        clearInterval(timer);
       }
     }, time);
     broadcast();
