@@ -87,7 +87,7 @@ defmodule AmpsWeb.Util do
           "zip" => ["format", "output"]
         }
       },
-      "customers" => %{
+      "groups" => %{
         "headers" => ["name", "phone", "email"],
         "subgrids" => nil,
         "types" => nil
@@ -229,7 +229,7 @@ defmodule AmpsWeb.Util do
 
   def order() do
     [
-      "customers",
+      "groups",
       "fields",
       "keys",
       "topics",

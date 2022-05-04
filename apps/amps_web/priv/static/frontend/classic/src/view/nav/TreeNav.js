@@ -51,7 +51,7 @@ Ext.define("Amps.view.nav.TreeNav", {
             {
               iconCls: "x-fa fa-id-card-o",
               leaf: true,
-              rowCls: "customers",
+              rowCls: "groups",
               text: "Groups",
               tooltip: "Groups",
             },

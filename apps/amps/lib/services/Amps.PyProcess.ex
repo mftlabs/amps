@@ -382,11 +382,10 @@ defmodule Amps.PyProcess do
       %{
         "status" => "started",
         "topic" => topic,
-        "service" => state.parms["name"],
         "action" => state.parms["name"] <> " Message Handler"
       }
     )
-
+    AmpsUtil.local_file(msg, state.env)
     resp =
       :pythra.method(state.process.pid, state.process.service, :__receive__, [
         Jason.encode!(msg)
@@ -401,7 +400,6 @@ defmodule Amps.PyProcess do
           %{
             "status" => to_string(status),
             "topic" => topic,
-            "service" => state.parms["name"],
             "action" => state.parms["name"] <> " Message Handler"
           }
         )

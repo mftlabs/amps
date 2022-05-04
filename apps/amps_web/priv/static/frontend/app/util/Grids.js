@@ -5142,7 +5142,6 @@ Ext.define("Amps.util.Grids", {
           },
           onWidgetAttach: function (col, widget, rec) {
             var scope = this;
-            console.log("attach");
             if (rec.data.parent == "" || !rec.data.parent) {
               widget.setDisabled(true);
               widget.setText("New Message");
@@ -5150,7 +5149,6 @@ Ext.define("Amps.util.Grids", {
               widget.setDisabled(false);
 
               widget.setHandler(async function () {
-                console.log(rec.data);
                 var rows = await amfutil.getCollectionData("message_events", {
                   msgid: rec.data.parent,
                   status: "received",
@@ -5220,7 +5218,7 @@ Ext.define("Amps.util.Grids", {
       ],
       options: ["reprocess", "reroute"],
     }),
-    customers: () => ({
+    groups: () => ({
       title: "Groups",
       object: "Group",
       overwrite: true,
@@ -5239,7 +5237,7 @@ Ext.define("Amps.util.Grids", {
           flex: 1,
           type: "combo",
           searchOpts: {
-            store: amfutil.createCollectionStore("customers"),
+            store: amfutil.createCollectionStore("groups"),
             displayField: "name",
             valueField: "name",
           },
@@ -5263,7 +5261,7 @@ Ext.define("Amps.util.Grids", {
           },
           function (cmp, value) {
             return {
-              customers: amfutil.duplicateIdCheck({ name: value }, cmp),
+              groups: amfutil.duplicateIdCheck({ name: value }, cmp),
             };
           },
           "Customer Name Already Exists",
@@ -5310,7 +5308,7 @@ Ext.define("Amps.util.Grids", {
           flex: 1,
           type: "combo",
           searchOpts: {
-            store: amfutil.createCollectionStore("customers"),
+            store: amfutil.createCollectionStore("groups"),
             displayField: "name",
             valueField: "name",
           },
@@ -5343,14 +5341,14 @@ Ext.define("Amps.util.Grids", {
           amfutil.combo(
             "Group",
             "customer",
-            amfutil.createCollectionStore("customers", {}, { autoLoad: true }),
+            amfutil.createCollectionStore("groups", {}, { autoLoad: true }),
             "name",
             "name",
             {
               tooltip: "The Customer this user belongs to.",
             }
           ),
-          "customers"
+          "groups"
         ),
         amfutil.duplicateVal(
           amfutil.text("Username", "username", {
@@ -10217,6 +10215,7 @@ Ext.define("Amps.util.Grids", {
                       updateColor: function (v) {
                         console.log(v);
                         var v = amfutil.hexToRgb(v);
+                        console.log(v);
                         this.replaceColor = v;
                         this.updateDisplay();
                       },
@@ -10470,9 +10469,6 @@ Ext.define("Amps.util.Grids", {
                               this.setListeners({
                                 change: function (field, color) {
                                   console.log("change");
-                                  console.log(color);
-
-                                  console.log(rgb);
                                   amfutil
                                     .getElementByID("cropper")
                                     .updateColor(color);

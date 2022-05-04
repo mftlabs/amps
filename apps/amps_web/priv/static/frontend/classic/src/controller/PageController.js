@@ -1464,9 +1464,21 @@ Ext.define("Amps.controller.PageController", {
   },
 
   reprocess: async function (grid, rowIndex, colIndex, e) {
+    var g = grid.up();
+    g.setLoading(true);
     var record = grid.getStore().getAt(rowIndex).data;
     console.log(record);
-    amfutil.reprocess(grid, record._id);
+    try {
+      Ext.toast("Reprocessing");
+
+      await amfutil.reprocess(grid, record._id);
+      g.setLoading(false);
+
+      Ext.toast("Reprocessed");
+    } catch {
+      g.setLoading(false);
+      Ext.toast("Failed to Reprocessing");
+    }
   },
 
   clearEnv: async function (grid, rowIndex) {

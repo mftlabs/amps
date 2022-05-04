@@ -1791,7 +1791,7 @@ Ext.define("Amps.util.Utilities", {
   },
 
   reprocess: function (grid, msgid) {
-    amfutil.ajaxRequest({
+    return amfutil.ajaxRequest({
       url: "api/msg/reprocess/" + msgid,
       method: "post",
       success: function () {

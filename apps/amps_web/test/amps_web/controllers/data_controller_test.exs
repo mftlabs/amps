@@ -59,7 +59,7 @@ defmodule AmpsWeb.DataControllerTest do
   Enum.each(
     [
       %{
-        "collection" => "customers",
+        "collection" => "groups",
         "obj" => %{
           "active" => true,
           "created" => "2022-02-17T09:11:16.789Z",

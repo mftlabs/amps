@@ -391,7 +391,7 @@ defmodule AmpsUtil do
         msg["fpath"]
       else
         Logger.debug("Attempting to Retrive Data for Message #{msg["msgid"]} from Archive")
-
+        File.mkdir_p(Path.dirname(msg["fpath"]))
         Amps.ArchiveConsumer.stream(msg, env)
         |> Stream.into(File.stream!(msg["fpath"]))
         |> Stream.run()
@@ -399,7 +399,8 @@ defmodule AmpsUtil do
 
       msg["fpath"]
     rescue
-      _e ->
+      e ->
+        Logger.error(Exception.format(:error, e, __STACKTRACE__))
         false
     end
   end
@@ -431,7 +432,7 @@ defmodule AmpsUtil do
 
   def get_local_file(msg, env) do
     msg = Jason.decode!(msg)
-    local_file(msg, env)
+    local_file(msg, List.to_string(env))
   end
 
   def get_output_msg(msg, {ostream, tfile}, parms \\ %{}) do
@@ -744,6 +745,4 @@ defmodule AmpsUtil do
         Path.join([Amps.Defaults.get("python_path"), "env", env] ++ paths)
     end
   end
-
-
 end

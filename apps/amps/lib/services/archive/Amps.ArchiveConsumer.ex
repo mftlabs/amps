@@ -364,10 +364,10 @@ defmodule Amps.ArchivePullConsumer do
           Logger.error("Archive Failed for message #{msg["msgid"]}\nS3 Issue #{e.message} - Will Retry.\n" <> Exception.format(:error, e, __STACKTRACE__))
 
           backoff =
-            if failures > 10 do
-              10000
+            if failures > 5 do
+              300000
             else
-              failures * 1000
+              failures * 60000
             end
           Process.sleep(backoff)
           Jetstream.nack(message)
