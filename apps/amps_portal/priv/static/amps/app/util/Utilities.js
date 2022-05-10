@@ -380,6 +380,12 @@ Ext.define("Amps.Utilities", {
     );
   },
 
+  emailEnabled: async function () {
+    var resp = await amfutil.ajaxRequest({ url: "api/util/email" });
+    var enabled = Ext.decode(resp.responseText);
+    return enabled;
+  },
+
   channelHandlers: function (channel) {
     channel
       .join()

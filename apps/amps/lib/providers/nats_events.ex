@@ -3,7 +3,10 @@ defmodule AmpsEvents do
   alias Amps.DB
 
   def send(msg, parms, state) do
-    IO.puts("send parms #{inspect(msg)}   #{inspect(parms)}   #{inspect(state)}")
+    Logger.debug("Sending to #{parms["output"]}")
+    # Logger.debug(msg)
+    # Logger.debug(parms)
+    # Logger.debug(state)
 
     topic = parms["output"]
 

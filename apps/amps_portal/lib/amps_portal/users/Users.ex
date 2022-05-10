@@ -229,16 +229,17 @@ defmodule AmpsPortal.Users.DB do
 
   def create(body) do
     IO.inspect(body)
-    password = body["password"]
-    %{password_hash: hashed} = add_hash(password)
+    # password = body["password"]
+    # %{password_hash: hashed} = add_hash(password)
 
     user =
-      Map.drop(body, ["password"])
-      |> Map.drop(["confirmpswd"])
-      |> Map.put("password", hashed)
+      body
+      # Map.drop(body, ["password"])
+      # |> Map.drop(["confirmpswd"])
+      |> Map.put("password", nil)
       |> Map.merge(%{"approved" => false})
 
-    id = Amps.DB.insert("users", user)
+    {:ok, id} = Amps.DB.insert("users", user)
 
     user = Map.put(user, "id", id) |> Map.new(fn {k, v} -> {String.to_atom(k), v} end)
 

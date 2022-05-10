@@ -229,12 +229,13 @@ defmodule NackError do
         cond do
           is_atom(message) ->
             %NackError{message: Atom.to_string(message)}
+
           is_binary(message) ->
             %NackError{message: message}
+
           true ->
             %NackError{}
         end
-
     end
   end
 end
@@ -290,7 +291,6 @@ defmodule Amps.ArchivePullConsumer do
         end
     }
 
-    schedule_bulk()
     {:ok, state}
   end
 
@@ -351,7 +351,6 @@ defmodule Amps.ArchivePullConsumer do
             nil
         end
 
-
         Logger.info("Archived Message #{msg["msgid"]}")
 
         Jetstream.ack(message)
@@ -361,27 +360,40 @@ defmodule Amps.ArchivePullConsumer do
           e
 
           failures = Amps.ArchiveHandler.add_failure(state.handler)
-          Logger.error("Archive Failed for message #{msg["msgid"]}\nS3 Issue #{e.message} - Will Retry.\n" <> Exception.format(:error, e, __STACKTRACE__))
+
+          Logger.error(
+            "Archive Failed for message #{msg["msgid"]}\nS3 Issue #{e.message} - Will Retry.\n" <>
+              Exception.format(:error, e, __STACKTRACE__)
+          )
 
           backoff =
             if failures > 5 do
-              300000
+              300_000
             else
               failures * 60000
             end
+
           Process.sleep(backoff)
           Jetstream.nack(message)
+
         e ->
-          Logger.error("Archive Failed: Error parsing message #{msg["msgid"]}, skipping message.\n" <> Exception.format(:error, e, __STACKTRACE__))
+          Logger.error(
+            "Archive Failed: Error parsing message #{msg["msgid"]}, skipping message.\n" <>
+              Exception.format(:error, e, __STACKTRACE__)
+          )
+
           Jetstream.ack(message)
       end
-
     rescue
       e in NackError ->
         e
 
         failures = Amps.ArchiveHandler.add_failure(state.handler)
-        Logger.error("Archive Failed\nS3 Issue #{e.message} - Will Retry.\n" <> Exception.format(:error, e, __STACKTRACE__))
+
+        Logger.error(
+          "Archive Failed\nS3 Issue #{e.message} - Will Retry.\n" <>
+            Exception.format(:error, e, __STACKTRACE__)
+        )
 
         backoff =
           if failures > 10 do
@@ -389,40 +401,20 @@ defmodule Amps.ArchivePullConsumer do
           else
             failures * 1000
           end
+
         Process.sleep(backoff)
         Jetstream.nack(message)
+
       e ->
-        Logger.error("Archive Failed: Invalid Message, skipping message.\n" <> Exception.format(:error, e, __STACKTRACE__))
+        Logger.error(
+          "Archive Failed: Invalid Message, skipping message.\n" <>
+            Exception.format(:error, e, __STACKTRACE__)
+        )
+
         Jetstream.ack(message)
     end
 
     {:noreply, state}
-  end
-
-  def handle_info(:bulk, state) do
-    schedule_bulk()
-
-    # state =
-    #   if Enum.count(state.messages) > 0 do
-    #     Enum.reduce(state.messages, [], fn {actions, _}, acc ->
-    #       Enum.reduce(actions, acc, fn action, acc ->
-    #         [action | acc]
-    #       end)
-    #     end)
-    #     |> Snap.Bulk.perform(Amps.Cluster, nil, [])
-
-    #     {_, msg} = Enum.at(state.messages, 0)
-    #     Jetstream.ack(msg)
-    #     Map.put(state, :messages, [])
-    #   else
-    #     state
-    #   end
-
-    {:noreply, state}
-  end
-
-  defp schedule_bulk do
-    Process.send_after(self(), :bulk, AmpsUtil.hinterval())
   end
 
   def handle_info(other, state) do

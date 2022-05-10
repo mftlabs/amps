@@ -689,6 +689,13 @@ Ext.define("Amps.util.Utilities", {
       iconCls: "x-fa fa-key actionicon",
       itemId: "resetPassword",
       tooltip: "Click here to reset user password",
+      isActionDisabled: function (v, r, c, i, record) {
+        if (!record.data.approved) {
+          return true;
+        } else {
+          return false;
+        }
+      },
       handler: "resetPassword",
     },
     resetAdmin: {
@@ -697,6 +704,13 @@ Ext.define("Amps.util.Utilities", {
       itemId: "resetPassword",
       tooltip: "Click here to reset user password",
       handler: "resetAdminPassword",
+      isActionDisabled: function (v, r, c, i, record) {
+        if (!record.data.approved) {
+          return true;
+        } else {
+          return false;
+        }
+      },
     },
     changePassAdmin: {
       xtype: "button",
@@ -1766,18 +1780,21 @@ Ext.define("Amps.util.Utilities", {
     return field;
   },
 
-  renderContainer: function (itemId, items) {
-    return {
-      hidden: true,
-      disabled: true,
-      xtype: "fieldcontainer",
-      itemId: itemId,
-      layout: {
-        type: "vbox",
-        align: "stretch",
+  renderContainer: function (itemId, items, opts = {}) {
+    return Object.assign(
+      {
+        hidden: true,
+        disabled: true,
+        xtype: "fieldcontainer",
+        itemId: itemId,
+        layout: {
+          type: "vbox",
+          align: "stretch",
+        },
+        items: items,
       },
-      items: items,
-    };
+      opts
+    );
   },
 
   getMetadataFields: async function () {
@@ -1788,6 +1805,40 @@ Ext.define("Amps.util.Utilities", {
     });
 
     return mapping;
+  },
+
+  showFormattedText: function (val) {
+    return new Ext.window.Window({
+      title: `View`,
+      width: 700,
+      height: 500,
+      layout: "fit",
+      items: [
+        {
+          xtype: "container",
+          padding: 20,
+          style: {
+            background: "var(--main-color)",
+          },
+          scrollable: true,
+
+          items: [
+            {
+              xtype: "component",
+
+              style: {
+                background: "var(--main-color)",
+                "white-space": "pre-wrap",
+                "font-weight": "500",
+                color: "white",
+                // "font-size": "1.5rem",
+              },
+              html: val,
+            },
+          ],
+        },
+      ],
+    });
   },
 
   reprocess: function (grid, msgid) {

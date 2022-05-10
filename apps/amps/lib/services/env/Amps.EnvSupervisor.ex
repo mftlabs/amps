@@ -149,6 +149,13 @@ defmodule Amps.EnvSupervisor do
         "index" => "message_events"
       },
       %{
+        "name" => "object_handler",
+        "subs_count" => 3,
+        "topic" => "amps.objects.>",
+        "receipt" => true,
+        "index" => "message_events"
+      },
+      %{
         "name" => "service_logs",
         "subs_count" => 3,
         "topic" => "amps.events.svcs.*.logs"

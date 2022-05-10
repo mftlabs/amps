@@ -13,19 +13,19 @@ Ext.define("Amps.Unauthorized.Viewport", {
     console.log(args);
     this.callParent([args]);
     console.log(args);
-    // var ap = this.down("#authpanel");
-    // if (args["reset"]) {
-    //   ap.removeAll();
-    //   ap.insert(0, {
-    //     xtype: "reset",
-    //     username: args["reset"].username,
-    //     token: args["reset"].token,
-    //   });
-    //   var clean_uri =
-    //     location.protocol + "//" + location.host + location.pathname;
+    var ap = this.down("#authpanel");
+    if (args["reset"]) {
+      ap.removeAll();
+      ap.insert(0, {
+        xtype: "reset",
+        username: args["reset"].username,
+        token: args["reset"].token,
+      });
+      var clean_uri =
+        location.protocol + "//" + location.host + location.pathname;
 
-    //   window.history.replaceState({}, document.title, clean_uri);
-    // }
+      window.history.replaceState({}, document.title, clean_uri);
+    }
   },
   items: [
     {
@@ -43,39 +43,35 @@ Ext.define("Amps.Unauthorized.Viewport", {
               xtype: "button",
               text: "Forgot Password",
               handler: function () {
-                var dialog = Ext.create({
-                  xtype: "dialog",
+                var win = Ext.create({
+                  xtype: "window",
+                  bodyPadding: 20,
                   title: "Send Password Reset Email",
-                  width: 500,
-                  maximizable: true,
+                  modal: true,
                   items: [
                     {
-                      xtype: "formpanel",
+                      xtype: "form",
                       items: [
                         {
                           xtype: "textfield",
                           name: "email",
-                          label: "Email",
+                          fieldLabel: "Email",
                         },
                       ],
                       buttons: [
                         {
-                          text: "Close",
-                          handler: function () {
-                            dialog.destroy();
-                          },
-                        },
-                        {
                           text: "Submit",
                           formBind: true,
                           handler: async function (scope) {
-                            var form = scope.up("formpanel");
+                            win.setLoading(true);
+                            var form = scope.up("form");
                             var email = form.getValues().email;
-                            var resp = await ampsutil.ajaxRequest({
+                            var resp = await amfutil.ajaxRequest({
                               method: "POST",
                               url: "/api/users/link/" + email,
                               jsonData: { host: window.location.origin },
                               failure: function () {
+                                win.setLoading(false);
                                 Ext.toast("Error sending password reset email");
                               },
                             });
@@ -84,10 +80,17 @@ Ext.define("Amps.Unauthorized.Viewport", {
                               Ext.toast(
                                 "Please check your email for a password reset email."
                               );
+                              win.destroy();
                             } else {
                               Ext.toast("Could not find user with that email");
+                              win.setLoading(false);
                             }
-                            form.reset();
+                          },
+                        },
+                        {
+                          text: "Cancel",
+                          handler: function () {
+                            win.destroy();
                           },
                         },
                       ],
@@ -95,7 +98,13 @@ Ext.define("Amps.Unauthorized.Viewport", {
                   ],
                 });
 
-                dialog.show();
+                win.show();
+              },
+              listeners: {
+                beforerender: async function () {
+                  var hidden = !(await amfutil.emailEnabled());
+                  this.setHidden(hidden);
+                },
               },
             },
             // {

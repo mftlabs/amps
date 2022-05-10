@@ -737,6 +737,15 @@ Ext.define("Amps.view.messages.MessageDetails", {
                           .then(function () {});
                       },
                     },
+                    {
+                      text: "View",
+                      iconCls: "x-fa fa fa-eye",
+                      handler: function () {
+                        var input = df.getValue();
+                        var window = amfutil.showFormattedText(input);
+                        window.show();
+                      },
+                    },
                   ],
                 });
                 e.stopEvent();
@@ -789,6 +798,12 @@ Ext.define("Amps.view.messages.MessageDetails", {
             //   margin: 0,
             //   "text-align": "center",
             // },
+
+            renderer: function (val) {
+              return val.length > 90
+                ? val.substring(0, 90) + " <b>[...]<b>"
+                : val;
+            },
 
             fieldLabel: mapping[entry[0]] ? mapping[entry[0]].label : entry[0],
             value:

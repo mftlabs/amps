@@ -4,6 +4,10 @@ defmodule AmpsPortal.DataController do
   alias Amps.DB
   alias AmpsPortal.Util
 
+  def email(conn, _) do
+    json(conn, Amps.Defaults.get("email"))
+  end
+
   def get_mailboxes(conn, _params) do
     case Pow.Plug.current_user(conn) do
       nil ->

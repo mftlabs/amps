@@ -112,7 +112,7 @@ defmodule AmpsWeb.Util do
         "subgrids" => nil,
         "types" => nil
       },
-      "scheduler" => %{
+      "jobs" => %{
         "headers" => ["name", "active", "topic", "meta", "type"],
         "subgrids" => nil,
         "types" => %{
@@ -239,7 +239,7 @@ defmodule AmpsWeb.Util do
       "users/mailboxes",
       "actions",
       "services",
-      "scheduler",
+      "jobs",
       "templates"
     ]
   end
@@ -285,7 +285,7 @@ defmodule AmpsWeb.Util do
           Gnat.pub(:gnat, topic, "")
         end
 
-      "scheduler" ->
+      "jobs" ->
         case env do
           "" ->
             Amps.Scheduler.load(body["name"])
@@ -307,6 +307,8 @@ defmodule AmpsWeb.Util do
       _ ->
         nil
     end
+
+    # AmpsEvents.send()
   end
 
   def before_update(collection, id, body, env, old) do
@@ -334,6 +336,8 @@ defmodule AmpsWeb.Util do
         if config["name"] == "SYSTEM" do
           Amps.SvcManager.load_system_parms()
           archive = Amps.Defaults.get("archive")
+          IO.inspect(old["archive"])
+          IO.inspect(archive)
 
           if old["archive"] != archive do
             action =
@@ -398,7 +402,7 @@ defmodule AmpsWeb.Util do
           Util.create_batch_consumer(body)
         end
 
-      "scheduler" ->
+      "jobs" ->
         case env do
           "" ->
             Amps.Scheduler.update(body["name"])
@@ -573,5 +577,82 @@ defmodule AmpsWeb.Util do
       port: 4444,
       otp_app: :amps
     )
+  end
+
+  def ui_event(index, id, action, env, fun \\ nil) do
+    msg = %{
+      "msgid" => AmpsUtil.get_id(),
+      "action" => action,
+      "service" => "UI Actions"
+    }
+
+    {msg, sid} = AmpsEvents.start_session(msg, %{"service" => "UI Actions"}, env)
+    obj = Amps.DB.find_by_id(index, id)
+    if fun do
+      fun.(msg, obj, env)
+    end
+
+    msg =
+      Map.put(
+        msg,
+        "data",
+        Jason.encode!(obj|> AmpsUtil.filter())
+        |> Jason.Formatter.pretty_print()
+      )
+
+    AmpsEvents.send(
+      msg,
+      %{"output" => AmpsUtil.env_topic("amps.objects.#{base_index(env, index)}.#{action}", env)},
+      %{}
+    )
+
+    AmpsEvents.end_session(sid, env)
+  end
+
+  def ui_delete_event(index, body, env) do
+    msg = %{
+      "msgid" => AmpsUtil.get_id(),
+      "data" =>
+        Jason.encode!(body |> AmpsUtil.filter())
+        |> Jason.Formatter.pretty_print(),
+      "action" => "delete",
+      "service" => "UI Actions"
+    }
+
+    {msg, sid} = AmpsEvents.start_session(msg, %{"service" => "UI Actions"}, env)
+
+    AmpsEvents.send(
+      msg,
+      %{"output" => AmpsUtil.env_topic("amps.objects.#{base_index(env, index)}.delete", env)},
+      %{}
+    )
+
+    AmpsEvents.end_session(sid, env)
+  end
+
+  def ui_field_event(index, id, field, fieldid, action, env) do
+    msg = %{
+      "msgid" => AmpsUtil.get_id(),
+      "data" =>
+        Jason.encode!(Amps.DB.find_by_id(index, id) |> AmpsUtil.filter())
+        |> Jason.Formatter.pretty_print(),
+      "field" => field,
+      "fieldid" => fieldid,
+      "action" => action,
+      "service" => "UI Actions"
+    }
+
+    {msg, sid} = AmpsEvents.start_session(msg, %{"service" => "UI Actions"}, env)
+
+    AmpsEvents.send(
+      msg,
+      %{
+        "output" =>
+          AmpsUtil.env_topic("amps.objects.#{base_index(env, index)}.#{field}.#{action}", env)
+      },
+      %{}
+    )
+
+    AmpsEvents.end_session(sid, env)
   end
 end

@@ -48,7 +48,6 @@ defmodule Amps.ArchiveHandler do
   end
 
   def handle_cast(:reset_failure, state) do
-    IO.inspect(state)
     {:noreply, Map.put(state, :failures, 0)}
   end
 end

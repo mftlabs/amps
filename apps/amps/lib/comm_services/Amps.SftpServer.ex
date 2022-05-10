@@ -347,6 +347,7 @@ defmodule Amps.SftpHandler do
       msg = %{
         "mailbox" => state[:mailbox],
         "service" => service,
+        "action" => "SFTP PUT",
         "msgid" => state[:msgid],
         "fsize" => state[:fsize],
         "fpath" => state[:fpath],
@@ -631,9 +632,9 @@ defmodule Amps.SftpHandler do
         {{:ok, finfo}, state}
 
       ["/", mailbox, fname] ->
-        IO.puts("read_link_info")
+        # IO.puts("read_link_info")
         user = to_string(state[:user])
-        IO.puts("read_link_info #{user} #{mailbox} #{fname}")
+        # IO.puts("read_link_info #{user} #{mailbox} #{fname}")
         #    msg = Enum.find(flist, nil, fn x -> x["fname"] == fname end)
         case AmpsMailbox.get_message(user, mailbox, fname, state[:env]) do
           nil ->
@@ -660,7 +661,7 @@ defmodule Amps.SftpHandler do
   end
 
   def get_file_info(fsize, ftime) do
-    IO.puts("get_file_info")
+    # IO.puts("get_file_info")
 
     {:file_info, fsize, :regular, :read_write,
      {{ftime.year, ftime.month, ftime.day}, {ftime.hour, ftime.minute, ftime.second}},

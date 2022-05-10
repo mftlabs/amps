@@ -242,6 +242,8 @@ Ext.define("Amps.panel.Script", {
         });
       },
       failure: function () {
+        script.setLoading(false);
+
         Ext.toast("Failed to save script");
       },
     });

@@ -73,6 +73,11 @@ Ext.define("Amps.form.add", {
     {
       xtype: "form",
       entity: null,
+      // layout: {
+      //   type: "vbox",
+      //   align: "stretch",
+      // },
+
       getInvalidFields: function () {
         var invalidFields = [];
         Ext.suspendLayouts();

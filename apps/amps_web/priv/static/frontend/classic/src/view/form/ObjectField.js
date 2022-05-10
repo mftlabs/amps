@@ -36,7 +36,7 @@ Ext.define("Amps.form.Object", {
     var vals;
     try {
       vals = JSON.parse(val);
-    } catch {
+    } catch (e) {
       vals = {};
     }
     var fields = this.query("field");

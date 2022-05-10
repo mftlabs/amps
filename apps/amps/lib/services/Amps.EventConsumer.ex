@@ -119,7 +119,13 @@ defmodule Amps.PullConsumer do
     IO.puts("group #{group}")
     consumer_name = get_consumer(parms, consumer_name)
 
-    {:ok, _sid} = Gnat.sub(connection_pid, self(), listening_topic, queue_group: group)
+    {:ok, _sid} =
+      if parms["cluster"] do
+        Gnat.sub(connection_pid, self(), listening_topic, queue_group: group)
+      else
+        group <> Atom.to_string(Node.self())
+        Gnat.sub(connection_pid, self(), listening_topic, queue_group: group)
+      end
 
     :ok =
       Gnat.pub(connection_pid, "$JS.API.CONSUMER.MSG.NEXT.#{stream_name}.#{consumer_name}", "1",

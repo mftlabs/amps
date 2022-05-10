@@ -392,7 +392,7 @@ Ext.define("Amps.util.UpdateRecordController", {
       admin: this.updateUser,
       agentget: this.updateAgentGet,
       agentput: this.updateAgentPut,
-      topics: this.updateTopic,
+      // topics: this.updateTopic,
       // actions: this.updateAction,
       // services: this.updateService,
     };

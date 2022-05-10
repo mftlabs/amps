@@ -188,30 +188,22 @@ defmodule Amps.HistoryPullConsumer do
         if is_list(state.index) do
           actions =
             Enum.reduce(state.index, [], fn index, acc ->
+              IO.inspect(acc)
+
               [
-                %Snap.Bulk.Action.Create{
-                  _index: AmpsUtil.index(state.env, index),
-                  doc: doc
-                }
-                | acc
+                {AmpsUtil.index(state.env, index), Amps.DB.bulk_insert(doc)} | acc
               ]
             end)
 
           {actions, message}
         else
           {[
-             %Snap.Bulk.Action.Create{
-               _index: AmpsUtil.index(state.env, state.index),
-               doc: doc
-             }
+             {AmpsUtil.index(state.env, state.index), Amps.DB.bulk_insert(doc)}
            ], message}
         end
       else
         {[
-           %Snap.Bulk.Action.Create{
-             _index: AmpsUtil.index(state.env, data["index"]),
-             doc: data
-           }
+           {AmpsUtil.index(state.env, data["index"]), Amps.DB.bulk_insert(data)}
          ], message}
       end
 
@@ -220,21 +212,41 @@ defmodule Amps.HistoryPullConsumer do
     {:noreply, state}
   end
 
+  defp handle_index(indexes, index, op) do
+    if Map.has_key?(indexes, index) do
+      Map.put(indexes, index, [op | indexes[index]])
+    else
+      Map.put(indexes, index, [op])
+    end
+  end
+
   def handle_info(:bulk, state) do
     schedule_bulk()
 
     state =
       if Enum.count(state.messages) > 0 do
-        Enum.reduce(state.messages, [], fn {actions, _}, acc ->
-          Enum.reduce(actions, acc, fn action, acc ->
-            [action | acc]
+        indexes =
+          Enum.reduce(state.messages, %{}, fn {actions, _}, acc ->
+            Enum.reduce(actions, acc, fn {index, op}, acc ->
+              handle_index(acc, index, op)
+            end)
           end)
-        end)
-        |> Snap.Bulk.perform(Amps.Cluster, nil, [])
 
+        Enum.each(indexes, fn {index, ops} ->
+          Amps.DB.bulk_perform(ops, index)
+        end)
+
+        # case res do
+        #   :ok ->
+        Logger.debug("Bulked #{state.parms["name"]}")
         {_, msg} = Enum.at(state.messages, 0)
         Jetstream.ack(msg)
         Map.put(state, :messages, [])
+
+        # {:error, error} ->
+        #   Logger.error("#{inspect(error)}")
+        #   state
+        # end
       else
         state
       end

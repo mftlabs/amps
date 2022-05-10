@@ -409,43 +409,138 @@ Ext.define("Amps.controller.PageController", {
 
   approveUser: function (grid, rowIndex, colIndex) {
     const route = Ext.util.History.currentToken;
-    var mask = new Ext.LoadMask({
-      msg: "Please wait...",
-      target: grid,
-    });
     var rec = grid.getStore().getAt(rowIndex);
-    var id = rec.data._id;
-    var data = rec.data;
-    data.approved = true;
-    delete data.id;
-    console.log(data);
-    delete data.password;
-    console.log(data);
-    amfutil.ajaxRequest({
-      url: "/api/" + route + "/" + id,
-      headers: {
-        Authorization: localStorage.getItem("access_token"),
+
+    var approveWin = new Ext.window.Window({
+      title: "Approve User",
+      modal: true,
+      width: 400,
+      height: 300,
+      layout: {
+        type: "vbox",
+        align: "stretch",
       },
-      method: "PUT",
-      timeout: 60000,
-      params: {},
-      jsonData: data,
-      success: function (response) {
-        mask.hide();
-        amfutil.broadcastEvent("update", {
-          page: Ext.util.History.getToken(),
-        });
-        Ext.toast({
-          title: "Approved",
-          html: "<center>User Approved</center>",
-          autoCloseDelay: 5000,
-        });
-        grid.getStore().reload();
-      },
-      failure: function (response) {
-        amfutil.onFailure("Failed to Approve", response);
-      },
+      items: [
+        {
+          xtype: "form",
+          flex: 1,
+          defaults: {
+            padding: 5,
+            labelWidth: 140,
+          },
+          // layout: {
+          //   type: "vbox",
+          //   align: "stretch",
+          // },
+          scrollable: true,
+          items: [
+            amfutil.combo(
+              "Group",
+              "group",
+              amfutil.createCollectionStore("groups"),
+              "name",
+              "name"
+            ),
+          ],
+
+          buttons: [
+            {
+              text: "Approve",
+              formBind: true,
+              handler: function (scope) {
+                var form = this.up("form").getForm();
+                scope.up("window").setLoading(true);
+                var group = form.getValues().group;
+                // console.log(files);
+                amfutil.ajaxRequest({
+                  url: "/api/users/approve/" + rec.data._id,
+                  headers: {
+                    Authorization: localStorage.getItem("access_token"),
+                  },
+                  method: "POST",
+                  timeout: 60000,
+                  params: {},
+                  jsonData: {
+                    group: group,
+                  },
+                  success: function (resp) {
+                    scope.up("window").setLoading(false);
+
+                    amfutil.broadcastEvent("update", {
+                      page: Ext.util.History.getToken(),
+                    });
+                    Ext.toast({
+                      title: "Approved",
+                      html: "<center>User Approved</center>",
+                      autoCloseDelay: 5000,
+                    });
+                    grid.getStore().reload();
+                    var data = Ext.decode(resp.responseText);
+                    var items = [
+                      {
+                        xtype: "component",
+                        autoEl: "h3",
+                        style: {
+                          "text-align": "center",
+                        },
+                        html: "User Successfully Approved",
+                      },
+                      {
+                        xtype: "container",
+                        layout: "center",
+                        items: [
+                          {
+                            xtype: "button",
+                            text: "Copy Password",
+                            handler: function (btn) {
+                              navigator.clipboard
+                                .writeText(data.success.password)
+                                .then(
+                                  function () {
+                                    console.log(
+                                      "Async: Copying to clipboard was successful!"
+                                    );
+                                    Ext.toast("Copied to clipboard");
+                                  },
+                                  function (err) {
+                                    console.error(
+                                      "Async: Could not copy text: ",
+                                      err
+                                    );
+                                  }
+                                );
+                            },
+                          },
+                        ],
+                      },
+                    ];
+
+                    approveWin.removeAll();
+                    approveWin.insert(0, items);
+                    approveWin.setLoading(false);
+                  },
+                  failure: function (response) {
+                    amfutil.onFailure("Failed to Approve", response);
+                  },
+                });
+                // msgbox.anchorTo(Ext.getBody(), "br");
+              },
+            },
+            {
+              text: "Cancel",
+              cls: "button_class",
+              itemId: "cancel",
+              listeners: {
+                click: function (btn) {
+                  uploadWindow.close();
+                },
+              },
+            },
+          ],
+        },
+      ],
     });
+    approveWin.show();
   },
 
   getSecret: async function (grid, rowIndex, colIndex) {
@@ -1475,7 +1570,7 @@ Ext.define("Amps.controller.PageController", {
       g.setLoading(false);
 
       Ext.toast("Reprocessed");
-    } catch {
+    } catch (e) {
       g.setLoading(false);
       Ext.toast("Failed to Reprocessing");
     }

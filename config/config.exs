@@ -70,7 +70,7 @@ config :master_proxy,
   ]
 
 config :amps,
-  db: "es"
+  db: System.get_env("AMPS_DB_PROVIDER", "os")
 
 config :amps, :gnat,
   host: String.to_charlist(System.get_env("AMPS_NATS_HOST", "localhost")),
@@ -110,6 +110,7 @@ config :amps_web, AmpsWeb.Endpoint,
     port: System.get_env("AMPS_HOST_PORT", "4000"),
     protocol_options: [idle_timeout: 5_000_000]
   ],
+  use_ssl: String.to_atom(String.downcase(System.get_env("AMPS_USE_SSL", "FALSE"))),
   # https: [
   #   port: 443,
   #   # cipher_suite: :strong,
@@ -236,11 +237,8 @@ config :amps, :streams,
   "amps.actions": "ACTIONS",
   "amps.delivery": "DELIVERY",
   "amps.mailbox": "MAILBOX",
-  "amps.data": "DATA"
-
-config :amps, :elsa,
-  endpoints: [localhost: 29092],
-  name: :amps_elsa
+  "amps.data": "DATA",
+  "amps.objects": "OBJECTS"
 
 config :amps, :services,
   subscriber: Amps.EventConsumer,

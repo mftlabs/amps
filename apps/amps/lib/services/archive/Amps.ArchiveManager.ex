@@ -24,28 +24,28 @@ defmodule Amps.ArchiveManager do
     children = [
       %{
         "name" => "action_archiver",
-        "subs_count" => 3,
+        "subs_count" => 5,
         "topic" => "amps.actions.>",
         "receipt" => true,
         "index" => "archive_events"
       },
       %{
         "name" => "service_archiver",
-        "subs_count" => 3,
+        "subs_count" => 5,
         "topic" => "amps.svcs.>",
         "receipt" => true,
         "index" => "archive_events"
       },
       %{
         "name" => "mailbox_archiver",
-        "subs_count" => 3,
+        "subs_count" => 5,
         "topic" => "amps.mailbox.>",
         "receipt" => true,
         "index" => ["archive_events", "mailbox"]
       },
       %{
         "name" => "data_archiver",
-        "subs_count" => 3,
+        "subs_count" => 5,
         "topic" => "amps.data.>",
         "receipt" => true,
         "index" => "archive_events"

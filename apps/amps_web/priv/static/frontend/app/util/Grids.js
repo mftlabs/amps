@@ -1,3 +1,266 @@
+Ext.define("Amps.form.CollectionGrid", {
+  extend: "Ext.form.FieldContainer",
+  xtype: "collectionlist",
+  // title: "Rules",
+  mixins: {
+    field: "Ext.form.field.Field",
+  },
+  // flex: 1,
+  width: 600,
+  constructor: function (args) {
+    this.callParent([args]);
+
+    var collection = args["collection"];
+    var filter = {};
+    if (args["filter"]) {
+      filter = args["filter"];
+    }
+    var config = ampsgrids.grids[collection]();
+    console.log(config);
+    var scope = this;
+    var gridstore = Ext.create("Ext.data.Store", {
+      proxy: {
+        type: "memory",
+        reader: "array",
+      },
+    });
+    var grid = Ext.create({
+      xtype: "grid",
+      sortableColumns: false,
+      title: config.title,
+      itemId: "rules",
+      store: gridstore,
+      reloadRules: function () {
+        var gridstore = this.getStore();
+        Promise.all([amfutil.getCollectionData(collection, filter)]).then(
+          (values) => {
+            var items = values[0];
+            var ids = gridstore.data.items.map((rec) => rec.data._id);
+
+            console.log(ids);
+            console.log(items);
+
+            console.log(gridstore);
+            var filtered = [];
+
+            ids.forEach((id) => {
+              var rule = items.find((rule) => rule._id == id);
+              if (rule) {
+                filtered.push(rule);
+              }
+            });
+
+            gridstore.loadData(filtered);
+            grid.setLoading(false);
+          }
+        );
+      },
+      listeners: {
+        dblclick: {
+          element: "body", //bind to the underlying body property on the panel
+          fn: function (e) {
+            var record = e.record.data;
+            var fields = config.fields;
+            if (config.update && config.update.fields) {
+              fields.concat(config.update.fields);
+            }
+
+            var myForm = Ext.create("Amps.form.update");
+            myForm.loadForm(config, record, false, collection);
+
+            var form = this.up("form");
+
+            var win = new Ext.window.Window({
+              width: 600,
+              height: 600,
+              title: "Edit Rule",
+              modal: true,
+              layout: "fit",
+              items: [myForm],
+              listeners: {
+                hide: function () {
+                  console.log(grid);
+                  grid.reloadRules();
+                },
+              },
+            });
+
+            win.show();
+          },
+        },
+      },
+      tbar: args["readOnly"]
+        ? []
+        : [
+            {
+              xtype: "container",
+              width: 400,
+              layout: {
+                type: "vbox",
+                align: "stretch",
+              },
+              items: [
+                amfutil.dynamicCreate(
+                  amfutil.combo(
+                    config.title,
+                    config.field,
+                    amfutil.createCollectionStore(collection, filter, {
+                      autoLoad: true,
+                    }),
+                    "_id",
+                    "desc",
+                    {
+                      itemId: "obj",
+                      isFormField: false,
+                      allowBlank: true,
+                    }
+                  ),
+                  collection
+                ),
+              ],
+            },
+
+            // "->",
+            {
+              xtype: "button",
+              text: "Add to List",
+              handler: function (scope) {
+                var rule = amfutil.getElementByID("obj").getSelectedRecord();
+                console.log(rule);
+                var error = amfutil.getElementByID("error");
+
+                if (rule) {
+                  var gridstore = scope.up("grid").getStore();
+
+                  var curr = gridstore.getData().items;
+
+                  var present = curr.findIndex(
+                    (rec) => rec.data._id == rule.data._id
+                  );
+
+                  if (present >= 0) {
+                    error.setHtml("Item is already in list.");
+                  } else {
+                    error.setHtml("");
+
+                    curr.push(rule);
+                    gridstore.loadData(curr);
+                  }
+                } else {
+                  error.setHtml("Select an item");
+                }
+              },
+            },
+            {
+              xtype: "container",
+              items: [
+                {
+                  xtype: "component",
+                  style: {
+                    color: "red",
+                  },
+                  itemId: "error",
+                  html: "",
+                },
+              ],
+            },
+          ],
+
+      enableLocking: true,
+      columns: [
+        {
+          header: "Name",
+          dataIndex: "name",
+          flex: true,
+        },
+        {
+          header: "Description",
+          dataIndex: "desc",
+          flex: true,
+        },
+      ].concat(
+        args["readOnly"]
+          ? []
+          : [
+              {
+                xtype: "actioncolumn",
+                text: "Actions",
+                dataIndex: "actions",
+                width: 175,
+                items: [
+                  {
+                    iconCls: "x-fa fa-trash",
+                    handler: function (scope, rowIndex) {
+                      console.log(scope);
+                      var gridstore = scope.ownerGrid.getStore();
+                      gridstore.removeAt(rowIndex);
+                    },
+                  },
+                ],
+              },
+            ]
+      ),
+      viewConfig: args["readOnly"]
+        ? {}
+        : {
+            plugins: {
+              gridviewdragdrop: {
+                dragText: "Drag and drop to reorganize",
+              },
+            },
+          },
+    });
+
+    this.setReadOnly(args["readOnly"]);
+
+    this.insert(grid);
+
+    if (args["value"]) {
+      grid.setLoading(true);
+      Promise.all([amfutil.getCollectionData(collection, filter)]).then(
+        (values) => {
+          var rules = values[0];
+          var ids = args["value"];
+          var filtered = [];
+
+          ids.forEach((id) => {
+            var rule = rules.find((rule) => rule._id == id);
+            if (rule) {
+              filtered.push(rule);
+            }
+          });
+
+          gridstore.loadData(filtered);
+          grid.setLoading(false);
+        }
+      );
+    }
+
+    this.initField();
+  },
+
+  getValue: function (scope) {
+    var ids = this.down("grid")
+      .getStore()
+      .getData()
+      .items.map((rec) => rec.data._id);
+
+    return JSON.stringify(ids);
+  },
+
+  setReadOnly: function (readOnly) {
+    var buttons = Ext.ComponentQuery.query("#collectiongridButton");
+    // var fi = Ext.ComponentQuery.query("fields");
+
+    if (readOnly) {
+      buttons.forEach((b) => {
+        console.log(b);
+        b.setHidden(true);
+      });
+    }
+  },
+});
+
 Ext.define("Amps.form.RuleGrid", {
   extend: "Ext.form.FieldContainer",
   xtype: "rulelist",
@@ -814,7 +1077,14 @@ Ext.define("Amps.consumers.tab", {
   constructor(args) {
     console.log("consumers");
     this.callParent([args]);
-    var streams = ["SERVICES", "ACTIONS", "DATA", "EVENTS", "MAILBOX"];
+    var streams = [
+      "SERVICES",
+      "ACTIONS",
+      "DATA",
+      "EVENTS",
+      "OBJECTS",
+      "MAILBOX",
+    ];
     var tabPanel = new Ext.tab.Panel({
       // listeners: {
       //   beforetabchange(tabPanel, newCard, oldCard, eOpts) {
@@ -1342,15 +1612,7 @@ Ext.define("Amps.container.Workflow", {
         beforerender: function () {
           this.setStore(
             amfutil.createCollectionStore("services", {
-              bool: {
-                must_not: [
-                  {
-                    match: {
-                      type: "subscriber",
-                    },
-                  },
-                ],
-              },
+              type: { $ne: "subscriber" },
             })
           );
         },
@@ -1407,7 +1669,7 @@ Ext.define("Amps.container.Workflow", {
       ],
       listeners: {
         beforerender: function () {
-          this.setStore(amfutil.createCollectionStore("scheduler"));
+          this.setStore(amfutil.createCollectionStore("jobs"));
         },
       },
     },
@@ -1439,8 +1701,8 @@ Ext.define("Amps.container.Workflow", {
           type: "text",
         },
         {
-          text: "Customer",
-          dataIndex: "customer",
+          text: "Group",
+          dataIndex: "group",
           flex: 1,
           type: "text",
         },
@@ -4499,6 +4761,177 @@ Ext.define("Amps.util.Grids", {
               ]),
             ],
           },
+          email: {
+            field: "email",
+            label: "Email",
+            fields: [
+              amfutil.localCombo(
+                "Email Type",
+                "etype",
+                [{ field: "SMTP", label: "SMTP" }],
+                "field",
+                "label",
+                {
+                  listeners: amfutil.renderListeners(function (scope, val) {
+                    var providers = ["SMTP"];
+
+                    providers.forEach((provider) => {
+                      var c = amfutil.getElementByID(provider);
+                      c.setHidden(provider != val);
+                      c.setDisabled(provider != val);
+                    });
+                  }),
+                }
+              ),
+              amfutil.renderContainer(
+                "SMTP",
+                [
+                  amfutil.text("Relay", "relay"),
+                  amfutil.text("Username", "username"),
+                  amfutil.text("Password", "password", {
+                    inputType: "password",
+                  }),
+                  {
+                    xtype: "radiogroup",
+                    fieldLabel: "Use Auth",
+                    allowBlank: false,
+                    name: "auth",
+                    columns: 3,
+                    width: 400,
+                    items: [
+                      {
+                        boxLabel: "Never",
+                        inputValue: "never",
+                        name: "auth",
+                      },
+                      {
+                        boxLabel: "If Available",
+                        name: "auth",
+                        inputValue: "if_available",
+                        checked: true,
+                      },
+                      {
+                        boxLabel: "Always",
+                        name: "auth",
+                        inputValue: "always",
+                      },
+                    ],
+                  },
+                  {
+                    xtype: "radiogroup",
+                    fieldLabel: "Use TLS",
+                    allowBlank: false,
+                    name: "tls",
+                    columns: 3,
+                    width: 400,
+                    items: [
+                      {
+                        boxLabel: "Never",
+                        inputValue: "never",
+                        name: "tls",
+                      },
+                      {
+                        boxLabel: "If Available",
+                        name: "tls",
+                        inputValue: "if_available",
+                        checked: true,
+                      },
+                      {
+                        boxLabel: "Always",
+                        name: "tls",
+                        inputValue: "always",
+                      },
+                    ],
+                  },
+                  amfutil.check("Use SSL (not TLS)", "ssl"),
+                  {
+                    xtype: "numberfield",
+                    name: "port",
+                    fieldLabel: "Port (Leave blank to use defaults)",
+                  },
+                ],
+                {
+                  defaults: {
+                    labelWidth: 200,
+                  },
+                }
+              ),
+            ],
+          },
+          auth: {
+            field: "auth",
+            label: "Auth",
+            fields: [
+              amfutil.localCombo(
+                "Auth Provider",
+                "atype",
+                [{ field: "aws", label: "AWS" }],
+                "field",
+                "label",
+                {
+                  listeners: amfutil.renderListeners(function (scope, val) {
+                    var providers = ["aws"];
+
+                    providers.forEach((provider) => {
+                      var c = amfutil.getElementByID(provider);
+                      c.setHidden(provider != val);
+                      c.setDisabled(provider != val);
+                    });
+                  }),
+                }
+              ),
+              amfutil.renderContainer(
+                "aws",
+                [
+                  amfutil.text("Access Key ID", "aws_access_key_id"),
+                  amfutil.text("Secret Access Key", "aws_secret_access_key ", {
+                    inputType: "password",
+                  }),
+                  amfutil.localCombo(
+                    "Region",
+                    "region",
+                    [
+                      "us-east-2",
+                      "us-east-1",
+                      "us-west-1",
+                      "us-west-2",
+                      "af-south-1",
+                      "ap-east-1",
+                      "ap-south-1",
+                      "ap-northeast-3",
+                      "ap-northeast-2",
+                      "ap-southeast-1",
+                      "ap-southeast-2",
+                      "ap-northeast-1",
+                      "ca-central-1",
+                      "cn-north-1",
+                      "cn-northwest-1",
+                      "eu-central-1",
+                      "eu-west-1",
+                      "eu-west-2",
+                      "eu-west-3",
+                      "eu-north-1",
+                      "eu-south-1",
+                      "me-south-1",
+                      "sa-east-1",
+                      "us-gov-west-1",
+                      "us-gov-east-1",
+                    ],
+                    null,
+                    null,
+                    {
+                      tooltip: "The AWS Region your S3 Buckets are hosted on.",
+                    }
+                  ),
+                ],
+                {
+                  defaults: {
+                    labelWidth: 200,
+                  },
+                }
+              ),
+            ],
+          },
           generic: {
             field: "generic",
             label: "Generic",
@@ -4734,7 +5167,7 @@ Ext.define("Amps.util.Grids", {
             value: "true",
             type: "combo",
             searchOpts: {
-              store: amfutil.createCollectionStore("scheduler"),
+              store: amfutil.createCollectionStore("jobs"),
               displayField: "name",
               valueField: "name",
             },
@@ -5222,7 +5655,10 @@ Ext.define("Amps.util.Grids", {
       title: "Groups",
       object: "Group",
       overwrite: true,
-
+      window: {
+        width: 600,
+        height: 600,
+      },
       actionIcons: [
         "addnewbtn",
         "searchpanelbtn",
@@ -5282,10 +5718,30 @@ Ext.define("Amps.util.Grids", {
           tooltip: "The Email of the primary point of contact of the Group",
           vtype: "email",
         },
+        {
+          xtype: "collectionlist",
+          name: "providers",
+          collection: "providers",
+          filter: { type: "auth" },
+        },
         // amfutil.checkbox("Active", "active", true, {
         //   tooltip: "Whether this customer is active.",
         // }),
       ],
+
+      add: {
+        process: function (form, values) {
+          values.providers = JSON.parse(values.providers);
+          return values;
+        },
+      },
+      update: {
+        process: function (form, values) {
+          values.providers = JSON.parse(values.providers);
+          return values;
+        },
+      },
+
       options: ["delete"],
     }),
     users: () => ({
@@ -5304,7 +5760,7 @@ Ext.define("Amps.util.Grids", {
       columns: [
         {
           text: "Group",
-          dataIndex: "customer",
+          dataIndex: "group",
           flex: 1,
           type: "combo",
           searchOpts: {
@@ -5340,7 +5796,7 @@ Ext.define("Amps.util.Grids", {
         amfutil.dynamicCreate(
           amfutil.combo(
             "Group",
-            "customer",
+            "group",
             amfutil.createCollectionStore("groups", {}, { autoLoad: true }),
             "name",
             "name",
@@ -5492,6 +5948,7 @@ Ext.define("Amps.util.Grids", {
           audit: true,
           crud: true,
           import: true,
+          options: ["delete"],
           actionIcons: [
             "addnewbtn",
             "searchpanelbtn",
@@ -7429,6 +7886,14 @@ Ext.define("Amps.util.Grids", {
               flex: 1,
               margin: 5,
 
+              boxLabel: "Object",
+              name: "type",
+              inputValue: "objects",
+            },
+            {
+              flex: 1,
+              margin: 5,
+
               boxLabel: "Mailbox",
               name: "type",
               inputValue: "mailbox",
@@ -7659,6 +8124,84 @@ Ext.define("Amps.util.Grids", {
                     },
                   }
                 );
+              } else if (val.type == "objects") {
+                combo = amfutil.localCombo(
+                  "Objects",
+                  null,
+                  null,
+                  "field",
+                  "label",
+                  {
+                    isFormField: false,
+                    listeners: {
+                      beforerender: function (cmp) {
+                        cmp.setStore(Object.keys(ampsgrids.grids));
+                      },
+                      change: function (scope, val) {
+                        scope
+                          .up("form")
+                          .getForm()
+                          .findField("topic")
+                          .updateTopic(val, 2);
+                      },
+                    },
+                  }
+                );
+
+                parm = {
+                  xtype: "fieldcontainer",
+                  items: [
+                    {
+                      xtype: "checkbox",
+                      itemId: "serviceparms",
+                      isFormField: false,
+                      inputValue: true,
+                      fieldLabel: "Wildcard",
+                      uncheckedValue: false,
+                      listeners: {
+                        change: function (scope, val) {
+                          var c = scope.up("fieldcontainer").down("#op");
+                          if (val) {
+                            c.setValue("");
+                            c.setDisabled(true);
+                            scope
+                              .up("form")
+                              .getForm()
+                              .findField("topic")
+                              .updateTopic("*", 3);
+                          } else {
+                            c.setDisabled(false);
+                            scope
+                              .up("form")
+                              .getForm()
+                              .findField("topic")
+                              .updateTopic("", 3);
+                          }
+                        },
+                      },
+                    },
+
+                    amfutil.localCombo(
+                      "Operation",
+                      null,
+                      ["create", "update", "delete"],
+                      null,
+                      null,
+                      {
+                        itemId: "op",
+                        listeners: {
+                          change: function (scope, val) {
+                            scope
+                              .up("form")
+                              .getForm()
+                              .findField("topic")
+                              .updateTopic(val, 3);
+                          },
+                        },
+                      }
+                    ),
+                  ],
+                };
               } else {
                 parm = {
                   xtype: "textfield",
@@ -8255,12 +8798,17 @@ Ext.define("Amps.util.Grids", {
                 name: "subs_count",
                 fieldLabel: "Subscriber Count",
                 tooltip:
-                  "The Number of concurrent processes of this subscriber to run.",
+                  "The Number of concurrent processes of this subscriber to run on each AMPS node.",
                 allowBlank: false,
                 minValue: 1,
                 maxValue: 50,
                 value: 1,
               },
+              amfutil.check("Cluster", "cluster", {
+                value: true,
+                tooltip:
+                  "When running AMPS clustered, this flag indicates whether instances of this subscriber running on separate nodes should share work, or whether at least one subscriber on each node should receive the message. Setting Cluster to true indicates that the work will be shared across Nodes (only one instance of this subscriber on any given node will receive and process the message).",
+              }),
               amfutil.dynamicCreate(
                 amfutil.combo(
                   "Action",
@@ -9666,9 +10214,7 @@ Ext.define("Amps.util.Grids", {
             ],
             store: amfutil.createCollectionStore(
               "services",
-              {
-                exists: { field: "active" },
-              },
+              {},
               { autoLoad: true }
             ),
             listeners: {
@@ -10002,11 +10548,11 @@ Ext.define("Amps.util.Grids", {
           scrollable: true,
           title: "System Configuration",
           // padding: 20,
-          bodyPadding: 20,
+          // bodyPadding: 20,
 
-          defaults: {
-            margin: 10,
-          },
+          // defaults: {
+          //   margin: 10,
+          // },
           items: [
             {
               xtype: "form",
@@ -10017,131 +10563,168 @@ Ext.define("Amps.util.Grids", {
                 var fc = this.down("fieldcontainer");
                 // fc.removeAll();
                 this.setMasked(true);
-
+                // this._id = record._id;
                 var data = await amfutil.getCollectionData("config", {
                   name: "SYSTEM",
                 });
                 console.log(data);
                 var record = data[0];
-
-                this._id = record._id;
-
-                this.getForm().setValues(record);
-
-                this.setMasked(false);
-              },
-              items: [
-                {
-                  xtype: "fieldcontainer",
-                  layout: {
-                    type: "vbox",
-                    align: "stretch",
-                  },
-                  defaults: {
-                    labelWidth: 200,
-                  },
-                  items: [
+                var config = {
+                  object: "System Configuration",
+                  fields: [
                     {
-                      xtype: "hidden",
-                      name: "name",
-                      value: "SYSTEM",
-                    },
-                    amfutil.text("Module Path", "python_path"),
-                    amfutil.text("Permanent Storage Root", "storage_root"),
-                    amfutil.text("Temp Storage Path", "storage_temp"),
-                    amfutil.text("Log Path", "storage_logs"),
-                    {
-                      xtype: "numberfield",
-                      name: "hinterval",
-                      fieldLabel: "History Interval(ms)",
-                      allowBlank: false,
-                    },
-                    {
-                      xtype: "numberfield",
-                      name: "TTL (days)",
-                      fieldLabel: "Time to Live(Days)",
-                      allowBlank: false,
-                    },
-                    amfutil.check("Archive Messages", "archive", {
-                      listeners: amfutil.renderListeners(function (scope, val) {
-                        var a = amfutil.getElementByID("archive");
-                        a.setHidden(!val);
-                        a.setDisabled(!val);
-                      }),
-                    }),
-                    amfutil.dynamicCreate(
-                      amfutil.combo(
-                        "Archive Provider",
-                        "aprovider",
-                        amfutil.createCollectionStore("providers", {
-                          type: "archive",
-                        }),
-                        "_id",
-                        "name"
-                      ),
-                      "providers",
-                      {
-                        itemId: "archive",
-                        defaults: {
-                          labelWidth: 200,
+                      xtype: "fieldcontainer",
+                      layout: {
+                        type: "vbox",
+                        align: "stretch",
+                      },
+                      defaults: {
+                        labelWidth: 200,
+                      },
+                      items: [
+                        {
+                          xtype: "hidden",
+                          name: "name",
+                          value: "SYSTEM",
                         },
-                      }
-                    ),
-                    {
-                      xtype: "displayfield",
-                      name: "modifiedby",
-                      fieldLabel: "Last Modified By",
-                    },
-                    {
-                      xtype: "displayfield",
-                      name: "modified",
-                      fieldLabel: "Modified On",
+                        amfutil.text("Module Path", "python_path"),
+                        // amfutil.text("Permanent Storage Root", "storage_root"),
+                        amfutil.text("Temp Storage Path", "storage_temp"),
+                        // amfutil.text("Log Path", "storage_logs"),
+                        {
+                          xtype: "numberfield",
+                          name: "hinterval",
+                          fieldLabel: "History Interval(ms)",
+                          allowBlank: false,
+                        },
+                        {
+                          xtype: "numberfield",
+                          name: "TTL (days)",
+                          fieldLabel: "Time to Live(Days)",
+                          allowBlank: false,
+                        },
+                        amfutil.check("Archive Messages", "archive", {
+                          listeners: amfutil.renderListeners(function (
+                            scope,
+                            val
+                          ) {
+                            var a = amfutil.getElementByID("archive");
+                            a.setHidden(!val);
+                            a.setDisabled(!val);
+                          }),
+                        }),
+                        amfutil.dynamicCreate(
+                          amfutil.combo(
+                            "Archive Provider",
+                            "aprovider",
+                            amfutil.createCollectionStore("providers", {
+                              type: "archive",
+                            }),
+                            "_id",
+                            "name"
+                          ),
+                          "providers",
+                          {
+                            itemId: "archive",
+                            defaults: {
+                              labelWidth: 200,
+                            },
+                          }
+                        ),
+                        amfutil.check("Use Email", "email", {
+                          listeners: amfutil.renderListeners(function (
+                            scope,
+                            val
+                          ) {
+                            var a = amfutil.getElementByID("email");
+                            a.setHidden(!val);
+                            a.setDisabled(!val);
+                          }),
+                        }),
+                        amfutil.dynamicCreate(
+                          amfutil.combo(
+                            "Email Provider",
+                            "eprovider",
+                            amfutil.createCollectionStore("providers", {
+                              type: "email",
+                            }),
+                            "_id",
+                            "name"
+                          ),
+                          "providers",
+                          {
+                            itemId: "email",
+                            defaults: {
+                              labelWidth: 200,
+                            },
+                          }
+                        ),
+                        {
+                          xtype: "displayfield",
+                          name: "modifiedby",
+                          fieldLabel: "Last Modified By",
+                        },
+                        {
+                          xtype: "displayfield",
+                          name: "modified",
+                          fieldLabel: "Modified On",
+                        },
+                      ],
                     },
                   ],
-                },
-              ],
-              buttons: [
-                {
-                  xtype: "button",
-                  formBind: true,
-                  text: "Update",
-                  handler: function (scope) {
-                    var form = scope.up("form");
-                    form.setLoading(true);
-                    var values = scope.up("form").getForm().getValues();
-                    console.log(values);
-                    var id = scope.up("form")._id;
+                };
 
-                    var user = amfutil.get_user();
+                var myForm = Ext.create("Amps.form.update");
+                myForm.loadForm(config, record, false, `config`);
+                this.insert(myForm);
 
-                    values.modifiedby = user.firstname + " " + user.lastname;
-                    values.modified = new Date().toISOString();
+                // this.getForm().setValues(record);
 
-                    values = amfutil.convertNumbers(form.getForm(), values);
+                // this.setMasked(false);
+              },
+              // items: ,
+              // buttons: [
+              //   {
+              //     xtype: "button",
+              //     formBind: true,
+              //     text: "Update",
+              //     handler: function (scope) {
+              //       var form = scope.up("form");
+              //       form.setLoading(true);
+              //       var values = scope.up("form").getForm().getValues();
+              //       console.log(values);
+              //       var id = scope.up("form")._id;
 
-                    amfutil.ajaxRequest({
-                      headers: {
-                        Authorization: localStorage.getItem("access_token"),
-                      },
-                      url: "/api/config/" + id,
-                      method: "POST",
-                      timeout: 60000,
-                      params: {},
-                      jsonData: values,
-                      success: function () {
-                        form.setLoading(false);
+              //       var user = amfutil.get_user();
 
-                        form.loadConfig();
-                      },
-                      failure: function () {
-                        form.setLoading(false);
+              //       values.modifiedby = user.firstname + " " + user.lastname;
+              //       values.modified = new Date().toISOString();
 
-                        mask.hide();
-                      },
-                    });
-                  },
-                },
-              ],
+              //       values = amfutil.convertNumbers(form.getForm(), values);
+
+              //       amfutil.ajaxRequest({
+              //         headers: {
+              //           Authorization: localStorage.getItem("access_token"),
+              //         },
+              //         url: "/api/config/" + id,
+              //         method: "POST",
+              //         timeout: 60000,
+              //         params: {},
+              //         jsonData: values,
+              //         success: function () {
+              //           form.setLoading(false);
+
+              //           form.loadConfig();
+              //         },
+              //         failure: function () {
+              //           form.setLoading(false);
+
+              //           mask.hide();
+              //         },
+              //       });
+              //     },
+              //   },
+              // ],
               listeners: {
                 beforerender: function (scope) {
                   scope.loadConfig();

@@ -232,24 +232,24 @@ Ext.define("Amps.panel.Startup", {
             labelWidth: 150,
           },
           items: [
-            {
-              xtype: "textfield",
-              name: "storage_root",
-              fieldLabel: "Permanent Storage Path",
-              value: "/data/amps/data",
-            },
+            // {
+            //   xtype: "textfield",
+            //   name: "storage_root",
+            //   fieldLabel: "Permanent Storage Path",
+            //   value: "/data/amps/data",
+            // },
             {
               xtype: "textfield",
               name: "storage_temp",
               fieldLabel: "Temp Path",
               value: "/data/amps/tmp",
             },
-            {
-              xtype: "textfield",
-              name: "storage_logs",
-              fieldLabel: "Logs Path",
-              value: "/data/amps/logs",
-            },
+            // {
+            //   xtype: "textfield",
+            //   name: "storage_logs",
+            //   fieldLabel: "Logs Path",
+            //   value: "/data/amps/logs",
+            // },
             {
               xtype: "textfield",
               name: "python_path",

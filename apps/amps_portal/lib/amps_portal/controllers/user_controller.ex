@@ -2,17 +2,21 @@ defmodule AmpsPortal.UserController do
   use AmpsPortal, :controller
   import Argon2
   alias Amps.DB
+  import Plug.Conn
   alias AmpsPortal.Util
   alias Plug.Conn
   alias Pow.{Config, Plug, Store.Backend.EtsCache, UUID}
   alias PowResetPassword.Ecto.Context, as: ResetPasswordContext
   alias PowResetPassword.Store.ResetTokenCache
+  import PowResetPassword.Plug
 
   def get(conn, _params) do
     Util.conn_index(conn, "users")
 
     res =
-      Amps.DB.find_one(Util.conn_index(conn, "users"), %{"_id" => Pow.Plug.current_user(conn).id})
+      Amps.DB.find_one(Util.conn_index(conn, "users"), %{
+        "_id" => Pow.Plug.current_user(conn).id
+      })
 
     IO.inspect(res)
     json(conn, res)
@@ -34,7 +38,11 @@ defmodule AmpsPortal.UserController do
       end
 
     {:ok, res} =
-      Amps.DB.find_one_and_update(Util.conn_index(conn, "users"), %{"_id" => user.id}, body)
+      Amps.DB.find_one_and_update(
+        Util.conn_index(conn, "users"),
+        %{"_id" => user.id},
+        body
+      )
 
     json(conn, res)
   end
@@ -43,12 +51,21 @@ defmodule AmpsPortal.UserController do
     data = conn.body_params()
     host = data["host"]
 
-    case PowResetPassword.Plug.create_reset_token(conn, %{"email" => email}) do
+    conn =
+      put_private(
+        conn,
+        :pow_config,
+        Keyword.put(conn.private.pow_config, :env, conn.assigns().env)
+      )
+
+    IO.inspect(conn)
+
+    case reset_token(conn, %{"email" => email}) do
       {:ok, %{token: token, user: user}, conn} ->
         link = "#{host}?token=#{token}#setpassword"
 
-        AmpsPortal.UserEmail.reset(user, link)
-        |> Amps.Mailer.deliver()
+        AmpsPortal.UserEmail.reset(user, link, host)
+        |> AmpsUtil.deliver()
 
         json(conn, %{"success" => true})
 
@@ -57,37 +74,99 @@ defmodule AmpsPortal.UserController do
     end
   end
 
+  def create_link() do
+    #   host = data["host"]
+    conn =
+      Pow.Plug.put_config(%Conn{},
+        mod: AmpsPortal.APIAuthPlug,
+        plug: AmpsPortal.APIAuthPlug,
+        otp_app: :amps_portal
+      )
+
+    #   conn =
+    #     put_private(
+    #       conn,
+    #       :pow_config,
+    #       Keyword.put(conn.private.pow_config, :env, conn.assigns().env)
+    #     )
+
+    #   IO.inspect(conn)
+
+    #   case reset_token(conn, %{"email" => email}) do
+    #     {:ok, %{token: token, user: user}, conn} ->
+    #       link = "#{host}?token=#{token}#setpassword"
+  end
+
+  defp reset_token(conn, params) do
+    conn =
+      put_private(
+        conn,
+        :pow_config,
+        Keyword.put(conn.private.pow_config, :env, conn.assigns().env)
+      )
+
+    config = Plug.fetch_config(conn)
+    token = UUID.generate()
+    IO.inspect(config)
+
+    AmpsPortal.Users.get_by(params, config)
+    |> case do
+      nil ->
+        {:error, nil, conn}
+
+      user ->
+        {store, store_config} = store(config)
+
+        store.put(store_config, token, user)
+
+        signed = Phoenix.Token.sign(AmpsPortal.Endpoint, Atom.to_string(__MODULE__), token, [])
+
+        {:ok, %{token: signed, user: user}, conn}
+    end
+  end
+
   def parse_user_token(conn, %{"token" => token}) do
     IO.inspect(conn)
     IO.inspect(token)
 
-    case PowResetPassword.Plug.load_user_by_token(
+    conn =
+      put_private(
+        conn,
+        :pow_config,
+        Keyword.put(conn.private.pow_config, :env, conn.assigns().env)
+      )
+
+    case load_from_token(
            conn,
            token
          ) do
       {:ok, conn} ->
-        json(conn, %{status: "success", username: conn.assigns.reset_password_user.username})
+        IO.inspect("SUCCESS")
+
+        json(conn, %{
+          success: true,
+          username: conn.assigns.reset_password_user.username
+        })
 
       {:error, conn} ->
-        IO.inspect(conn)
-        json(conn, %{status: "error", error: %{message: "Expired Token"}})
+        json(conn, %{success: false, error: %{message: "Expired Token"}})
     end
-
-    json(conn, :ok)
   end
 
   def reset_password(conn, %{"token" => token, "user" => user}) do
     conn
-    |> PowResetPassword.Plug.load_user_by_token(token)
+    |> load_from_token(token)
     |> case do
       {:ok, conn} ->
         %{password_hash: hashed} = add_hash(user["password"])
+
         # res = PowResetPassword.Plug.update_user_password(conn, %{"password" => hashed})
         config = Plug.fetch_config(conn)
+        index = Util.conn_index(conn, "users")
 
         res =
           Amps.DB.find_one_and_update(
-            Util.conn_index(conn, "users"),
+            index,
             %{"username" => user["username"]},
             %{
               "password" => hashed
@@ -95,15 +174,65 @@ defmodule AmpsPortal.UserController do
           )
 
         expire_token(conn, config)
+        user = Amps.DB.find_one(index, %{"username" => user["username"]})
+
+        onb = fn msg, obj, env ->
+          obj = obj |> Map.put("password", user["password"])
+          msg = Map.put(msg, "data", Jason.encode!(obj))
+
+          Amps.Onboarding.update(
+            msg,
+            obj,
+            conn.assigns().env
+          )
+        end
+
+        AmpsWeb.Util.ui_event(index, user["_id"], "reset_password", conn.assigns().env, onb)
 
         IO.inspect(res)
-        json(conn, %{success: %{message: "Password Set"}})
+        json(conn, %{success: true, message: "Password Set"})
 
       {:error, conn} ->
-        json(conn, %{error: %{message: "Expired Token"}})
+        json(conn, %{success: false, message: "Expired Token"})
     end
+  end
 
-    json(conn, %{status: "ok"})
+  def load_from_token(conn, signed_token) do
+    config = Plug.fetch_config(conn)
+
+    IO.inspect(
+      Phoenix.Token.verify(AmpsPortal.Endpoint, Atom.to_string(__MODULE__), signed_token,
+        max_age: 86400
+      )
+    )
+
+    with {:ok, token} <-
+           Phoenix.Token.verify(AmpsPortal.Endpoint, Atom.to_string(__MODULE__), signed_token,
+             max_age: 86400
+           ),
+         user when not is_nil(user) <-
+           fetch_user_from_token(token, config) do
+      conn =
+        conn
+        |> Conn.put_private(:pow_reset_password_decoded_token, token)
+        |> Conn.assign(:reset_password_user, user)
+
+      {:ok, conn}
+    else
+      _any -> {:error, conn}
+    end
+  end
+
+  defp fetch_user_from_token(token, config) do
+    IO.inspect(token)
+    {store, store_config} = store(config)
+
+    store_config
+    |> store.get(token)
+    |> case do
+      :not_found -> nil
+      user -> user
+    end
   end
 
   def register(conn, _params) do
@@ -118,11 +247,20 @@ defmodule AmpsPortal.UserController do
       {:error, _changeset, conn} ->
         conn
         |> put_status(500)
-        |> json(%{error: %{status: 500, message: "Couldn't create user", errors: "error"}})
+        |> json(%{
+          error: %{
+            status: 500,
+            message: "Couldn't create user",
+            errors: "error"
+          }
+        })
     end
   end
 
-  defp expire_token(%{private: %{pow_reset_password_decoded_token: token}}, config) do
+  defp expire_token(
+         %{private: %{pow_reset_password_decoded_token: token}},
+         config
+       ) do
     {store, store_config} = store(config)
     store.delete(store_config, token)
   end
@@ -148,7 +286,10 @@ defmodule AmpsPortal.UserController do
 
   defp store_opts(config, store_config \\ []) do
     store_config
-    |> Keyword.put_new(:backend, Config.get(config, :cache_store_backend, EtsCache))
+    |> Keyword.put_new(
+      :backend,
+      Config.get(config, :cache_store_backend, EtsCache)
+    )
     |> Keyword.put_new(:pow_config, config)
   end
 
@@ -158,7 +299,11 @@ defmodule AmpsPortal.UserController do
         send_resp(conn, 401, "Unauthorized")
 
       user ->
-        user = DB.find_one(Util.conn_index(conn, "users"), %{"username" => user.username})
+        user =
+          DB.find_one(Util.conn_index(conn, "users"), %{
+            "username" => user.username
+          })
+
         json(conn, user["tokens"])
     end
   end
@@ -169,7 +314,11 @@ defmodule AmpsPortal.UserController do
         send_resp(conn, 401, "Unauthorized")
 
       user ->
-        user = DB.find_one(Util.conn_index(conn, "users"), %{"username" => user.username})
+        user =
+          DB.find_one(Util.conn_index(conn, "users"), %{
+            "username" => user.username
+          })
+
         body = conn.body_params()
         body = Util.before_token_create(body, conn.assigns().env)
         index = Util.conn_index(conn, "users")
@@ -189,7 +338,11 @@ defmodule AmpsPortal.UserController do
         index = Util.conn_index(conn, "users")
         user = DB.find_one(index, %{"username" => user.username})
         item = DB.get_in_field(index, user["_id"], "tokens", id)
-        secrets = DB.find_one(Util.conn_index(conn, "tokens"), %{"username" => user["username"]})
+
+        secrets =
+          DB.find_one(Util.conn_index(conn, "tokens"), %{
+            "username" => user["username"]
+          })
 
         case secrets do
           nil ->
@@ -219,7 +372,10 @@ defmodule AmpsPortal.UserController do
 
   def duplicate_username(conn, %{"username" => username}) do
     body = conn.body_params()
-    duplicate = DB.find_one(Util.conn_index(conn, "users"), %{"username" => username}) != nil
+
+    duplicate =
+      DB.find_one(Util.conn_index(conn, "users"), %{"username" => username}) !=
+        nil
 
     json(conn, duplicate)
   end

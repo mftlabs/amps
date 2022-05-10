@@ -79,75 +79,75 @@ Ext.define("Amps.Unauthorized.Signup", {
           },
         },
       },
-      {
-        xtype: "textfield",
-        name: "password",
-        itemId: "passwd",
-        inputType: "password",
-        fieldLabel: "Password",
-        maskRe: /[^\^ ]/,
-        allowBlank: false,
-        enableKeyEvents: true,
-        listeners: {
-          afterrender: function (cmp) {
-            cmp.inputEl.set({
-              autocomplete: "new-password",
-            });
-          },
-          keypress: function (me, e) {
-            var charCode = e.getCharCode();
-            if (!e.shiftKey && charCode >= 65 && charCode <= 90) {
-              capslock_id = Ext.ComponentQuery.query("#signup_capslock_id")[0];
-              capslock_id.setHidden(false);
-            } else {
-              me.isValid();
-              capslock_id = Ext.ComponentQuery.query("#signup_capslock_id")[0];
-              capslock_id.setHidden(true);
-            }
-          },
-          change: function (me, e) {
-            confPassword =
-              Ext.ComponentQuery.query("#confpasswd")[0].getValue();
-            password = me.value;
-            if (confPassword.length != 0) {
-              if (password != confPassword) {
-                Ext.ComponentQuery.query("#signup_id")[0].setDisabled(true);
-                var m = Ext.getCmp("confpasswd_id");
-                m.setActiveError("Passwords doesn't match");
-              } else {
-                Ext.ComponentQuery.query("#signup_id")[0].setDisabled(false);
-                var m = Ext.getCmp("confpasswd_id");
-                m.unsetActiveError();
-              }
-            }
-          },
-        },
-      },
-      {
-        xtype: "textfield",
-        name: "confirmpswd",
-        itemId: "confpasswd",
-        inputType: "password",
-        maskRe: /[^\^ ]/,
-        fieldLabel: "Confirm Password",
-        allowBlank: false,
-        enableKeyEvents: true,
-        vtype: "passwordMatch",
-        labelStyle: "white-space: nowrap;",
-        listeners: {
-          keypress: function (me, e) {
-            var charCode = e.getCharCode();
-            if (!e.shiftKey && charCode >= 65 && charCode <= 90) {
-              capslock_id = Ext.ComponentQuery.query("#signup_capslock_id")[0];
-              capslock_id.setHidden(false);
-            } else {
-              me.isValid();
-              capslock_id = Ext.ComponentQuery.query("#signup_capslock_id")[0];
-              capslock_id.setHidden(true);
-            }
-          },
-        },
-      },
+      // {
+      //   xtype: "textfield",
+      //   name: "password",
+      //   itemId: "passwd",
+      //   inputType: "password",
+      //   fieldLabel: "Password",
+      //   maskRe: /[^\^ ]/,
+      //   allowBlank: false,
+      //   enableKeyEvents: true,
+      //   listeners: {
+      //     afterrender: function (cmp) {
+      //       cmp.inputEl.set({
+      //         autocomplete: "new-password",
+      //       });
+      //     },
+      //     keypress: function (me, e) {
+      //       var charCode = e.getCharCode();
+      //       if (!e.shiftKey && charCode >= 65 && charCode <= 90) {
+      //         capslock_id = Ext.ComponentQuery.query("#signup_capslock_id")[0];
+      //         capslock_id.setHidden(false);
+      //       } else {
+      //         me.isValid();
+      //         capslock_id = Ext.ComponentQuery.query("#signup_capslock_id")[0];
+      //         capslock_id.setHidden(true);
+      //       }
+      //     },
+      //     change: function (me, e) {
+      //       confPassword =
+      //         Ext.ComponentQuery.query("#confpasswd")[0].getValue();
+      //       password = me.value;
+      //       if (confPassword.length != 0) {
+      //         if (password != confPassword) {
+      //           Ext.ComponentQuery.query("#signup_id")[0].setDisabled(true);
+      //           var m = Ext.getCmp("confpasswd_id");
+      //           m.setActiveError("Passwords doesn't match");
+      //         } else {
+      //           Ext.ComponentQuery.query("#signup_id")[0].setDisabled(false);
+      //           var m = Ext.getCmp("confpasswd_id");
+      //           m.unsetActiveError();
+      //         }
+      //       }
+      //     },
+      //   },
+      // },
+      // {
+      //   xtype: "textfield",
+      //   name: "confirmpswd",
+      //   itemId: "confpasswd",
+      //   inputType: "password",
+      //   maskRe: /[^\^ ]/,
+      //   fieldLabel: "Confirm Password",
+      //   allowBlank: false,
+      //   enableKeyEvents: true,
+      //   vtype: "passwordMatch",
+      //   labelStyle: "white-space: nowrap;",
+      //   listeners: {
+      //     keypress: function (me, e) {
+      //       var charCode = e.getCharCode();
+      //       if (!e.shiftKey && charCode >= 65 && charCode <= 90) {
+      //         capslock_id = Ext.ComponentQuery.query("#signup_capslock_id")[0];
+      //         capslock_id.setHidden(false);
+      //       } else {
+      //         me.isValid();
+      //         capslock_id = Ext.ComponentQuery.query("#signup_capslock_id")[0];
+      //         capslock_id.setHidden(true);
+      //       }
+      //     },
+      //   },
+      // },
       {
         xtype: "textfield",
         name: "email",

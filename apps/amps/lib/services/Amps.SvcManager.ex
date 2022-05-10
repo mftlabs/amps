@@ -227,7 +227,7 @@ defmodule Amps.SvcManager do
               router: args["router"],
               env: nil
             )
-           |> Code.compile_string("Amps.Gateway.eex")
+            |> Code.compile_string("Amps.Gateway.eex")
 
           if args["tls"] do
             {cert, key} =
@@ -401,11 +401,8 @@ defmodule Amps.SvcManager do
           parms |> Map.drop(["_id", "name"])
       end
 
-    IO.inspect(parms)
-
     Enum.each(parms, fn {key, val} ->
       res = Amps.Defaults.put(key, val)
-      IO.inspect(res)
       Application.put_env(:amps, String.to_atom(key), val)
     end)
   end

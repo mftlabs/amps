@@ -6,7 +6,7 @@ defmodule Amps.Scheduler do
   require Logger
 
   def init(config) do
-    sched = DB.find("scheduler")
+    sched = DB.find("jobs")
 
     jobs =
       Enum.reduce(sched, [], fn job, acc ->
@@ -21,7 +21,7 @@ defmodule Amps.Scheduler do
   end
 
   def load(name) do
-    case DB.find_one("scheduler", %{name: name}) do
+    case DB.find_one("jobs", %{name: name}) do
       nil ->
         Logger.info("Could not load")
 

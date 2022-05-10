@@ -119,6 +119,7 @@ if config_env() == :prod do
   end
 
   config :amps_web, AmpsWeb.Endpoint,
+    use_ssl: String.to_atom(String.downcase(System.get_env("AMPS_USE_SSL", "FALSE"))),
     http: [
       # Enable IPv6 and bind on all interfaces.
       # Set it to  {0, 0, 0, 0, 0, 0, 0, 1} for local network only access.
@@ -133,6 +134,7 @@ if config_env() == :prod do
     ],
     authmethod: System.get_env("AMPS_AUTH_METHOD") || "db",
     vault_addr: System.get_env("AMPS_VAULT_ADDR", "http://localhost:8200"),
+    mongo_addr: System.get_env("AMPS_MONGO_ADDR", "mongodb://localhost:27017/amps"),
     secret_key_base: secret_key_base
 
   config :amps, Amps.Cluster,

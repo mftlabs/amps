@@ -6,9 +6,6 @@ defmodule Amps.EnvScheduler do
   require Logger
 
   def init(config) do
-    IO.puts("SCHEDULER")
-    IO.inspect(config)
-
     config =
       Enum.reduce(config, [], fn {key, val}, acc ->
         str = Atom.to_string(key)
@@ -25,7 +22,7 @@ defmodule Amps.EnvScheduler do
 
     IO.inspect(config)
 
-    sched = DB.find(AmpsUtil.index(config[:env], "scheduler"))
+    sched = DB.find(AmpsUtil.index(config[:env], "jobs"))
 
     jobs =
       Enum.reduce(sched, [], fn job, acc ->
@@ -48,7 +45,7 @@ defmodule Amps.EnvScheduler do
   end
 
   def load(name, env) do
-    case DB.find_one(AmpsUtil.index(env, "scheduler"), %{name: name}) do
+    case DB.find_one(AmpsUtil.index(env, "jobs"), %{name: name}) do
       nil ->
         Logger.info("Could not load job #{name} in environment #{env}")
 

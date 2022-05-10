@@ -183,13 +183,15 @@ defmodule Amps.VaultDatabase do
 
     case get_vault() do
       {:ok, vault} ->
+        id = AmpsUtil.get_id()
+
         case Vault.write(
                vault,
-               "kv/amps/" <> collection <> "/" <> AmpsUtil.get_id(),
+               "kv/amps/" <> collection <> "/" <> id,
                body
              ) do
-          {:ok, resp} ->
-            {:ok, resp}
+          {:ok, _} ->
+            {:ok, id}
 
           {:error, error} ->
             {:error, error}

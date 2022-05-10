@@ -70,7 +70,8 @@ defmodule Amps.MixProject do
       },
       {:mnesiac, git: "https://github.com/aram0112/mnesiac"},
       {:kafka_ex, git: "https://github.com/aram0112/kafka_ex"},
-      {:cors_plug, "~> 2.0"}
+      {:cors_plug, "~> 2.0"},
+      {:gen_smtp, "~> 1.0"}
       # {:ex_json_schema, "~> 0.9.1"},
       # {:xml_builder, "~> 2.1"},
       # {:jsonpatch, "~> 0.12.0"}

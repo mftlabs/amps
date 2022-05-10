@@ -392,6 +392,7 @@ defmodule AmpsUtil do
       else
         Logger.debug("Attempting to Retrive Data for Message #{msg["msgid"]} from Archive")
         File.mkdir_p(Path.dirname(msg["fpath"]))
+
         Amps.ArchiveConsumer.stream(msg, env)
         |> Stream.into(File.stream!(msg["fpath"]))
         |> Stream.run()
@@ -736,6 +737,49 @@ defmodule AmpsUtil do
     {:ok, pid} = Amps.PyProcess.start_link(parms: parms, env: "gwdemo", name: :gwdemo)
   end
 
+  def deliver(email) do
+    import Swoosh.Email
+
+    if Amps.Defaults.get("email") do
+      provider = DB.find_by_id("providers", Amps.Defaults.get("eprovider"))
+      type = provider["etype"]
+
+      config =
+        provider
+        |> Map.drop([
+          "name",
+          "desc",
+          "_id",
+          "type",
+          "etype",
+          "modified",
+          "modifiedby",
+          "created",
+          "createdby"
+        ])
+        |> Enum.map(fn {k, v} ->
+          {String.to_atom(k),
+           if Enum.member?(["auth", "tls"], k) do
+             String.to_atom(v)
+           else
+             v
+           end}
+        end)
+        |> Enum.into([])
+
+      config =
+        if config[:port] do
+          config
+        else
+          Keyword.delete(config, :port)
+        end
+
+      :"Elixir.Swoosh.Adapters.#{type}".deliver(email, config)
+    else
+      Logger.warn("Amps Mailer not configured")
+    end
+  end
+
   def get_mod_path(env \\ "", paths \\ [""]) do
     case env do
       "" ->
@@ -743,6 +787,39 @@ defmodule AmpsUtil do
 
       env ->
         Path.join([Amps.Defaults.get("python_path"), "env", env] ++ paths)
+    end
+  end
+
+  def filter(data) do
+    Enum.reduce(data, %{}, fn {k, v}, acc ->
+      if is_filtered?(k) do
+        Map.put(acc, k, "[FILTERED]")
+      else
+        Map.put(acc, k, parse(v))
+      end
+    end)
+  end
+
+  defp is_filtered?(k) do
+    filters = ["password"]
+    Enum.member?(filters, k)
+  end
+
+  defp parse(v) do
+    case v do
+      v when is_struct(v, BSON.ObjectId) ->
+        BSON.ObjectId.encode!(v)
+
+      v when is_map(v) ->
+        filter(v)
+
+      v when is_list(v) ->
+        Enum.map(v, fn val ->
+          parse(val)
+        end)
+
+      _ ->
+        v
     end
   end
 end

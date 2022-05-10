@@ -41,6 +41,8 @@ defmodule AmpsPortal.Router do
       only: [:create, :delete]
     )
 
+    get("/util/email", DataController, :email)
+
     post("/session/renew", SessionController, :renew)
     post("/users/reg", UserController, :register)
     get("/users/token/:token", UserController, :parse_user_token)

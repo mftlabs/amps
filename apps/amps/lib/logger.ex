@@ -55,9 +55,8 @@ defmodule Amps.Logger do
               |> Logger.Formatter.format(level, msg, ts, [])
               |> IO.chardata_to_string()
 
-            message = %Snap.Bulk.Action.Create{
-              _index: "system_logs",
-              doc:
+            message =
+              Amps.DB.bulk_insert(
                 Map.merge(
                   meta,
                   %{
@@ -67,7 +66,7 @@ defmodule Amps.Logger do
                     etime: etime
                   }
                 )
-            }
+              )
 
             Map.put(state, :messages, [message | state.messages])
           else
@@ -88,7 +87,7 @@ defmodule Amps.Logger do
     state =
       if Enum.count(state.messages) > 0 do
         state.messages
-        |> Snap.Bulk.perform(Amps.Cluster, nil, [])
+        |> Amps.DB.bulk_perform("system_logs")
 
         Map.put(state, :messages, [])
       else

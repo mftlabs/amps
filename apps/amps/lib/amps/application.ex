@@ -1,9 +1,5 @@
 defmodule Amps.Application do
-  defimpl Poison.Encoder, for: BSON.ObjectId do
-    def encode(id, options) do
-      BSON.ObjectId.encode!(id) |> Poison.Encoder.encode(options)
-    end
-  end
+
 
   # See https://hexdocs.pm/elixir/Application.html
   # for more information on OTP Applications
@@ -43,15 +39,7 @@ defmodule Amps.Application do
       {Pow.Store.Backend.MnesiaCache, extra_db_nodes: {Node, :list, []}},
       # Recover from netsplit
       Pow.Store.Backend.MnesiaCache.Unsplit,
-
-      # {Mongo,
-      #  [
-      #    name: :mongo,
-      #    database: "amps",
-      #    url: Application.fetch_env!(:amps_web, AmpsWeb.Endpoint)[:mongo_addr],
-      #    pool_size: 1
-      #  ]},
-      {Amps.Cluster, []},
+      Amps.DB.get_db(),
       {Amps.Startup, []},
       AmpsWeb.Vault,
       Amps.SvcHandler,
@@ -135,6 +123,20 @@ defmodule Amps.Application do
                "name" => "data_handler",
                "subs_count" => 3,
                "topic" => "amps.data.>",
+               "receipt" => true,
+               "index" => "message_events"
+             }
+           ]}
+      },
+      %{
+        id: "object_handler",
+        start:
+          {Amps.HistoryHandler, :start_link,
+           [
+             %{
+               "name" => "object_handler",
+               "subs_count" => 3,
+               "topic" => "amps.objects.>",
                "receipt" => true,
                "index" => "message_events"
              }

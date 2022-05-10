@@ -1,10 +1,3 @@
-defimpl Jason.Encoder, for: BSON.ObjectId do
-  def encode(val, _opts \\ []) do
-    BSON.ObjectId.encode!(val)
-    |> Jason.encode!()
-  end
-end
-
 defmodule AmpsWeb.DataController do
   use AmpsWeb, :controller
   require Logger
@@ -142,12 +135,7 @@ defmodule AmpsWeb.DataController do
     index = Util.index(conn.assigns().env, "users")
     _length = 15
 
-    symbol_count = Enum.count(@symbols)
-
-    password =
-      for _ <- 1..15,
-          into: "",
-          do: <<Enum.at(@symbols, :crypto.rand_uniform(0, symbol_count))>>
+    password = create_password()
 
     # IO.inspect(password)
     %{password_hash: hashed} = add_hash(password)
@@ -157,6 +145,67 @@ defmodule AmpsWeb.DataController do
     Amps.DB.find_one_and_update(index, %{"_id" => id}, %{
       "password" => hashed
     })
+
+    onb = fn msg, obj, env ->
+      obj = obj |> Map.put("password", password)
+      msg = Map.put(msg, "data", Jason.encode!(obj))
+
+      Amps.Onboarding.update(
+        msg,
+        obj,
+        conn.assigns().env
+      )
+    end
+
+    Util.ui_event(index, id, "reset_password", conn.assigns().env, onb)
+
+    json(conn, %{success: %{password: password}})
+  end
+
+  def create_password do
+    symbol_count = Enum.count(@symbols)
+
+    password =
+      for _ <- 1..15,
+          into: "",
+          do: <<Enum.at(@symbols, :crypto.rand_uniform(0, symbol_count))>>
+  end
+
+  def approve_user(conn, %{"id" => id, "group" => group}) do
+    index = Util.index(conn.assigns().env, "users")
+    _length = 15
+
+    password = create_password()
+
+    # IO.inspect(password)
+    %{password_hash: hashed} = add_hash(password)
+
+    # res = PowResetPassword.Plug.update_user_password(conn, %{"password" => hashed})
+
+    Amps.DB.find_one_and_update(index, %{"_id" => id}, %{
+      "password" => hashed,
+      "approved" => true,
+      "group" => group
+    })
+
+    onb = fn msg, obj, env ->
+      obj = obj |> Map.put("password", password)
+      msg = Map.put(msg, "data", Jason.encode!(obj))
+
+      Amps.Onboarding.update(
+        msg,
+        obj,
+        conn.assigns().env
+      )
+    end
+
+    Util.ui_event(index, id, "approve_user", conn.assigns().env, onb)
+
+    # email =
+    #   new()
+    #   |> from("abhaykram12@gmail.com")
+    #   |> to("diksharath0@gmail.com")
+    #   |> text_body("this is being sent from elixir i love u")
 
     json(conn, %{success: %{password: password}})
   end
@@ -690,6 +739,8 @@ defmodule AmpsWeb.DataController do
 
     Util.after_create(collection, body, conn.assigns().env)
 
+    Util.ui_event(collection, res, "create", conn.assigns().env)
+
     json(conn, res)
   end
 
@@ -698,6 +749,8 @@ defmodule AmpsWeb.DataController do
     {:ok, res} = DB.insert_with_id(collection, body, id)
 
     Util.after_create(collection, body, conn.assigns().env)
+
+    Util.ui_event(collection, id, "create", conn.assigns().env)
 
     json(conn, res)
   end
@@ -732,6 +785,7 @@ defmodule AmpsWeb.DataController do
     result = DB.update(collection, body, id)
 
     Util.after_update(collection, id, body, conn.assigns().env, old)
+    Util.ui_event(collection, id, "update", conn.assigns().env)
 
     json(conn, result)
   end
@@ -745,6 +799,7 @@ defmodule AmpsWeb.DataController do
     {:ok, result} = DB.insert_with_id(collection, body, id)
 
     Util.after_update(collection, id, body, conn.assigns().env, old)
+    Util.ui_event(collection, id, "update", conn.assigns().env)
 
     json(conn, result)
   end
@@ -783,12 +838,13 @@ defmodule AmpsWeb.DataController do
 
         if object["type"] == "gateway" do
           mod =
-          case conn.assigns().env do
-            "" ->
-              :"Amps.Gateway.#{object["name"]}"
-            env ->
-              :"Amps.Gateway.#{env}.#{object["name"]}"
-          end
+            case conn.assigns().env do
+              "" ->
+                :"Amps.Gateway.#{object["name"]}"
+
+              env ->
+                :"Amps.Gateway.#{env}.#{object["name"]}"
+            end
 
           :code.delete(mod)
           :code.purge(mod)
@@ -813,6 +869,8 @@ defmodule AmpsWeb.DataController do
       _ ->
         nil
     end
+
+    Util.ui_delete_event(collection, object, conn.assigns().env)
 
     json(conn, resp)
   end
@@ -861,6 +919,8 @@ defmodule AmpsWeb.DataController do
       conn.assigns().env
     )
 
+    Util.ui_field_event(collection, id, field, fieldid, "create", conn.assigns().env)
+
     json(conn, updated)
   end
 
@@ -886,6 +946,8 @@ defmodule AmpsWeb.DataController do
       conn.assigns().env
     )
 
+    Util.ui_field_event(collection, id, field, fieldid, "create", conn.assigns().env)
+
     json(conn, updated)
   end
 
@@ -907,7 +969,9 @@ defmodule AmpsWeb.DataController do
         "field" => field
       }) do
     body = conn.body_params()
+    IO.inspect(%{field => body})
     DB.find_one_and_update(collection, %{"_id" => id}, %{field => body})
+    Util.ui_event(collection, id, "update.#{field}", conn.assigns().env)
     json(conn, :ok)
   end
 
@@ -947,6 +1011,8 @@ defmodule AmpsWeb.DataController do
       _ ->
         nil
     end
+
+    Util.ui_field_event(collection, id, field, fieldid, "update", conn.assigns().env)
 
     json(conn, result)
   end
@@ -998,6 +1064,8 @@ defmodule AmpsWeb.DataController do
       _ ->
         nil
     end
+
+    Util.ui_delete_event(collection, obj, conn.assigns().env)
 
     json(conn, result)
   end

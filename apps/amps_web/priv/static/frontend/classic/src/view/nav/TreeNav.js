@@ -126,9 +126,9 @@ Ext.define("Amps.view.nav.TreeNav", {
             {
               iconCls: "x-fa fa-calendar",
               leaf: true,
-              rowCls: "scheduler",
+              rowCls: "jobs",
               text: "Jobs",
-              tooltip: "Scheduler",
+              tooltip: "Jobs",
             },
           ],
         },
