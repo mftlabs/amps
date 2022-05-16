@@ -147,6 +147,9 @@ if config_env() == :prod do
       ]
     ]
 
+  config :amps,
+    db: System.get_env("AMPS_DB_PROVIDER", "os")
+
   # config :ex_aws, :s3,
   #   access_key_id: "minioadmin",
   #   secret_access_key: "minioadmin",
