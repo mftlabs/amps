@@ -46,10 +46,14 @@ RUN pip3 install amps-py python-jsonrpc-server python-lsp-server
 
 RUN pip3 install "python-lsp-server[all]"
 
-RUN chgrp -R 0 /release \
+RUN mkdir /release
+RUN chgrp -R 0 /release && \
     chmod -R g=u /release
 
-WORKDIR /release
+RUN mkdir /release/data/amps/tmp
+RUN mkdir /release/data/amps/modules
+
+WORKDIR /releasse
 
 ENV ERLPORT_PYTHON=/usr/bin/python3
 
