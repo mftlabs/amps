@@ -438,7 +438,7 @@ Ext.define("Amps.controller.PageController", {
               "Group",
               "group",
               amfutil.createCollectionStore("groups"),
-              "name",
+              "_id",
               "name"
             ),
           ],
@@ -904,6 +904,7 @@ Ext.define("Amps.controller.PageController", {
       title: "Confirm Password Reset",
       width: 400,
       height: 300,
+      modal: true,
       layout: {
         type: "vbox",
         align: "stretch",

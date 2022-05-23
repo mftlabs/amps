@@ -11,6 +11,12 @@ defmodule AmpsWeb.UtilController do
 
   @loop_delimiter "//"
 
+  def verify(conn, %{"username" => username}) do
+    user = DB.find_one(Util.index(conn.assigns().env, "users"), %{"username" => username})
+    auths = Amps.Onboarding.verify(user)
+    json(conn, auths)
+  end
+
   def glob_match(conn, _params) do
     body = conn.body_params()
     test = body["test"]

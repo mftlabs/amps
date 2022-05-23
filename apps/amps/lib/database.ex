@@ -23,6 +23,16 @@ defmodule Amps.DB do
     Application.get_env(:amps, :db)
   end
 
+  def id_to_string(id) do
+    case db() do
+      "mongo" ->
+        BSON.ObjectId.encode!(id)
+
+      _ ->
+        id
+    end
+  end
+
   def get_db() do
     case db() do
       "mongo" ->
@@ -188,7 +198,23 @@ defmodule Amps.DB do
         "collection" => collection
       }) do
     if vault_collection(collection) do
-      VaultDatabase.get_rows(collection)
+      query = conn.query_params
+
+      params =
+        if query["params"] do
+          Jason.decode!(query["params"])
+        else
+          %{}
+        end
+
+      filters =
+        if params["filters"] != nil do
+          params["filters"]
+        else
+          %{}
+        end
+
+      VaultDatabase.get_rows(collection, filters)
     else
       case db() do
         "pg" ->
@@ -273,7 +299,7 @@ defmodule Amps.DB do
 
   def find(collection, clauses \\ %{}, opts \\ %{}) do
     if vault_collection(collection) do
-      VaultDatabase.find(collection)
+      VaultDatabase.find(collection, clauses)
     else
       case db() do
         "pg" ->
@@ -281,8 +307,8 @@ defmodule Amps.DB do
 
         "mongo" ->
           clauses = convert_id(clauses)
-
-          cursor = Mongo.find(:mongo, collection, clauses)
+          clauses = Filter.parse(clauses)
+          cursor = Mongo.find(:mongo, collection, clauses, Enum.into(opts, []))
 
           cursor
           |> Enum.to_list()
@@ -293,7 +319,7 @@ defmodule Amps.DB do
     end
   end
 
-  def find_by_id(collection, id) do
+  def find_by_id(collection, id, opts \\ []) do
     if vault_collection(collection) do
       {:ok, data} = VaultDatabase.read(collection, id)
       data
@@ -305,15 +331,15 @@ defmodule Amps.DB do
         "mongo" ->
           clauses = convert_id(%{"_id" => id})
 
-          Mongo.find_one(:mongo, collection, clauses)
+          Mongo.find_one(:mongo, collection, clauses, opts)
 
         "os" ->
-          Elastic.find_by_id(collection, id)
+          Elastic.find_by_id(collection, id, Enum.into(opts, %{}))
       end
     end
   end
 
-  def find_one(collection, clauses) do
+  def find_one(collection, clauses, opts \\ []) do
     if vault_collection(collection) do
       {:ok, data} = VaultDatabase.find_one(collection, clauses)
       data
@@ -325,10 +351,10 @@ defmodule Amps.DB do
         "mongo" ->
           clauses = convert_id(clauses)
 
-          Mongo.find_one(:mongo, collection, clauses)
+          Mongo.find_one(:mongo, collection, clauses, opts)
 
         "os" ->
-          Elastic.find_one(collection, clauses)
+          Elastic.find_one(collection, clauses, Enum.into(opts, %{}))
       end
     end
   end
@@ -422,8 +448,9 @@ defmodule Amps.DB do
   def bulk_perform(ops, index) do
     case db() do
       "mongo" ->
-        Mongo.UnorderedBulk.write(ops, :mongo, index, 100_000)
-        |> Stream.run()
+        res =
+          Mongo.UnorderedBulk.write(ops, :mongo, index, 100_000)
+          |> Stream.run()
 
       "os" ->
         Snap.Bulk.perform(ops, Amps.Cluster, index, [])
@@ -1373,7 +1400,17 @@ defmodule Amps.DB do
            }
          }} ->
           Enum.reduce(sort, [], fn %{"direction" => dir, "property" => field}, acc ->
-            dir = String.downcase(dir)
+            dir = cond do
+              is_binary(dir) ->
+                String.downcase(dir)
+
+              is_integer(dir) ->
+                case dir do
+                  1 -> "asc"
+                  -1 -> "desc"
+                  _ -> nil
+                end
+            end
 
             sortfield =
               case properties[field]["type"] do

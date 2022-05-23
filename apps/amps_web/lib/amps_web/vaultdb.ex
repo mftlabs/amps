@@ -114,7 +114,7 @@ defmodule Amps.VaultDatabase do
     # end)
   end
 
-  def find(collection) do
+  def find(collection, clauses \\ %{}) do
     {:ok, vault} = get_vault()
 
     case Vault.list(vault, Path.join("kv/amps", collection)) do
@@ -132,7 +132,7 @@ defmodule Amps.VaultDatabase do
             [body | acc]
           end)
 
-        data
+        filter(data, clauses)
 
       {:error, error} ->
         Logger.error(error)
@@ -301,7 +301,7 @@ defmodule Amps.VaultDatabase do
     end
   end
 
-  def get_rows(collection) do
+  def get_rows(collection, clauses \\ %{}) do
     collection = DB.path(collection)
 
     {:ok, vault} = get_vault()
@@ -321,11 +321,36 @@ defmodule Amps.VaultDatabase do
             [body | acc]
           end)
 
+        data = filter(data, clauses)
         %{rows: data, success: true, count: Enum.count(data)}
 
       {:error, error} ->
         Logger.error(error)
         %{rows: [], success: true, count: 0}
+    end
+  end
+
+  def filter(data, clauses) do
+    case clauses do
+      %{} when clauses == %{} ->
+        data
+
+      _ ->
+        Enum.filter(data, fn record ->
+          Enum.reduce(clauses, true, fn {k, v}, acc ->
+            case v do
+              %{"$regex" => val} ->
+                if record[k] do
+                  acc && Regex.match?(~r/#{val}/, record[k])
+                else
+                  acc && false
+                end
+
+              _ ->
+                acc && v == record[k]
+            end
+          end)
+        end)
     end
   end
 end

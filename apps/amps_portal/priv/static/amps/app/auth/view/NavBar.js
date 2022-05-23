@@ -49,7 +49,7 @@ Ext.define("Amps.Authorized.NavBar", {
               var user = await amfutil.userInfo();
               console.log(user);
               if (user) {
-                btn.setText(user.firstname + " " + user.lastname);
+                btn.setText(user.username);
               }
             },
           },

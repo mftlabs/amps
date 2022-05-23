@@ -1705,6 +1705,11 @@ Ext.define("Amps.container.Workflow", {
           dataIndex: "group",
           flex: 1,
           type: "text",
+          renderer: function (val) {
+            var store = amfutil.createCollectionStore("groups");
+            var group = store.findExact("_id", val);
+            return group.name;
+          },
         },
         {
           text: "Action",
@@ -4761,12 +4766,12 @@ Ext.define("Amps.util.Grids", {
               ]),
             ],
           },
-          email: {
-            field: "email",
-            label: "Email",
+          smtp: {
+            field: "smtp",
+            label: "SMTP",
             fields: [
               amfutil.localCombo(
-                "Email Type",
+                "SMTP Type",
                 "etype",
                 [{ field: "SMTP", label: "SMTP" }],
                 "field",
@@ -4858,80 +4863,121 @@ Ext.define("Amps.util.Grids", {
               ),
             ],
           },
-          auth: {
-            field: "auth",
-            label: "Auth",
-            fields: [
-              amfutil.localCombo(
-                "Auth Provider",
-                "atype",
-                [{ field: "aws", label: "AWS" }],
-                "field",
-                "label",
-                {
-                  listeners: amfutil.renderListeners(function (scope, val) {
-                    var providers = ["aws"];
+          // auth: {
+          //   field: "auth",
+          //   label: "Auth",
+          //   fields: [
+          //     amfutil.check("Local", "local"),
+          //     amfutil.localCombo(
+          //       "Auth Provider",
+          //       "atype",
+          //       [
+          //         { field: "aws", label: "AWS" },
+          //         { field: "sfg", label: "IBM Sterling" },
+          //       ],
+          //       "field",
+          //       "label",
+          //       {
+          //         listeners: amfutil.renderListeners(function (scope, val) {
+          //           var providers = scope
+          //             .getStore()
+          //             .getRange()
+          //             .map((rec) => rec.data.field);
 
-                    providers.forEach((provider) => {
-                      var c = amfutil.getElementByID(provider);
-                      c.setHidden(provider != val);
-                      c.setDisabled(provider != val);
-                    });
-                  }),
-                }
-              ),
-              amfutil.renderContainer(
-                "aws",
-                [
-                  amfutil.text("Access Key ID", "aws_access_key_id"),
-                  amfutil.text("Secret Access Key", "aws_secret_access_key ", {
-                    inputType: "password",
-                  }),
-                  amfutil.localCombo(
-                    "Region",
-                    "region",
-                    [
-                      "us-east-2",
-                      "us-east-1",
-                      "us-west-1",
-                      "us-west-2",
-                      "af-south-1",
-                      "ap-east-1",
-                      "ap-south-1",
-                      "ap-northeast-3",
-                      "ap-northeast-2",
-                      "ap-southeast-1",
-                      "ap-southeast-2",
-                      "ap-northeast-1",
-                      "ca-central-1",
-                      "cn-north-1",
-                      "cn-northwest-1",
-                      "eu-central-1",
-                      "eu-west-1",
-                      "eu-west-2",
-                      "eu-west-3",
-                      "eu-north-1",
-                      "eu-south-1",
-                      "me-south-1",
-                      "sa-east-1",
-                      "us-gov-west-1",
-                      "us-gov-east-1",
-                    ],
-                    null,
-                    null,
-                    {
-                      tooltip: "The AWS Region your S3 Buckets are hosted on.",
-                    }
-                  ),
-                ],
-                {
-                  defaults: {
-                    labelWidth: 200,
-                  },
-                }
-              ),
-            ],
-          },
+          //           providers.forEach((provider) => {
+          //             var c = amfutil.getElementByID(provider);
+          //             c.setHidden(provider != val);
+          //             c.setDisabled(provider != val);
+          //           });
+          //         }),
+          //       }
+          //     ),
+          //     amfutil.renderContainer(
+          //       "aws",
+          //       [
+          //         amfutil.text("Access Key ID", "access_key_id"),
+          //         amfutil.text("Secret Access Key", "secret_key", {
+          //           inputType: "password",
+          //         }),
+          //         amfutil.localCombo(
+          //           "Region",
+          //           "region",
+          //           [
+          //             "us-east-2",
+          //             "us-east-1",
+          //             "us-west-1",
+          //             "us-west-2",
+          //             "af-south-1",
+          //             "ap-east-1",
+          //             "ap-south-1",
+          //             "ap-northeast-3",
+          //             "ap-northeast-2",
+          //             "ap-southeast-1",
+          //             "ap-southeast-2",
+          //             "ap-northeast-1",
+          //             "ca-central-1",
+          //             "cn-north-1",
+          //             "cn-northwest-1",
+          //             "eu-central-1",
+          //             "eu-west-1",
+          //             "eu-west-2",
+          //             "eu-west-3",
+          //             "eu-north-1",
+          //             "eu-south-1",
+          //             "me-south-1",
+          //             "sa-east-1",
+          //             "us-gov-west-1",
+          //             "us-gov-east-1",
+          //           ],
+          //           null,
+          //           null,
+          //           {
+          //             tooltip: "The AWS Region your S3 Buckets are hosted on.",
+          //           }
+          //         ),
+          //         amfutil.check("Add To Group", "use_group", {
+          //           listeners: amfutil.renderListeners(function (scope, val) {
+          //             var g = amfutil.getElementByID("group");
+          //             g.setHidden(!val);
+          //             g.setDisabled(!val);
+          //           }),
+          //         }),
+          //         amfutil.text("Group Name", "group", {
+          //           itemId: "group",
+          //         }),
+          //         {
+          //           xtype: "scriptfield",
+          //           name: "policy",
+          //           language: "json",
+          //           height: 400,
+          //           width: 400,
+          //           flex: 1,
+          //         },
+          //       ],
+          //       {
+          //         defaults: {
+          //           labelWidth: 200,
+          //         },
+          //       }
+          //     ),
+
+          //     amfutil.renderContainer(
+          //       "sfg",
+          //       [
+          //         amfutil.text("API Usename", "api_username"),
+          //         amfutil.text("API Password", "api_password", {
+          //           inputType: "password",
+          //         }),
+          //         amfutil.text("API URL", "api_uri"),
+          //       ],
+          //       {
+          //         defaults: {
+          //           labelWidth: 200,
+          //         },
+          //       }
+          //     ),
+          //   ],
+          // },
           generic: {
             field: "generic",
             label: "Generic",
@@ -5718,29 +5764,74 @@ Ext.define("Amps.util.Grids", {
           tooltip: "The Email of the primary point of contact of the Group",
           vtype: "email",
         },
-        {
-          xtype: "collectionlist",
-          name: "providers",
-          collection: "providers",
-          filter: { type: "auth" },
-        },
+        // {
+        //   xtype: "collectionlist",
+        //   name: "providers",
+        //   collection: "providers",
+        //   filter: { type: "auth" },
+        // },
         // amfutil.checkbox("Active", "active", true, {
         //   tooltip: "Whether this customer is active.",
         // }),
       ],
 
-      add: {
-        process: function (form, values) {
-          values.providers = JSON.parse(values.providers);
-          return values;
-        },
-      },
-      update: {
-        process: function (form, values) {
-          values.providers = JSON.parse(values.providers);
-          return values;
-        },
-      },
+      // subgrids: {
+      //   users: {
+      //     title: "Users",
+      //     object: "User",
+      //     grid: true,
+      //     // audit: true,
+      //     // crud: true,
+      //     // import: true,
+      //     actionIcons: ["refreshbtn"],
+      //     store: async function () {
+      //       var path = Ext.util.History.getToken()
+      //         .split("/")
+      //         .slice(0, 2)
+      //         .join("/");
+      //       console.log(path);
+      //       var record = await amfutil.getCurrentItem(path);
+      //       return amfutil.createCollectionStore("users", {
+      //         group: record["_id"],
+      //       });
+      //     },
+      //     fields: [
+      //       amfutil.text("Name", "name"),
+      //       amfutil.text("Description", "desc"),
+      //     ],
+      //     columns: [
+      //       {
+      //         text: "Username",
+      //         flex: 1,
+      //         dataIndex: "username",
+      //       },
+      //       {
+      //         text: "First Name",
+      //         flex: 1,
+      //         dataIndex: "firstname",
+      //       },
+      //       {
+      //         text: "Last Name",
+      //         flex: 1,
+      //         dataIndex: "lastname",
+      //       },
+      //       amfutil.onboardingColumn(),
+      //     ],
+      //   },
+      // },
+
+      // add: {
+      //   process: function (form, values) {
+      //     values.providers = JSON.parse(values.providers);
+      //     return values;
+      //   },
+      // },
+      // update: {
+      //   process: function (form, values) {
+      //     values.providers = JSON.parse(values.providers);
+      //     return values;
+      //   },
+      // },
 
       options: ["delete"],
     }),
@@ -5761,12 +5852,51 @@ Ext.define("Amps.util.Grids", {
         {
           text: "Group",
           dataIndex: "group",
+          xtype: "widgetcolumn",
           flex: 1,
+          value: "true",
+          widget: {
+            xtype: "button",
+          },
+          onWidgetAttach: async function (col, widget, rec) {
+            var scope = this;
+            var store = amfutil.createCollectionStore("groups");
+            var group;
+            if (store.isLoaded) {
+              console.log(store);
+              group = store.findRecord("_id", rec.data.group);
+              if (group != -1) {
+                console.log(group);
+                widget.setText(group.data.name);
+              }
+            } else {
+              store.on("load", async function () {
+                group = store.findRecord("_id", rec.data.group);
+                if (group != -1) {
+                  console.log(group);
+                  widget.setText(group.data.name);
+                } else {
+                  group = await amfutil.getById("groups", rec.data.group);
+                  console.log(group);
+                  widget.setText(group.name);
+                }
+              });
+            }
+
+            widget.setHandler(async function () {
+              scope
+                .up("app-main")
+                .getController()
+                .redirectTo(`groups/${rec.data.group}`);
+              return false;
+            });
+          },
+
           type: "combo",
           searchOpts: {
             store: amfutil.createCollectionStore("groups"),
             displayField: "name",
-            valueField: "name",
+            valueField: "_id",
           },
         },
         {
@@ -5790,6 +5920,7 @@ Ext.define("Amps.util.Grids", {
           flex: 1,
           type: "text",
         },
+        // amfutil.onboardingColumn(),
       ],
       options: ["approve", "delete", "reset"],
       fields: [
@@ -5798,10 +5929,10 @@ Ext.define("Amps.util.Grids", {
             "Group",
             "group",
             amfutil.createCollectionStore("groups", {}, { autoLoad: true }),
-            "name",
+            "_id",
             "name",
             {
-              tooltip: "The Customer this user belongs to.",
+              tooltip: "The Group this user belongs to.",
             }
           ),
           "groups"
@@ -5818,6 +5949,12 @@ Ext.define("Amps.util.Grids", {
           "Username Already Exists",
           amfutil.nameValidator
         ),
+        amfutil.text("Email", "email", {
+          tooltip: "The Email of the user.",
+          inputType: "email",
+          vtype: "email",
+          allowBlank: false,
+        }),
         amfutil.text("First Name", "firstname", {
           tooltip: "The First Name of the user.",
           allowBlank: true,
@@ -5832,12 +5969,7 @@ Ext.define("Amps.util.Grids", {
           vtype: "phone",
           allowBlank: true,
         }),
-        amfutil.text("Email", "email", {
-          tooltip: "The Email of the user.",
-          inputType: "email",
-          vtype: "email",
-          allowBlank: true,
-        }),
+
         amfutil.check("Approved", "approved", {
           tooltip: "Whether the user is approved",
           value: true,
@@ -5941,6 +6073,211 @@ Ext.define("Amps.util.Grids", {
         //   ],
         //   options: ["delete"],
         // },
+
+        // oprofiles: {
+        //   grid: true,
+        //   title: "Onboarding Profiles",
+        //   object: "Onboarding Profile",
+        //   window: {
+        //     width: 650,
+        //     height: 650,
+        //     defaults: {
+        //       labelWidth: 250,
+        //     },
+        //   },
+        //   actionIcons: [
+        //     "addnewbtn",
+        //     "searchpanelbtn",
+        //     "clearfilter",
+        //     "refreshbtn",
+        //   ],
+        //   types: {
+        //     // cd: {
+        //     //   type: "cd",
+        //     //   name: "Connect:Direct",
+        //     //   fields: [
+        //     //     amfutil.combo(
+        //     //       "Connect:Direct Provider",
+        //     //       "provider",
+        //     //       amfutil.createCollectionStore("providers", { type: "cd" }),
+        //     //       "_id",
+        //     //       "name"
+        //     //     ),
+        //     //     amfutil.localCombo("Operating System", "os", [
+        //     //       "Windows",
+        //     //       "OS/390",
+        //     //       "OS/400",
+        //     //       "UNIX",
+        //     //     ]),
+        //     //     amfutil.check("Use Secure Point of Entry", "use_spoe"),
+        //     //     amfutil.text("Node Name", "nodename"),
+        //     //     amfutil.text("Host Name/IP", "host"),
+        //     //     amfutil.text("Port", "port"),
+        //     //     {
+        //     //       xtype: "arrayfield",
+        //     //       name: "alternatehosts",
+        //     //       title: "Alternate Hosts",
+        //     //       arrayfield: "Host",
+        //     //       arrayfields: [
+        //     //         {
+        //     //           xtype: "textfield",
+        //     //           name: "host",
+        //     //           fieldLabel: "Host",
+        //     //           vtype: "ipandhostname",
+        //     //         },
+        //     //         {
+        //     //           xtype: "numberfield",
+        //     //           name: "port",
+        //     //           fieldLabel: "Port",
+        //     //           minValue: 1,
+        //     //         },
+        //     //       ],
+        //     //     },
+        //     //     amfutil.check("Use Secure Plus", "use_secure_plus", {
+        //     //       listeners: amfutil.renderListeners(function (scope, val) {
+        //     //         console.log(val);
+        //     //         var sp = amfutil.getElementByID("secure_plus");
+        //     //         sp.setHidden(!val);
+        //     //         sp.setDisabled(!val);
+        //     //       }),
+        //     //     }),
+        //     //     amfutil.renderContainer("secure_plus", [
+        //     //       amfutil.combo("Cert", "cert", null, "_id", "name", {
+        //     //         listeners: {
+        //     //           beforerender: function (scope) {
+        //     //             var entity = scope.up("form").entity;
+        //     //             console.log(entity);
+        //     //             scope.setStore(
+        //     //               amfutil.createCollectionStore("keys", {
+        //     //                 user: entity.username,
+        //     //               })
+        //     //             );
+        //     //           },
+        //     //         },
+        //     //       }),
+        //     //       amfutil.text("Common Name", "commonname"),
+        //     //       amfutil.localCombo(
+        //     //         "TLS Version",
+        //     //         "tls_version",
+        //     //         ["TLSv1", "TLSv1.1", "TLSv1.2"],
+        //     //         null,
+        //     //         null,
+        //     //         {
+        //     //           listeners: amfutil.renderListeners(function (scope, val) {
+        //     //             if (val) {
+        //     //               var cp = amfutil.getElementByID("ciphers");
+        //     //               var ciphers = {
+        //     //                 TLSv1: ["CIPHER1"],
+        //     //                 "TLSv1.1": ["CIPHER1.1"],
+        //     //                 "TLSv1.2": ["CIPHER1.2"],
+        //     //               };
+        //     //               cp.setStore(ciphers[val]);
+        //     //             }
+        //     //           }),
+        //     //         }
+        //     //       ),
+        //     //       amfutil.localCombo("Ciphers", "ciphers", [], null, null, {
+        //     //         itemId: "ciphers",
+        //     //       }),
+        //     //     ]),
+        //     //   ],
+        //     // },
+        //   },
+        //   fields: [
+        //     amfutil.duplicateVal(
+        //       {
+        //         xtype: "textfield",
+        //         name: "name",
+        //         fieldLabel: "Profile Name",
+        //       },
+        //       function (cmp, value) {
+        //         var form = cmp.up("form");
+        //         return {
+        //           users: { "oprofiles.name": value, _id: form.entity._id },
+        //         };
+        //       },
+        //       "Onboarding Profile Already Exists",
+        //       amfutil.nameValidator
+        //     ),
+        //     amfutil.check("Active", "active", {
+        //       value: true,
+        //     }),
+        //     amfutil.check("Local", "local"),
+        //     {
+        //       name: "type",
+        //       fieldLabel: "Profile Type",
+        //       xtype: "combobox",
+        //       store: [
+        //         {
+        //           field: "cd",
+        //           label: "Connect:Direct",
+        //         },
+        //       ],
+        //       displayField: "label",
+        //       valueField: "field",
+        //       allowBlank: false,
+        //       listeners: {
+        //         change: async function (combo, val, eOpts) {
+        //           var formfields = this.up().down("#typeparms");
+        //           formfields.removeAll();
+
+        //           formfields.insert(
+        //             0,
+        //             amfutil.scanFields(
+        //               ampsgrids.grids["users"]().subgrids["oprofiles"].types[
+        //                 val
+        //               ].fields
+        //             )
+        //           );
+        //         },
+        //       },
+        //     },
+
+        //     {
+        //       xtype: "container",
+        //       itemId: "typeparms",
+        //       layout: {
+        //         type: "vbox",
+        //         align: "stretch",
+        //       },
+        //       defaults: {
+        //         labelWidth: 175,
+        //       },
+        //     },
+
+        //     /*{
+        //         xtype: "textfield",
+        //         name: "foldername",
+        //         itemId: "fname",
+        //         hidden: true,
+        //         fieldLabel: "Folder Name",
+        //         //value:record.fname
+        //       },*/
+        //   ],
+
+        //   columns: [
+        //     {
+        //       text: "Name",
+        //       dataIndex: "field",
+        //       type: "text",
+        //       flex: 1,
+        //     },
+        //     {
+        //       text: "Description",
+        //       dataIndex: "description",
+        //       type: "text",
+        //       flex: 3,
+        //     },
+        //     {
+        //       text: "Type",
+        //       dataIndex: "type",
+        //       type: "text",
+        //       flex: 1,
+        //     },
+        //   ],
+        //   options: ["delete"],
+        // },
+
         mailboxes: {
           title: "Mailboxes",
           object: "Mailbox",
@@ -6051,15 +6388,15 @@ Ext.define("Amps.util.Grids", {
                   itemId: "fpoll",
                   value: "300",
                 },
-                {
-                  xtype: "textfield",
-                  name: "fretry",
-                  fieldLabel: "Failure Retry Wait",
-                  maskRe: /[0-9]/,
-                  vtypeText: "Please enter a valid Failure Retry Wait",
-                  itemId: "fretry",
-                  value: "5",
-                },
+                // {
+                //   xtype: "textfield",
+                //   name: "fretry",
+                //   fieldLabel: "Failure Retry Wait",
+                //   maskRe: /[0-9]/,
+                //   vtypeText: "Please enter a valid Failure Retry Wait",
+                //   itemId: "fretry",
+                //   value: "5",
+                // },
                 {
                   xtype: "checkboxfield",
                   name: "regex",
@@ -8181,25 +8518,22 @@ Ext.define("Amps.util.Grids", {
                       },
                     },
 
-                    amfutil.localCombo(
-                      "Operation",
-                      null,
-                      ["create", "update", "delete"],
-                      null,
-                      null,
-                      {
-                        itemId: "op",
-                        listeners: {
-                          change: function (scope, val) {
-                            scope
-                              .up("form")
-                              .getForm()
-                              .findField("topic")
-                              .updateTopic(val, 3);
-                          },
+                    {
+                      xtype: "textfield",
+                      isFormField: false,
+                      fieldLabel: "Custom",
+                      itemId: "op",
+                      allowBlank: false,
+                      listeners: {
+                        change: function (scope, val) {
+                          scope
+                            .up("form")
+                            .getForm()
+                            .findField("topic")
+                            .updateTopic(val, 3);
                         },
-                      }
-                    ),
+                      },
+                    },
                   ],
                 };
               } else {
@@ -8804,11 +9138,17 @@ Ext.define("Amps.util.Grids", {
                 maxValue: 50,
                 value: 1,
               },
-              amfutil.check("Cluster", "cluster", {
-                value: true,
-                tooltip:
-                  "When running AMPS clustered, this flag indicates whether instances of this subscriber running on separate nodes should share work, or whether at least one subscriber on each node should receive the message. Setting Cluster to true indicates that the work will be shared across Nodes (only one instance of this subscriber on any given node will receive and process the message).",
-              }),
+              amfutil.localCombo(
+                "Subscription Mode",
+                "smode",
+                [
+                  { field: "group", label: "Node Group" },
+                  { field: "node", label: "Node" },
+                  { field: "cluster", label: "Cluster" },
+                ],
+                "field",
+                "label"
+              ),
               amfutil.dynamicCreate(
                 amfutil.combo(
                   "Action",
@@ -9403,15 +9743,13 @@ Ext.define("Amps.util.Grids", {
             // },
           },
         },
-        // {
-        //   xtype: "combobox",
-        //   fieldLabel: "User",
-        //   allowBlank: false,
-        //   name: "user",
-        //   displayField: "username",
-        //   valueField: "username",
-        //   store: amfutil.createCollectionStore("users", {}, { autoLoad: true }),
-        // },
+        amfutil.combo(
+          "User",
+          "user",
+          amfutil.createCollectionStore("users"),
+          "username",
+          "username"
+        ),
 
         amfutil.localCombo(
           "Key Usage",
@@ -9475,7 +9813,14 @@ Ext.define("Amps.util.Grids", {
           dataIndex: "usage",
           flex: 1,
           type: "combo",
-          options: ["RSA", "ssh", "enc", "sign"],
+          options: [
+            "RSA",
+            "SSH",
+            "Encryption",
+            "Signing",
+            "Cert",
+            "Credential",
+          ],
         },
         {
           text: "Type",
@@ -9483,9 +9828,13 @@ Ext.define("Amps.util.Grids", {
           flex: 1,
           type: "combo",
           searchOpts: {
-            store: amfutil.createCollectionStore("keys"),
-            displayField: "type",
-            valueField: "type",
+            store: [
+              { field: "private", label: "Private" },
+              { field: "public", label: "Public" },
+              { field: "other", label: "Other" },
+            ],
+            displayField: "label",
+            valueField: "field",
           },
         },
       ],
@@ -10181,7 +10530,11 @@ Ext.define("Amps.util.Grids", {
                           "monitoring"
                         );
                       },
-                      payload: { name: data.name, topic: data.topic },
+                      payload: {
+                        name: data.name,
+                        topic: data.topic,
+                        local: data.local,
+                      },
                     };
                   }
                 },
@@ -10646,7 +10999,7 @@ Ext.define("Amps.util.Grids", {
                             "Email Provider",
                             "eprovider",
                             amfutil.createCollectionStore("providers", {
-                              type: "email",
+                              type: "smtp",
                             }),
                             "_id",
                             "name"

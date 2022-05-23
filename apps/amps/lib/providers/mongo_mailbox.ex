@@ -123,7 +123,7 @@ defmodule AmpsMailbox do
     # |> Enum.to_list()
     DB.find(AmpsUtil.index(env, "mailbox"), %{"recipient" => user, "mailbox" => mailbox}, %{
       size: limit,
-      sort: %{mtime: "desc"}
+      sort: %{"mtime" => -1}
     })
   end
 end

@@ -14,7 +14,10 @@ defmodule AmpsWeb.Vault do
 
   # Server
   def init(_) do
-    vault_startup()
+    Logger.info("INITING VAULT")
+    res = vault_startup()
+    Logger.info("INITED VAULT")
+    res
   end
 
   def handle_call(:token, _from, keys) do

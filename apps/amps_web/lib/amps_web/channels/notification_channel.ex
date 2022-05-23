@@ -82,16 +82,36 @@ defmodule AmpsWeb.NotificationChannel do
     {:reply, {:ok, consumers}, socket}
   end
 
-  def handle_in("consumer", %{"name" => name, "topic" => topic}, socket) do
+  def handle_in("consumer", body, socket) do
     env = Amps.DB.find_one("admin", %{"_id" => socket.assigns().user_id})["config"]["env"]
-    {stream, consumer} = AmpsUtil.get_names(%{"name" => name, "topic" => topic}, env)
 
-    case Jetstream.API.Consumer.info(:gnat, stream, consumer) do
-      {:ok, info} ->
-        {:reply, {:ok, Integer.to_string(info.num_pending)}, socket}
+    if body["local"] do
+      nodes = [node() | Node.list()]
 
-      {:error, error} ->
-        {:reply, {:ok, "Error"}, socket}
+      resp =
+        Enum.reduce(nodes, "", fn node, acc ->
+          {stream, consumer} = AmpsUtil.get_names(body, env, node)
+
+          case Jetstream.API.Consumer.info(:gnat, stream, consumer) do
+            {:ok, info} ->
+              acc <> " " <> Integer.to_string(info.num_pending)
+
+            {:error, error} ->
+              acc
+          end
+        end)
+
+      {:reply, {:ok, resp}, socket}
+    else
+      {stream, consumer} = AmpsUtil.get_names(body, env)
+
+      case Jetstream.API.Consumer.info(:gnat, stream, consumer) do
+        {:ok, info} ->
+          {:reply, {:ok, Integer.to_string(info.num_pending)}, socket}
+
+        {:error, error} ->
+          {:reply, {:ok, "Error"}, socket}
+      end
     end
   end
 

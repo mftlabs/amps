@@ -55,7 +55,7 @@ config :master_proxy,
   protocol_options: [
     request_timeout: 10000
   ],
-  http: [:inet6, port: 4080],
+  http: [:inet6, port: System.get_env("AMPS_PORT", "4080")],
   log_requests: false,
   # https: [:inet6, port: 4443],
   backends: [
@@ -70,7 +70,7 @@ config :master_proxy,
   ]
 
 config :amps,
-  db: System.get_env("AMPS_DB_PROVIDER", "os")
+  db: System.get_env("AMPS_DB_PROVIDER", "mongo")
 
 config :amps, :gnat,
   host: String.to_charlist(System.get_env("AMPS_NATS_HOST", "localhost")),
@@ -142,8 +142,9 @@ config :amps_web, AmpsWeb.Endpoint,
 
 config :mnesiac,
   stores: [Amps.Defaults],
-  # defaults to :ram_copies
   schema_type: :disc_copies
+
+# defaults to :ram_copies
 
 if config_env() == :prod do
   config :logger,
@@ -274,6 +275,14 @@ config :amps, :actions,
 #      max_keepalive: 5_000_000
 #    ]
 #  ]
+config :amps, Amps.Scheduler,
+  jobs: [
+    heartbeat: [
+      schedule: "* * * * *",
+      task: {Amps.Heartbeat, :send, []},
+      run_strategy: Quantum.RunStrategy.Local
+    ]
+  ]
 
 config :amps, :pyworker,
   config: [
@@ -282,6 +291,29 @@ config :amps, :pyworker,
     {:size, 5},
     {:max_overflow, 2}
   ]
+
+if String.upcase(System.get_env("AMPS_CLUSTER", "FALSE")) == "TRUE" do
+  config :libcluster,
+    topologies: [
+      amps: [
+        # The selected clustering strategy. Required.
+        strategy: Cluster.Strategy.LocalEpmd,
+        # Configuration for the provided strategy. Optional.
+        # The function to use for connecting nodes. The node
+        # name will be appended to the argument list. Optional
+        connect: {:net_kernel, :connect_node, []},
+        # The function to use for disconnecting nodes. The node
+        # name will be appended to the argument list. Optional
+        disconnect: {:erlang, :disconnect_node, []},
+        # The function to use for listing nodes.
+        # This function must return a list of node names. Optional
+        list_nodes: {:erlang, :nodes, [:connected]}
+      ]
+    ]
+else
+  config :libcluster,
+    topologies: []
+end
 
 # Configure esbuild (the version is required)
 # config :esbuild,

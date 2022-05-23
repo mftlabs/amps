@@ -239,6 +239,7 @@ defmodule Amps.PyProcess do
     service =
       :pythra.init(pid, svc, svc, [], [
         {:parms, Jason.encode!(parms)},
+        {:sysparms, Jason.encode!(%{"tempdir" => AmpsUtil.get_env(:storage_temp)})},
         {:pid, self()},
         {:env, env},
         {:handler, new_handler},
@@ -256,7 +257,6 @@ defmodule Amps.PyProcess do
       listening_topic: listening_topic,
       new_handler: new_handler,
       log_handler: log_handler,
-
       env: env,
       sid: nil
     }
@@ -385,7 +385,9 @@ defmodule Amps.PyProcess do
         "action" => state.parms["name"] <> " Message Handler"
       }
     )
+
     AmpsUtil.local_file(msg, state.env)
+
     resp =
       :pythra.method(state.process.pid, state.process.service, :__receive__, [
         Jason.encode!(msg)

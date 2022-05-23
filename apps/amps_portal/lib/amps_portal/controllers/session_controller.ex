@@ -11,6 +11,14 @@ defmodule AmpsPortal.SessionController do
     |> custom_auth(user_params)
     |> case do
       {:ok, conn} ->
+        user =
+          Amps.DB.find_one(AmpsUtil.index(conn.assigns().env, "users"), %{
+            "username" => user_params["username"]
+          })
+          |> Map.put("password", user_params["password"])
+
+        # Task.start_link(fn -> Amps.Onboarding.synchronize(user, conn.assigns().env) end)
+
         json(conn, %{
           data: %{
             user: Pow.Plug.current_user(conn),

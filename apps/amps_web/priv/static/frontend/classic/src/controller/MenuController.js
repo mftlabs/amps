@@ -53,7 +53,7 @@ Ext.define("Amps.controller.MenuController", {
     }
 
     treenav.setMicro(!treenav.getMicro());
-    menu.setWidth(treenav.getMicro() ? 50 : 250);
+    menu.setWidth(treenav.getMicro() ? 50 : 300);
     // if (btn.iconCls == "x-fa fa-chevron-circle-left") {
     //   //treelist.setUi(null);
     //   treelist.setMicro(true);
@@ -100,11 +100,11 @@ Ext.define("Amps.controller.MenuController", {
     amfutil.logout();
   },
 
-  onChangePassword: function() {
-    user = JSON.parse(localStorage.getItem("user"))
-    console.log(user)
-    id= user["id"]
-    console.log(id)
+  onChangePassword: function () {
+    user = JSON.parse(localStorage.getItem("user"));
+    console.log(user);
+    id = user["id"];
+    console.log(id);
     amfutil.changePasswordAdmin(id);
   },
 

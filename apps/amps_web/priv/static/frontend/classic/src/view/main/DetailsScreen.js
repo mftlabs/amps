@@ -15,11 +15,6 @@ Ext.define("Amps.view.main.DetailsScreen", {
         const route = Ext.util.History.getToken();
         var tokens = route.split("/");
 
-        if (tokens[0] == "accounts") {
-          if (tokens.length >= 2) {
-            amfutil.redirect(tokens[0]);
-          }
-        }
         if (tokens.length > 3) {
           amfutil.redirect(tokens[0] + "/" + tokens[1]);
         } else if (tokens.length >= 2) {

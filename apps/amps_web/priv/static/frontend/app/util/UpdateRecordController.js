@@ -387,14 +387,7 @@ Ext.define("Amps.util.UpdateRecordController", {
     // amfutil.getElementByID("actionbar").hide();
     const updateFunctions = {
       message_events: this.viewMessages,
-      bucket: this.updateBucket,
-      // accounts: this.viewAccounts,
       admin: this.updateUser,
-      agentget: this.updateAgentGet,
-      agentput: this.updateAgentPut,
-      // topics: this.updateTopic,
-      // actions: this.updateAction,
-      // services: this.updateService,
     };
 
     const close = () => {
@@ -416,20 +409,20 @@ Ext.define("Amps.util.UpdateRecordController", {
       el = updateFunctions[route](record, route, this, close);
     } else {
       if (config.subgrids) {
-        el = this.viewSubGrids(record, route, this, close);
+        el = this.viewSubGrids(record, config, route, this, close);
       } else {
-        el = this.createForm(record, route, this, close);
+        el = this.createForm(record, config, this, close);
       }
     }
 
     el = Ext.apply(el, { region: "center" });
     amfutil.getElementByID("edit_container").add(el);
+    amfutil.getElementByID("detailsbackbtn").setText(config.object + "s");
   },
 
-  createForm: function (record, route, scope, close, subgrid) {
+  createForm: function (record, config, scope, close, subgrid) {
     var grid = amfutil.getElementByID("main-grid");
     // scope = btn.lookupController();
-    var config = ampsgrids.grids[route]();
     var fields = config.fields;
     if (config.update && config.update.fields) {
       fields.concat(config.update.fields);
@@ -456,19 +449,23 @@ Ext.define("Amps.util.UpdateRecordController", {
     return details;
   },
 
-  viewSubGrids: function (record, route, scope, close) {
-    var page = ampsgrids.grids[route]();
+  viewSubGrids: function (record, page, route, scope, close) {
     var object = page.object;
     var displayfield = page.displayField;
     var tabItems = [
-      Ext.apply(scope.createForm(record, route, this, close, true), {
+      Ext.apply(scope.createForm(record, page, this, close, true), {
         title: object + " Info",
       }),
     ].concat(
       Object.entries(page.subgrids).map((subgrid) => {
         var field = subgrid[0];
+        var gridinfo;
+        if (typeof subgrid[1] === "function") {
+          gridinfo = subgrid[1](record);
+        } else {
+          gridinfo = subgrid[1];
+        }
 
-        var gridinfo = subgrid[1];
         function handleAction() {
           var tokens = Ext.util.History.getToken().split("/");
           if (tokens.length >= 3) {

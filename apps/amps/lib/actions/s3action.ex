@@ -79,7 +79,7 @@ defmodule S3Action do
               Logger.info("Uploaded")
 
             {:error, error} ->
-              raise error
+              raise "#{inspect(error)}"
           end
 
         "delete" ->

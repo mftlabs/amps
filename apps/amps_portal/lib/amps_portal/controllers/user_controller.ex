@@ -174,22 +174,24 @@ defmodule AmpsPortal.UserController do
           )
 
         expire_token(conn, config)
+
+        # onb = fn msg, obj, env ->
+        #   obj = obj |> Map.put("password", user["password"])
+        #   msg = Map.put(msg, "data", Jason.encode!(obj))
+
+        #   Amps.Onboarding.onboard(
+        #     msg,
+        #     obj,
+        #     env
+        #   )
+
+        #   Map.merge(msg, %{"onboarding" => true, "user_id" => obj["_id"]})
+        # end
+
         user = Amps.DB.find_one(index, %{"username" => user["username"]})
 
-        onb = fn msg, obj, env ->
-          obj = obj |> Map.put("password", user["password"])
-          msg = Map.put(msg, "data", Jason.encode!(obj))
+        AmpsWeb.Util.ui_event(index, user["_id"], "reset_password", conn.assigns().env)
 
-          Amps.Onboarding.update(
-            msg,
-            obj,
-            conn.assigns().env
-          )
-        end
-
-        AmpsWeb.Util.ui_event(index, user["_id"], "reset_password", conn.assigns().env, onb)
-
-        IO.inspect(res)
         json(conn, %{success: true, message: "Password Set"})
 
       {:error, conn} ->

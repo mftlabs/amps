@@ -56,8 +56,7 @@ defmodule AmpsPortal.Util do
   end
 
   def create_config_consumer(body, env \\ nil) do
-    {stream, consumer} =
-      AmpsUtil.get_names(%{"name" => body["name"], "topic" => body["topic"]}, env)
+    {stream, consumer} = AmpsUtil.get_names(body, env)
 
     opts =
       if body["policy"] == "by_start_time" do
@@ -109,8 +108,7 @@ defmodule AmpsPortal.Util do
   end
 
   def delete_config_consumer(body, env \\ nil) do
-    {stream, consumer} =
-      AmpsUtil.get_names(%{"name" => body["name"], "topic" => body["topic"]}, env)
+    {stream, consumer} = AmpsUtil.get_names(body, env)
 
     AmpsUtil.delete_consumer(stream, consumer)
   end

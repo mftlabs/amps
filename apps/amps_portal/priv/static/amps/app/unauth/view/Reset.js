@@ -35,9 +35,13 @@ Ext.define("Amps.Unauthorized.Reset", {
       itemId: "passwd",
       inputType: "password",
       fieldLabel: "Password",
+      regex: new RegExp(
+        "^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$"
+      ),
+      regexText:
+        "Password must be atleast 8 characters and include atleast an uppercase letter, a lowercase letter, a number, and one of the following symbols: #?!@$%^&*-",
       labelWidth: 200,
       maskRe: /[^\^ ]/,
-      allowBlank: false,
       enableKeyEvents: true,
       listeners: {
         afterrender: function (cmp) {

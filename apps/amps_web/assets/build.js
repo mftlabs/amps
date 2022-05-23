@@ -16,7 +16,10 @@ const plugins = [
   // Add and configure plugins here
 ];
 
-const workerEntryPoints = ["vs/editor/editor.worker.js"];
+const workerEntryPoints = [
+  "vs/editor/editor.worker.js",
+  "vs/language/json/json.worker.js",
+];
 
 esbuild.build({
   entryPoints: workerEntryPoints.map(

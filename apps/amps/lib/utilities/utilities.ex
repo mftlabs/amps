@@ -7,6 +7,12 @@ defmodule AmpsUtil do
     DateTime.to_iso8601(DateTime.utc_now())
   end
 
+  def get_offset(milli) do
+    (DateTime.to_unix(DateTime.utc_now(), :nanosecond) + milli * 1_000_000)
+    |> DateTime.from_unix!(:nanosecond)
+    |> DateTime.to_iso8601()
+  end
+
   #  def keys_to_atom(inmap) do
   #    inmap |> Enum.map(fn {x, y} -> {String.to_atom(x), y} end)
   #  end
@@ -465,9 +471,18 @@ defmodule AmpsUtil do
   def blank?(str_or_nil),
     do: "" == str_or_nil |> to_string() |> String.trim()
 
-  def get_names(parms, env \\ "") do
+  def get_names(parms, env \\ "", n \\ nil) do
     topic = parms["topic"]
+
     consumer = parms["name"] |> String.replace(" ", "_") |> String.downcase()
+
+    consumer =
+      if parms["local"] do
+        Atom.to_string(n || node()) <> "_" <> consumer
+      else
+        consumer
+      end
+      |> String.replace(~r/[.*>]/, "_")
 
     [base, part, _other] = String.split(topic, ".", parts: 3)
 
@@ -787,6 +802,30 @@ defmodule AmpsUtil do
 
       env ->
         Path.join([Amps.Defaults.get("python_path"), "env", env] ++ paths)
+    end
+  end
+
+  def scan(data, fun) do
+    Enum.reduce(data, %{}, fn {k, v}, acc ->
+      Map.put(acc, k, do_fun(v, fun))
+    end)
+  end
+
+  defp do_fun(v, fun) do
+    case v do
+      v when is_struct(v, BSON.ObjectId) ->
+        BSON.ObjectId.encode!(v)
+
+      v when is_map(v) ->
+        filter(v)
+
+      v when is_list(v) ->
+        Enum.map(v, fn val ->
+          do_fun(val, fun)
+        end)
+
+      _ ->
+        fun.(v)
     end
   end
 

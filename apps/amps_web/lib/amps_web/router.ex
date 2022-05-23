@@ -47,6 +47,8 @@ defmodule AmpsWeb.Router do
   scope "/api", AmpsWeb do
     pipe_through([:api, :api_protected])
 
+    get("/auth/:username", UtilController, :verify)
+
     post("/system/logo", DataController, :update_logo)
 
     post("/duplicate", UtilController, :duplicate)

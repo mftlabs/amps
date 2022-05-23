@@ -49,6 +49,9 @@ liveSocket.connect();
 // require.config({ paths: { vs: "../vendor/min/vs" } });
 self.MonacoEnvironment = {
   getWorkerUrl: function (moduleId, label) {
+    if (label === "json") {
+      return "./assets/js/vs/language/json/json.worker.js";
+    }
     return "./assets/js/vs/editor/editor.worker.js";
   },
 };

@@ -11,8 +11,6 @@ defmodule AmpsWeb.DataController do
   alias Elixlsx.Workbook
   alias Elixlsx.Sheet
 
-  @symbols '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMOPQRSTUVWXYZ$@!@#$%&*'
-
   plug(
     AmpsWeb.EnsureRolePlug,
     :Admin
@@ -135,7 +133,7 @@ defmodule AmpsWeb.DataController do
     index = Util.index(conn.assigns().env, "users")
     _length = 15
 
-    password = create_password()
+    password = Util.create_password()
 
     # IO.inspect(password)
     %{password_hash: hashed} = add_hash(password)
@@ -146,36 +144,28 @@ defmodule AmpsWeb.DataController do
       "password" => hashed
     })
 
-    onb = fn msg, obj, env ->
-      obj = obj |> Map.put("password", password)
-      msg = Map.put(msg, "data", Jason.encode!(obj))
+    # onb = fn msg, obj, env ->
+    #   obj = obj |> Map.put("password", password)
+    #   msg = Map.put(msg, "data", Jason.encode!(obj))
 
-      Amps.Onboarding.update(
-        msg,
-        obj,
-        conn.assigns().env
-      )
-    end
+    #   Amps.Onboarding.onboard(
+    #     msg,
+    #     obj,
+    #     conn.assigns().env
+    #   )
+    #   Map.merge(msg, %{"onboarding" => true, "user_id" => obj["_id"]})
+    # end
 
-    Util.ui_event(index, id, "reset_password", conn.assigns().env, onb)
+    Util.ui_event(index, id, "reset_password", conn.assigns().env)
 
     json(conn, %{success: %{password: password}})
-  end
-
-  def create_password do
-    symbol_count = Enum.count(@symbols)
-
-    password =
-      for _ <- 1..15,
-          into: "",
-          do: <<Enum.at(@symbols, :crypto.rand_uniform(0, symbol_count))>>
   end
 
   def approve_user(conn, %{"id" => id, "group" => group}) do
     index = Util.index(conn.assigns().env, "users")
     _length = 15
 
-    password = create_password()
+    password = Util.create_password()
 
     # IO.inspect(password)
     %{password_hash: hashed} = add_hash(password)
@@ -188,24 +178,19 @@ defmodule AmpsWeb.DataController do
       "group" => group
     })
 
-    onb = fn msg, obj, env ->
-      obj = obj |> Map.put("password", password)
-      msg = Map.put(msg, "data", Jason.encode!(obj))
+    # onb = fn msg, obj, env ->
+    #   obj = obj |> Map.put("password", password)
+    #   msg = Map.put(msg, "data", Jason.encode!(obj))
 
-      Amps.Onboarding.update(
-        msg,
-        obj,
-        conn.assigns().env
-      )
-    end
+    #   Amps.Onboarding.onboard(
+    #     msg,
+    #     obj,
+    #     env
+    #   )
+    #   Map.merge(msg, %{"onboarding" => true, "user_id" => obj["_id"]})
+    # end
 
-    Util.ui_event(index, id, "approve_user", conn.assigns().env, onb)
-
-    # email =
-    #   new()
-    #   |> from("abhaykram12@gmail.com")
-    #   |> to("diksharath0@gmail.com")
-    #   |> text_body("this is being sent from elixir i love u")
+    Util.ui_event(index, id, "approve_user", conn.assigns().env)
 
     json(conn, %{success: %{password: password}})
   end
@@ -737,9 +722,7 @@ defmodule AmpsWeb.DataController do
 
     {:ok, res} = DB.insert(collection, body)
 
-    Util.after_create(collection, body, conn.assigns().env)
-
-    Util.ui_event(collection, res, "create", conn.assigns().env)
+    Util.after_create(collection, Map.merge(body, %{"_id" => res}), conn.assigns().env)
 
     json(conn, res)
   end
@@ -749,8 +732,6 @@ defmodule AmpsWeb.DataController do
     {:ok, res} = DB.insert_with_id(collection, body, id)
 
     Util.after_create(collection, body, conn.assigns().env)
-
-    Util.ui_event(collection, id, "create", conn.assigns().env)
 
     json(conn, res)
   end
@@ -870,6 +851,18 @@ defmodule AmpsWeb.DataController do
         nil
     end
 
+    # onb = fn msg, obj, env ->
+    #   msg = Map.put(msg, "data", Jason.encode!(obj))
+
+    #   Amps.Onboarding.onboard(
+    #     msg,
+    #     obj,
+    #     conn.assigns().env
+    #   )
+
+    #   Map.merge(msg, %{"onboarding" => true, "user_id" => obj["_id"]})
+    # end
+
     Util.ui_delete_event(collection, object, conn.assigns().env)
 
     json(conn, resp)
@@ -918,8 +911,6 @@ defmodule AmpsWeb.DataController do
       updated,
       conn.assigns().env
     )
-
-    Util.ui_field_event(collection, id, field, fieldid, "create", conn.assigns().env)
 
     json(conn, updated)
   end
@@ -1116,21 +1107,26 @@ end
 
 defmodule Filter do
   def convert_dates(map, acc) do
-    if Kernel.is_map(map) do
-      cond do
-        Map.has_key?(map, "$date") ->
-          # with {:ok, datetime, _} <- DateTime.from_iso8601(Map.get(map, "$date")), do: datetime
-          Map.get(map, "$date")
+    cond do
+      is_map(map) ->
+        cond do
+          is_struct(map) ->
+            map
 
-        # Map.has_key?(map, "$regex") ->
-        #   %BSON.Regex{pattern: Map.get(map, "$regex")}
-        true ->
-          Enum.reduce(map, acc, fn {key, value}, acc ->
-            Map.put(acc, key, convert_dates(value, acc))
-          end)
-      end
-    else
-      map
+          Map.has_key?(map, "$date") ->
+            # with {:ok, datetime, _} <- DateTime.from_iso8601(Map.get(map, "$date")), do: datetime
+            Map.get(map, "$date")
+
+          # Map.has_key?(map, "$regex") ->
+          #   %BSON.Regex{pattern: Map.get(map, "$regex")}
+          true ->
+            Enum.reduce(map, acc, fn {key, value}, acc ->
+              Map.put(acc, key, convert_dates(value, acc))
+            end)
+        end
+
+      true ->
+        map
     end
   end
 

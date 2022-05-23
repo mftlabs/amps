@@ -7,6 +7,9 @@ Ext.define("Amps.container.Script", {
     this.callParent([args]);
     this.initField();
     console.log("init");
+    if (args["language"]) {
+      this.language = args["language"];
+    }
     // var cmp = {
     //   xtype: "component",
     //   itemId: "scriptcont",
@@ -52,7 +55,7 @@ Ext.define("Amps.container.Script", {
       var editor = window.monaco.editor.create(this.getEl().dom, {
         model: window.monaco.editor.createModel(
           this.value,
-          "python",
+          this.language || "python",
           window.monaco.Uri.parse(`inmemory://${amfutil.uuid()}${this.name}.py`)
         ),
         glyphMargin: true,

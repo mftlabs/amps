@@ -8,6 +8,23 @@ defmodule AmpsWeb.Util do
   alias AmpsWeb.ServiceController
   alias Elixlsx.Workbook
   alias Elixlsx.Sheet
+  @numbers '0123456789'
+  @letters 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMOPQRSTUVWXYZ'
+  @symbols '$@!@#$%&*'
+
+  def create_password do
+    numbers = Enum.shuffle(@numbers) |> Enum.take(2)
+    symbols = Enum.shuffle(@symbols) |> Enum.take(2)
+    letters = Enum.shuffle(@letters) |> Enum.take(16)
+
+    (numbers ++ symbols ++ letters) |> Enum.shuffle() |> List.to_string()
+  end
+
+  def create_password_hash do
+    password = create_password()
+    %{password_hash: hashed} = add_hash(password)
+    {password, hashed}
+  end
 
   def headers(collection \\ nil, field \\ nil) do
     headers = %{
@@ -37,7 +54,14 @@ defmodule AmpsWeb.Util do
           ],
           "kafkaput" => ["provider", "topic"],
           "mailbox" => ["recipient", "mailbox", "format"],
-          "pgpdecrypt" => ["key", "passphrase", "verify", "signing_key", "format", "output"],
+          "pgpdecrypt" => [
+            "key",
+            "passphrase",
+            "verify",
+            "signing_key",
+            "format",
+            "output"
+          ],
           "pgpencrypt" => [
             "key",
             "compress",
@@ -153,7 +177,13 @@ defmodule AmpsWeb.Util do
           ],
           "kafka" => ["provider", "topics", "format", "communication"],
           "sftpd" => ["port", "server_key", "communication"],
-          "subscriber" => ["subs_count", "handler", "updated", "policy", "start_time"]
+          "subscriber" => [
+            "subs_count",
+            "handler",
+            "updated",
+            "policy",
+            "start_time"
+          ]
         }
       },
       "templates" => %{
@@ -203,10 +233,22 @@ defmodule AmpsWeb.Util do
                 "folder",
                 "max"
               ],
-              "upload" => ["fpoll", "fretry", "regex", "fmatch", "fmeta", "subs_count", "ackmode"]
+              "upload" => [
+                "fpoll",
+                "fretry",
+                "regex",
+                "fmatch",
+                "fmeta",
+                "subs_count",
+                "ackmode"
+              ]
             }
           },
-          "tokens" => %{"headers" => ["name"], "subgrids" => nil, "types" => nil}
+          "tokens" => %{
+            "headers" => ["name"],
+            "subgrids" => nil,
+            "types" => nil
+          }
         },
         "types" => nil
       }
@@ -251,7 +293,8 @@ defmodule AmpsWeb.Util do
 
       # VaultDatabase.vault_store_key(conn.body_params(), collection, "account", "cred")
       "services" ->
-        if body["type"] == "subscriber" || (body["type"] == "pyservice" && body["receive"]) do
+        if body["type"] == "subscriber" ||
+             (body["type"] == "pyservice" && body["receive"]) do
           create_config_consumer(body, env)
           body
         end
@@ -264,14 +307,49 @@ defmodule AmpsWeb.Util do
   end
 
   def after_create(collection, body, env \\ "") do
+    # onb =
     case base_index(env, collection) do
+      "users" ->
+        if body["approved"] do
+          password = create_password()
+
+          # IO.inspect(password)
+          %{password_hash: hashed} = add_hash(password)
+
+          DB.find_one_and_update(
+            Util.index(env, "users"),
+            %{"username" => body["username"]},
+            %{
+              "password" => hashed
+            }
+          )
+
+          # fn msg, obj, env ->
+          #   obj = obj |> Map.put("password", password)
+          #   msg = Map.put(msg, "data", Jason.encode!(obj))
+
+          #   Amps.Onboarding.onboard(
+          #     msg,
+          #     obj,
+          #     env
+          #   )
+
+          #   Map.merge(msg, %{"onboarding" => true, "user_id" => obj["_id"]})
+          # end
+        end
+
       "services" ->
         types = SvcManager.service_types()
 
-        if body["type"] == "subscriber" || (body["type"] == "pyservice" && body["receive"]) do
-          DB.find_one_and_update(Util.index(env, "services"), %{"name" => body["name"]}, %{
-            "updated" => false
-          })
+        if body["type"] == "subscriber" ||
+             (body["type"] == "pyservice" && body["receive"]) do
+          DB.find_one_and_update(
+            Util.index(env, "services"),
+            %{"name" => body["name"]},
+            %{
+              "updated" => false
+            }
+          )
         end
 
         topic =
@@ -285,6 +363,8 @@ defmodule AmpsWeb.Util do
           Gnat.pub(:gnat, topic, "")
         end
 
+        nil
+
       "jobs" ->
         case env do
           "" ->
@@ -294,19 +374,24 @@ defmodule AmpsWeb.Util do
             Amps.EnvScheduler.load(body["name"], env)
         end
 
+        nil
+
       "actions" ->
         if body["type"] == "batch" do
           create_batch_consumer(body)
         end
 
-        body
+        nil
 
       "environments" ->
         Gnat.pub(:gnat, "amps.events.env.handler.#{body["name"]}.start", "")
+        nil
 
       _ ->
         nil
     end
+
+    ui_event(collection, body["_id"], "create", env)
 
     # AmpsEvents.send()
   end
@@ -354,7 +439,8 @@ defmodule AmpsWeb.Util do
       "services" ->
         service = DB.find_one(collection, %{"_id" => id})
 
-        if service["type"] == "subscriber" || (body["type"] == "pyservice" && body["receive"]) do
+        if service["type"] == "subscriber" ||
+             (body["type"] == "pyservice" && body["receive"]) do
           if service["updated"] do
             Util.delete_config_consumer(old, env)
 
@@ -392,8 +478,17 @@ defmodule AmpsWeb.Util do
             "stop"
           end
 
-        Gnat.pub(:gnat, "amps.events.env.handler.#{body["name"]}.#{envaction}", "")
-        Gnat.pub(:gnat, "amps.events.archive.handler.#{archaction}.#{body["name"]}", "")
+        Gnat.pub(
+          :gnat,
+          "amps.events.env.handler.#{body["name"]}.#{envaction}",
+          ""
+        )
+
+        Gnat.pub(
+          :gnat,
+          "amps.events.archive.handler.#{archaction}.#{body["name"]}",
+          ""
+        )
 
       "actions" ->
         # _action = DB.find_one(Util.index(conn.assigns().env, "actions"), %{"_id" => id})
@@ -433,11 +528,16 @@ defmodule AmpsWeb.Util do
   end
 
   def after_field_create(collection, id, field, fieldid, body, updated, env) do
+    # fun =
     case collection do
       "services" ->
         case field do
           "defaults" ->
-            Application.put_env(:amps, String.to_atom(body["field"]), body["value"])
+            Application.put_env(
+              :amps,
+              String.to_atom(body["field"]),
+              body["value"]
+            )
 
           _ ->
             nil
@@ -459,6 +559,8 @@ defmodule AmpsWeb.Util do
       _ ->
         nil
     end
+
+    Util.ui_field_event(collection, id, field, fieldid, "create", env)
   end
 
   def create_batch_consumer(body) do
@@ -498,7 +600,15 @@ defmodule AmpsWeb.Util do
       collection
     else
       if Enum.member?(
-           ["config", "demos", "admin", "environments", "system_logs", "ui_audit", "providers"],
+           [
+             "config",
+             "demos",
+             "admin",
+             "environments",
+             "system_logs",
+             "ui_audit",
+             "providers"
+           ],
            collection
          ) do
         collection
@@ -519,7 +629,10 @@ defmodule AmpsWeb.Util do
 
   def create_config_consumer(body, env \\ nil) do
     {stream, consumer} =
-      AmpsUtil.get_names(%{"name" => body["name"], "topic" => body["topic"]}, env)
+      AmpsUtil.get_names(
+        body,
+        env
+      )
 
     opts =
       if body["policy"] == "by_start_time" do
@@ -533,12 +646,24 @@ defmodule AmpsWeb.Util do
         }
       end
 
-    AmpsUtil.create_consumer(stream, consumer, AmpsUtil.env_topic(body["topic"], env), opts)
+    AmpsUtil.create_consumer(
+      stream,
+      consumer,
+      AmpsUtil.env_topic(body["topic"], env),
+      opts
+    )
   end
 
   def delete_config_consumer(body, env \\ nil) do
+    :rpc.multicall(AmpsWeb.Util, :do_delete, [body, env])
+  end
+
+  def do_delete(body, env) do
     {stream, consumer} =
-      AmpsUtil.get_names(%{"name" => body["name"], "topic" => body["topic"]}, env)
+      AmpsUtil.get_names(
+        body,
+        env
+      )
 
     AmpsUtil.delete_consumer(stream, consumer)
   end
@@ -580,79 +705,126 @@ defmodule AmpsWeb.Util do
   end
 
   def ui_event(index, id, action, env, fun \\ nil) do
-    msg = %{
-      "msgid" => AmpsUtil.get_id(),
-      "action" => action,
-      "service" => "UI Actions"
-    }
+    Task.start_link(fn ->
+      msg = %{
+        "msgid" => AmpsUtil.get_id(),
+        "action" => action,
+        "service" => "UI Actions"
+      }
 
-    {msg, sid} = AmpsEvents.start_session(msg, %{"service" => "UI Actions"}, env)
-    obj = Amps.DB.find_by_id(index, id)
-    if fun do
-      fun.(msg, obj, env)
-    end
+      {msg, sid} = AmpsEvents.start_session(msg, %{"service" => "UI Actions"}, env)
 
-    msg =
-      Map.put(
+      obj = Amps.DB.find_by_id(index, id)
+
+      msg =
+        if fun do
+          fun.(msg, obj, env)
+        else
+          msg
+        end
+
+      msg =
+        Map.put(
+          msg,
+          "data",
+          Jason.encode!(obj |> AmpsUtil.filter())
+          |> Jason.Formatter.pretty_print()
+        )
+
+      AmpsEvents.send(
         msg,
-        "data",
-        Jason.encode!(obj|> AmpsUtil.filter())
-        |> Jason.Formatter.pretty_print()
+        %{
+          "output" =>
+            AmpsUtil.env_topic(
+              "amps.objects.#{base_index(env, index)}.#{action}",
+              env
+            )
+        },
+        %{}
       )
 
-    AmpsEvents.send(
-      msg,
-      %{"output" => AmpsUtil.env_topic("amps.objects.#{base_index(env, index)}.#{action}", env)},
-      %{}
-    )
-
-    AmpsEvents.end_session(sid, env)
+      AmpsEvents.end_session(sid, env)
+    end)
   end
 
-  def ui_delete_event(index, body, env) do
-    msg = %{
-      "msgid" => AmpsUtil.get_id(),
-      "data" =>
-        Jason.encode!(body |> AmpsUtil.filter())
-        |> Jason.Formatter.pretty_print(),
-      "action" => "delete",
-      "service" => "UI Actions"
-    }
+  def ui_delete_event(index, body, env, fun \\ nil) do
+    Task.start_link(fn ->
+      msg = %{
+        "msgid" => AmpsUtil.get_id(),
+        "action" => "delete",
+        "service" => "UI Actions"
+      }
 
-    {msg, sid} = AmpsEvents.start_session(msg, %{"service" => "UI Actions"}, env)
+      {msg, sid} = AmpsEvents.start_session(msg, %{"service" => "UI Actions"}, env)
 
-    AmpsEvents.send(
-      msg,
-      %{"output" => AmpsUtil.env_topic("amps.objects.#{base_index(env, index)}.delete", env)},
-      %{}
-    )
+      msg =
+        if fun do
+          fun.(msg, body, env)
+        else
+          msg
+        end
 
-    AmpsEvents.end_session(sid, env)
+      msg =
+        Map.put(
+          msg,
+          "data",
+          Jason.encode!(body |> AmpsUtil.filter())
+          |> Jason.Formatter.pretty_print()
+        )
+
+      AmpsEvents.send(
+        msg,
+        %{
+          "output" =>
+            AmpsUtil.env_topic(
+              "amps.objects.#{base_index(env, index)}.delete",
+              env
+            )
+        },
+        %{}
+      )
+
+      AmpsEvents.end_session(sid, env)
+    end)
   end
 
-  def ui_field_event(index, id, field, fieldid, action, env) do
-    msg = %{
-      "msgid" => AmpsUtil.get_id(),
-      "data" =>
-        Jason.encode!(Amps.DB.find_by_id(index, id) |> AmpsUtil.filter())
-        |> Jason.Formatter.pretty_print(),
-      "field" => field,
-      "fieldid" => fieldid,
-      "action" => action,
-      "service" => "UI Actions"
-    }
+  def ui_field_event(index, id, field, fieldid, action, env, fun \\ nil) do
+    Task.start_link(fn ->
+      body = Amps.DB.find_by_id(index, id)
 
-    {msg, sid} = AmpsEvents.start_session(msg, %{"service" => "UI Actions"}, env)
+      msg = %{
+        "msgid" => AmpsUtil.get_id(),
+        "data" =>
+          Jason.encode!(body |> AmpsUtil.filter())
+          |> Jason.Formatter.pretty_print(),
+        "field" => field,
+        "fieldid" => fieldid,
+        "action" => action,
+        "service" => "UI Actions"
+      }
 
-    AmpsEvents.send(
-      msg,
-      %{
-        "output" =>
-          AmpsUtil.env_topic("amps.objects.#{base_index(env, index)}.#{field}.#{action}", env)
-      },
-      %{}
-    )
+      {msg, sid} = AmpsEvents.start_session(msg, %{"service" => "UI Actions"}, env)
 
-    AmpsEvents.end_session(sid, env)
+      msg =
+        if fun do
+          fun.(msg, body, env)
+        else
+          msg
+        end
+
+      AmpsEvents.send(
+        msg,
+        %{
+          "output" =>
+            AmpsUtil.env_topic(
+              "amps.objects.#{base_index(env, index)}.#{field}.#{action}",
+              env
+            )
+        },
+        %{}
+      )
+
+      AmpsEvents.end_session(sid, env)
+    end)
   end
 end

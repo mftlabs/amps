@@ -347,7 +347,7 @@ defmodule Amps.SftpHandler do
       msg = %{
         "mailbox" => state[:mailbox],
         "service" => service,
-        "action" => "SFTP PUT",
+        # "action" => "SFTP PUT",
         "msgid" => state[:msgid],
         "fsize" => state[:fsize],
         "fpath" => state[:fpath],

@@ -87,7 +87,6 @@ defmodule Amps.PyService do
     path = Path.join([:code.priv_dir(:amps), "py", "onboarding"])
     tmp = AmpsUtil.get_env(:storage_temp)
     # {:ok, pid} = :python.start([{:python_path, to_charlist(path)}])
-    IO.inspect(parms)
     module = String.to_atom(parms["module"])
     xparm = %{:msg => msg, :parms => parms, :sysparms => %{"tempdir" => tmp}}
     jparms = Poison.encode!(xparm)
@@ -101,7 +100,6 @@ defmodule Amps.PyService do
 
     try do
       result = :pythra.method(pid, action, :__run__, [])
-      IO.inspect(result)
       :pythra.stop(pid)
       handle_result(result, pid)
     rescue

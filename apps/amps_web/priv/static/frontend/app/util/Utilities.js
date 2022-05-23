@@ -1709,6 +1709,125 @@ Ext.define("Amps.util.Utilities", {
     );
   },
 
+  onboardingColumn() {
+    return {
+      xtype: "widgetcolumn",
+      selectable: false,
+      focusable: false,
+      cellFocusable: false,
+      text: "Onboarding",
+      widget: {
+        xtype: "container",
+        cls: "widgetbutton",
+        loadUser: async function (user) {
+          this.clearListeners();
+
+          this.removeAll();
+          this.insert({
+            xtype: "container",
+            flex: 1,
+            layout: "center",
+            items: [
+              {
+                xtype: "component",
+                cls: "x-fa fa-spinner fa-pulse",
+              },
+            ],
+          });
+          var resp = await amfutil.ajaxRequest({
+            url: `api/auth/${user.username}`,
+          });
+          var auths = Ext.decode(resp.responseText);
+          this.getEl().clearListeners();
+          this.getEl().on("click", function () {
+            var win = new Ext.window.Window({
+              title: `Onboarding Statuses for ${user.username}`,
+              width: 600,
+              height: 600,
+              modal: true,
+              layout: "fit",
+              items: [
+                {
+                  xtype: "grid",
+                  store: auths,
+
+                  columns: [
+                    {
+                      text: "Provider",
+                      dataIndex: "name",
+                      flex: 1,
+                    },
+                    {
+                      text: "Node",
+                      dataIndex: "node",
+                      flex: 1,
+                    },
+                    {
+                      text: "Status",
+                      dataIndex: "status",
+                      flex: 1,
+                      renderer: function (val) {
+                        return val ? "Active" : "Inactive/Unavailable";
+                      },
+                    },
+                  ],
+                },
+              ],
+            });
+            win.show();
+            console.log(auths);
+          });
+          console.log(auths);
+          this.removeAll();
+          var color;
+          var status = auths.reduce((acc, next) => {
+            return acc && next.status;
+          }, true);
+
+          if (status) {
+            color = "green";
+          } else {
+            if (auths.some((e) => e.status === true)) {
+              color = "yellow";
+            } else {
+              color = "red";
+            }
+          }
+          var items = [
+            {
+              xtype: "component",
+              cls: `x-fa fa-info-circle`,
+            },
+            {
+              xtype: "component",
+              html: "View",
+            },
+            {
+              xtype: "container",
+              layout: "center",
+              items: [
+                {
+                  xtype: "component",
+                  html: `<div class="led ${color}"></div>`,
+                },
+              ],
+            },
+          ];
+          this.insert(0, items);
+        },
+        layout: { type: "hbox", align: "stretch" },
+        defaults: {
+          padding: 5,
+        },
+      },
+
+      onWidgetAttach: function (col, widget, rec) {
+        console.log(rec.data.username);
+        widget.loadUser(rec.data);
+      },
+    };
+  },
+
   updateQuery(key, value) {
     if ("URLSearchParams" in window) {
       var searchParams = new URLSearchParams(window.location.search);
@@ -2350,6 +2469,7 @@ Ext.define("Amps.util.Utilities", {
         "Ext.data.Store",
         Object.assign(
           {
+            pageSize: 150,
             remoteSort: true,
             proxy: {
               type: "rest",
@@ -3006,7 +3126,6 @@ Ext.define("Amps.util.Utilities", {
     var items = ampsgrids.grids[collection]().subgrids[field].actionIcons;
     if (items) {
       fieldMenu.items.items.forEach((item) => {
-        console.log(item);
         if (items.indexOf(item.itemId) >= 0) {
           console.log("showing");
           item.show();
@@ -3256,7 +3375,7 @@ Ext.define("Amps.util.Utilities", {
           console.log(values[field.dataIndex]);
           filters[field.dataIndex] = JSON.parse(values[field.dataIndex]);
           console.log(filters);
-        } else if (field.type == "combo") {
+        } else if (field.type == "combo" || field.type == "aggregate") {
           filters[field.dataIndex] = values[field.dataIndex];
         } else {
           filters[field.dataIndex] = { $in: values[field.dataIndex] };

@@ -676,8 +676,7 @@ Ext.define("Amps.view.messages.MessageDetails", {
 
   loadDetails: async function (record) {
     console.log(record);
-    console.log(this.down());
-    var c = this.down("container");
+    var c = this.down("#details");
     c.removeAll();
     var filters = { msgid: record.msgid };
 
@@ -842,6 +841,7 @@ Ext.define("Amps.view.messages.MessageDetails", {
   items: [
     {
       xtype: "container",
+      itemId: "details",
       padding: 3,
     },
   ],

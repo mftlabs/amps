@@ -62,7 +62,7 @@ defmodule Amps.EventConsumer do
     {stream, consumer} = AmpsUtil.get_names(opts, state.env)
     Logger.info("got stream #{stream} #{consumer}")
 
-    AmpsUtil.create_consumer(stream, consumer, AmpsUtil.env_topic(opts["topic"], state.env))
+    AmpsWeb.Util.create_config_consumer(opts, state.env)
 
     opts = Map.put(opts, "id", name)
 
@@ -119,13 +119,7 @@ defmodule Amps.PullConsumer do
     IO.puts("group #{group}")
     consumer_name = get_consumer(parms, consumer_name)
 
-    {:ok, _sid} =
-      if parms["cluster"] do
-        Gnat.sub(connection_pid, self(), listening_topic, queue_group: group)
-      else
-        group <> Atom.to_string(Node.self())
-        Gnat.sub(connection_pid, self(), listening_topic, queue_group: group)
-      end
+    {:ok, _sid} = Gnat.sub(connection_pid, self(), listening_topic, queue_group: group)
 
     :ok =
       Gnat.pub(connection_pid, "$JS.API.CONSUMER.MSG.NEXT.#{stream_name}.#{consumer_name}", "1",
@@ -181,7 +175,8 @@ defmodule Amps.PullConsumer do
           AmpsEvents.start_session(data["msg"], %{"service" => parms["name"]}, state.env)
 
         try do
-          mctx = {data["state"], state.env}
+          mstate = data["state"]
+          mctx = {mstate, state.env}
           action_id = parms["handler"]
 
           actparms =

@@ -15,7 +15,7 @@ defmodule Amps.Scheduler do
         [qj | acc]
       end)
 
-    config = Keyword.put(config, :jobs, jobs)
+    config = Keyword.put(config, :jobs, config[:jobs] ++ jobs)
     IO.inspect(config)
     config
   end
