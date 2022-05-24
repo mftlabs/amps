@@ -85,20 +85,25 @@ defmodule Amps.Logger do
     schedule_bulk()
 
     state =
-      if Enum.count(state.messages) > 0 do
-        state.messages
-        |> Amps.DB.bulk_perform("system_logs")
+      try do
+        if Enum.count(state.messages) > 0 do
+          state.messages
+          |> Amps.DB.bulk_perform("system_logs")
 
-        Map.put(state, :messages, [])
-      else
-        state
+          Map.put(state, :messages, [])
+        else
+          state
+        end
+      rescue
+        e ->
+          state
       end
 
     {:ok, state}
   end
 
   defp schedule_bulk do
-    if Application.ensure_loaded(:amps) == :ok do
+    if Application.ensure_started(:amps) == :ok do
       Process.send_after(self(), :bulk, AmpsUtil.hinterval())
     else
       Process.send_after(self(), :bulk, 5000)
