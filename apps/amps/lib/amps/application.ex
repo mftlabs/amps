@@ -179,11 +179,14 @@ defmodule Amps.Application do
       )
     ]
 
-    Supervisor.start_link(children,
-      strategy: :one_for_one,
-      name: Amps.Supervisor
-    )
+    res =
+      Supervisor.start_link(children,
+        strategy: :one_for_one,
+        name: Amps.Supervisor
+      )
 
     Application.put_env(:amps, :initialized, true)
+
+    res
   end
 end
