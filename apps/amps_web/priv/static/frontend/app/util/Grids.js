@@ -9138,17 +9138,6 @@ Ext.define("Amps.util.Grids", {
                 maxValue: 50,
                 value: 1,
               },
-              amfutil.localCombo(
-                "Subscription Mode",
-                "smode",
-                [
-                  { field: "group", label: "Node Group" },
-                  { field: "node", label: "Node" },
-                  { field: "cluster", label: "Cluster" },
-                ],
-                "field",
-                "label"
-              ),
               amfutil.dynamicCreate(
                 amfutil.combo(
                   "Action",
