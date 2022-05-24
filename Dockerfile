@@ -52,8 +52,8 @@ RUN mkdir -p /amps/data/modules
 COPY --from=build /build/_build/prod/rel/amps /amps/amps 
 RUN chgrp -R 0 /amps && \
     chmod -R g=u /amps
-RUN chgrp -R 0 /usr && \
-    chmod -R g=u /usr
+RUN chgrp -R 0 /root && \
+    chmod -R g=u /root
 WORKDIR /amps
 
 ENV ERLPORT_PYTHON=/usr/bin/python3
