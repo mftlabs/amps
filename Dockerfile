@@ -17,16 +17,17 @@ RUN cd apps/amps_web/assets && node build.js --deploy
 
 
 FROM elixir:1.12.1 as build
-COPY --from=node-build /build ./build
 ENV MIX_ENV=prod
 
-WORKDIR /build
 RUN apt-get update
 
 RUN apt-get install build-essential git -y
 
 RUN mix local.hex --force && \
     mix local.rebar --force
+COPY --from=node-build /build ./build
+
+WORKDIR /build
 
 RUN mix deps.get --only prod && \
     mix deps.compile

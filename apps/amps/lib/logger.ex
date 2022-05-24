@@ -98,7 +98,7 @@ defmodule Amps.Logger do
   end
 
   defp schedule_bulk do
-    if Application.ensure_started(:amps) == :ok do
+    if Application.ensure_loaded(:amps) == :ok do
       Process.send_after(self(), :bulk, AmpsUtil.hinterval())
     else
       Process.send_after(self(), :bulk, 5000)
