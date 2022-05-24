@@ -140,7 +140,7 @@ defmodule AmpsWeb.ScriptController do
   end
 
   def install_dep(conn, %{"name" => name}) do
-    args = ["-m", "pip", "install", name]
+    args = ["-m", "pip", "install", ["--user"], name]
     Logger.info("Installing python package #{name}")
 
     {res, code} = System.cmd("python3", args, stderr_to_stdout: true)
