@@ -49,7 +49,7 @@ class ServerComm():
 
         # Create an instance of the language server
         proc = subprocess.Popen(
-            ['pylsp'],
+            ['python3', '-m', 'pylsp'],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE
         )
