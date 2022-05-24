@@ -41,10 +41,11 @@ FROM elixir:1.12.1
 RUN apt-get update
 RUN apt-get install python3 python3-pip -y
 
+RUN mkdir /root/.local
 
-RUN pip3 install cytoolz amps-py python-jsonrpc-server python-lsp-server
+RUN pip3 install --user cytoolz amps-py python-jsonrpc-server python-lsp-server
 
-RUN pip3 install "python-lsp-server[all]"
+RUN pip3 install --user "python-lsp-server[all]"
 
 RUN mkdir /amps
 RUN mkdir -p /amps/data/tmp
