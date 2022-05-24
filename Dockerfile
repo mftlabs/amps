@@ -42,6 +42,12 @@ RUN apt-get update
 RUN apt-get install python3 python3-pip -y
 
 RUN mkdir /root/.local
+RUN mkdir /.local
+RUN mkdir /.cache
+RUN mkdir /.config
+
+
+
 
 RUN pip3 install --user cytoolz amps-py python-jsonrpc-server python-lsp-server
 
@@ -55,6 +61,12 @@ RUN chgrp -R 0 /amps && \
     chmod -R g=u /amps
 RUN chgrp -R 0 /root && \
     chmod -R g=u /root
+RUN chgrp -R 0 /.local && \
+    chmod -R g=u /.local
+RUN chgrp -R 0 /.cache && \
+    chmod -R g=u /.cache
+RUN chgrp -R 0 /.config && \
+    chmod -R g=u /.config
 WORKDIR /amps
 
 ENV ERLPORT_PYTHON=/usr/bin/python3
