@@ -8,6 +8,7 @@ defmodule Amps.Application do
   @impl true
   def start(_type, _args) do
     gnatconf = Application.fetch_env!(:amps, :gnat)
+    Application.put_env!(:amps, :initialized, false)
 
     gnat_supervisor_settings = %{
       # (required) the registered named you want to give the Gnat connection
@@ -182,5 +183,7 @@ defmodule Amps.Application do
       strategy: :one_for_one,
       name: Amps.Supervisor
     )
+
+    Application.put_env!(:amps, :initialized, true)
   end
 end

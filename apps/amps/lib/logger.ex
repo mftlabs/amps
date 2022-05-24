@@ -85,7 +85,7 @@ defmodule Amps.Logger do
     schedule_bulk()
 
     state =
-      try do
+      if Application.fetch_env!(:amps, :initialized) do
         if Enum.count(state.messages) > 0 do
           state.messages
           |> Amps.DB.bulk_perform("system_logs")
@@ -94,9 +94,8 @@ defmodule Amps.Logger do
         else
           state
         end
-      rescue
-        e ->
-          state
+      else
+        state
       end
 
     {:ok, state}
