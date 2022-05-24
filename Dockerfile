@@ -41,17 +41,9 @@ FROM elixir:1.12.1
 RUN apt-get update
 RUN apt-get install python3 python3-pip -y
 
-RUN mkdir /root/.local
 RUN mkdir /.local
 RUN mkdir /.cache
 RUN mkdir /.config
-
-
-
-
-RUN pip3 install --user cytoolz amps-py python-jsonrpc-server python-lsp-server
-
-RUN pip3 install --user "python-lsp-server[all]"
 
 RUN mkdir /amps
 RUN mkdir -p /amps/data/tmp
@@ -59,8 +51,6 @@ RUN mkdir -p /amps/data/modules
 COPY --from=build /build/_build/prod/rel/amps /amps/amps 
 RUN chgrp -R 0 /amps && \
     chmod -R g=u /amps
-RUN chgrp -R 0 /root && \
-    chmod -R g=u /root
 RUN chgrp -R 0 /.local && \
     chmod -R g=u /.local
 RUN chgrp -R 0 /.cache && \

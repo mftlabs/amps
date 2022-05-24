@@ -1,6 +1,4 @@
 defmodule Amps.Application do
-
-
   # See https://hexdocs.pm/elixir/Application.html
   # for more information on OTP Applications
   @moduledoc false
@@ -21,6 +19,9 @@ defmodule Amps.Application do
       ]
     }
 
+    task = Task.async(Amps.Startup, :startup, [])
+    Task.await(task, 60000)
+
     IO.inspect(gnat_supervisor_settings)
 
     children = [
@@ -40,7 +41,6 @@ defmodule Amps.Application do
       # Recover from netsplit
       Pow.Store.Backend.MnesiaCache.Unsplit,
       Amps.DB.get_db(),
-      {Amps.Startup, []},
       AmpsWeb.Vault,
       Amps.SvcHandler,
       Amps.SvcSupervisor,
