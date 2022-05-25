@@ -20,8 +20,8 @@ defmodule Amps.Application do
       ]
     }
 
-    # task = Task.async(Amps.Startup, :startup, [])
-    # Task.await(task, 300_000)
+    task = Task.async(Amps.Startup, :startup, [])
+    Task.await(task, 300_000)
 
     IO.inspect(gnat_supervisor_settings)
 

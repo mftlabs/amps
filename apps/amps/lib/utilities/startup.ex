@@ -10,7 +10,7 @@ defmodule Amps.Startup do
 
   def startup() do
     nats()
-    python()
+    # python()
   end
 
   def nats() do
