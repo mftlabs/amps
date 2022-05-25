@@ -242,7 +242,7 @@ Ext.define("Amps.panel.Startup", {
               xtype: "textfield",
               name: "storage_temp",
               fieldLabel: "Temp Path",
-              value: "/data/amps/tmp",
+              value: "/amps/data/tmp",
             },
             // {
             //   xtype: "textfield",
@@ -254,7 +254,7 @@ Ext.define("Amps.panel.Startup", {
               xtype: "textfield",
               name: "python_path",
               fieldLabel: "Script Module Path",
-              value: "/data/amps/modules",
+              value: "/amps/data/modules",
             },
             {
               xtype: "numberfield",

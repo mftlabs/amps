@@ -2,7 +2,9 @@ from erlport.erlang import set_message_handler, cast
 from erlport.erlterms import Atom
 import subprocess
 import threading
-import sys
+from pathlib import Path
+import os
+import site
 
 from pylsp_jsonrpc import streams
 
@@ -48,8 +50,13 @@ class ServerComm():
         # log.info("Spawning pyls subprocess")
 
         # Create an instance of the language server
+        pylsp = os.path.join(site.getuserbase(), "bin", "pylsp")
+        if os.path.isfile(pylsp):
+            pass
+        else:
+            pylsp = 'pylsp'
         proc = subprocess.Popen(
-            ['python3', '-m', 'pylsp'],
+            [pylsp],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE
         )

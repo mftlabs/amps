@@ -67,12 +67,12 @@ defmodule Amps.PyService do
 
     {:ok, pid} = :pythra.start_link([String.to_charlist(path)])
 
-    action =
-      :pythra.init(pid, module, module, [], [
-        {:msgdata, jparms}
-      ])
-
     try do
+      action =
+        :pythra.init(pid, module, module, [], [
+          {:msgdata, jparms}
+        ])
+
       result = :pythra.method(pid, action, :__run__, [])
       IO.inspect(result)
       :pythra.stop(pid)
