@@ -1312,9 +1312,17 @@ Ext.define("Amps.Pages", {
         object: "User",
         fields: [
           {
-            xtype: "textfield",
+            xtype: "displayfield",
             name: "username",
             fieldLabel: "User Name",
+            allowBlank: false,
+            submitValue: true,
+          },
+          {
+            xtype: "displayfield",
+            name: "email",
+            submitValue: true,
+            fieldLabel: "Email",
             allowBlank: false,
           },
           {
@@ -1335,12 +1343,6 @@ Ext.define("Amps.Pages", {
             xtype: "textfield",
             name: "phone",
             fieldLabel: "Phone",
-            allowBlank: false,
-          },
-          {
-            xtype: "textfield",
-            name: "email",
-            fieldLabel: "Email",
             allowBlank: false,
           },
         ],

@@ -117,6 +117,12 @@ Ext.define("Amps.view.nav.TreeNav", {
               text: "Routing Rules",
             },
             {
+              iconCls: "x-fa fa-rss",
+              leaf: true,
+              rowCls: "endpoints",
+              text: "API Endpoints",
+            },
+            {
               iconCls: "x-fa fa-flag",
               leaf: true,
               rowCls: "fields",

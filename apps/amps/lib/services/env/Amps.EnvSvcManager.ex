@@ -174,11 +174,23 @@ defmodule Amps.EnvSvcManager do
             max_keepalive: args["max_keepalive"]
           ]
 
+          router =
+            Enum.reduce(args["router"], [], fn id, acc ->
+              case DB.find_by_id(AmpsUtil.index(env, "endpoints"), id) do
+                nil ->
+                  acc
+
+                endpoint ->
+                  [endpoint | acc]
+              end
+            end)
+            |> Enum.reverse()
+
           [{plug, _}] =
             EEx.eval_file(Path.join([:code.priv_dir(:amps), "gateway", "Amps.Gateway.eex"]),
               name: args["name"],
-              router: args["router"],
-              env: env,
+              router: router,
+              env: env
             )
             |> Code.compile_string("Amps.Gateway.eex")
 

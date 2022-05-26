@@ -50,6 +50,7 @@ defmodule AmpsPortal.Router do
     post("/users/password", UserController, :reset_password)
     post("/ufa/login", UFAController, :agent_login)
     get("/duplicate_username/:username", UserController, :duplicate_username)
+    get("/duplicate_email/:email", UserController, :duplicate_email)
   end
 
   scope "/api", AmpsPortal do

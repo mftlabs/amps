@@ -186,9 +186,9 @@ Ext.define("Amps.form.add", {
           itemId: "accounts_cancel",
           listeners: {
             click: function (btn) {
-              var fields = this.up("form").getInvalidFields();
-              console.log(fields);
-              // this.up("window").close();
+              // var fields = this.up("form").getInvalidFields();
+              // console.log(fields);
+              this.up("window").close();
             },
           },
         },

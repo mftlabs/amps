@@ -621,6 +621,22 @@ Ext.define("Amps.util.Utilities", {
         return "x-fa fa-user-circle actionicon " + style;
       },
     },
+    approveAdmin: {
+      name: "approve_admin",
+      tooltip: "Approve Admin",
+      itemId: "approve",
+      handler: "approveAdmin",
+      getClass: function (v, meta, record) {
+        // console.log(record);
+        var style;
+        if (record.data.approved) {
+          style = "active";
+        } else {
+          style = "inactive";
+        }
+        return "x-fa fa-user-circle actionicon " + style;
+      },
+    },
     active: {
       name: "toggle_active",
       tooltip: "Toggle Active",
@@ -1246,7 +1262,7 @@ Ext.define("Amps.util.Utilities", {
               type: "vbox",
               align: "stretch",
             },
-            padding: 15,
+            padding: 5,
             // width: 600,
           },
         ],
@@ -1629,7 +1645,6 @@ Ext.define("Amps.util.Utilities", {
     if (config.fields) {
       amfutil.searchFields(config.fields, function (field) {
         if (field.name != null) {
-          console.log(field.name);
           headers.push(field.name);
         }
         return field;
@@ -1707,6 +1722,73 @@ Ext.define("Amps.util.Utilities", {
         (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))
       ).toString(16)
     );
+  },
+
+  buttonColumn: function (title, dataIndex, collection) {
+    return {
+      text: title,
+      dataIndex: dataIndex,
+      xtype: "widgetcolumn",
+      flex: 1,
+      value: "true",
+      widget: {
+        xtype: "button",
+      },
+      onWidgetAttach: async function (col, widget, rec) {
+        var scope = this;
+        var store = amfutil.createCollectionStore(collection);
+        var obj;
+        if (store.isLoaded) {
+          console.log(store);
+          obj = store.findRecord("_id", rec.data[dataIndex]);
+          console.log(rec.data[dataIndex]);
+          console.log(store);
+          if (obj != -1 && obj) {
+            console.log(obj);
+            widget.setText(obj.data.name);
+          } else {
+            store.on("load", async function () {
+              obj = store.findRecord("_id", rec.data[dataIndex]);
+              if (obj != -1) {
+                console.log(obj);
+                widget.setText(obj.data.name);
+              } else {
+                group = await amfutil.getById(collection, rec.data[dataIndex]);
+                console.log(obj);
+                widget.setText(obj.name);
+              }
+            });
+          }
+        } else {
+          store.on("load", async function () {
+            obj = store.findRecord("_id", rec.data[dataIndex]);
+            if (obj != -1) {
+              console.log(group);
+              widget.setText(obj.data.name);
+            } else {
+              group = await amfutil.getById(collection, rec.data[dataIndex]);
+              console.log(obj);
+              widget.setText(obj.name);
+            }
+          });
+        }
+
+        widget.setHandler(async function () {
+          scope
+            .up("app-main")
+            .getController()
+            .redirectTo(`${collection}/${rec.data[dataIndex]}`);
+          return false;
+        });
+      },
+
+      type: "combo",
+      searchOpts: {
+        store: amfutil.createCollectionStore("groups"),
+        displayField: "name",
+        valueField: "_id",
+      },
+    };
   },
 
   onboardingColumn() {
@@ -1862,15 +1944,11 @@ Ext.define("Amps.util.Utilities", {
       field = amfutil.search(field, func);
       return field;
     });
-    console.log(fields);
     return fields;
   },
 
   search: function (field, func) {
-    console.log(field);
-
     field = func(field);
-    console.log(field);
     if (field.items && field.items.length) {
       field.items = field.items.map((item) => {
         return amfutil.search(item, func);

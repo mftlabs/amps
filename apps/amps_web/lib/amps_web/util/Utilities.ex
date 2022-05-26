@@ -54,14 +54,7 @@ defmodule AmpsWeb.Util do
           ],
           "kafkaput" => ["provider", "topic"],
           "mailbox" => ["recipient", "mailbox", "format"],
-          "pgpdecrypt" => [
-            "key",
-            "passphrase",
-            "verify",
-            "signing_key",
-            "format",
-            "output"
-          ],
+          "pgpdecrypt" => ["key", "passphrase", "verify", "signing_key", "format", "output"],
           "pgpencrypt" => [
             "key",
             "compress",
@@ -111,13 +104,13 @@ defmodule AmpsWeb.Util do
           "zip" => ["format", "output"]
         }
       },
-      "groups" => %{
-        "headers" => ["name", "phone", "email"],
+      "endpoints" => %{
+        "headers" => ["name", "desc", "method", "path", "action"],
         "subgrids" => nil,
         "types" => nil
       },
       "environments" => %{
-        "headers" => ["name", "desc", "active"],
+        "headers" => ["name", "desc", "active", "archive"],
         "subgrids" => nil,
         "types" => nil
       },
@@ -126,17 +119,53 @@ defmodule AmpsWeb.Util do
         "subgrids" => nil,
         "types" => nil
       },
-      "keys" => %{
-        "headers" => ["name", "usage", "type", "data"],
+      "groups" => %{
+        "headers" => ["name", "phone", "email"],
         "subgrids" => nil,
         "types" => nil
+      },
+      "keys" => %{
+        "headers" => ["name", "user", "usage", "type", "data"],
+        "subgrids" => nil,
+        "types" => nil
+      },
+      "providers" => %{
+        "headers" => ["name", "desc", "type"],
+        "subgrids" => nil,
+        "types" => %{
+          "archive" => [
+            "atype",
+            "provider",
+            "scheme",
+            "host",
+            "port",
+            "region",
+            "key",
+            "secret",
+            "bucket"
+          ],
+          "generic" => ["values"],
+          "kafka" => [
+            "brokers",
+            "auth",
+            "mechanism",
+            "username",
+            "password",
+            "cacert",
+            "cert",
+            "key"
+          ],
+          "s3" => ["provider", "scheme", "host", "port", "region", "key", "secret"],
+          "sharepoint" => ["tenant", "client_id", "client_secret"],
+          "smtp" => ["etype", "relay", "username", "password", "auth", "tls", "ssl", "port"]
+        }
       },
       "rules" => %{
         "headers" => ["name", "desc", "output", "patterns"],
         "subgrids" => nil,
         "types" => nil
       },
-      "jobs" => %{
+      "scheduler" => %{
         "headers" => ["name", "active", "topic", "meta", "type"],
         "subgrids" => nil,
         "types" => %{
@@ -154,6 +183,7 @@ defmodule AmpsWeb.Util do
         "headers" => ["name", "desc", "active", "type"],
         "subgrids" => nil,
         "types" => %{
+          "defaults" => [],
           "gateway" => [
             "port",
             "idle_timeout",
@@ -176,14 +206,19 @@ defmodule AmpsWeb.Util do
             "communication"
           ],
           "kafka" => ["provider", "topics", "format", "communication"],
-          "sftpd" => ["port", "server_key", "communication"],
-          "subscriber" => [
-            "subs_count",
-            "handler",
+          "pyservice" => [
+            "service",
+            "config",
+            "receive",
             "updated",
+            "topic",
             "policy",
-            "start_time"
-          ]
+            "start_time",
+            "send_output",
+            "output"
+          ],
+          "sftpd" => ["port", "server_key", "communication"],
+          "subscriber" => ["subs_count", "handler", "updated", "topic", "policy", "start_time"]
         }
       },
       "templates" => %{
@@ -198,12 +233,12 @@ defmodule AmpsWeb.Util do
       },
       "users" => %{
         "headers" => [
-          "customer",
+          "group",
           "username",
+          "email",
           "firstname",
           "lastname",
           "phone",
-          "email",
           "approved",
           "ufa/stime",
           "ufa/debug",
@@ -233,22 +268,10 @@ defmodule AmpsWeb.Util do
                 "folder",
                 "max"
               ],
-              "upload" => [
-                "fpoll",
-                "fretry",
-                "regex",
-                "fmatch",
-                "fmeta",
-                "subs_count",
-                "ackmode"
-              ]
+              "upload" => ["fpoll", "regex", "fmatch", "fmeta", "subs_count", "ackmode"]
             }
           },
-          "tokens" => %{
-            "headers" => ["name"],
-            "subgrids" => nil,
-            "types" => nil
-          }
+          "tokens" => %{"headers" => ["name"], "subgrids" => nil, "types" => nil}
         },
         "types" => nil
       }

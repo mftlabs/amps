@@ -381,4 +381,14 @@ defmodule AmpsPortal.UserController do
 
     json(conn, duplicate)
   end
+
+  def duplicate_email(conn, %{"email" => email}) do
+    body = conn.body_params()
+
+    duplicate =
+      DB.find_one(Util.conn_index(conn, "users"), %{"email" => email}) !=
+        nil
+
+    json(conn, duplicate)
+  end
 end

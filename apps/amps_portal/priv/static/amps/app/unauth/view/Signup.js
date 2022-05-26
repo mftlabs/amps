@@ -51,6 +51,36 @@ Ext.define("Amps.Unauthorized.Signup", {
       },
       {
         xtype: "textfield",
+        name: "email",
+        itemId: "email",
+        fieldLabel: "Email",
+        allowBlank: false,
+        listeners: {
+          afterrender: function (cmp) {
+            cmp.inputEl.set({
+              autocomplete: "nope",
+            });
+          },
+          change: async function (cmp, value, oldValue, eOpts) {
+            var resp = await amfutil.ajaxRequest({
+              url: "/api/duplicate_email/" + value,
+            });
+
+            var duplicate = Ext.decode(resp.responseText);
+
+            if (duplicate) {
+              cmp.setActiveError("Email Already Exists");
+              cmp.setValidation("Email Already Exists");
+              // cmp.isValid(false);
+            } else {
+              cmp.setActiveError();
+              cmp.setValidation();
+            }
+          },
+        },
+      },
+      {
+        xtype: "textfield",
         name: "firstname",
         itemId: "firstname",
         fieldLabel: "First name",
@@ -148,20 +178,7 @@ Ext.define("Amps.Unauthorized.Signup", {
       //     },
       //   },
       // },
-      {
-        xtype: "textfield",
-        name: "email",
-        itemId: "email",
-        fieldLabel: "Email",
-        allowBlank: false,
-        listeners: {
-          afterrender: function (cmp) {
-            cmp.inputEl.set({
-              autocomplete: "nope",
-            });
-          },
-        },
-      },
+
       {
         xtype: "textfield",
         name: "phone",

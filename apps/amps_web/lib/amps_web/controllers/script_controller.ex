@@ -83,7 +83,13 @@ defmodule AmpsWeb.ScriptController do
 
           case template do
             nil ->
-              "from amps import Action\n\n\nclass #{name}(Action):\n    def action(self):\n        return Action.send_status(\"completed\")"
+              case body["type"] do
+                "action" ->
+                  "from amps import Action\n\n\nclass #{name}(Action):\n    def action(self):\n        return Action.send_status(\"completed\")"
+
+                "endpoint" ->
+                  "from amps import Endpoint\n\n\nclass #{name}(Endpoint):\n    def action(self):\n        return Endpoint.send_resp_data(\"Success\", 200)"
+              end
 
             template ->
               template["data"]

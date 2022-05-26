@@ -9,7 +9,7 @@ Ext.define("Amps.form.CollectionGrid", {
   width: 600,
   constructor: function (args) {
     this.callParent([args]);
-
+    this.setLoading(true);
     var collection = args["collection"];
     var filter = {};
     if (args["filter"]) {
@@ -171,35 +171,37 @@ Ext.define("Amps.form.CollectionGrid", {
         {
           header: "Name",
           dataIndex: "name",
-          flex: true,
+          flex: 1,
         },
         {
           header: "Description",
           dataIndex: "desc",
-          flex: true,
+          flex: 1,
         },
-      ].concat(
-        args["readOnly"]
-          ? []
-          : [
-              {
-                xtype: "actioncolumn",
-                text: "Actions",
-                dataIndex: "actions",
-                width: 175,
-                items: [
-                  {
-                    iconCls: "x-fa fa-trash",
-                    handler: function (scope, rowIndex) {
-                      console.log(scope);
-                      var gridstore = scope.ownerGrid.getStore();
-                      gridstore.removeAt(rowIndex);
+      ]
+        .concat(args["columns"] ? args["columns"] : [])
+        .concat(
+          args["readOnly"]
+            ? []
+            : [
+                {
+                  xtype: "actioncolumn",
+                  text: "Actions",
+                  dataIndex: "actions",
+                  flex: 1,
+                  items: [
+                    {
+                      iconCls: "x-fa fa-trash",
+                      handler: function (scope, rowIndex) {
+                        console.log(scope);
+                        var gridstore = scope.ownerGrid.getStore();
+                        gridstore.removeAt(rowIndex);
+                      },
                     },
-                  },
-                ],
-              },
-            ]
-      ),
+                  ],
+                },
+              ]
+        ),
       viewConfig: args["readOnly"]
         ? {}
         : {
@@ -237,6 +239,7 @@ Ext.define("Amps.form.CollectionGrid", {
     }
 
     this.initField();
+    this.setLoading(false);
   },
 
   getValue: function (scope) {
@@ -5188,6 +5191,99 @@ Ext.define("Amps.util.Grids", {
         return record;
       },
     }),
+    endpoints: () => ({
+      object: "Endpoint",
+      overwrite: true,
+      window: { height: 600, width: 800 },
+      options: ["delete"],
+      title: "API Endpoints",
+      actionIcons: [
+        "addnewbtn",
+        "searchpanelbtn",
+        "clearfilter",
+        "refreshbtn",
+        "export",
+      ],
+      columns: [
+        {
+          text: "Name",
+          dataIndex: "name",
+          flex: 1,
+          type: "combo",
+          searchOpts: {
+            store: amfutil.createCollectionStore("rules"),
+            displayField: "name",
+            valueField: "name",
+          },
+        },
+        { text: "Description", dataIndex: "desc", flex: 1, type: "text" },
+        { text: "Method", dataIndex: "method", flex: 1, type: "text" },
+        { text: "Path", dataIndex: "path", flex: 1, type: "text" },
+        amfutil.buttonColumn("Action", "action", "actions"),
+      ],
+      fields: [
+        amfutil.duplicateVal(
+          {
+            xtype: "textfield",
+            name: "name",
+            fieldLabel: "Name",
+            allowBlank: false,
+            tooltip: "A name for this rule",
+          },
+          function (cmp, value) {
+            return {
+              services: amfutil.duplicateIdCheck({ name: value }, cmp),
+            };
+          },
+          "Rule Already Exists",
+          amfutil.nameValidator
+        ),
+        {
+          xtype: "textfield",
+          name: "desc",
+          fieldLabel: "Description",
+          tooltip: "A description of this rule",
+          allowBlank: false,
+        },
+        amfutil.localCombo(
+          "Method",
+          "method",
+          [
+            { label: "GET", field: "get" },
+            { label: "POST", field: "post" },
+            { label: "PUT", field: "put" },
+            { label: "DELETE", field: "delete" },
+          ],
+          "field",
+          "label",
+          {
+            tooltip: "The HTTP Method for the request.",
+            allowBlank: false,
+            forceSelection: true,
+          }
+        ),
+        amfutil.text("Path", "path", {
+          value: "/",
+          regex: /^\/(?!.*\/$)/,
+          regexText: `Route must begin with leading slash ("/") and not ending with trailing slash.`,
+        }),
+        amfutil.dynamicCreate(
+          amfutil.combo(
+            "Script Action",
+            "action",
+            amfutil.createCollectionStore("actions", {
+              type: "runscript",
+            }),
+            "_id",
+            "name",
+            {
+              tooltip: "The file name of the Python file/module to run.",
+            }
+          ),
+          "actions"
+        ),
+      ],
+    }),
     scheduler: () => {
       var config = {
         overwrite: true,
@@ -5949,12 +6045,21 @@ Ext.define("Amps.util.Grids", {
           "Username Already Exists",
           amfutil.nameValidator
         ),
-        amfutil.text("Email", "email", {
-          tooltip: "The Email of the user.",
-          inputType: "email",
-          vtype: "email",
-          allowBlank: false,
-        }),
+
+        amfutil.duplicateVal(
+          amfutil.text("Email", "email", {
+            tooltip: "The Email of the user.",
+            inputType: "email",
+            vtype: "email",
+            allowBlank: false,
+          }),
+          function (cmp, value, oldValue, eOpts) {
+            return {
+              users: amfutil.duplicateIdCheck({ email: value }, cmp),
+            };
+          },
+          "Email Already Exists"
+        ),
         amfutil.text("First Name", "firstname", {
           tooltip: "The First Name of the user.",
           allowBlank: true,
@@ -8835,46 +8940,21 @@ Ext.define("Amps.util.Grids", {
                 }),
               ]),
               {
-                xtype: "arrayfield",
-                title: "Routes",
+                xtype: "collectionlist",
                 name: "router",
-                // layout: "hbox",
-                arrayfields: [
-                  amfutil.localCombo(
-                    "Method",
-                    "method",
-                    [
-                      { label: "GET", field: "get" },
-                      { label: "POST", field: "post" },
-                      { label: "PUT", field: "put" },
-                      { label: "DELETE", field: "delete" },
-                    ],
-                    "field",
-                    "label",
-                    {
-                      tooltip: "The HTTP Method for the request.",
-                      allowBlank: false,
-                      forceSelection: true,
-                    }
-                  ),
-                  amfutil.text("Path", "path", {
-                    value: "/",
-                    regex: /^\/(?!.*\/$)/,
-                    regexText: `Route must begin with leading slash ("/") and not ending with trailing slash.`,
-                  }),
-                  amfutil.combo(
-                    "Script Action",
-                    "action",
-                    amfutil.createCollectionStore("actions", {
-                      type: "runscript",
-                    }),
-                    "_id",
-                    "name",
-                    {
-                      tooltip:
-                        "The file name of the Python file/module to run.",
-                    }
-                  ),
+                collection: "endpoints",
+                columns: [
+                  {
+                    text: "Method",
+                    dataIndex: "method",
+                    flex: 1,
+                  },
+                  {
+                    text: "Path",
+                    dataIndex: "path",
+                    flex: 1,
+                  },
+                  amfutil.buttonColumn("Action", "action", "actions"),
                 ],
               },
               {
@@ -9706,7 +9786,7 @@ Ext.define("Amps.util.Grids", {
         },
       ],
       //   options: ["approve","resetAdmin","changePassAdmin"],
-      options: ["approve", "resetAdmin"],
+      options: ["approveAdmin", "resetAdmin"],
     }),
     keys: () => ({
       title: "Keys",
@@ -10011,6 +10091,42 @@ Ext.define("Amps.util.Grids", {
                                   return true;
                                 }
                               ),
+                              {
+                                xtype: "radiogroup",
+                                name: "type",
+                                fieldLabel: "Script Type",
+                                items: [
+                                  {
+                                    boxLabel: "Action",
+                                    inputValue: "action",
+                                    name: "type",
+                                  },
+                                  {
+                                    boxLabel: "Endpoint",
+                                    inputValue: "endpoint",
+                                    name: "type",
+                                  },
+                                ],
+                                listeners: {
+                                  change: function (scope, val) {
+                                    var entity =
+                                      amfutil.getElementByID("combocontainer");
+                                    if (val.type == "collection") {
+                                      entity.setActiveItem(0);
+                                    } else {
+                                      entity.setActiveItem(1);
+                                    }
+
+                                    entity.setDisabled(false);
+                                  },
+                                },
+                                displayField: "label",
+                                valueField: "field",
+                                allowBlank: false,
+                                width: 600,
+                                labelWidth: 200,
+                                forceSelection: true,
+                              },
                               amfutil.combo(
                                 "Template",
                                 "template",
@@ -10432,7 +10548,6 @@ Ext.define("Amps.util.Grids", {
                     event: "service",
                     payload: { name: data.name },
                     cond: function () {
-                      console.log("cond");
                       return (
                         Ext.util.History.getToken().split("/")[0] ==
                         "monitoring"

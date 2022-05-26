@@ -489,7 +489,7 @@ defmodule Amps.DB do
       )
     end
 
-    def get_in_field(collection, id, field, idx) do
+    def get_in_field(collection, id, field, fieldid) do
       result =
         Mongo.find_one(
           :mongo,
@@ -497,7 +497,9 @@ defmodule Amps.DB do
           %{"_id" => objectid(id)}
         )
 
-      Enum.at(result[field], String.to_integer(idx))
+      Enum.find(result[field], fn obj ->
+        obj["_id"] == fieldid
+      end)
     end
 
     def update_in_field(collection, body, id, field, idx) do
@@ -1400,17 +1402,18 @@ defmodule Amps.DB do
            }
          }} ->
           Enum.reduce(sort, [], fn %{"direction" => dir, "property" => field}, acc ->
-            dir = cond do
-              is_binary(dir) ->
-                String.downcase(dir)
+            dir =
+              cond do
+                is_binary(dir) ->
+                  String.downcase(dir)
 
-              is_integer(dir) ->
-                case dir do
-                  1 -> "asc"
-                  -1 -> "desc"
-                  _ -> nil
-                end
-            end
+                is_integer(dir) ->
+                  case dir do
+                    1 -> "asc"
+                    -1 -> "desc"
+                    _ -> nil
+                  end
+              end
 
             sortfield =
               case properties[field]["type"] do

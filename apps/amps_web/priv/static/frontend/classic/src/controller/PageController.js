@@ -407,6 +407,47 @@ Ext.define("Amps.controller.PageController", {
     });
   },
 
+  approveAdmin: function (grid, rowIndex, colIndex) {
+    const route = Ext.util.History.currentToken;
+    var mask = new Ext.LoadMask({
+      msg: "Please wait...",
+      target: grid,
+    });
+    var rec = grid.getStore().getAt(rowIndex);
+    var id = rec.data._id;
+    var data = rec.data;
+    data.approved = true;
+    delete data.id;
+    console.log(data);
+    delete data.password;
+    console.log(data);
+    amfutil.ajaxRequest({
+      url: "/api/" + route + "/" + id,
+      headers: {
+        Authorization: localStorage.getItem("access_token"),
+      },
+      method: "PUT",
+      timeout: 60000,
+      params: {},
+      jsonData: data,
+      success: function (response) {
+        mask.hide();
+        amfutil.broadcastEvent("update", {
+          page: Ext.util.History.getToken(),
+        });
+        Ext.toast({
+          title: "Approved",
+          html: "<center>User Approved</center>",
+          autoCloseDelay: 5000,
+        });
+        grid.getStore().reload();
+      },
+      failure: function (response) {
+        amfutil.onFailure("Failed to Approve", response);
+      },
+    });
+  },
+
   approveUser: function (grid, rowIndex, colIndex) {
     const route = Ext.util.History.currentToken;
     var rec = grid.getStore().getAt(rowIndex);
