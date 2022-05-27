@@ -417,7 +417,7 @@ Ext.define("Amps.util.UpdateRecordController", {
 
     el = Ext.apply(el, { region: "center" });
     amfutil.getElementByID("edit_container").add(el);
-    amfutil.getElementByID("detailsbackbtn").setText(config.object + "s");
+    amfutil.getElementByID("detailsbackbtn").setText(config.title);
   },
 
   createForm: function (record, config, scope, close, subgrid) {

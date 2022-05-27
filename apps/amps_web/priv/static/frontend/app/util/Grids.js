@@ -8892,6 +8892,7 @@ Ext.define("Amps.util.Grids", {
                   "The time in milliseconds the server will wait to receive data before closing the connection",
                 fieldLabel: "Idle Timeout (ms)",
                 minValue: 0,
+                value: 10000,
               },
               {
                 xtype: "numberfield",
@@ -8901,6 +8902,7 @@ Ext.define("Amps.util.Grids", {
                   "The time in milliseconds the server will wait for additional requests before closing the connection",
                 fieldLabel: "Request Timeout (ms)",
                 minValue: 0,
+                value: 10000,
               },
               {
                 xtype: "numberfield",
@@ -8909,6 +8911,7 @@ Ext.define("Amps.util.Grids", {
                 tooltip: "Maximum number of requests allowed per connection",
                 fieldLabel: "Max Keep Alive",
                 minValue: 0,
+                value: 100,
               },
               {
                 xtype: "checkbox",
@@ -9077,6 +9080,7 @@ Ext.define("Amps.util.Grids", {
                   "The time in milliseconds the server will wait to receive data before closing the connection",
                 fieldLabel: "Idle Timeout (ms)",
                 minValue: 0,
+                value: 10000,
               },
               {
                 xtype: "numberfield",
@@ -9086,6 +9090,7 @@ Ext.define("Amps.util.Grids", {
                   "The time in milliseconds the server will wait for additional requests before closing the connection",
                 fieldLabel: "Request Timeout (ms)",
                 minValue: 0,
+                value: 10000,
               },
               {
                 xtype: "numberfield",
@@ -9094,6 +9099,7 @@ Ext.define("Amps.util.Grids", {
                 tooltip: "Maximum number of requests allowed per connection",
                 fieldLabel: "Max Keep Alive",
                 minValue: 0,
+                value: 100,
               },
               {
                 xtype: "checkbox",
