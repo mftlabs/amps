@@ -44,20 +44,20 @@ defmodule :"Amps.Gateway<%= if env do%>.<%= env %><% end %>.<%= name %>" do
     |> Enum.into(msg)
   end
 
-  defp get_body_metadata(conn, msgid, stime, temp) do
+  defp get_body_metadata(conn, msg, stime, temp) do
+    msgid = msg["msgid"]
     size =
       Enum.find(conn.req_headers, -1, fn x ->
         String.starts_with?(elem(x, 0), "content-length")
       end)
 
-    nmsg = %{
-      "msgid" => msgid,
+    nmsg = Map.merge(msg, %{
       "fpath" => temp,
       "temp" => "true",
       "stime" => stime,
       "fsize" => elem(size, 1),
       "ftime" => AmpsUtil.gettime()
-    }
+    })
 
     if nmsg["fname"] == "" || nmsg["fname"] == nil do
       fname =
@@ -145,11 +145,7 @@ defmodule :"Amps.Gateway<%= if env do%>.<%= env %><% end %>.<%= name %>" do
     if conn.method == "POST" || conn.method == "PUT" do
       temp_file = AmpsUtil.tempdir() <> "/" <> msgid
 
-      msg =
-        Map.merge(
-          msg,
-          get_body_metadata(conn, msgid, stime, temp_file)
-        )
+      msg = get_body_metadata(conn, msg, stime, temp_file)
 
       AmpsEvents.send(
         msg,
@@ -247,7 +243,7 @@ defmodule :"Amps.Gateway<%= if env do%>.<%= env %><% end %>.<%= name %>" do
                 send_resp(conn, 200, Poison.encode!(%{"status" => "completed"}))
               end
 
-            {:sent, topic} ->
+            {:sent, topics} ->
               AmpsEvents.send_history(
                 AmpsUtil.env_topic("amps.events.action", conn.private.env),
                 "message_events",
@@ -258,7 +254,11 @@ defmodule :"Amps.Gateway<%= if env do%>.<%= env %><% end %>.<%= name %>" do
                 }
               )
 
-              send_resp(conn, 202, "Sent to topic #{topic}")
+              topics = Enum.reduce(topics, "", fn topic, acc ->
+                acc <> "\t" <> topic <> "\n"
+              end)
+
+              send_resp(conn, 202, "Action performed successfully\nMessage sent to topic(s):\n" <> topics)
           end
         rescue
           e ->

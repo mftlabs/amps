@@ -1144,6 +1144,31 @@ Ext.define("Amps.util.Utilities", {
     );
   },
 
+  tagfield: function (label, name, store, val = null, disp = null, opts = {}) {
+    return Object.assign(
+      {
+        xtype: "tagfield",
+        minChars: 1,
+        triggerAction: "all",
+        typeAhead: true,
+        queryMode: "local",
+        blankText: "Select One",
+
+        name: name,
+        fieldLabel: label,
+        displayField: disp,
+        valueField: val,
+        store: {
+          type: "chained",
+          source: store,
+        },
+        allowBlank: false,
+        forceSelection: true,
+      },
+      opts
+    );
+  },
+
   combo: function (label, name, store, val = null, disp = null, opts = {}) {
     return Object.assign(
       {
@@ -2172,7 +2197,7 @@ Ext.define("Amps.util.Utilities", {
 
   outputTopic: function () {
     return amfutil.dynamicCreate(
-      amfutil.combo(
+      amfutil.tagfield(
         "Output Topic",
         "output",
         amfutil.createCollectionStore("topics", {}, { autoLoad: true }),

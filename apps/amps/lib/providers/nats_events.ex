@@ -8,8 +8,18 @@ defmodule AmpsEvents do
     # Logger.debug(parms)
     # Logger.debug(state)
 
-    topic = parms["output"]
+    output = parms["output"]
 
+    if is_list(output) do
+      Enum.each(output, fn topic ->
+        do_send(msg, parms, state, topic)
+      end)
+    else
+      do_send(msg, parms, state, output)
+    end
+  end
+
+  def do_send(msg, parms, state, topic) do
     msg = Map.merge(msg, %{"etime" => AmpsUtil.gettime(), "topic" => topic})
 
     if not AmpsUtil.blank?(topic) do
