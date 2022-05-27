@@ -477,8 +477,6 @@ defmodule Amps.DB do
           }
         )
 
-      IO.inspect(result)
-
       Mongo.find_one(
         :mongo,
         collection,
