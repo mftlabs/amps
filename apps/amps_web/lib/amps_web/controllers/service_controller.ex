@@ -1,8 +1,8 @@
 defmodule AmpsWeb.ServiceController do
   use AmpsWeb, :controller
   require Logger
-  import Argon2
-  alias Amps.DB
+  #import Argon2
+  #alias Amps.DB
   alias Amps.SvcManager
 
   plug(
@@ -48,7 +48,6 @@ defmodule AmpsWeb.ServiceController do
         "name" => name
       }
     })
-
     json(conn, :ok)
   end
 end

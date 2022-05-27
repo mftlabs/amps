@@ -1,7 +1,7 @@
 defmodule Amps.Startup do
   use Task
   require Vault
-  import Argon2
+  #import Argon2
   require Logger
 
   def start_link(_arg) do
@@ -66,12 +66,12 @@ defmodule Amps.Startup do
   def create_stream(gnat, name, subjects, retries) do
     if retries < 5 do
       case Jetstream.API.Stream.info(gnat, name) do
-        {:ok, res} ->
+        {:ok, _res} ->
           Logger.info(name <> " Stream Exists")
 
         # IO.inspect(res)
 
-        {:error, error} ->
+        {:error, _error} ->
           # IO.inspect(error)
           Logger.info("Creating Stream " <> name)
           subjects = subjects <> ".>"
@@ -81,7 +81,7 @@ defmodule Amps.Startup do
                  storage: :file,
                  subjects: [subjects]
                }) do
-            {:ok, res} ->
+            {:ok, _res} ->
               Logger.info("Created Stream " <> name)
 
             # IO.inspect(res)

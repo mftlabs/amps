@@ -71,7 +71,7 @@ defmodule AmpsUtil do
     try do
       val =
         if msg["fpath"] do
-          {:ok, file} = File.read(msg["fpath"])
+          {:ok, _file} = File.read(msg["fpath"])
           {:ok, is} = :file.open(msg["fpath"], [:binary])
           {:ok, val} = :file.pread(is, 0, 200)
           val
@@ -176,7 +176,7 @@ defmodule AmpsUtil do
 
     pieces = String.split(header, elem) |> Enum.take(8)
 
-    {idx, meta} =
+    {_idx, meta} =
       Enum.reduce(pieces, {0, %{}}, fn piece, {index, acc} ->
         sec = Enum.at(sections, index)
 
