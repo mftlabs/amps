@@ -586,7 +586,11 @@ Ext.define("Amps.controller.PageController", {
 
   getSecret: async function (grid, rowIndex, colIndex) {
     var rec = grid.getStore().getAt(rowIndex).data;
-    var user = await amfutil.getCurrentItem();
+    var route = Ext.util.History.getToken();
+    route = route.split("/");
+    route.pop();
+    route = route.join("/");
+    var user = await amfutil.getCurrentItem(route);
     var secret = await amfutil.getCollectionData("tokens", {
       username: user["username"],
     });

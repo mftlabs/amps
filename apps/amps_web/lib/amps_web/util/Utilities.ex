@@ -303,6 +303,7 @@ defmodule AmpsWeb.Util do
       "users/rules",
       "users/mailboxes",
       "actions",
+      "endpoints",
       "services",
       "jobs",
       "templates"
