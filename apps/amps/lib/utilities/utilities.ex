@@ -1,8 +1,16 @@
 defmodule AmpsUtil do
-  #alias Amps.DB
+  alias Amps.DB
+  alias Amps.VaultDatabase
+  require Logger
 
   def gettime() do
     DateTime.to_iso8601(DateTime.utc_now())
+  end
+
+  def get_offset(milli) do
+    (DateTime.to_unix(DateTime.utc_now(), :nanosecond) + milli * 1_000_000)
+    |> DateTime.from_unix!(:nanosecond)
+    |> DateTime.to_iso8601()
   end
 
   #  def keys_to_atom(inmap) do
@@ -56,7 +64,7 @@ defmodule AmpsUtil do
   end
 
   def get_id() do
-    :uuid.uuid_to_string(:uuid.get_v4(), :binary_standard)
+    :uuid.uuid_to_string(:uuid.get_v4(), :binary_nodash)
   end
 
   def parse_edi(msg) do
@@ -101,8 +109,25 @@ defmodule AmpsUtil do
       hdr = String.slice(leader, 0..105)
       sep = String.slice(leader, 3..3)
 
-      [_isa, _, _, _, _, squal, sender, rqual, receiver, date, time, _, _ver, icn, _, _test, _] =
-        String.split(hdr, sep)
+      [
+        _isa,
+        _,
+        _,
+        _,
+        _,
+        squal,
+        sender,
+        rqual,
+        receiver,
+        date,
+        time,
+        _,
+        _ver,
+        icn,
+        _,
+        _test,
+        _
+      ] = String.split(hdr, sep)
 
       tval = date <> ":" <> time
       sender = String.trim(squal <> ":" <> sender)
@@ -190,13 +215,13 @@ defmodule AmpsUtil do
         msg["fpath"]
 
       _ ->
-        root = Application.get_env(:amps, :storage_root)
+        root = Amps.Defaults.get("storage_root")
         root <> "/" <> msg["fpath"]
     end
   end
 
   def tempdir(session \\ nil) do
-    temp = Application.get_env(:amps, :storage_temp)
+    temp = Amps.Defaults.get("storage_temp")
 
     case session do
       nil ->
@@ -250,7 +275,9 @@ defmodule AmpsUtil do
   def rmdir(dirname) do
     case :file.list_dir(dirname) do
       {:ok, names} ->
-        Enum.each(names, fn x -> :file.delete(dirname <> "/" <> to_string(x)) end)
+        Enum.each(names, fn x ->
+          :file.delete(dirname <> "/" <> to_string(x))
+        end)
 
       other ->
         {other}
@@ -262,7 +289,7 @@ defmodule AmpsUtil do
   def format(format, msg) do
     {:ok, c} = Regex.compile("\{(.*?)\}")
     rlist = Regex.scan(c, format)
-    IO.puts("format #{format} #{inspect(rlist)}")
+    # IO.puts("format #{format} #{inspect(rlist)}")
     check(rlist, msg, format)
   end
 
@@ -273,7 +300,7 @@ defmodule AmpsUtil do
   defp check([head | tail], msg, fname) do
     dt = DateTime.utc_now()
     [pat, name] = head
-    IO.puts("format #{pat} #{name}")
+    # IO.puts("format #{pat} #{name}")
 
     case name do
       "YYYY" ->
@@ -330,10 +357,9 @@ defmodule AmpsUtil do
     String.replace(fname, pat, strval)
   end
 
-  def get_stream(msg) do
+  def get_stream(msg, env) do
     if Map.has_key?(msg, "data") do
-      {:ok, stream} = msg["data"] |> StringIO.open()
-      is = stream |> IO.binstream(:line)
+      is = stream(msg, env)
 
       {:ok, ostream} = StringIO.open("")
       os = ostream |> IO.binstream(:line)
@@ -343,17 +369,77 @@ defmodule AmpsUtil do
       msgid = AmpsUtil.get_id()
       tfile = AmpsUtil.tempdir() <> "/" <> msgid <> ".out"
 
-      {File.stream!(msg["fpath"]), File.stream!(tfile), {nil, tfile}}
+      {stream(msg, env), File.stream!(tfile), {nil, tfile}}
     end
   end
 
-  def get_istream(msg) do
+  def stream(msg, env, chunk_size \\ nil) do
     if Map.has_key?(msg, "data") do
       {:ok, stream} = msg["data"] |> StringIO.open()
       stream |> IO.binstream(:line)
     else
-      File.stream!(msg["fpath"])
+      if File.exists?(msg["fpath"]) do
+        if chunk_size do
+          File.stream!(msg["fpath"], [read_ahead: chunk_size], chunk_size)
+        else
+          File.stream!(msg["fpath"])
+        end
+      else
+        Logger.debug("Attempting to Stream Message #{msg["msgid"]} from Archive")
+        Amps.ArchiveConsumer.stream(msg, env, chunk_size)
+      end
     end
+  end
+
+  def local_file(msg, env) do
+    try do
+      if File.exists?(msg["fpath"]) do
+        msg["fpath"]
+      else
+        Logger.debug("Attempting to Retrive Data for Message #{msg["msgid"]} from Archive")
+        File.mkdir_p(Path.dirname(msg["fpath"]))
+
+        Amps.ArchiveConsumer.stream(msg, env)
+        |> Stream.into(File.stream!(msg["fpath"]))
+        |> Stream.run()
+      end
+
+      msg["fpath"]
+    rescue
+      e ->
+        Logger.error(Exception.format(:error, e, __STACKTRACE__))
+        false
+    end
+  end
+
+  def get_data(msg, env) do
+    if Map.has_key?(msg, "data") do
+      msg["data"]
+    else
+      if File.exists?(msg["fpath"]) do
+        File.read!(msg["fpath"])
+      else
+        Logger.debug("Attempting to Get Data for Message #{msg["msgid"]} from Archive")
+        Amps.ArchiveConsumer.get(msg, env)
+      end
+    end
+  end
+
+  def get_size(msg, env) do
+    if Map.has_key?(msg, "data") do
+      byte_size(msg["data"])
+    else
+      if File.exists?(msg["fpath"]) do
+        File.state!(msg["fpath"]).size
+      else
+        Amps.ArchiveConsumer.size(msg, env)
+      end
+    end
+  end
+
+  def get_local_file(msg, env) do
+    msg = Jason.decode!(msg)
+    local_file(msg, List.to_string(env))
   end
 
   def get_output_msg(msg, {ostream, tfile}, parms \\ %{}) do
@@ -366,7 +452,12 @@ defmodule AmpsUtil do
         StringIO.close(ostream)
         Map.merge(msg, %{"msgid" => msgid, "data" => out, "parent" => parent})
       else
-        Map.merge(msg, %{"msgid" => msgid, "fpath" => tfile, "temp" => true, "parent" => parent})
+        Map.merge(msg, %{
+          "msgid" => msgid,
+          "fpath" => tfile,
+          "temp" => true,
+          "parent" => parent
+        })
       end
 
     if not blank?(parms["format"]) do
@@ -380,12 +471,30 @@ defmodule AmpsUtil do
   def blank?(str_or_nil),
     do: "" == str_or_nil |> to_string() |> String.trim()
 
-  def get_names(parms) do
+  def get_names(parms, env \\ "", n \\ nil) do
     topic = parms["topic"]
+
     consumer = parms["name"] |> String.replace(" ", "_") |> String.downcase()
 
+    consumer =
+      if parms["local"] do
+        Atom.to_string(n || node()) <> "_" <> consumer
+      else
+        consumer
+      end
+      |> String.replace(~r/[.*>]/, "_")
+
     [base, part, _other] = String.split(topic, ".", parts: 3)
+
     stream = AmpsUtil.get_env_parm(:streams, String.to_atom(base <> "." <> part))
+
+    stream =
+      if env == "" do
+        stream
+      else
+        String.upcase(env) <> "-" <> stream
+      end
+
     {stream, consumer}
   end
 
@@ -394,12 +503,12 @@ defmodule AmpsUtil do
 
     case Jetstream.API.Consumer.info(gnat, stream, name) do
       {:ok, res} ->
-        IO.puts("Consumer Already Exists")
-        IO.inspect(res)
+        Logger.info("Consumer #{name} Already Exists")
+        Logger.debug(res)
 
       {:error, error} ->
-        IO.inspect(error)
-        IO.puts("Creating Consumer")
+        Logger.info(error)
+        Logger.info("Creating Consumer #{name}")
 
         cons =
           Map.merge(
@@ -411,17 +520,18 @@ defmodule AmpsUtil do
             opts
           )
 
-        IO.inspect(cons)
+        Logger.debug(cons)
 
         case Jetstream.API.Consumer.create(
                gnat,
                cons
              ) do
           {:ok, res} ->
-            IO.inspect(res)
+            Logger.debug(res)
+            Logger.info("Created Consumer #{name}")
 
           {:error, error} ->
-            IO.inspect(error)
+            Logger.error(error)
         end
     end
   end
@@ -439,60 +549,70 @@ defmodule AmpsUtil do
   end
 
   def get_key(id) do
-    with {:ok, key} <- VaultDatabase.read("keys", id) do
+    with key <- DB.find_by_id("keys", id) do
       key["data"]
     end
   end
 
-  def get_kafka_auth(args, provider) do
+  def get_key(id, env) do
+    IO.inspect("ID")
+    IO.inspect(id)
+    res = DB.find_by_id(AmpsUtil.index(env, "keys"), id)["data"]
+    IO.puts("Key")
+    IO.inspect(res)
+    res
+  end
+
+  def get_kafka_auth(args, provider, env \\ "") do
     {cacertfile, certfile, keyfile} =
       if String.contains?(provider["auth"], "SSL") do
-        cacertfile = Path.join(AmpsUtil.tempdir(args["name"]), "cacert")
-        File.write(cacertfile, AmpsUtil.get_key(provider["cacert"]))
-        certfile = Path.join(AmpsUtil.tempdir(args["name"]), "cert")
-        File.write(certfile, AmpsUtil.get_key(provider["cert"]))
-        keyfile = Path.join(AmpsUtil.tempdir(args["name"]), "key")
-        File.write(keyfile, AmpsUtil.get_key(provider["key"]))
+        cacertfile = Path.join(AmpsUtil.tempdir(env <> "-" <> args["name"]), "cacert")
+        File.write(cacertfile, AmpsUtil.get_key(provider["cacert"], env))
+        certfile = Path.join(AmpsUtil.tempdir(env <> "-" <> args["name"]), "cert")
+        File.write(certfile, AmpsUtil.get_key(provider["cert"], env))
+        keyfile = Path.join(AmpsUtil.tempdir(env <> "-" <> args["name"]), "key")
+        File.write(keyfile, AmpsUtil.get_key(provider["key"], env))
         {cacertfile, certfile, keyfile}
       else
         {nil, nil, nil}
       end
 
-    _config =
-      case provider["auth"] do
-        "SASL_PLAINTEXT" ->
-          [
-            # ssl: true,
-            sasl:
-              {String.to_atom(provider["mechanism"]), provider["username"], provider["password"]}
-          ]
+    case provider["auth"] do
+      "SASL_PLAINTEXT" ->
+        [
+          auth:
+            {:sasl, String.to_existing_atom(provider["mechanism"]),
+             username: provider["username"], password: provider["password"]}
+        ]
 
-        "SASL_SSL" ->
+      "SASL_SSL" ->
+        [
+          use_ssl: true,
+          ssl_options: [
+            cacertfile: cacertfile,
+            certfile: certfile,
+            keyfile: keyfile
+          ],
+          auth:
+            {:sasl, String.to_existing_atom(provider["mechanism"]),
+             username: provider["username"], password: provider["password"]}
+        ]
+
+      "SSL" ->
+        [
           [
-            ssl: [
+            use_ssl: true,
+            ssl_options: [
               cacertfile: cacertfile,
               certfile: certfile,
               keyfile: keyfile
-              # verify: :verify_peer
-            ],
-            sasl:
-              {String.to_existing_atom(provider["mechanism"]), provider["username"],
-               provider["password"]}
-          ]
-
-        "SSL" ->
-          [
-            ssl: [
-              cacertfile: cacertfile,
-              certfile: certfile,
-              keyfile: keyfile
-              # verify: :verify_peer
             ]
           ]
+        ]
 
-        "NONE" ->
-          []
-      end
+      "NONE" ->
+        []
+    end
   end
 
   def match(file, parms) do
@@ -524,6 +644,221 @@ defmodule AmpsUtil do
       _ ->
         IO.puts("bad regex, failing")
         false
+    end
+  end
+
+  def produce(msg) do
+    KafkaEx.create_worker(:pr,
+      uris: [{"localhost", 9092}],
+      auth: {:sasl, :plain, username: "user", password: "bitnami"}
+    )
+
+    KafkaEx.produce(
+      %KafkaEx.Protocol.Produce.Request{
+        topic: "amps.events",
+        partition: 0,
+        required_acks: 1,
+        messages: [%KafkaEx.Protocol.Produce.Message{value: msg}]
+      },
+      worker_name: :pr
+    )
+  end
+
+  def env_topic(topic, env) do
+    if env == "" do
+      topic
+    else
+      String.split(topic, ".")
+      |> List.insert_at(1, env)
+      |> Enum.join(".")
+    end
+  end
+
+  # def topic_check(topic) do
+  #   if Amps.Defaults.get("sandbox") do
+  #     sandbox_topic(topic)
+  #   else
+  #     topic
+  #   end
+  # end
+
+  def index(env, index) do
+    if env == "" do
+      index
+    else
+      if Enum.member?(
+           ["config", "demos", "admin", "environments", "system_logs", "ui_audit", "providers"],
+           index
+         ) do
+        index
+      else
+        env <> "-" <> index
+      end
+    end
+  end
+
+  def clear_env(env) do
+    delete_env(env)
+    Amps.EnvManager.load_env(env)
+  end
+
+  def delete_env(env) do
+    {:ok, %{streams: streams}} = Jetstream.API.Stream.list(:gnat)
+
+    Enum.each(streams, fn stream ->
+      if String.starts_with?(stream, String.upcase(env)) do
+        Jetstream.API.Stream.delete(:gnat, stream)
+      end
+    end)
+
+    Amps.DB.delete_index("#{env}-*")
+    Amps.VaultDatabase.delete_env(env)
+
+    File.rm_rf(Path.join(Amps.Defaults.get("python_path"), env))
+
+    Amps.EnvSupervisor.stop_child(env)
+
+    Logger.info("Deleted environment #{env}")
+  end
+
+  def hinterval(default \\ 5_000) do
+    Amps.Defaults.get("hinterval", default)
+  end
+
+  def convert_output(parms, env) do
+    if parms["output"] do
+      Map.put(parms, "output", AmpsUtil.env_topic(parms["output"], env))
+    else
+      parms
+    end
+  end
+
+  def test do
+    parms = %{
+      "name" => "DonationForm",
+      "service" => "webapp",
+      "config" => %{
+        "port" => 8484
+      },
+      "receive" => true,
+      "topic" => "amps.actions.runscript.test",
+      "policy" => "all",
+      "send_output" => true,
+      "output" => "amps.mailbox.gw01.Outbox"
+    }
+
+    AmpsWeb.Util.create_config_consumer(parms, "gwdemo")
+
+    {:ok, pid} = Amps.PyProcess.start_link(parms: parms, env: "gwdemo", name: :gwdemo)
+  end
+
+  def deliver(email) do
+    import Swoosh.Email
+
+    if Amps.Defaults.get("email") do
+      provider = DB.find_by_id("providers", Amps.Defaults.get("eprovider"))
+      type = provider["etype"]
+
+      config =
+        provider
+        |> Map.drop([
+          "name",
+          "desc",
+          "_id",
+          "type",
+          "etype",
+          "modified",
+          "modifiedby",
+          "created",
+          "createdby"
+        ])
+        |> Enum.map(fn {k, v} ->
+          {String.to_atom(k),
+           if Enum.member?(["auth", "tls"], k) do
+             String.to_atom(v)
+           else
+             v
+           end}
+        end)
+        |> Enum.into([])
+
+      config =
+        if config[:port] do
+          config
+        else
+          Keyword.delete(config, :port)
+        end
+
+      :"Elixir.Swoosh.Adapters.#{type}".deliver(email, config)
+    else
+      Logger.warn("Amps Mailer not configured")
+    end
+  end
+
+  def get_mod_path(env \\ "", paths \\ [""]) do
+    case env do
+      "" ->
+        Path.join([Amps.Defaults.get("python_path")] ++ paths)
+
+      env ->
+        Path.join([Amps.Defaults.get("python_path"), "env", env] ++ paths)
+    end
+  end
+
+  def scan(data, fun) do
+    Enum.reduce(data, %{}, fn {k, v}, acc ->
+      Map.put(acc, k, do_fun(v, fun))
+    end)
+  end
+
+  defp do_fun(v, fun) do
+    case v do
+      v when is_struct(v, BSON.ObjectId) ->
+        BSON.ObjectId.encode!(v)
+
+      v when is_map(v) ->
+        filter(v)
+
+      v when is_list(v) ->
+        Enum.map(v, fn val ->
+          do_fun(val, fun)
+        end)
+
+      _ ->
+        fun.(v)
+    end
+  end
+
+  def filter(data) do
+    Enum.reduce(data, %{}, fn {k, v}, acc ->
+      if is_filtered?(k) do
+        Map.put(acc, k, "[FILTERED]")
+      else
+        Map.put(acc, k, parse(v))
+      end
+    end)
+  end
+
+  defp is_filtered?(k) do
+    filters = ["password"]
+    Enum.member?(filters, k)
+  end
+
+  defp parse(v) do
+    case v do
+      v when is_struct(v, BSON.ObjectId) ->
+        BSON.ObjectId.encode!(v)
+
+      v when is_map(v) ->
+        filter(v)
+
+      v when is_list(v) ->
+        Enum.map(v, fn val ->
+          parse(val)
+        end)
+
+      _ ->
+        v
     end
   end
 end

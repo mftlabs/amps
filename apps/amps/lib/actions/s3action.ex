@@ -17,10 +17,11 @@ defmodule S3Action do
 
   """
 
-  def run(msg, parms, _state) do
+  def run(msg, parms, {state, env}) do
     Logger.info("S3 Action Called")
+    provider = DB.find_one(AmpsUtil.index(env, "providers"), %{"_id" => parms["provider"]})
 
-    req = req(parms)
+    req = req(provider, env)
 
     try do
       case parms["operation"] do
@@ -47,8 +48,8 @@ defmodule S3Action do
             {:error, {:http_error, 404, _}} ->
               raise "Bucket does not exist"
 
-            _ ->
-              raise "Error fetching get"
+            {:error, error} ->
+              raise "Error #{inspect(error)} "
           end
 
         "put" ->
@@ -64,12 +65,11 @@ defmodule S3Action do
               ExAws.S3.put_object(
                 parms["bucket"],
                 Path.join(parms["prefix"], msg["fname"]),
-                msg["data"]
+                AmpsUtil.get_data(msg, env)
               )
               |> ExAws.request(req)
             else
-              msg["fpath"]
-              |> S3.Upload.stream_file()
+              AmpsUtil.stream(msg, env)
               |> S3.upload(parms["bucket"], Path.join(parms["prefix"], msg["fname"]))
               |> ExAws.request(req)
             end
@@ -79,7 +79,7 @@ defmodule S3Action do
               Logger.info("Uploaded")
 
             {:error, error} ->
-              raise error
+              raise "#{inspect(error)}"
           end
 
         "delete" ->
@@ -112,9 +112,7 @@ defmodule S3Action do
     :ok
   end
 
-  def req(parms) do
-    provider = DB.find_one("providers", %{"_id" => parms["provider"]})
-
+  def req(provider, env) do
     req = [
       access_key_id: provider["key"],
       secret_access_key: provider["secret"]

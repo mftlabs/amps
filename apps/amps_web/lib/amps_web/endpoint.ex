@@ -27,7 +27,7 @@ defmodule AmpsWeb.Endpoint do
     at: "/",
     from: :amps_web,
     gzip: false,
-    only: ~w(assets fonts images favicon.ico robots.txt)
+    only: ~w(assets vs fonts images favicon.ico robots.txt)
   )
 
   socket("/socket", AmpsWeb.UserSocket,
@@ -36,6 +36,14 @@ defmodule AmpsWeb.Endpoint do
     ],
     longpoll: false,
     log: false
+  )
+
+  socket("/pyserver", AmpsWeb.PySocket,
+    longpoll: true,
+    websocket: [
+      connect_info: [pow_config: [otp_app: :amps_web]]
+    ],
+    log: true
   )
 
   # Code reloading can be explicitly enabled under the
@@ -57,7 +65,7 @@ defmodule AmpsWeb.Endpoint do
   plug(Plug.Parsers,
     parsers: [:urlencoded, :multipart, :json],
     pass: ["*/*"],
-    # length: 1_073_741_824,
+    length: 5_368_709_120,
     json_decoder: Phoenix.json_library()
   )
 

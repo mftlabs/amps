@@ -3,12 +3,12 @@ Ext.define("Amps.Unauthorized.Reset", {
   xtype: "reset",
   itemId: "signupform",
   controller: "auth",
-  padding: 10,
+  bodyPadding: 10,
   title: "AMPortal Set Password",
   closable: false,
   autoShow: true,
   defaults: {
-    labelWidth: 120,
+    fieldLabelWidth: 120,
   },
   layout: "vbox",
   constructor: function (args) {
@@ -17,10 +17,13 @@ Ext.define("Amps.Unauthorized.Reset", {
     if (args["username"]) {
       this.insert(0, {
         xtype: "displayfield",
+        labelWidth: 200,
+
         name: "username",
         itemId: "username",
-        label: "Username",
+        fieldLabel: "Username",
         value: args["username"],
+        submitValue: true,
       });
     }
   },
@@ -29,11 +32,16 @@ Ext.define("Amps.Unauthorized.Reset", {
     {
       xtype: "textfield",
       name: "password",
-      itemId: "pass",
+      itemId: "passwd",
       inputType: "password",
-      label: "Password",
+      fieldLabel: "Password",
+      regex: new RegExp(
+        "^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$"
+      ),
+      regexText:
+        "Password must be atleast 8 characters and include atleast an uppercase letter, a lowercase letter, a number, and one of the following symbols: #?!@$%^&*-",
+      labelWidth: 200,
       maskRe: /[^\^ ]/,
-      allowBlank: false,
       enableKeyEvents: true,
       listeners: {
         afterrender: function (cmp) {
@@ -52,27 +60,35 @@ Ext.define("Amps.Unauthorized.Reset", {
             capslock_id.setHidden(true);
           }
         },
+        change: function (me, e) {
+          confPassword = Ext.ComponentQuery.query("#confpasswd")[0].getValue();
+          password = me.value;
+          if (confPassword.length != 0) {
+            if (password != confPassword) {
+              Ext.ComponentQuery.query("#signup_id")[0].setDisabled(true);
+              var m = Ext.getCmp("confpasswd_id");
+              m.setActiveError("Passwords doesn't match");
+            } else {
+              Ext.ComponentQuery.query("#signup_id")[0].setDisabled(false);
+              var m = Ext.getCmp("confpasswd_id");
+              m.unsetActiveError();
+            }
+          }
+        },
       },
     },
     {
       xtype: "textfield",
-      name: "confirm",
-      itemId: "confirm",
+      name: "confirmpswd",
+      itemId: "confpasswd",
+      labelWidth: 200,
+
       inputType: "password",
       maskRe: /[^\^ ]/,
-      label: "Confirm Password",
+      fieldLabel: "Confirm Password",
       allowBlank: false,
       enableKeyEvents: true,
-      validators: {
-        fn: function (confirm) {
-          var pass = this.up("formpanel").down("#pass");
-          var val = pass.getValue();
-          if (val && val.length > 0) {
-            return confirm === val || "Passwords don't match";
-          }
-        },
-      },
-      labelStyle: "white-space: nowrap;",
+      vtype: "passwordMatch",
       listeners: {
         keypress: function (me, e) {
           var charCode = e.getCharCode();
@@ -100,7 +116,8 @@ Ext.define("Amps.Unauthorized.Reset", {
       cls: "button_class",
       itemId: "signup_id",
       handler: function (btn) {
-        var form = btn.up("formpanel");
+        var form = btn.up("form");
+        form.setLoading(true);
         var token = form.token;
         var values = form.getValues();
         delete values.confirm;
@@ -112,13 +129,22 @@ Ext.define("Amps.Unauthorized.Reset", {
             token: token,
             user: values,
           },
-          success: function () {
+          success: function (resp) {
             var a = form.up("container");
-            console.log(a);
-            a.removeAll();
-            a.insert(0, {
-              xtype: "login",
-            });
+            var data = Ext.decode(resp.responseText);
+            console.log(data);
+            if (data.success) {
+              Ext.toast(data["message"]);
+              console.log(a);
+              a.removeAll();
+              a.insert(0, {
+                xtype: "login",
+              });
+              form.setLoading(false);
+            } else {
+              Ext.toast(data["message"]);
+              form.setLoading(false);
+            }
           },
         });
       },

@@ -2,10 +2,10 @@ defmodule BatchAction do
   require Logger
   alias Amps.DB
 
-  def run(msg, parms, state) do
+  def run(msg, parms, {state, env}) do
     Logger.info("input #{inspect(msg)}")
 
-    case batch(msg, parms, state) do
+    case batch(msg, parms, env) do
       {:ok, newmsg} ->
         Logger.info("output #{inspect(newmsg)}")
         AmpsEvents.send(newmsg, parms, state)
@@ -15,14 +15,13 @@ defmodule BatchAction do
     end
   end
 
-  def batch(msg, parms, _state) do
+  def batch(msg, parms, env) do
     messages =
       case parms["inputtype"] do
         "topic" ->
           listening_topic = "_CON.#{nuid()}"
 
-          {stream, consumer} =
-            AmpsUtil.get_names(%{"name" => parms["name"], "topic" => parms["input"]})
+          {stream, consumer} = AmpsUtil.get_names(%{"name" => parms["name"], "topic" => parms["input"]}, env)
 
           AmpsWeb.DataController.create_batch_consumer(parms)
 
@@ -49,7 +48,7 @@ defmodule BatchAction do
           end
 
         "mailbox" ->
-          DB.find("mailbox", %{
+          DB.find(AmpsUtil.index(env, "mailbox"), %{
             "recipient" => parms["mailbox"],
             "mtime" => %{"$gt" => get_time(parms["from_time"])}
           })
@@ -71,12 +70,7 @@ defmodule BatchAction do
         file = File.stream!(fpath)
 
         Enum.map(messages, fn msg ->
-          data =
-            if msg["fpath"] do
-              File.read!(msg["fpath"])
-            else
-              msg["data"]
-            end
+          data = AmpsUtil.get_data(msg, env)
 
           data <> parms["delimiter"]
         end)
@@ -128,8 +122,7 @@ defmodule BatchAction do
     group = String.replace(parms["name"], " ", "_")
     # consumer_name = get_consumer(parms, consumer_name)
 
-    {:ok, _sid} =
-      Gnat.sub(consumer.connection_pid, self(), consumer.listening_topic, queue_group: group)
+    {:ok, _sid} = Gnat.sub(consumer.connection_pid, self(), consumer.listening_topic, queue_group: group)
   end
 
   @spec get_messages(

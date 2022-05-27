@@ -1,10 +1,16 @@
 defmodule AmpsEvents do
   require Logger
+  alias Amps.DB
 
   def send(msg, parms, state) do
-    IO.puts("send parms #{inspect(msg)}   #{inspect(parms)}   #{inspect(state)}")
+    Logger.debug("Sending to #{parms["output"]}")
+    # Logger.debug(msg)
+    # Logger.debug(parms)
+    # Logger.debug(state)
 
     topic = parms["output"]
+
+    msg = Map.merge(msg, %{"etime" => AmpsUtil.gettime(), "topic" => topic})
 
     if not AmpsUtil.blank?(topic) do
       data = %{msg: msg, state: state}
@@ -34,6 +40,31 @@ defmodule AmpsEvents do
   def message(msg) do
     IO.puts("event: message - #{inspect(msg)}")
     send_event("amps.events.message", Poison.encode!(msg))
+  end
+
+  def start_session(msg, session, env) do
+    sid = AmpsUtil.get_id()
+    Logger.metadata(sid: sid)
+
+    DB.insert(
+      AmpsUtil.index(env, "sessions"),
+      Map.merge(session, %{"sid" => sid, "start" => AmpsUtil.gettime()})
+    )
+
+    msg =
+      Map.merge(msg, %{
+        "sid" => sid
+      })
+
+    {msg, sid}
+  end
+
+  def end_session(sid, env) do
+    DB.find_one_and_update(AmpsUtil.index(env, "sessions"), %{"sid" => sid}, %{
+      "end" => AmpsUtil.gettime()
+    })
+
+    Logger.metadata(sid: nil)
   end
 
   def session_start(session) do

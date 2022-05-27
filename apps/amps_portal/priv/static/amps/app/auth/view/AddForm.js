@@ -73,10 +73,9 @@ Ext.define("Amps.form.add", {
               var form = btn.up("form").getForm();
               var values = form.getValues();
               console.log(values);
-
-              values = this.up("window").process(btn.up("form"), values);
-              console.log(values);
               values = amfutil.convertNumbers(form, values);
+              console.log(values);
+              values = this.up("window").process(btn.up("form"), values);
               console.log(values);
 
               var user = await amfutil.userInfo();
@@ -123,6 +122,7 @@ Ext.define("Amps.form.add", {
                   btn.up("window").close();
                 },
                 failure: function (response) {
+                  console.log("fail");
                   mask.hide();
                   btn.setDisabled(false);
                   amfutil.onFailure("Failed to Create User", response);

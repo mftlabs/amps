@@ -35,6 +35,7 @@ Ext.define("Amps.form.ArrayField", {
     if (args["value"]) {
       var value = args["value"];
       value.forEach((val) => {
+        console.log(val);
         if (args.arrayfields.length == 1) {
           scope.insert(
             scope.items.length - 1,
@@ -43,7 +44,8 @@ Ext.define("Amps.form.ArrayField", {
               register: scope.register.bind(scope),
               deregister: scope.deregister.bind(scope),
               fields: args.arrayfields.map((field) => {
-                var f = Object.assign({ value: val }, field);
+                var f = Object.assign({}, field);
+                f.value = val;
                 return f;
               }),
               title: args.fieldTitle,
@@ -57,7 +59,8 @@ Ext.define("Amps.form.ArrayField", {
               register: scope.register.bind(scope),
               deregister: scope.deregister.bind(scope),
               fields: args.arrayfields.map((field) => {
-                var f = Object.assign({ value: val[field.name] }, field);
+                var f = Object.assign({}, field);
+                f.value = val[field.name];
                 return f;
               }),
               title: args.fieldTitle,
@@ -160,9 +163,13 @@ Ext.define("Amps.form.ArrayField.Field", {
     type: "vbox",
     align: "stretch",
   },
+  style: {
+    border: "dotted 1px var(--main-color)",
+  },
 
   constructor: function (args) {
     this.callParent([args]);
+    console.log(args);
     var name = "field-" + amfutil.makeRandom();
     this.itemId = name;
     this.name = name;
@@ -201,10 +208,22 @@ Ext.define("Amps.form.ArrayField.Field", {
         type: "hbox",
         align: "stretch",
       },
+
       defaults: {
         margin: 5,
         flex: 1,
       },
+    };
+
+    var vbox = {
+      xtype: "container",
+      layout: {
+        type: "vbox",
+        align: "stretch",
+      },
+      padding: 5,
+
+      items: [],
     };
 
     for (var i = 0; i < fields.length; i++) {
@@ -213,14 +232,20 @@ Ext.define("Amps.form.ArrayField.Field", {
       items.push(field);
       if (items.length == 2) {
         hbox.items = items;
-        this.insert(0, hbox);
+        vbox.items.push(Ext.create(hbox));
         items = [];
       } else if (i == fields.length - 1) {
+        items.push({
+          xtype: "component",
+        });
         hbox.items = items;
-        this.insert(0, hbox);
+        vbox.items.push(Ext.create(hbox));
+
         items = [];
       }
     }
+    console.log(vbox);
+    this.insert(0, vbox);
   },
 
   setReadOnly: function (readOnly) {

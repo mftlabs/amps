@@ -15,12 +15,13 @@ defmodule AmpsWeb.Router do
 
   pipeline :api do
     # plug(:accepts, ["json"])
-    plug(AmpsWeb.APIAuthPlug, otp_app: :amps)
+    plug(AmpsWeb.APIAuthPlug, otp_app: :amps_web)
   end
 
   pipeline :api_protected do
     plug(:fetch_session)
     plug(:fetch_live_flash)
+    plug(AmpsWeb.EnvPlug)
     plug(Pow.Plug.RequireAuthenticated, error_handler: AmpsWeb.APIAuthErrorHandler)
   end
 
@@ -40,11 +41,20 @@ defmodule AmpsWeb.Router do
     post("/util/glob", UtilController, :glob_match)
     post("/user/reset-password", UserController, :send_password_email)
     post("/user/reg", UserController, :register)
-    post("/duplicate", UtilController, :duplicate)
+    get("/duplicate_username/:username", UtilController, :duplicate_username)
   end
 
   scope "/api", AmpsWeb do
     pipe_through([:api, :api_protected])
+
+    get("/auth/:username", UtilController, :verify)
+
+    post("/system/logo", DataController, :update_logo)
+
+    post("/duplicate", UtilController, :duplicate)
+
+    get("/user/info", UserController, :info)
+
     get("/data/export/:collection", DataController, :export_collection)
     post("/data/import/:collection", DataController, :import_data)
     post("/data/import/:collection/:entity/:field", DataController, :import_field_data)
@@ -66,13 +76,19 @@ defmodule AmpsWeb.Router do
     )
 
     get("/users/reset/:id", DataController, :reset_password)
+    post("/users/approve/:id", DataController, :approve_user)
+
     get("/admin/reset/:id", DataController, :reset_admin_password)
     post("/admin/changepassword/:id", DataController, :change_admin_password)
 
     get("/message_events/history/:msgid", UtilController, :history)
-    get("/message_events/download/:msgid", DataController, :download)
+    get("/message_events/download/:msgid", UtilController, :download)
     post("/workflow", UtilController, :workflow)
-    get("/port/:port", UtilController, :in_use)
+    get("/loop/:sub", UtilController, :loop)
+
+    post("/port/:port", UtilController, :in_use)
+    post("/env/:name", EnvironmentController, :handle_env)
+    get("/env/:name", EnvironmentController, :ping_env)
     post("/service/:name", ServiceController, :handle_service)
     get("/service/:name", ServiceController, :ping_service)
     post("/msg/reprocess/:msgid", DataController, :reprocess)
@@ -87,8 +103,26 @@ defmodule AmpsWeb.Router do
     get("/rules/fields/:id", DataController, :get_match_fields)
     # get("/:collection", DataController, :get_rows)
     get("/store/:collection", UtilController, :create_store)
+    get("/:collection/aggregate/:field", UtilController, :aggregate_field)
+
+    post("/demos", DataController, :upload_demo)
+    post("/environments/clear/:name", DataController, :clear_env)
+    post("/environments/export/:env", DataController, :export_env)
+
+    get("/deps", ScriptController, :get_deps)
+    post("/deps", ScriptController, :install_dep)
+    delete("/deps/:name", ScriptController, :uninstall_dep)
+
+    post("/scripts/duplicate/", ScriptController, :duplicate)
+    resources("/scripts/", ScriptController, except: [:new, :edit])
+
+    get("/pyservices", ScriptController, :get_services)
+
     resources("/:collection/", DataController, except: [:new, :edit])
-    post("/:collection/:id", DataController, :create_with_id)
+    post("/:collection/create/:id", DataController, :create_with_id)
+    post("/:collection/:id", DataController, :update_with_id)
+    post("/:collection/:id/:field/create/:fieldid", DataController, :add_to_field_with_id)
+
     get("/:collection/:id/:field", DataController, :get_field)
     put("/:collection/:id/:field", DataController, :update_field)
     post("/:collection/:id/:field", DataController, :add_to_field)
@@ -105,8 +139,6 @@ defmodule AmpsWeb.Router do
 
     get("/", PageController, :index)
   end
-
-  redirect("/*path", "/", :permanent)
 
   # Other scopes may use custom stacks.
   # scope "/api", AmpsWeb do
@@ -140,4 +172,6 @@ defmodule AmpsWeb.Router do
       forward("/mailbox", Plug.Swoosh.MailboxPreview)
     end
   end
+
+  redirect("/*path", "/", :permanent)
 end

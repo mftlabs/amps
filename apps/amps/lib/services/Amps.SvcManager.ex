@@ -36,6 +36,15 @@ defmodule Amps.SvcManager do
   end
 
   def handle_call({:stop_service, name}, _from, state) do
+    AmpsEvents.send_history(
+      "amps.events.svcs.#{name}.logs",
+      "service_logs",
+      %{
+        "name" => name,
+        "status" => "stopping"
+      }
+    )
+
     res =
       case service_active?(name) do
         nil ->
@@ -51,6 +60,15 @@ defmodule Amps.SvcManager do
             DynamicSupervisor.terminate_child(Amps.SvcSupervisor, pid)
           end)
 
+          AmpsEvents.send_history(
+            "amps.events.svcs.#{name}.logs",
+            "service_logs",
+            %{
+              "name" => name,
+              "status" => "stopped"
+            }
+          )
+
           {:ok, true}
       end
 
@@ -64,6 +82,10 @@ defmodule Amps.SvcManager do
           res = load_service(name)
           IO.inspect(res)
           res
+
+          DB.find_one_and_update("services", %{"name" => name}, %{
+            "active" => true
+          })
 
         pid ->
           {:error, "Service Already Running #{inspect(pid)}"}
@@ -97,63 +119,168 @@ defmodule Amps.SvcManager do
           ]
 
           if args["tls"] do
-            cert = AmpsUtil.get_key(args["cert"])
-            key = AmpsUtil.get_key(args["key"])
-            cert = X509.Certificate.from_pem!(cert) |> X509.Certificate.to_der()
-            key = X509.PrivateKey.from_pem!(key)
-            keytype = Kernel.elem(key, 0)
-            key = X509.PrivateKey.to_der(key)
+            {cert, key} =
+              try do
+                cert = AmpsUtil.get_key(args["cert"])
+                key = AmpsUtil.get_key(args["key"])
+
+                cert = X509.Certificate.from_pem!(cert) |> X509.Certificate.to_der()
+
+                key = X509.PrivateKey.from_pem!(key)
+                keytype = Kernel.elem(key, 0)
+                key = X509.PrivateKey.to_der(key)
+                {cert, {keytype, key}}
+              rescue
+                e ->
+                  raise "Error parsing key and/or certificate"
+              end
 
             {Plug.Cowboy,
              scheme: :https,
-             plug: types[:httpd],
+             plug: {types[:httpd], [opts: args]},
              options: [
                ref: name,
                port: args["port"],
                cipher_suite: :strong,
                cert: cert,
-               key: {keytype, key},
+               key: key,
                otp_app: :amps,
                protocol_options: protocol_options
              ]}
           else
             {Plug.Cowboy,
              scheme: :http,
-             plug: types[:httpd],
-             options: [ref: name, port: args["port"], protocol_options: protocol_options]}
+             plug: {types[:httpd], [opts: args]},
+             options: [
+               ref: name,
+               port: args["port"],
+               protocol_options: protocol_options
+             ]}
           end
 
         :kafka ->
-          init_opts = [
-            group: args["name"],
-            topics: args["topics"],
-            # assignment_received_handler: assignment_received_handler(),
-            # assignments_revoked_handler: assignments_revoked_handler(),
-            handler: types[:kafka],
-            handler_init_args: args
-            # config: consumer_config()
+          provider = DB.find_one("providers", %{"_id" => args["provider"]})
+          auth_opts = AmpsUtil.get_kafka_auth(args, provider)
+
+          spec = %{
+            id: name,
+            start:
+              {KafkaEx.ConsumerGroup, :start_link,
+               [
+                 types[:kafka],
+                 args["name"],
+                 args["topics"],
+                 [
+                   uris:
+                     Enum.map(
+                       provider["brokers"],
+                       fn %{"host" => host, "port" => port} ->
+                         {host, port}
+                       end
+                     ),
+                   extra_consumer_args: args
+                 ] ++
+                   auth_opts
+               ]}
+          }
+
+          spec
+
+        # init_opts = [
+        #   group: args["name"],
+        #   topics: args["topics"],
+        #   # assignment_received_handler: assignment_received_handler(),
+        #   # assignments_revoked_handler: assignments_revoked_handler(),
+        #   handler: types[:kafka],
+        #   handler_init_args: args
+        #   # config: consumer_config()
+        # ]
+
+        # config = AmpsUtil.get_kafka_auth(args, provider)
+
+        # {
+        #   Elsa.Supervisor,
+        #   config: config,
+        #   endpoints:
+        #     Enum.map(
+        #       provider["brokers"],
+        #       fn %{"host" => host, "port" => port} ->
+        #         {host, port}
+        #       end
+        #     ),
+        #   connection: String.to_atom("elsa_" <> args["name"]),
+        #   group_consumer: init_opts
+        # }
+
+        :gateway ->
+          IO.inspect(args)
+
+          protocol_options = [
+            idle_timeout: args["idle_timeout"],
+            request_timeout: args["request_timeout"],
+            max_keepalive: args["max_keepalive"]
           ]
 
-          provider = DB.find_one("providers", %{"_id" => args["provider"]})
+          router =
+            Enum.reduce(args["router"], [], fn id, acc ->
+              case DB.find_by_id("endpoints", id) do
+                nil ->
+                  acc
 
-          config = AmpsUtil.get_kafka_auth(args, provider)
+                endpoint ->
+                  [endpoint | acc]
+              end
+            end)
+            |> Enum.reverse()
 
-          {
-            Elsa.Supervisor,
-            config: config,
-            endpoints:
-              Enum.map(
-                provider["brokers"],
-                fn %{"host" => host, "port" => port} ->
-                  {host, port}
-                end
-              ),
-            connection: String.to_atom("elsa_" <> args["name"]),
-            group_consumer: init_opts,
-            producer: [
-              topic: "amps.events"
-            ]
-          }
+          string =
+            EEx.eval_file(Path.join([:code.priv_dir(:amps), "gateway", "Amps.Gateway.eex"]),
+              name: args["name"],
+              router: router,
+              env: nil
+            )
+
+          [{plug, _}] = Code.compile_string(string, "Amps.Gateway.eex")
+
+          if args["tls"] do
+            {cert, key} =
+              try do
+                cert = AmpsUtil.get_key(args["cert"])
+                key = AmpsUtil.get_key(args["key"])
+
+                cert = X509.Certificate.from_pem!(cert) |> X509.Certificate.to_der()
+
+                key = X509.PrivateKey.from_pem!(key)
+                keytype = Kernel.elem(key, 0)
+                key = X509.PrivateKey.to_der(key)
+                {cert, {keytype, key}}
+              rescue
+                e ->
+                  raise "Error parsing key and/or certificate"
+              end
+
+            {Plug.Cowboy,
+             scheme: :https,
+             plug: {plug, [opts: args]},
+             options: [
+               ref: name,
+               port: args["port"],
+               cipher_suite: :strong,
+               cert: cert,
+               key: key,
+               otp_app: :amps,
+               protocol_options: protocol_options
+             ]}
+          else
+            {Plug.Cowboy,
+             scheme: :http,
+             plug: {plug, [opts: args]},
+             options: [
+               ref: name,
+               port: args["port"],
+               protocol_options: protocol_options
+             ]}
+          end
 
         type ->
           {types[type], name: name, parms: args}
@@ -161,7 +288,7 @@ defmodule Amps.SvcManager do
     rescue
       e ->
         Logger.error(Exception.format(:error, e, __STACKTRACE__))
-        {:error, "Invalid Service Opts"}
+        {:error, e}
     end
   end
 
@@ -189,6 +316,15 @@ defmodule Amps.SvcManager do
   def load_service(svcname) do
     Logger.info("load_service loading service #{svcname}")
 
+    AmpsEvents.send_history(
+      "amps.events.svcs.#{svcname}.logs",
+      "service_logs",
+      %{
+        "name" => svcname,
+        "status" => "starting"
+      }
+    )
+
     case AmpsDatabase.get_config(svcname) do
       nil ->
         Logger.info("service not found #{svcname}")
@@ -204,18 +340,31 @@ defmodule Amps.SvcManager do
 
             case get_spec(name, opts) do
               {:error, error} ->
-                Logger.warn("Service #{name} could not be started. Error: #{error}")
+                Logger.warn("Service #{name} could not be started. Error: #{inspect(error)}")
+
                 raise error
 
               spec ->
-                Amps.SvcSupervisor.start_child(name, spec)
+                Amps.SvcSupervisor.start_child(name, spec, parms)
             end
           end)
 
-          {:ok, "Started #{opts["subs_count"]}"}
+          {:ok, "Started #{svcname}"}
         rescue
           e ->
-            {:error, e.message}
+            error = "#{inspect(e)}"
+
+            AmpsEvents.send_history(
+              "amps.events.svcs.#{svcname}.logs",
+              "service_logs",
+              %{
+                "name" => svcname,
+                "status" => "failed",
+                "reason" => error
+              }
+            )
+
+            {:error, e}
         end
     end
   end
@@ -224,6 +373,7 @@ defmodule Amps.SvcManager do
     case AmpsDatabase.get_config(svcname) do
       nil ->
         Logger.info("service not found #{svcname}")
+        nil
 
       parms ->
         opts = Map.delete(parms, "_id")
@@ -256,7 +406,7 @@ defmodule Amps.SvcManager do
 
   def load_system_parms() do
     parms =
-      case AmpsDatabase.get_config("SYSTEM") do
+      case Amps.DB.find_one("config", %{"name" => "SYSTEM"}) do
         nil ->
           %{}
 
@@ -264,9 +414,8 @@ defmodule Amps.SvcManager do
           parms |> Map.drop(["_id", "name"])
       end
 
-    IO.inspect(parms)
-
     Enum.each(parms, fn {key, val} ->
+      res = Amps.Defaults.put(key, val)
       Application.put_env(:amps, String.to_atom(key), val)
     end)
   end

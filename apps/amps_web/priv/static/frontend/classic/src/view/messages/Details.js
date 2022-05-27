@@ -9,7 +9,6 @@ Ext.define("Amps.view.messages.MessageActivity", {
   layout: "fit",
 
   width: "auto",
-  height: 500,
 
   loadMessageActivity: function (record) {
     // console.log(this);
@@ -24,28 +23,29 @@ Ext.define("Amps.view.messages.MessageActivity", {
       //
       //title:'Message Details',
       xtype: "panel",
-      layout: "border",
+      layout: {
+        type: "vbox",
+        align: "stretch",
+      },
       width: "100%",
       items: [
         {
-          xtype: "messagestatus",
-          // flex: 1
-          region: "north",
-          height: "55%",
-          width: "100%",
-          itemId: "messagestatus",
-          padding: 10,
-        },
-        {
           xtype: "messagedetails",
-          // flex: 1,
-          region: "center",
-          height: "45%",
+          flex: 1,
           width: "100%",
           itemId: "messagedetails",
           scrollable: true,
-          padding: 10,
         },
+        {
+          xtype: "splitter",
+        },
+        {
+          xtype: "messagestatus",
+          flex: 1,
+          width: "100%",
+          itemId: "messagestatus",
+        },
+
         // {
         //   xtype: "panel",
         //   height: "65%",
@@ -672,9 +672,12 @@ Ext.define("Amps.view.messages.MessageDetails", {
   xtype: "messagedetails",
   title: "Message Details",
   //scrollable:true,
+  // layout: "fit",
+
   loadDetails: async function (record) {
     console.log(record);
-    this.removeAll();
+    var c = this.down("#details");
+    c.removeAll();
     var filters = { msgid: record.msgid };
 
     var statuses = await amfutil.getCollectionData("message_status", filters);
@@ -682,9 +685,13 @@ Ext.define("Amps.view.messages.MessageDetails", {
     var route = Ext.util.History.getToken().split("/")[0];
     var hbox = {
       xtype: "container",
-      layout: "hbox",
-      width: "100%",
-      style: "padding-left: .5em; padding-right: .5em; box-sizing: border-box",
+      layout: {
+        type: "hbox",
+        align: "stretch",
+      },
+      defaults: {
+        padding: 5,
+      },
     };
     var items = [];
     var entries = Object.entries(record);
@@ -695,39 +702,149 @@ Ext.define("Amps.view.messages.MessageDetails", {
     });
     fields["_id"] = { label: "ID" };
     console.log(fields);
+    var mapping = await amfutil.getMetadataFields();
+    console.log(mapping);
     for (var i = 0; i < entries.length; i++) {
       var entry = entries[i];
-      console.log(entry);
-      items.push({
-        xtype: "displayfield",
-        fieldLabel: entry[0],
-        value: entry[1],
+      var f = Ext.create({
+        xtype: "container",
+        // layout: {
+        //   type: "hbox",
+        //   align: "stretch",
+        // },
         flex: 1,
+        cls: i % 2 ? "" : "x-grid-item-alt",
+        style: {
+          "border-style": "solid",
+          "border-color": "#e9e9e9",
+          "border-width": "0px 1px 1px 0px",
+        },
+        listeners: {
+          afterrender: function () {
+            var df = this.down("displayfield");
+            this.getEl().setListeners({
+              click: function (e) {
+                var contextMenu = Ext.create("Ext.menu.Menu", {
+                  items: [
+                    {
+                      text: "Copy",
+                      iconCls: "x-fa fa fa-copy",
+                      handler: function () {
+                        var input = df.getValue();
+                        navigator.clipboard
+                          .writeText(input)
+                          .then(function () {});
+                      },
+                    },
+                    {
+                      text: "View",
+                      iconCls: "x-fa fa fa-eye",
+                      handler: function () {
+                        var input = df.getValue();
+                        var window = amfutil.showFormattedText(input);
+                        window.show();
+                      },
+                    },
+                  ],
+                });
+                e.stopEvent();
+                contextMenu.showAt(e.pageX, e.pageY);
+              },
+              contextmenu: function (e, a2, a3) {
+                console.log(a2);
+                console.log(a3);
+
+                var contextMenu = Ext.create("Ext.menu.Menu", {
+                  items: [
+                    {
+                      text: "Copy",
+                      iconCls: "x-fa fa fa-copy",
+                      handler: function () {
+                        var input = df.getValue();
+                        navigator.clipboard
+                          .writeText(input)
+                          .then(function () {});
+                      },
+                    },
+                  ],
+                });
+                e.stopEvent();
+                contextMenu.showAt(e.pageX, e.pageY);
+              },
+            });
+
+            this.getEl().hover(
+              () => {
+                this.addCls("x-grid-item-over");
+              },
+              () => {
+                this.removeCls("x-grid-item-over");
+              }
+            );
+          },
+        },
+        flex: 1,
+        items: [
+          {
+            xtype: "displayfield",
+            labelWidth: 125,
+            // labelStyle: {
+            //   "font-weight": 400,
+            //   // margin: 0,
+            //   "text-align": "center",
+            // },
+            // fieldStyle: {
+            //   margin: 0,
+            //   "text-align": "center",
+            // },
+
+            renderer: function (val) {
+              return val.length > 90
+                ? val.substring(0, 90) + " <b>[...]<b>"
+                : val;
+            },
+
+            fieldLabel: mapping[entry[0]] ? mapping[entry[0]].label : entry[0],
+            value:
+              typeof entry[1] === "object" && entry[1] !== null
+                ? JSON.stringify(entry[1])
+                : entry[1],
+          },
+        ],
       });
+      items.push(f);
       if (items.length == 3) {
         hbox.items = items;
-        this.insert(hbox);
+        c.insert(hbox);
+
         delete hbox.items;
         items = [];
       } else if (i == entries.length - 1) {
-        var extra = i % 3;
+        console.log(i);
+
+        var extra = 3 - ((i + 1) % 3);
+        console.log(extra);
         for (var j = 0; j < extra; j++) {
           items.push({
-            xtype: "displayfield",
-            fieldLabel: "",
-            value: "",
+            xtype: "container",
             flex: 1,
           });
         }
         hbox.items = items;
-        this.insert(hbox);
+        c.insert(hbox);
         delete hbox.items;
         items = [];
       }
     }
   },
 
-  items: [],
+  items: [
+    {
+      xtype: "container",
+      itemId: "details",
+      padding: 3,
+    },
+  ],
 });
 
 Ext.define("Amps.view.messages.MessageStatus", {
@@ -737,47 +854,29 @@ Ext.define("Amps.view.messages.MessageStatus", {
   //scrollable:true,
   loadStatus: async function (record) {
     var filters = { msgid: record.msgid };
-
+    var grid = this.down("grid");
     var scope = this;
     var store = await amfutil.createHistoryStore(record["msgid"]);
-    // store.on(
-    //   "load",
-    //   function (storeScope, records, successful, operation, eOpts) {
-    //     var statuses = store.getData().items.map((item) => item.data);
-    //     // get unfiltered collection (will be null if the store has never been filtered)
-    //     console.log(statuses);
-    //     statuses.sort((a, b) => (a.stime > b.stime ? 1 : -1));
-    //     statuses.reverse();
 
-    //     var status = statuses[0].status;
-    //     var reason = statuses[0].reason;
-    //     console.log(status);
-    //     scope.down("#current-status").setHtml(status);
-    //     scope
-    //       .down("#current-reason-title")
-    //       .setHtml(`${status == "mailboxed" ? "Recipient" : "Reason"}: `);
-    //     scope.down("#current-reason").setHtml(reason);
-    //     var rbutton = amfutil.getElementByID("reprocessbtn");
-    //     if (statuses[0].status == "reprocessing" || !record["location"]) {
-    //       console.log("Reprocessing");
-    //       rbutton.disable();
-    //     } else {
-    //       rbutton.enable();
-    //     }
+    store.load();
+    grid.setStore(store);
 
-    //     console.log(statuses);
-    //   }
-    // );
-
-    store.sort("etime", "DESC");
-
-    this.down("grid").setStore(store);
+    store.sort("start", "DESC");
+    store.on("load", function () {
+      var rec = store.findRecord("sid", record["sid"]);
+      grid.setSelection(rec);
+    });
   },
 
   items: [
     {
-      xtype: "container",
-      layout: "border",
+      xtype: "panel",
+      title: "Session History",
+
+      layout: {
+        type: "hbox",
+        align: "stretch",
+      },
       items: [
         // {
         //   xtype: "container",
@@ -855,150 +954,143 @@ Ext.define("Amps.view.messages.MessageStatus", {
         // },
         {
           xtype: "grid",
-          title: "Message History",
           itemId: "status-grid",
-          region: "center",
-          width: "100%",
-          viewConfig: {
-            getRowClass: function (record, index, rowParams) {
-              var id = Ext.util.History.getToken().split("/").pop();
-              console.log(record);
-              return record.data._id == id ? "boldrow" : "";
-            },
-          },
+          flex: 1,
           listeners: {
-            dblclick: {
-              element: "body", //bind to the underlying body property on the panel
-              fn: function (grid, rowIndex, e, obj) {
-                var record = grid.record.data;
-                var scope = this;
-                var route = Ext.util.History.getToken().split("/")[0];
-                amfutil.redirectTo(route + "/" + record._id);
-              },
+            beforerender: function () {
+              this.reconfigure(null, [
+                {
+                  text: "Session ID",
+                  dataIndex: "sid",
+                  flex: 1,
+                },
+                {
+                  text: "Service",
+                  dataIndex: "service",
+                  flex: 1,
+                },
+                {
+                  text: "Start Time",
+                  dataIndex: "start",
+                  flex: 1,
+                  renderer: amfutil.dateRenderer,
+                },
+                {
+                  text: "End Time",
+                  dataIndex: "end",
+                  flex: 1,
+                  renderer: amfutil.dateRenderer,
+                },
+              ]);
+            },
+            select: function (scope, record, index, eOpts) {
+              console.log("Selected");
+              amfutil
+                .getElementByID("session-details")
+                .loadSession(record.data);
             },
           },
-
-          columns: [
+        },
+        {
+          xtype: "splitter",
+        },
+        {
+          xtype: "tabpanel",
+          flex: 2,
+          itemId: "session-details",
+          layout: "fit",
+          loadSession(session) {
+            var sid = session["sid"];
+            var eventstore = session["rows"];
+            var logstore = amfutil.createCollectionStore("system_logs", {
+              sid: sid,
+            });
+            var evgrid = this.down("#session-events");
+            var loggrid = this.down("#session-logs");
+            evgrid.setStore(eventstore);
+            evgrid.getStore().sort("etime", "DESC");
+            loggrid.setStore(logstore);
+            loggrid.getStore().sort("etime", "DESC");
+          },
+          items: [
             {
-              dataIndex: "action",
-              text: "Action",
-              flex: 1,
-            },
-            {
-              dataIndex: "msgid",
-              text: "Message ID",
-              flex: 1,
-            },
-            {
-              dataIndex: "reason",
-              text: "Reason",
-              flex: 1,
-            },
-            {
-              dataIndex: "status",
-              text: "Status",
-              flex: 1,
-            },
-            {
-              dataIndex: "etime",
-              text: "Event Time",
-              flex: 1,
-            },
-            {
-              xtype: "actioncolumn",
-              text: "Actions",
-              items: [
-                {
-                  iconCls: "x-fa fa-download",
-                  handler: async function (
-                    view,
-                    rowIndex,
-                    colIndex,
-                    item,
-                    e,
-                    rec
-                  ) {
-                    var filename;
-                    var msgbox = Ext.MessageBox.show({
-                      title: "Please wait",
-                      msg: "Downloading...",
-                      progressText: "Downloading...",
-                      width: 300,
-                      progress: true,
-                      closable: false,
-                    });
-                    await amfutil.renew_session();
-                    await fetch(
-                      "/api/message_events/download/" + rec.data.msgid,
-                      {
-                        headers: {
-                          Authorization: localStorage.getItem("access_token"),
-                        },
-                      }
-                    )
-                      .then(async (response) => {
-                        if (response.ok) {
-                          var progress = 0;
-                          var size;
-                          for (let entry of response.headers.entries()) {
-                            if (entry[0] == "content-length") {
-                              size = entry[1];
-                            }
-                            if (entry[0] == "content-disposition") {
-                              filename = entry[1].match(/filename="(.+)"/)[1];
-                            }
-                          }
-                          console.log(size);
-
-                          console.log(response);
-                          const reader = response.body.getReader();
-                          return new ReadableStream({
-                            start(controller) {
-                              return pump();
-                              function pump() {
-                                return reader.read().then(({ done, value }) => {
-                                  // When no more data needs to be consumed, close the stream
-                                  if (done) {
-                                    controller.close();
-                                    return;
-                                  }
-                                  // Enqueue the next data chunk into our target stream
-                                  progress += value.length;
-                                  msgbox.updateProgress(progress / size);
-                                  controller.enqueue(value);
-                                  return pump();
-                                });
-                              }
-                            },
-                          });
-                        } else {
-                          msgbox.close();
-                          Ext.MessageBox.alert(
-                            "Error",
-                            "Failed to Download UFA Agent"
-                          );
-                          throw new Error("Something went wrong");
-                        }
-                      })
-                      .then((stream) => new Response(stream))
-                      .then((response) => response.blob())
-                      .then((blob) => {
-                        const url = URL.createObjectURL(blob);
-                        const link = document.createElement("a");
-                        link.href = url;
-                        link.setAttribute("download", filename);
-                        document.body.appendChild(link);
-                        msgbox.close();
-                        link.click();
-                        link.remove();
-                      })
-                      .catch((err) => console.error(err));
+              xtype: "grid",
+              title: "Events",
+              itemId: "session-events",
+              viewConfig: {
+                getRowClass: function (record, index, rowParams) {
+                  var id = Ext.util.History.getToken().split("/").pop();
+                  console.log(record);
+                  console.log(rowParams);
+                  return record.data._id == id ? "boldrow" : "";
+                },
+              },
+              listeners: {
+                dblclick: {
+                  element: "body", //bind to the underlying body property on the panel
+                  fn: function (grid, rowIndex, e, obj) {
+                    var record = grid.record.data;
+                    var scope = this;
+                    var route = Ext.util.History.getToken().split("/")[0];
+                    amfutil.redirectTo(route + "/" + record._id);
                   },
                 },
-              ],
+                beforerender: function (scope) {
+                  scope.reconfigure(
+                    null,
+                    ampsgrids.grids.message_events().columns
+                  );
+                },
+              },
+            },
+            {
+              xtype: "grid",
+              title: "Logs",
+              itemId: "session-logs",
+
+              listeners: {
+                beforerender: function (scope) {
+                  var config = ampsgrids.grids.system_logs();
+                  scope.reconfigure(null, config.columns);
+                  var config = ampsgrids.grids.system_logs();
+                  this.setListeners({
+                    dblclick: {
+                      element: "body", //bind to the underlying body property on the panel
+                      fn: function (grid, rowIndex, e, obj) {
+                        var record = grid.record.data;
+                        console.log(record);
+                        config.dblclick(record);
+                      },
+                    },
+                  });
+                },
+              },
             },
           ],
         },
+        // {
+        //   xtype: "grid",
+        //   title: "Message History",
+        //   itemId: "status-grid",
+        //   region: "center",
+        //   width: "100%",
+        //
+        //   plugins: [
+        //     {
+        //       ptype: "rowwidget",
+        //       widget: {
+        //         xtype: "grid",
+        //         height: 300,
+        //         columns: [
+        //           {
+        //             text: "name",
+        //           },
+        //         ],
+        //       },
+        //     },
+        //   ],
+        //   // plugins: ["rowexpander"],
+        // },
       ],
     },
   ],

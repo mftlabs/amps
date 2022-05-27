@@ -20,7 +20,7 @@ Ext.define("Amps.controller.MessagesController", {
     console.log(btn);
     var mask = new Ext.LoadMask({
       msg: "Reprocessing...",
-      target: amfutil.getElementByID("messagestatus"),
+      target: amfutil.getElementByID("messagecontainer"),
     });
     mask.show();
     var message = await amfutil.getCurrentItem();
@@ -30,10 +30,9 @@ Ext.define("Amps.controller.MessagesController", {
     var scope = this;
 
     amfutil.ajaxRequest({
-      url: `api/` + "reprocess",
+      url: `api/msg/reprocess/${message["_id"]}`,
       method: "POST",
       timeout: 60000,
-      jsonData: message,
       success: function (response) {
         scope.onRefreshButtonClicked();
         mask.destroy();

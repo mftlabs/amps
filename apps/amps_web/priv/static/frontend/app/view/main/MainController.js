@@ -69,9 +69,12 @@ Ext.define("Amps.view.main.MainController", {
       case "topics":
         this.createForm(btn, route);
         break;
-      case "services":
-        this.addService(btn);
+      case "demos":
+        this.addDemo(btn, route);
         break;
+      // case "services":
+      //   this.addService(btn);
+      //   break;
       default:
         this.createForm(btn, route);
     }
@@ -89,6 +92,112 @@ Ext.define("Amps.view.main.MainController", {
         values = config.add.process(form, values);
       }
       return values;
+    });
+    win.show();
+  },
+
+  addDemo: function (btn) {
+    var grid = amfutil.getElementByID("main-grid");
+
+    var myForm = new Ext.form.Panel({
+      defaults: {
+        padding: 5,
+        labelWidth: 140,
+        width: 400,
+      },
+      layout: {
+        type: "vbox",
+        align: "stretch",
+      },
+      scrollable: true,
+      items: [
+        {
+          xtype: "filefield",
+          flex: 1,
+          name: "file",
+          itemId: "zipfile",
+          fieldLabel: "Demo Zip File",
+          allowBlank: false,
+          buttonText: "Select File...",
+          labelWidth: 200,
+          accept: ".zip",
+          blankText: "Supports only .zip file format",
+          listeners: {
+            change: function (fld, value) {
+              var newValue = value.replace(/C:\\fakepath\\/g, "");
+              fld.setRawValue(newValue);
+            },
+          },
+        },
+      ],
+      buttons: [
+        {
+          text: "Save",
+          itemId: "addaccount",
+          cls: "button_class",
+          formBind: true,
+          listeners: {
+            click: async function (btn) {
+              var form = btn.up("form").getForm();
+              var values = form.getValues();
+              btn.setDisabled(true);
+              var mask = new Ext.LoadMask({
+                msg: "Please wait...",
+                target: this.up("window"),
+              });
+              mask.show();
+              var filefield = form.findField("file");
+
+              var file = filefield.extractFileInput().files[0];
+
+              var req = await amfuploads.handleUpload(
+                encodeURI("api/demos"),
+                file,
+                false,
+                false
+              );
+              mask.hide();
+              var status = req.status;
+              console.log(req);
+              if (status >= 200 && status <= 299) {
+                btn.setDisabled(false);
+                Ext.toast("Demo added");
+                amfutil.broadcastEvent("update", {
+                  page: Ext.util.History.getToken(),
+                });
+                grid.getStore().reload();
+                mask.hide();
+                win.close();
+              } else {
+                mask.hide();
+                btn.setDisabled(false);
+                amfutil.onFailure("Failed to Create Demo", req);
+              }
+              console.log(req);
+            },
+          },
+        },
+        {
+          text: "Cancel",
+          cls: "button_class",
+          itemId: "accounts_cancel",
+          listeners: {
+            click: function (btn) {
+              win.close();
+            },
+          },
+        },
+      ],
+    });
+    var win = new Ext.window.Window({
+      title: "Add Demo",
+      modal: true,
+      width: 500,
+      height: 200,
+      scrollable: true,
+      resizable: false,
+      layout: "fit",
+      items: [myForm],
     });
     win.show();
   },
@@ -795,6 +904,9 @@ Ext.define("Amps.view.main.MainController", {
                   lastname: surname,
                   email: email,
                   phone: phone_number,
+                  config: {
+                    env: "",
+                  },
                 },
                 success: function (response) {
                   mask.hide();

@@ -38,12 +38,15 @@ Ext.define("Amps.view.signup.Signup", {
             });
           },
           change: async function (cmp, value, oldValue, eOpts) {
-            var duplicate = await amfutil.checkDuplicate({
-              users: { username: value },
+            var resp = await amfutil.ajaxRequest({
+              url: `api/duplicate_username/${value}`,
             });
+
+            var duplicate = Ext.decode(resp.responseText);
 
             if (duplicate) {
               cmp.setActiveError("User Already Exists");
+              cmp.markInvalid("User Already Exists");
               cmp.setValidation("User Already Exists");
               // cmp.isValid(false);
             } else {

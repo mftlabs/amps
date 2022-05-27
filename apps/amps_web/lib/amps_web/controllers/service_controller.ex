@@ -25,17 +25,18 @@ defmodule AmpsWeb.ServiceController do
   end
 
   def handle_service(conn, %{"name" => name, "action" => action}) do
-    resp =
-      case action do
-        "start" ->
-          start_service(name)
+    env = conn.assigns().env
 
-        "stop" ->
-          stop_service(name)
-
-        "restart" ->
-          restart_service(name)
+    topic =
+      if env == "" do
+        "amps.events.svcs.handler.#{name}.#{action}"
+      else
+        "amps.#{env}.events.svcs.handler.#{name}.#{action}"
       end
+
+    IO.inspect(topic)
+
+    Gnat.pub(:gnat, topic, "")
 
     user = Pow.Plug.current_user(conn)
 
@@ -47,38 +48,6 @@ defmodule AmpsWeb.ServiceController do
         "name" => name
       }
     })
-
-    json(conn, resp)
-  end
-
-  def restart_service(_svcname) do
-  end
-
-  def start_service(svcname) do
-    # svc = String.to_atom(svcname)
-    res = SvcManager.start_service(svcname)
-
-    case res do
-      {:ok, _res} ->
-        %{
-          "success" => true
-        }
-
-      {:error, reason} ->
-        %{
-          "success" => false,
-          "reason" => reason
-        }
-    end
-  end
-
-  def stop_service(svcname) do
-    case SvcManager.stop_service(svcname) do
-      {:ok, res} ->
-        res
-
-      {:error, reason} ->
-        reason
-    end
+    json(conn, :ok)
   end
 end

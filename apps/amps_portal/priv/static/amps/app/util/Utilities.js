@@ -101,6 +101,97 @@ Ext.define("Amps.Utilities", {
     },
   },
 
+  config: {
+    tokens: {
+      window: { width: 500, height: 200 },
+      object: "Auth Token",
+      fields: [
+        {
+          xtype: "textfield",
+          name: "name",
+          fieldLabel: "Token Name",
+          allowBlank: false,
+          listeners: {
+            beforerender: async function (scope) {
+              scope.setListeners({
+                change: async function (cmp, value, oldValue, eOpts) {
+                  await amfutil.duplicateHandler(
+                    cmp,
+                    { "tokens.name": value },
+                    "Token Already Exists",
+                    amfutil.nameValidator
+                  );
+                },
+              });
+            },
+          },
+        },
+      ],
+      add: {
+        process: function (form, values) {
+          return values;
+        },
+      },
+    },
+    mailboxes: {
+      title: "Mailboxes",
+      object: "Mailbox",
+      grid: true,
+      audit: true,
+      crud: true,
+
+      actionIcons: [
+        "addnewbtn",
+        "searchpanelbtn",
+        "clearfilter",
+        "refreshbtn",
+        "export",
+      ],
+      fields: [
+        {
+          xtype: "textfield",
+          name: "name",
+          fieldLabel: "Name",
+          allowBlank: false,
+          listeners: {
+            beforerender: async function (scope) {
+              scope.setListeners({
+                change: async function (cmp, value, oldValue, eOpts) {
+                  await amfutil.duplicateHandler(
+                    cmp,
+                    { "mailboxes.name": value },
+                    "Mailbox Already Exists",
+                    amfutil.nameValidator
+                  );
+                },
+              });
+            },
+          },
+        },
+        {
+          xtype: "textfield",
+          name: "desc",
+          fieldLabel: "Description",
+          // allowBlank: false,
+        },
+      ],
+      columns: [
+        {
+          text: "Name",
+          dataIndex: "name",
+          type: "text",
+          flex: 1,
+        },
+        {
+          text: "Description",
+          dataIndex: "desc",
+          type: "text",
+          flex: 1,
+        },
+      ],
+    },
+  },
+
   all_icons: [
     "addnewbtn",
     "searchpanelbtn",
@@ -287,6 +378,12 @@ Ext.define("Amps.Utilities", {
       },
       opts
     );
+  },
+
+  emailEnabled: async function () {
+    var resp = await amfutil.ajaxRequest({ url: "api/util/email" });
+    var enabled = Ext.decode(resp.responseText);
+    return enabled;
   },
 
   channelHandlers: function (channel) {
@@ -523,6 +620,41 @@ Ext.define("Amps.Utilities", {
         dcon.insert(length - 1, d);
       }
     });
+  },
+
+  deleteAction: function (title, msg, route, store) {
+    return {
+      iconCls: "x-fa fa-trash",
+      handler: async function (grid, rowIndex, colIndex) {
+        console.log(rowIndex);
+        var rec = grid.getStore().getAt(rowIndex).data;
+        console.log(rec);
+        Ext.Msg.confirm(title, msg, function (btn) {
+          if (btn == "yes") {
+            console.log("yes");
+            amfutil.ajaxRequest({
+              url: `api/${route}/${rec._id}`,
+              method: "delete",
+              success: function () {
+                store.reload();
+              },
+            });
+          }
+        });
+      },
+    };
+  },
+
+  copyToClipboard: function (text) {
+    navigator.clipboard.writeText(text).then(
+      function () {
+        console.log("Async: Copying to clipboard was successful!");
+        Ext.toast("Copied to clipboard");
+      },
+      function (err) {
+        console.error("Async: Could not copy text: ", err);
+      }
+    );
   },
 
   uniqueBucket: async function (cmp, value, oldValue, eOpts) {
@@ -1147,7 +1279,6 @@ Ext.define("Amps.Utilities", {
   renderListeners: function (render, ar, change) {
     return {
       afterrender: function (scope) {
-        console.log(scope);
         var val = scope.getValue();
         render(scope, val);
         if (ar) {
@@ -1159,6 +1290,9 @@ Ext.define("Amps.Utilities", {
         if (change) {
           change(scope, val);
         }
+        console.log(scope);
+
+        console.log(val);
       },
     };
   },
@@ -1370,15 +1504,17 @@ Ext.define("Amps.Utilities", {
           console.log(
             "server-side failure with status code " + response.status
           );
-          if ((response.status = 401)) {
+          if (response.status == 401) {
             await amfutil.renew_session();
             request.headers = {
               Authorization: localStorage.getItem("access_token"),
             };
             request.failure = failure;
             response = await Ext.Ajax.request(request);
-            resolve(response);
+          } else {
+            failure(response);
           }
+          resolve(response);
         }
       );
     });
@@ -1433,6 +1569,7 @@ Ext.define("Amps.Utilities", {
 
   setGridStore: function (filters, config) {
     // console.log(filters);
+    console.log(config);
     var route = Ext.util.History.currentToken;
     var grid = amfutil.getElementByID("main-grid");
     grid.setStore(
@@ -1440,13 +1577,14 @@ Ext.define("Amps.Utilities", {
         start: 0,
         limit: 25,
         remoteSort: true,
+        sorters: config["sorters"] ? config["sorters"] : [],
         proxy: {
           type: "rest",
           headers: {
             Authorization: localStorage.getItem("access_token"),
           },
           extraParams: { filters: JSON.stringify(filters ? filters : {}) },
-          url: `/api/store/${route}`,
+          url: `/api/${route}`,
           listeners: {
             exception: amfutil.refresh_on_failure,
           },
@@ -1542,7 +1680,7 @@ Ext.define("Amps.Utilities", {
     window.clearForm();
 
     console.log(form);
-    amfutil.setGridStore({}, ampsgrids.grids[Ext.util.History.getToken()]());
+    amfutil.setGridStore({}, Amps.Pages.pages[Ext.util.History.getToken()]());
 
     amfutil.getElementByID("searchwindow").close();
     amfutil.getElementByID("searchpanelbtn").setIconCls("x-fa fa-search");
@@ -1643,17 +1781,23 @@ Ext.define("Amps.Utilities", {
   },
 
   createFieldSearch: function (route, field, grid) {
-    var page = ampsgrids.grids[route]();
+    var page = Amps.Pages.pages[route]();
+    console.log(page);
     var items =
-      page.subgrids[field].columns &&
-      page.subgrids[field].columns.map((field) => {
+      page.view.columns &&
+      page.view.columns.map((field) => {
         if (field.type) {
-          return filterTypes[field.type](field);
+          console.log(field);
+          if (field.searchOpts) {
+            return filterTypes[field.type](field, field.searchOpts);
+          } else {
+            return filterTypes[field.type](field);
+          }
         } else {
           return;
         }
       });
-
+    console.log(items);
     return new Ext.form.Panel({
       defaults: {
         padding: 5,
@@ -1672,7 +1816,7 @@ Ext.define("Amps.Utilities", {
             // console.log(dateval);
             var fields = form.getFields();
             var values = form.getValues();
-            var fields = ampsgrids.grids[route]().subgrids[field].columns;
+            var fields = Amps.Pages.pages[route]().columns;
             // var fieldKeys = fields.map((field) => field.field);
             console.log(fields);
             console.log(values);
@@ -1734,18 +1878,21 @@ Ext.define("Amps.Utilities", {
 
   createFormFilter: function () {
     var route = Ext.util.History.currentToken;
-    var page = ampsgrids.grids[route]();
-    console.log(ampsgrids.grids[route]());
+    var page = Amps.Pages.pages[route]();
+    console.log(Amps.Pages.pages[route]());
     var items =
-      page.columns &&
-      page.columns.map((field) => {
+      page.view.columns &&
+      page.view.columns.map((field) => {
         if (field.type) {
-          return filterTypes[field.type](field);
+          if (field.searchOpts) {
+            return filterTypes[field.type](field, field.searchOpts);
+          } else {
+            return filterTypes[field.type](field);
+          }
         } else {
           return;
         }
       });
-
     return new Ext.form.Panel({
       defaults: {
         padding: 5,
@@ -1764,7 +1911,7 @@ Ext.define("Amps.Utilities", {
             // console.log(dateval);
             var fields = form.getFields();
             var values = form.getValues();
-            var fields = ampsgrids.grids[route]().columns;
+            var fields = Amps.Pages.pages[route]().view.columns;
             // var fieldKeys = fields.map((field) => field.field);
             console.log(fields);
             console.log(values);
@@ -1791,6 +1938,7 @@ Ext.define("Amps.Utilities", {
                   );
                   console.log(filters);
                 } else {
+                  console.log(filters);
                   filters[field.dataIndex] = values[field.dataIndex];
                 }
               }
@@ -1815,6 +1963,40 @@ Ext.define("Amps.Utilities", {
     });
   },
 
+  addbtn: function (config, store, field) {
+    return {
+      xtype: "button",
+      iconCls: "x-fa fa-plus",
+      handler: function () {
+        var win = Ext.create("Amps.form.add", config.window);
+        win.loadForm(
+          config.object,
+          config.fields,
+          (form, values) => {
+            if (config.add && config.add.process) {
+              values = config.add.process(form, values);
+            }
+            return values;
+          },
+          field,
+          function () {
+            store.reload();
+          }
+        );
+        win.show();
+      },
+    };
+  },
+
+  searchbtn: function (gridid) {
+    return {
+      xtype: "button",
+      iconCls: "x-fa fa-search",
+      itemId: "searchpanelbtn",
+      handler: "onSearchPanel",
+      gridid: gridid,
+    };
+  },
   copyTextdata: function (e) {
     var contextMenu = Ext.create("Ext.menu.Menu", {
       width: 100,
@@ -1833,8 +2015,21 @@ Ext.define("Amps.Utilities", {
     contextMenu.showAt(e.pageX, e.pageY);
   },
 
+  fieldStore(field) {
+    return {
+      proxy: {
+        type: "ajax",
+        url: "api/" + field,
+        headers: {
+          Authorization: localStorage.getItem("access_token"),
+        },
+      },
+      autoLoad: true,
+    };
+  },
+
   renderFileSize: function fileSize(size) {
-    var i = Math.floor(Math.log(size) / Math.log(1000));
+    var i = size == 0 ? 0 : Math.floor(Math.log(size) / Math.log(1000));
     return (
       (size / Math.pow(1000, i)).toFixed(2) * 1 +
       " " +
@@ -1842,7 +2037,42 @@ Ext.define("Amps.Utilities", {
     );
   },
 
-  consumerConfig(store, tooltip) {
+  updateHandler: function (config) {
+    return {
+      element: "body", //bind to the underlying body property on the panel
+      fn: async function (grid, rowIndex, e, obj) {
+        var record = grid.record.data;
+
+        var user = await amfutil.userInfo();
+        var updateForm = Ext.create("Amps.form.update", {
+          entity: user,
+        });
+        updateForm.loadForm(config, record, false);
+        var win = new Ext.window.Window({
+          modal: true,
+          minWidth: 500,
+          width: 600,
+          minHeight: 600,
+          height: 600,
+          title: `Update ${config.object}`,
+          // maxHeight: 600,
+          scrollable: true,
+          // resizable: false,
+          layout: "fit",
+          items: [updateForm],
+        });
+        console.log(win);
+        win.show();
+      },
+    };
+  },
+
+  consumerConfig: (topicbuilder, tooltip, msg = null) => {
+    var tb = topicbuilder(function (scope, val) {
+      var updated = this.up("fieldset").down("#updated");
+      updated.update();
+    });
+    console.log(tb);
     return {
       xtype: "fieldset",
       title: "Consumer Config",
@@ -1852,7 +2082,9 @@ Ext.define("Amps.Utilities", {
       },
       items: [
         amfutil.infoBlock(
-          'Certain rules, actions, or services require the creation of a topic consumer which determines which subset of events to process. This block allows for the configuration of that subscriber and changing any of these values after creation will result in the creation of a new consumer. (i.e. If the consumer is configured with a Deliver Policy of "All" and 50 messages are consumed, updating the consumer config and leaving the delivery policy of "All" will result in the reprocessing of those messages.)'
+          msg
+            ? msg
+            : 'Certain rules, actions, or services require the creation of a topic consumer which determines which subset of events to process. This block allows for the configuration of that subscriber and changing any of these values after creation will result in the creation of a new consumer. (i.e. If the consumer is configured with a Deliver Policy of "All" and 50 messages are consumed, updating the consumer config and leaving the delivery policy of "All" will result in the reprocessing of those messages.)'
         ),
         {
           xtype: "displayfield",
@@ -1868,52 +2100,45 @@ Ext.define("Amps.Utilities", {
           submitValue: true,
         },
         {
-          xtype: "combobox",
-          fieldLabel: "Mailbox Topic",
-          name: "topic",
-          valueField: "topic",
-          displayField: "topic",
-          store: store,
-          allowBlank: false,
-          listeners: {
-            change: function (scope) {
-              var updated = scope.up("fieldset").down("#updated");
-              updated.update();
-            },
+          xtype: "fieldcontainer",
+          layout: {
+            type: "vbox",
+            align: "stretch",
           },
+          items: tb,
         },
-        {
-          xtype: "combobox",
-          fieldLabel: "Deliver Policy",
-          name: "policy",
-          allowBlank: false,
-          valueField: "field",
-          displayField: "label",
-          store: [
+        amfutil.combo(
+          "Deliver Policy",
+          "policy",
+          [
             { field: "all", label: "All" },
             { field: "new", label: "New" },
             { field: "last", label: "Last" },
             { field: "by_start_time", label: "Start Time" },
           ],
-          listeners: amfutil.renderListeners(
-            function (scope, val) {
-              var conts = ["by_start_time"];
+          "field",
+          "label",
+          {
+            listeners: amfutil.renderListeners(
+              function (scope, val) {
+                var conts = ["by_start_time"];
 
-              conts.forEach((cont) => {
-                console.log(cont);
-                var c = scope.up("fieldset").down("#" + cont);
-                console.log(c);
-                c.setHidden(val != cont);
-                c.setDisabled(val != cont);
-              });
-            },
-            null,
-            function (scope) {
-              var updated = scope.up("fieldset").down("#updated");
-              updated.update();
-            }
-          ),
-        },
+                conts.forEach((cont) => {
+                  console.log(cont);
+                  var c = scope.up("fieldset").down("#" + cont);
+                  console.log(c);
+                  c.setHidden(val != cont);
+                  c.setDisabled(val != cont);
+                });
+              },
+              null,
+              function (scope) {
+                var updated = scope.up("fieldset").down("#updated");
+                updated.update();
+              }
+            ),
+          }
+        ),
         {
           xtype: "fieldcontainer",
           itemId: "by_start_time",
@@ -2037,3 +2262,518 @@ Ext.define("Amps.Utilities", {
     return h + ":" + m + ":" + s + " ";
   },
 });
+
+const filterTypes = {
+  tag: (field, opts = {}) => {
+    return Object.assign(
+      {
+        xtype: "tagfield",
+        fieldLabel: field.text,
+        name: field.dataIndex,
+        store: field["options"],
+        emptyText: "Filter by " + field.text,
+        displayField: "label",
+        valueField: "field",
+        queryMode: "local",
+        filterPickList: true,
+      },
+      opts
+    );
+  },
+  aggregate: (field) => {
+    return {
+      xtype: "combobox",
+      fieldLabel: field.text,
+      name: field.dataIndex,
+      emptyText: "Filter by " + field.text,
+      listeners: {
+        beforerender: async function (scope) {
+          var res = await amfutil.ajaxRequest({
+            url: `api/${field.collection}/aggregate/${field.dataIndex}`,
+          });
+          var nodes = Ext.decode(res.responseText);
+          scope.setStore(nodes);
+        },
+      },
+    };
+  },
+  text: (field) => ({
+    xtype: "textfield",
+    fieldLabel: field.text,
+    name: field.dataIndex,
+    emptyText: "Filter by " + field.text,
+  }),
+  checkbox: (field) => ({
+    xtype: "checkbox",
+    name: field.dataIndex,
+    fieldLabel: field.text,
+
+    uncheckedValue: false,
+    inputValue: true,
+    allowBlank: false,
+    forceSelection: true,
+  }),
+  combo: (field, opts) => {
+    return Object.assign(
+      {
+        xtype: "combobox",
+        fieldLabel: field.text,
+        name: field.dataIndex,
+        displayField: "label",
+        valueField: "field",
+        store: field.options,
+        emptyText: "Filter by " + field.text,
+      },
+      opts
+    );
+  },
+
+  date: (field) =>
+    new Ext.form.FieldSet({
+      title: field.text,
+      items: [
+        {
+          xtype: "fieldcontainer",
+          layout: "hbox",
+          items: [
+            {
+              xtype: "datefield",
+              anchor: "100%",
+              fieldLabel: "From",
+              name: "from_date",
+              itemId: "fromDate",
+              emptyText: "Select Date",
+              format: "d-M-Y",
+              padding: { left: 0, top: 0, bottom: 6 },
+              listeners: {
+                specialkey: function (field, e) {
+                  if (e.getKey() == e.ENTER) {
+                    btn = amfutil.getElementByID("filter_message_activity");
+                    amfactionhelper.OnEnterKey(btn);
+                  }
+                },
+
+                change: function (field) {
+                  var date = new Date(field.getValue());
+                  var year = date.getFullYear();
+                  var month = date.getMonth();
+                  var day = date.getDate();
+                  console.log(year, month, day);
+                  if (field.getValue() != "" || field.getValue() != null) {
+                    var fromTime = amfutil.getElementByID("fromTime");
+                    if (fromTime.value == null || fromTime.value == "") {
+                      fromTime.setValue("00:00:00");
+                    }
+                  } else {
+                    console.log("going to set allow blank true");
+                    amfutil.getElementByID("fromTime").allowBlank = true;
+                  }
+                  var fieldset = this.up("fieldset");
+                  console.log(fieldset);
+                  var hidden = amfutil.getElementByID("datefiltervalue");
+                  console.log(hidden.value);
+                  var curr = hidden.value;
+                  if (curr != "" && curr != null) {
+                    curr = JSON.parse(curr);
+                  } else {
+                    curr = {};
+                  }
+
+                  if (curr["$gt"]) {
+                    var date = new Date(curr["$gt"]);
+                    date.setFullYear(year);
+                    date.setMonth(month);
+                    date.setDate(day);
+
+                    curr["$gt"] = date;
+                  } else {
+                    curr["$gt"] = new Date(date);
+                  }
+
+                  console.log(curr);
+                  hidden.setValue(JSON.stringify(curr));
+                },
+              },
+            },
+            {
+              xtype: "timefield",
+              name: "fromtime",
+              fieldLabel: "",
+              increment: 15,
+              itemId: "fromTime",
+              emptyText: "Select Time",
+              padding: { left: 4, top: 0, bottom: 0 },
+              format: "H:i:s",
+              anchor: "100%",
+              listeners: {
+                specialkey: function (field, e) {
+                  if (e.getKey() == e.ENTER) {
+                    btn = amfutil.getElementByID("filter_message_activity");
+                    amfactionhelper.OnEnterKey(btn);
+                  }
+                },
+                change: function (field) {
+                  var date = new Date(field.getValue());
+                  var hours = date.getHours();
+                  var minutes = date.getMinutes();
+                  var seconds = date.getSeconds();
+                  console.log(hours, minutes, seconds);
+                  if (!isNaN(hours)) {
+                    var hidden = amfutil.getElementByID("datefiltervalue");
+                    console.log(hidden.value);
+                    var curr = hidden.value;
+                    if (curr != "" && curr != null) {
+                      curr = JSON.parse(curr);
+                    } else {
+                      curr = {};
+                    }
+
+                    if (curr["$gt"]) {
+                      var date = new Date(curr["$gt"]);
+                      date.setHours(hours);
+                      date.setMinutes(minutes);
+                      date.setSeconds(seconds);
+
+                      curr["$gt"] = date;
+                    }
+                    console.log(curr);
+                    hidden.setValue(JSON.stringify(curr));
+                  }
+                },
+              },
+            },
+          ],
+        },
+        {
+          xtype: "fieldcontainer",
+          layout: "hbox",
+          items: [
+            {
+              xtype: "datefield",
+              anchor: "100%",
+              fieldLabel: "To",
+              name: "to_date",
+              format: "d-M-Y",
+              emptyText: "Select Date",
+              itemId: "maToDate",
+              padding: { left: 0, top: 0, bottom: 6 },
+              listeners: {
+                specialkey: function (field, e) {
+                  if (e.getKey() == e.ENTER) {
+                    btn = amfutil.getElementByID("filter_message_activity");
+                    amfactionhelper.OnEnterKey(btn);
+                  }
+                },
+                change: function (field) {
+                  var date = new Date(field.getValue());
+                  var year = date.getFullYear();
+                  var month = date.getMonth();
+                  var day = date.getDate();
+                  console.log(year, month, day);
+                  if (field.getValue() != "" || field.getValue() != null) {
+                    var fromTime = amfutil.getElementByID("fromTime");
+                    if (fromTime.value == null || fromTime.value == "") {
+                      fromTime.setValue("00:00:00");
+                    }
+                  } else {
+                    console.log("going to set allow blank true");
+                    amfutil.getElementByID("fromTime").allowBlank = true;
+                  }
+                  var fieldset = this.up("fieldset");
+                  console.log(fieldset);
+                  var hidden = amfutil.getElementByID("datefiltervalue");
+                  console.log(hidden.value);
+                  var curr = hidden.value;
+                  if (curr != "" && curr != null) {
+                    curr = JSON.parse(curr);
+                  } else {
+                    curr = {};
+                  }
+
+                  if (curr["$lt"]) {
+                    var date = new Date(curr["$lt"]);
+                    date.setFullYear(year);
+                    date.setMonth(month);
+                    date.setDate(day);
+
+                    curr["$lt"] = date;
+                  } else {
+                    curr["$lt"] = new Date(date);
+                  }
+
+                  console.log(curr);
+                  hidden.setValue(JSON.stringify(curr));
+                },
+              },
+            },
+            {
+              xtype: "timefield",
+              name: "totime",
+              fieldLabel: "",
+              increment: 15,
+              itemId: "toTime",
+              emptyText: "Select Time",
+              format: "H:i:s",
+              padding: { left: 4, top: 0, bottom: 0 },
+              anchor: "100%",
+              listeners: {
+                specialkey: function (field, e) {
+                  if (e.getKey() == e.ENTER) {
+                    btn = amfutil.getElementByID("filter_message_activity");
+                    amfactionhelper.OnEnterKey(btn);
+                  }
+                },
+                change: function (field) {
+                  var date = new Date(field.getValue());
+                  var hours = date.getHours();
+                  var minutes = date.getMinutes();
+                  var seconds = date.getSeconds();
+                  console.log(hours, minutes, seconds);
+                  if (!isNaN(hours)) {
+                    var hidden = amfutil.getElementByID("datefiltervalue");
+                    console.log(hidden.value);
+                    var curr = hidden.value;
+                    if (curr != "" && curr != null) {
+                      curr = JSON.parse(curr);
+                    } else {
+                      curr = {};
+                    }
+
+                    if (curr["$lt"]) {
+                      var date = new Date(curr["$lt"]);
+                      date.setHours(hours);
+                      date.setMinutes(minutes);
+                      date.setSeconds(seconds);
+
+                      curr["$lt"] = date;
+                    }
+                    console.log(curr);
+                    hidden.setValue(JSON.stringify(curr));
+                  }
+                },
+              },
+            },
+          ],
+        },
+        {
+          xtype: "hidden",
+          itemId: "datefiltervalue",
+          name: field.dataIndex,
+        },
+      ],
+    }),
+  fileSize: (field) => {
+    function setHiddenValue() {
+      var curr = {};
+      var hidden = amfutil.getElementByID(field.dataIndex + "sizefiltervalue");
+      var minUnit = amfutil
+        .getElementByID(field.dataIndex + "minUnit")
+        .getValue();
+      var minSize = amfutil
+        .getElementByID(field.dataIndex + "minSize")
+        .getValue();
+      var maxUnit = amfutil
+        .getElementByID(field.dataIndex + "maxUnit")
+        .getValue();
+      var maxSize = amfutil
+        .getElementByID(field.dataIndex + "maxSize")
+        .getValue();
+
+      if (minSize && minUnit) {
+        curr["$gt"] = minSize * sizeUnits[minUnit];
+      }
+
+      if (maxSize && maxUnit) {
+        curr["$lt"] = maxSize * sizeUnits[maxUnit];
+      }
+      console.log(curr);
+      hidden.setValue(JSON.stringify(curr));
+    }
+
+    return new Ext.form.FieldSet({
+      title: field.text,
+      items: [
+        {
+          xtype: "fieldcontainer",
+          layout: "hbox",
+          items: [
+            {
+              xtype: "numberfield",
+              anchor: "100%",
+              fieldLabel: "Minimum",
+              minValue: 0,
+              name: "minSize",
+              itemId: field.dataIndex + "minSize",
+              emptyText: "Minimum File Size",
+              format: "d-M-Y",
+              padding: { left: 0, top: 0, bottom: 6 },
+              listeners: {
+                specialkey: function (field, e) {
+                  if (e.getKey() == e.ENTER) {
+                    btn = amfutil.getElementByID("filter_message_activity");
+                    amfactionhelper.OnEnterKey(btn);
+                  }
+                },
+
+                change: function (fieldObj) {
+                  var minUnit = amfutil.getElementByID(
+                    field.dataIndex + "minUnit"
+                  );
+                  if (
+                    fieldObj.getValue() != "" &&
+                    fieldObj.getValue() != null
+                  ) {
+                    if (minUnit.value == null || minUnit.value == "") {
+                      minUnit.setValue("KB");
+                    }
+                  } else {
+                    console.log("going to set allow blank true");
+                    minUnit.allowBlank = true;
+                  }
+                  setHiddenValue();
+                },
+              },
+            },
+            {
+              xtype: "combo",
+              name: "minsizeunit",
+              fieldLabel: "Size Unit",
+              store: ["B", "KB", "MB", "GB", "TB"],
+              itemId: field.dataIndex + "minUnit",
+              emptyText: "Select Unit",
+              padding: { left: 4, top: 0, bottom: 0 },
+              anchor: "100%",
+              listeners: {
+                specialkey: function (field, e) {
+                  if (e.getKey() == e.ENTER) {
+                    btn = amfutil.getElementByID("filter_message_activity");
+                    amfactionhelper.OnEnterKey(btn);
+                  }
+                },
+                change: function (fieldObj) {
+                  var minSize = amfutil.getElementByID(
+                    field.dataIndex + "minSize"
+                  );
+
+                  if (
+                    fieldObj.getValue() != "" &&
+                    fieldObj.getValue() != null
+                  ) {
+                    if (minSize.value == null || minSize.value == "") {
+                      minSize.setValue(1);
+                    }
+                  } else {
+                    console.log("going to set allow blank true");
+                    minSize.allowBlank = true;
+                  }
+
+                  setHiddenValue();
+                },
+              },
+            },
+          ],
+        },
+        {
+          xtype: "fieldcontainer",
+          layout: "hbox",
+          items: [
+            {
+              xtype: "numberfield",
+              anchor: "100%",
+              fieldLabel: "Maximum",
+              name: "maxSize",
+              itemId: field.dataIndex + "maxSize",
+              minValue: 0,
+              emptyText: "Maximum File Size",
+              padding: { left: 0, top: 0, bottom: 6 },
+              listeners: {
+                specialkey: function (field, e) {
+                  if (e.getKey() == e.ENTER) {
+                    btn = amfutil.getElementByID("filter_message_activity");
+                    amfactionhelper.OnEnterKey(btn);
+                  }
+                },
+
+                change: function (fieldObj) {
+                  var maxUnit = amfutil.getElementByID(
+                    field.dataIndex + "maxUnit"
+                  );
+                  console.log();
+                  var val = fieldObj.getValue();
+                  console.log(val);
+                  if (val != "" && val != null) {
+                    if (maxUnit.value == null || maxUnit.value == "") {
+                      maxUnit.setValue("KB");
+                    }
+                  } else {
+                    console.log("going to set allow blank true");
+                    maxUnit.allowBlank = true;
+                  }
+
+                  setHiddenValue();
+                },
+              },
+            },
+            {
+              xtype: "combo",
+              name: "maxsizeunit",
+              fieldLabel: "Size Unit",
+              increment: 15,
+              itemId: field.dataIndex + "maxUnit",
+              emptyText: "Select Unit",
+              store: ["B", "KB", "MB", "GB", "TB"],
+              padding: { left: 4, top: 0, bottom: 0 },
+              anchor: "100%",
+              listeners: {
+                specialkey: function (field, e) {
+                  if (e.getKey() == e.ENTER) {
+                    btn = amfutil.getElementByID("filter_message_activity");
+                    amfactionhelper.OnEnterKey(btn);
+                  }
+                },
+                change: function (fieldObj) {
+                  var maxSize = amfutil.getElementByID(
+                    field.dataIndex + "maxSize"
+                  );
+                  var val = fieldObj.getValue();
+                  console.log(val);
+                  if (val != "" && val != null) {
+                    if (maxSize.value == null || maxSize.value == "") {
+                      maxSize.setValue(1);
+                    }
+                  } else {
+                    console.log("going to set allow blank true");
+                    maxSize.allowBlank = true;
+                  }
+                  setHiddenValue();
+                },
+              },
+            },
+          ],
+        },
+        {
+          xtype: "hidden",
+          itemId: field.dataIndex + "sizefiltervalue",
+          name: field.dataIndex,
+        },
+      ],
+    });
+  },
+  copyTextdata: function (e) {
+    var contextMenu = Ext.create("Ext.menu.Menu", {
+      width: 100,
+      items: [
+        {
+          text: "Copy",
+          iconCls: "x-fa fa fa-copy",
+          handler: function () {
+            var input = CLIPBOARD_CONTENTS;
+            navigator.clipboard.writeText(input).then(function () {});
+          },
+        },
+      ],
+    });
+    e.stopEvent();
+    contextMenu.showAt(e.pageX, e.pageY);
+  },
+};

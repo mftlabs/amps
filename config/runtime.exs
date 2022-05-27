@@ -96,7 +96,7 @@ if config_env() == :prod do
           phoenix_endpoint: AmpsWeb.Endpoint
         },
         %{
-          host: ~r/^#{System.get_env("AMPS_HOST", "localhost")}$/,
+          host: ~r/#{System.get_env("AMPS_HOST", "localhost")}$/,
           phoenix_endpoint: AmpsPortal.Endpoint
         }
       ]
@@ -112,13 +112,14 @@ if config_env() == :prod do
           phoenix_endpoint: AmpsWeb.Endpoint
         },
         %{
-          host: ~r/^#{System.get_env("AMPS_HOST", "localhost")}$/,
+          host: ~r/#{System.get_env("AMPS_HOST", "localhost")}$/,
           phoenix_endpoint: AmpsPortal.Endpoint
         }
       ]
   end
 
   config :amps_web, AmpsWeb.Endpoint,
+    use_ssl: String.to_atom(String.downcase(System.get_env("AMPS_USE_SSL", "FALSE"))),
     http: [
       # Enable IPv6 and bind on all interfaces.
       # Set it to  {0, 0, 0, 0, 0, 0, 0, 1} for local network only access.
@@ -133,12 +134,21 @@ if config_env() == :prod do
     ],
     authmethod: System.get_env("AMPS_AUTH_METHOD") || "db",
     vault_addr: System.get_env("AMPS_VAULT_ADDR", "http://localhost:8200"),
+    mongo_addr: System.get_env("AMPS_MONGO_ADDR", "mongodb://localhost:27017/amps"),
     secret_key_base: secret_key_base
 
   config :amps, Amps.Cluster,
-    url: System.get_env("AMPS_OPENSEARCH_ADDR", "http://localhost:9200"),
+    url: System.get_env("AMPS_OPENSEARCH_ADDR", "https://localhost:9200"),
     username: System.get_env("AMPS_OPENSEARCH_USERNAME", "admin"),
-    password: System.get_env("AMPS_OPENSEARCH_PASSWORD", "admin")
+    password: System.get_env("AMPS_OPENSEARCH_PASSWORD", "admin"),
+    conn_opts: [
+      transport_opts: [
+        verify: :verify_none
+      ]
+    ]
+
+  config :amps,
+    db: System.get_env("AMPS_DB_PROVIDER", "mongo")
 
   # config :ex_aws, :s3,
   #   access_key_id: "minioadmin",

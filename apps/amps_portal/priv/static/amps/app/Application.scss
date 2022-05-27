@@ -33,3 +33,21 @@ $form-label-font-weight: 500;
   $tool-selected-background-color: $base-color,
   $tool-indicator-selected-color: $selected-color
 );
+
+
+.x-grid-cell {
+  .actionicon {
+    margin-right: 0.5em;
+    width: min-content;
+    &.active {
+      color: green;
+    }
+    &.inactive {
+      color: grey;
+    }
+  }
+  font-weight: 500;
+  * {
+    font-family: "Open Sans" !important;
+  }
+}

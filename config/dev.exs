@@ -9,7 +9,7 @@ import Config
 config :amps_portal, AmpsPortal.Endpoint,
   # Binding to loopback ipv4 address prevents access from other machines.
   # Change to `ip: {0, 0, 0, 0}` to allow access from other machines.
-  http: [ip: {127, 0, 0, 1}, port: 4001],
+  http: [ip: {127, 0, 0, 1}, port: String.to_integer(System.get_env("AMPS_DEV_PORT", "4000")) + 1],
   check_origin: false,
   code_reloader: true,
   debug_errors: true,
@@ -71,16 +71,14 @@ config :amps_portal, AmpsPortal.Endpoint,
 config :amps_web, AmpsWeb.Endpoint,
   # Binding to loopback ipv4 address prevents access from other machines.
   # Change to `ip: {0, 0, 0, 0}` to allow access from other machines.
-  http: [ip: {0, 0, 0, 0}, port: 4000],
+  http: [ip: {0, 0, 0, 0}, port: String.to_integer(System.get_env("AMPS_DEV_PORT", "4000"))],
   check_origin: false,
   code_reloader: true,
   debug_errors: true,
   secret_key_base: "FZecDq8oIf+th6OcXfXYy5Y0cZi3QEsVIQsJ/qua2D0nrmE5qw/EDNtWN3j8KBBs",
   watchers: [
     # Start the esbuild watcher by calling Esbuild.install_and_run(:default, args)
-    esbuild:
-      {Esbuild, :install_and_run,
-       [:amps_web, ~w(--sourcemap=inline --watch --external:app.css --loader:.svg=file)]}
+    node: ["build.js", "--watch", cd: Path.expand("../apps/amps_web/assets", __DIR__)]
   ],
   server: true
 

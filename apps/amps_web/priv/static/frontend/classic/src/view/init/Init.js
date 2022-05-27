@@ -47,9 +47,11 @@ Ext.define("Amps.panel.Startup", {
               });
             },
             change: async function (cmp, value, oldValue, eOpts) {
-              var duplicate = await amfutil.checkDuplicate({
-                admin: { username: value },
+              var resp = await amfutil.ajaxRequest({
+                url: `api/duplicate_username/${value}`,
               });
+
+              var duplicate = Ext.decode(resp.responseText);
 
               if (duplicate) {
                 cmp.setActiveError("User Already Exists");
@@ -230,29 +232,42 @@ Ext.define("Amps.panel.Startup", {
             labelWidth: 150,
           },
           items: [
-            {
-              xtype: "textfield",
-              name: "storage_root",
-              fieldLabel: "Permanent Storage Path",
-              value: "/amps/data",
-            },
+            // {
+            //   xtype: "textfield",
+            //   name: "storage_root",
+            //   fieldLabel: "Permanent Storage Path",
+            //   value: "/data/amps/data",
+            // },
             {
               xtype: "textfield",
               name: "storage_temp",
               fieldLabel: "Temp Path",
-              value: "/amps/tmp",
+              value: "/amps/data/tmp",
             },
-            {
-              xtype: "textfield",
-              name: "storage_logs",
-              fieldLabel: "Logs Path",
-              value: "/amps/logs",
-            },
+            // {
+            //   xtype: "textfield",
+            //   name: "storage_logs",
+            //   fieldLabel: "Logs Path",
+            //   value: "/data/amps/logs",
+            // },
             {
               xtype: "textfield",
               name: "python_path",
               fieldLabel: "Script Module Path",
-              value: "/amps/modules",
+              value: "/amps/data/modules",
+            },
+            {
+              xtype: "numberfield",
+              name: "hinterval",
+              fieldLabel: "History Interval",
+              value: "2500",
+            },
+            {
+              xtype: "numberfield",
+              name: "TTL (days)",
+              fieldLabel: "Time to Live(Days)",
+              allowBlank: false,
+              value: "60",
             },
           ],
         },
@@ -286,6 +301,11 @@ Ext.define("Amps.panel.Startup", {
           handler: async function (scope) {
             var rootform = scope.up("startup").down("#card-0");
             var defaultform = scope.up("startup").down("#card-1");
+
+            var defaultvalues = amfutil.convertNumbers(
+              defaultform.getForm(),
+              defaultform.getValues()
+            );
             var mask = new Ext.LoadMask({
               msg: "Loading...",
               target: scope.up("startup"),
@@ -299,7 +319,7 @@ Ext.define("Amps.panel.Startup", {
               url: "/api/startup",
               jsonData: {
                 root: rootvalues,
-                system: defaultform.getValues(),
+                system: defaultvalues,
               },
               success: function () {
                 Ext.toast("Startup Configuration Successful");

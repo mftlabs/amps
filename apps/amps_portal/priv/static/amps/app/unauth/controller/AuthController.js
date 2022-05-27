@@ -101,12 +101,16 @@ Ext.define("Amps.controller.AuthController", {
     Ext.ComponentQuery.query("#signup_id")[0].disable();
     var form = btn.up("form");
     var values = form.getValues();
-    if (values.password != values.confpasswd) {
-      Ext.msg.Alert("Error", "Passwords not matched");
+    console.log(values);
+    if (values.password != values.confirmpswd) {
+      Ext.Msg.alert("Error", "Passwords not matched");
       return;
     }
     values.rules = [];
-    values.profiles = [];
+    values.mailboxes = [];
+
+    // values.profiles = [];
+    values.tokens = [];
     values.ufa = {
       stime: new Date().toISOString(),
       debug: false,
@@ -115,7 +119,12 @@ Ext.define("Amps.controller.AuthController", {
       cinterval: 30,
       max: 100,
     };
+
+    values.createdby = values.firstname + " " + values.lastname;
+    values.created = new Date().toISOString();
     delete values.confpasswd;
+    console.log(values);
+
     Ext.Ajax.request({
       url: "/api/users/reg",
       method: "POST",

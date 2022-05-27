@@ -1,18 +1,25 @@
 defmodule AmpsPortal.DataController do
   use AmpsPortal, :controller
-  #import Argon2
+  # import Argon2
   alias Amps.DB
+  alias AmpsPortal.Util
 
-  def get_messages(conn, _params) do
-    # if vault_collection(collection) do
-    #   data = VaultData.get_rows("amps/" <> collection)
-    #   IO.inspect(data)
+  def email(conn, _) do
+    json(conn, Amps.Defaults.get("email"))
+  end
 
-    #   json(
-    #     conn,
-    #     data
-    #   )
-    # else
+  def get_mailboxes(conn, _params) do
+    case Pow.Plug.current_user(conn) do
+      nil ->
+        send_resp(conn, 401, "Unauthorized")
+
+      user ->
+        user = DB.find_one(Util.conn_index(conn, "users"), %{"username" => user.username})
+        json(conn, user["mailboxes"] || [])
+    end
+  end
+
+  def get_messages(conn, %{"mailbox" => mailbox}) do
     case Pow.Plug.current_user(conn) do
       nil ->
         json(
@@ -21,31 +28,38 @@ defmodule AmpsPortal.DataController do
         )
 
       user ->
-        qp = conn.query_params()
+        user = DB.find_one(Util.conn_index(conn, "users"), %{"username" => user.username})
 
-        qp = Map.put(qp, "filters", Jason.encode!(%{"mailbox" => user.username}))
-        IO.inspect(qp)
-        conn = Map.put(conn, :query_params, qp)
+        mailbox =
+          Enum.find(user["mailboxes"], fn mb ->
+            mb["name"] == mailbox
+          end)
 
-        data = DB.get_rows(conn, %{"collection" => "mailbox"})
+        case mailbox do
+          nil ->
+            send_resp(conn, 404, "Mailbox not found")
 
-        json(
-          conn,
-          data
-        )
+          mailbox ->
+            qp = conn.query_params()
+
+            qp =
+              Util.create_filter(qp, %{
+                "recipient" => user["username"],
+                "mailbox" => mailbox["name"]
+              })
+
+            conn = Map.put(conn, :query_params, qp)
+            data = DB.get_rows(conn, %{"collection" => Util.conn_index(conn, "mailbox")})
+
+            json(
+              conn,
+              data
+            )
+        end
     end
   end
 
   def get_messages(conn, _params) do
-    # if vault_collection(collection) do
-    #   data = VaultData.get_rows("amps/" <> collection)
-    #   IO.inspect(data)
-
-    #   json(
-    #     conn,
-    #     data
-    #   )
-    # else
     case Pow.Plug.current_user(conn) do
       nil ->
         json(
@@ -55,12 +69,9 @@ defmodule AmpsPortal.DataController do
 
       user ->
         qp = conn.query_params()
-
-        qp = Map.put(qp, "filters", Jason.encode!(%{"mailbox" => user.username}))
-        IO.inspect(qp)
+        qp = Util.create_filter(qp, %{"recipient" => user.username})
         conn = Map.put(conn, :query_params, qp)
-
-        data = DB.get_rows(conn, %{"collection" => "mailbox"})
+        data = DB.get_rows(conn, %{"collection" => Util.conn_index(conn, "mailbox")})
 
         json(
           conn,
@@ -72,9 +83,19 @@ defmodule AmpsPortal.DataController do
   def duplicate(conn, _params) do
     body = conn.body_params()
 
-    duplicate = DB.find_one("users", body) != nil
+    case Pow.Plug.current_user(conn) do
+      nil ->
+        send_resp(conn, 401, "Unauthorized")
 
-    json(conn, duplicate)
+      user ->
+        duplicate =
+          DB.find_one(
+            Util.conn_index(conn, "users"),
+            Map.merge(body, %{"username" => user.username})
+          ) != nil
+
+        json(conn, duplicate)
+    end
   end
 
   def get_mailbox_topics(conn, _params) do
@@ -87,7 +108,7 @@ defmodule AmpsPortal.DataController do
 
       user ->
         topics =
-          DB.find("topics", %{
+          DB.find(Util.conn_index(conn, "topics"), %{
             "type" => "mailbox",
             "topic" => %{"$regex" => "amps.mailbox.#{user.username}.*"}
           })
@@ -105,7 +126,10 @@ defmodule AmpsPortal.DataController do
         send_resp(conn, 403, "Forbidden")
 
       user ->
-        case DB.find_one("mailbox", %{"recipient" => user.username, "msgid" => msgid}) do
+        case DB.find_one(Util.conn_index(conn, "mailbox"), %{
+               "recipient" => user.username,
+               "msgid" => msgid
+             }) do
           nil ->
             send_resp(conn, 404, "Not found")
 
@@ -117,7 +141,28 @@ defmodule AmpsPortal.DataController do
               )
             else
               # if msg["temp"] do
-              send_download(conn, {:file, msg["fpath"]}, disposition: :attachment)
+              stream = AmpsUtil.stream(msg, conn.assigns().env)
+
+              conn =
+                conn
+                |> put_resp_header(
+                  "content-disposition",
+                  "attachment; filename=\"#{msg["fname"] || "download"}\""
+                )
+                |> send_chunked(200)
+
+              Enum.reduce_while(stream, conn, fn chunk, conn ->
+                case Plug.Conn.chunk(conn, chunk) do
+                  {:ok, conn} ->
+                    {:cont, conn}
+
+                  {:error, :closed} ->
+                    {:halt, conn}
+                end
+              end)
+
+              # send_download(conn, {:file, msg["fpath"]}, disposition: :attachment)
+
               # else
               #   root = AmpsUtil.get_env(:storage_root)
 
@@ -136,8 +181,34 @@ defmodule AmpsPortal.DataController do
         send_resp(conn, 403, "Forbidden")
 
       user ->
-        DB.delete_one("mailbox", %{"recipient" => user.username, "msgid" => msgid})
+        DB.delete_one(Util.conn_index(conn, "mailbox"), %{
+          "recipient" => user.username,
+          "msgid" => msgid
+        })
+
         json(conn, :ok)
+    end
+  end
+
+  def ufa_logs(conn, _params) do
+    case Pow.Plug.current_user(conn) do
+      nil ->
+        json(
+          conn,
+          %{success: false, count: 0, rows: []}
+        )
+
+      user ->
+        qp = conn.query_params()
+        IO.inspect(qp)
+        qp = Util.create_filter(qp, %{"user" => user.username})
+        conn = Map.put(conn, :query_params, qp)
+        data = DB.get_rows(conn, %{"collection" => Util.conn_index(conn, "ufa_logs")})
+
+        json(
+          conn,
+          data
+        )
     end
   end
 end

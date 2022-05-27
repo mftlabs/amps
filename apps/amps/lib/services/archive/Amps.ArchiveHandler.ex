@@ -1,0 +1,53 @@
+defmodule Amps.ArchiveHandler do
+  use Supervisor
+  require Logger
+
+  def start_link(args, env \\ "") do
+    IO.inspect(args)
+    IO.inspect(env)
+    GenServer.start_link(__MODULE__, {args, env})
+  end
+
+  def init({parms, env}) do
+    Logger.info("Archive Handler for #{env}")
+    count = parms["subs_count"]
+
+    children =
+      Enum.reduce(1..count, [], fn x, acc ->
+        name = String.to_atom(parms["name"] <> Integer.to_string(x))
+
+        [{Amps.ArchiveConsumer, name: name, parms: parms, env: env, handler: self()} | acc]
+      end)
+
+    # Now we start the supervisor with the children and a strategy
+    {:ok, pid} = Supervisor.start_link(children, strategy: :one_for_one)
+
+    # After started, we can query the supervisor for information
+
+    {:ok, %{parms: parms, failures: 0}}
+  end
+
+  def get_failures(pid) do
+    GenServer.call(pid, :failures)
+  end
+
+  def add_failure(pid) do
+    GenServer.call(pid, :add_fail)
+  end
+
+  def reset_failure(pid) do
+    GenServer.cast(pid, :reset_failure)
+  end
+
+  def handle_call(:add_fail, _, state) do
+    {:reply, state.failures + 1, Map.put(state, :failures, state.failures + 1)}
+  end
+
+  def handle_call(:failures, _, state) do
+    {:reply, state.failures, state}
+  end
+
+  def handle_cast(:reset_failure, state) do
+    {:noreply, Map.put(state, :failures, 0)}
+  end
+end

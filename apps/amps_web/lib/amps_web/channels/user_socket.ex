@@ -2,7 +2,7 @@ defmodule AmpsWeb.UserSocket do
   use Phoenix.Socket
   alias AmpsWeb.APIAuthPlug
   # transport :websocket, Phoenix.Transports.WebSocket
-  channel "notifications", AmpsWeb.NotificationChannel
+  channel("notifications", AmpsWeb.NotificationChannel)
 
   ## Channels
   # channel "room:*", AmpsWeb.RoomChannel
@@ -24,6 +24,8 @@ defmodule AmpsWeb.UserSocket do
   # end
 
   def connect(%{"token" => token} = _params, socket, %{pow_config: config}) do
+    IO.inspect(config)
+
     %Plug.Conn{secret_key_base: socket.endpoint.config(:secret_key_base)}
     |> APIAuthPlug.get_credentials(token, config)
     |> case do

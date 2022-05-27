@@ -1,15 +1,15 @@
 defmodule ZipAction do
   require Logger
 
-  def run(msg, parms, state) do
+  def run(msg, parms, {state, env}) do
     Logger.info("input #{inspect(msg)}")
-    {:ok, newmsg} = zip(msg, parms, state)
+    {:ok, newmsg} = zip(msg, parms, {state, env})
     Logger.info("output #{inspect(newmsg)}")
     AmpsEvents.send(newmsg, parms, state)
   end
 
-  def zip(msg, parms, _state) do
-    is = AmpsUtil.get_istream(msg)
+  def zip(msg, parms, {state, env}) do
+    is = AmpsUtil.stream(msg, env)
     opts = []
 
     if not AmpsUtil.blank?(parms["password"]) do
@@ -24,7 +24,7 @@ defmodule ZipAction do
     tfile = AmpsUtil.tempdir() <> "/" <> msgid <> ".out"
 
     Zstream.zip([
-      Zstream.entry(msg["fname"], is, opts)
+      Zstream.entry(msg["fname"] || msgid, is, opts)
     ])
     |> Stream.into(File.stream!(tfile))
     |> Stream.run()

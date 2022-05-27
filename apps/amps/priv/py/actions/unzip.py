@@ -1,6 +1,9 @@
 import zipfile
 import json
 import os
+import io
+from erlport.erlang import cast, call
+from erlport.erlterms import Atom
 
 
 def run(input):
@@ -8,9 +11,18 @@ def run(input):
     input = json.loads(input)
     msg = input["msg"]
     parms = input["parms"]
+    env = input["env"]
     outputdir = msg["fpath"] + ".tmp"
 
-    zf = zipfile.ZipFile(msg["fpath"], mode='r')
+    fpath = call(Atom(b'Elixir.AmpsUtil'), Atom(b'get_local_file'),
+                 [json.dumps(msg), bytes(env, "utf-8")])
+    print(fpath)
+    if not fpath:
+        raise "Couldn't fetch message."
+    else:
+        fpath = fpath.decode("utf-8")
+
+    zf = zipfile.ZipFile(fpath, mode='r')
     try:
 
         if "password" in parms:

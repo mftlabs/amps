@@ -23,7 +23,7 @@ defmodule Amps.MixProject do
   def application do
     [
       mod: {Amps.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: [:logger, :runtime_tools, :datapio_cluster]
     ]
   end
 
@@ -40,26 +40,41 @@ defmodule Amps.MixProject do
       {:swoosh, "~> 1.3"},
       {:plug_cowboy, "~> 2.0"},
       {:uuid, "~> 2.0", hex: :uuid_erl},
-      {:sched_ex, "~> 1.0"},
       {:poison, "~> 3.1"},
       {:mongodb_driver, "~> 0.7"},
       {:export, "~> 0.0.7"},
-      {:erlport, "~> 0.10.1"},
+      {:erlport,
+       [
+         env: :prod,
+         override: true,
+         git: "https://github.com/erlport/erlport.git",
+         branch: "master"
+       ]},
       {:poolboy, "~> 1.5"},
       {:glob, "~> 1.0"},
       {:sftp_client, "~> 1.4"},
-      {:snap, "~>0.5"},
+      {:snap, git: "https://github.com/aram0112/snap"},
       {:jetstream, path: "./jetstream"},
-      {:gnat, "~> 1.2"},
-      {:ldap_ex, "~> 0.2.2"},
+      {:pythra, git: "https://github.com/aram0112/pythra.git"},
+      {:gnat, "~> 1.4"},
       {:httpoison, "~> 1.8"},
       {:zstream, "~> 0.6.0"},
-      {:elsa, "~> 1.0.0-rc.3"},
       {:ex_aws, "~> 2.0"},
       {:ex_aws_s3, "~> 2.0"},
       {:quantum, "~> 3.0"},
       {:argon2_elixir, "~> 2.0"},
-      {:tesla, git: "https://github.com/teamon/tesla", override: true}
+      {:tesla, git: "https://github.com/teamon/tesla", override: true},
+      {
+        :datapio_cluster,
+        github: "datapio/opencore", ref: "main", sparse: "apps/datapio_cluster"
+      },
+      {:mnesiac, git: "https://github.com/aram0112/mnesiac"},
+      {:kafka_ex, git: "https://github.com/aram0112/kafka_ex"},
+      {:cors_plug, "~> 2.0"},
+      {:gen_smtp, "~> 1.0"}
+      # {:ex_json_schema, "~> 0.9.1"},
+      # {:xml_builder, "~> 2.1"},
+      # {:jsonpatch, "~> 0.12.0"}
     ]
   end
 

@@ -42,7 +42,7 @@ Ext.define("Amps.view.main.Main", {
       xtype: "mainmenu",
       title: "Main Menu",
       itemId: "mainmenu",
-      width: 250,
+      width: 300,
       region: "west",
       cls: "ufa-menu shadowed",
     },
@@ -152,7 +152,7 @@ Ext.define("Amps.view.main.Main", {
         },
         {
           xtype: "container",
-          itemId: "messages",
+          itemId: "message_events",
           hidden: true,
           controller: "messages",
           items: [

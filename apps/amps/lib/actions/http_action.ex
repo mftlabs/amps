@@ -1,13 +1,13 @@
 defmodule HttpAction do
   import Logger
 
-  def run(msg, parms, state) do
+  def run(msg, parms, {state, env}) do
     Logger.info("input #{inspect(msg)}")
-    req(msg, parms, state)
+    req(msg, parms, env)
     # AmpsEvents.send(newmsg, parms, state)
   end
 
-  def req(msg, parms, _state) do
+  def req(msg, parms, env) do
     # case parms["method"] do
     # end
 
@@ -43,12 +43,7 @@ defmodule HttpAction do
     #     ""
     #   end
 
-    body =
-      if msg["data"] do
-        msg["data"]
-      else
-        File.read!(msg["fpath"])
-      end
+    body = AmpsUtil.get_data(msg, env)
 
     IO.inspect(body)
 

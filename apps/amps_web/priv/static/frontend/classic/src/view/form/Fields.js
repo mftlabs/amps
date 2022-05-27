@@ -27,7 +27,7 @@ Ext.define("Amps.form.DateTime", {
     if (args["fieldLabel"]) {
       this.setFieldLabel(args["fieldLabel"]);
     } else {
-      this.setTitle("Time");
+      this.setFieldLabel("Time");
     }
 
     console.log(this);

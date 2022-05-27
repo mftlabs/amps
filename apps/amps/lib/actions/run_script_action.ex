@@ -1,11 +1,22 @@
 defmodule RunScriptAction do
   require Logger
 
-  def run(msg, parms, _state) do
+  def run(msg, parms, {state, env}) do
+    case runscript(msg, parms, env) do
+      {:send, event} ->
+        AmpsEvents.send(event, parms, %{})
+        {:sent, parms["output"]}
+
+      {:ok, result} ->
+        {:ok, result}
+    end
+  end
+
+  def runscript(msg, parms, env) do
     result =
       case parms["script_type"] do
         "python" ->
-          Amps.PyService.call(msg, parms)
+          Amps.PyService.call(msg, parms, env)
 
         _ ->
           nil
@@ -24,11 +35,19 @@ defmodule RunScriptAction do
 
           event =
             if newmsg do
-              msg
-              |> Map.merge(newmsg)
-              |> Map.merge(%{
-                "parent" => msg["msgid"]
-              })
+              msg =
+                msg
+                |> Map.merge(newmsg)
+                |> Map.merge(%{
+                  "msgid" => msgid,
+                  "parent" => msg["msgid"]
+                })
+
+              if newmsg["data"] do
+                Map.drop(msg, ["fpath", "fsize"])
+              else
+                Map.drop(msg, ["data"])
+              end
             else
               Map.merge(
                 msg,
@@ -41,10 +60,11 @@ defmodule RunScriptAction do
               )
             end
 
-          AmpsEvents.send(event, parms, %{})
+          IO.inspect(parms)
+          {:send, event}
+        else
+          {:ok, rparm}
         end
-
-        :ok
 
       {:error, error} ->
         raise error

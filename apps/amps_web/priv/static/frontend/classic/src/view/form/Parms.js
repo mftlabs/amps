@@ -130,8 +130,10 @@ Ext.define("Amps.form.Parms", {
           d = Ext.create("Amps.form.Parm.Bool", {
             name: scope.name,
           });
-
-          scope.insert(length - 1, d);
+        } else if (Number.isFinite(p.value)) {
+          d = Ext.create("Amps.form.Parm.Number", {
+            name: scope.name,
+          });
         } else {
           d = Ext.create("Amps.form.Parm.String", {
             name: scope.name,
@@ -294,7 +296,7 @@ Ext.define("Amps.form.Parm.String", {
             change: "onDefaultChange",
           },
           itemId: "value",
-          allowBlank: false,
+          // allowBlank: false,
         },
       ],
     },

@@ -38,7 +38,7 @@ defmodule AmpsWeb.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:phoenix, "~> 1.6.0"},
+      {:phoenix, "~> 1.6.6"},
       {:phoenix_html, "~> 3.0"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_live_view, "~> 0.17.5"},
@@ -47,6 +47,7 @@ defmodule AmpsWeb.MixProject do
       {:esbuild, "~> 0.2", runtime: Mix.env() == :dev},
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry_poller, "~> 1.0"},
+      {:argon2_elixir, "~> 2.0"},
       {:gettext, "~> 0.18"},
       {:amps, in_umbrella: true},
       {:jason, "~> 1.2"},
@@ -57,7 +58,6 @@ defmodule AmpsWeb.MixProject do
       {:ex_aws_s3, "~> 2.3.1"},
       {:glob, "~> 1.0"},
       {:httpoison, "~> 1.8"},
-      {:snap, "~> 0.5"},
       {:postgrex, "~> 0.15.10"},
       {:pow, "~> 1.0.25"},
       {:pow_assent, "~> 0.4.12"},
@@ -70,7 +70,17 @@ defmodule AmpsWeb.MixProject do
       {:x509, "~> 0.8.0"},
       {:master_proxy, "~> 0.1"},
       {:elixlsx, "~> 0.5.1"},
-      {:xlsxir, "~> 1.6.4"}
+      {:xlsxir, "~> 1.6.4"},
+      {:earmark, "~> 1.4"},
+      {:erlport,
+       [
+         env: :prod,
+         override: true,
+         git: "https://github.com/erlport/erlport.git",
+         branch: "master"
+       ]},
+      {:swoosh, "~> 1.3"}
+
       # {:uuid, "~> 1.1"}
     ]
   end
@@ -80,8 +90,8 @@ defmodule AmpsWeb.MixProject do
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     [
-      setup: ["deps.get"],
-      "assets.deploy": ["esbuild default --minify", "phx.digest"]
+      setup: ["cmd --cd assets npm install"],
+      "assets.deploy": ["cmd --cd assets node build.js --deploy", "phx.digest"]
     ]
   end
 end

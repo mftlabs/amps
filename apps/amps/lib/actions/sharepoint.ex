@@ -2,8 +2,8 @@ defmodule SharePoint do
   alias Amps.DB
   require Logger
 
-  def run(msg, parms, _state) do
-    provider = DB.find_one("providers", %{"_id" => parms["provider"]})
+  def run(msg, parms, {state, env}) do
+    provider = DB.find_one(AmpsUtil.index(env, "providers"), %{"_id" => parms["provider"]})
 
     token = get_token(provider)
 
@@ -34,12 +34,12 @@ defmodule SharePoint do
         if msg["data"] do
           small_upload(siteid, token, msg, parms, msg["data"])
         else
-          info = File.stat!(msg["fpath"])
+          size = AmpsUtil.get_size(msg, env)
 
-          if info.size < 4_000_000 do
-            small_upload(siteid, token, msg, parms, {:file, msg["fpath"]})
+          if size < 4_000_000 do
+            small_upload(siteid, token, msg, parms, {:stream, AmpsUtil.stream(msg, env)})
           else
-            large_upload(siteid, token, msg, parms, info.size)
+            large_upload(siteid, token, msg, parms, size, env)
           end
 
           # path = Path.join([path, fname <> ":/content"])
@@ -247,7 +247,7 @@ defmodule SharePoint do
     end
   end
 
-  def large_upload(siteid, token, msg, parms, size) do
+  def large_upload(siteid, token, msg, parms, size, env) do
     path = parms["path"]
     fname = msg["fname"]
     path = Path.join([path, fname <> ":/createUploadSession"])
@@ -274,7 +274,7 @@ defmodule SharePoint do
         10_485_760
       end
 
-    File.stream!(msg["fpath"], [read_ahead: chunk_size], chunk_size)
+    AmpsUtil.stream(msg, env, chunk_size)
     |> Enum.reduce({0, size}, fn chunk, {start, remaining} ->
       {finish, length, done} =
         if remaining > chunk_size do

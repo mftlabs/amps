@@ -28,9 +28,36 @@ Ext.define("Amps.Authorized.Viewport", {
       items: [
         {
           xtype: "container",
+          autoEl: "div",
+          layout: {
+            type: "vbox",
+            align: "begin",
+            vertical: true,
+            pack: "middle",
+          },
+          items: [
+            {
+              xtype: "component",
+              autoEl: {
+                tag: "img",
+                src: "/images/logo",
+                style: `
+                width: 200;
+                height: 50; 
+                object-fit: contain;
+                position: absolute; 
+                left: 0;
+                object-position: 0 0;
+              `,
+              },
+            },
+          ],
+        },
+        {
+          xtype: "container",
+          region: "center",
           layout: "center",
-          region: "west",
-          width: 100,
+          flex: 1,
           style: {
             color: "white",
             "font-size": 36,
@@ -45,8 +72,9 @@ Ext.define("Amps.Authorized.Viewport", {
         },
         {
           xtype: "container",
-          region: "center",
-          flex: 1,
+          layout: "center",
+          region: "east",
+          width: 100,
         },
       ],
     },
@@ -76,7 +104,6 @@ Ext.define("Amps.Authorized.Viewport", {
           xtype: "container",
           layout: "fit",
           itemId: "mainpage",
-
           style: {
             // "margin-left": "5",
             // "margin-right": "5",
@@ -149,6 +176,10 @@ Ext.define("Amps.Authorized.Viewport", {
           ],
         },
       ],
+    },
+    {
+      xtype: "searchwindow",
+      itemId: "searchwindow",
     },
   ],
 });

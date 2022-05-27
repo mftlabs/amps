@@ -18,18 +18,16 @@ Ext.define("Amps.view.nav.TreeNav", {
           cls: "messages",
         },
         {
-          iconCls: "x-fa fa-cog",
-          leaf: true,
-          rowCls: "service_events",
-          text: "Service Events",
-          tooltip: "Service Events",
-          // cls: "messages",
-        },
-        {
           iconCls: "x-fa fa-television",
           leaf: true,
           rowCls: "monitoring",
           text: "Service Monitoring",
+        },
+        {
+          iconCls: "x-fa fa-cog",
+          leaf: true,
+          rowCls: "system_logs",
+          text: "System Logs",
         },
         {
           iconCls: "x-fa fa-bolt",
@@ -43,6 +41,12 @@ Ext.define("Amps.view.nav.TreeNav", {
           rowCls: "consumers",
           text: "Consumers",
         },
+        // {
+        //   iconCls: "x-fa fa-list",
+        //   leaf: true,
+        //   rowCls: "reports",
+        //   text: "Reports",
+        // },
         {
           iconCls: "x-fa fa-sign-in",
           rowCls: "onboarding",
@@ -53,9 +57,9 @@ Ext.define("Amps.view.nav.TreeNav", {
             {
               iconCls: "x-fa fa-id-card-o",
               leaf: true,
-              rowCls: "customers",
-              text: "Customers",
-              tooltip: "Customers",
+              rowCls: "groups",
+              text: "Groups",
+              tooltip: "Groups",
             },
             {
               iconCls: "x-fa fa-users",
@@ -68,20 +72,84 @@ Ext.define("Amps.view.nav.TreeNav", {
         },
 
         {
-          iconCls: "x-fa fa-cogs",
+          iconCls: "x-fa fa-cog",
           rowCls: "configuration",
-          text: "Configuration",
+          text: "Message Configuration",
           selectable: false,
 
           expanded: true,
           children: [
             {
+              iconCls: "x-fa fa-edit",
+              leaf: true,
+              rowCls: "topics",
+              text: "Topics",
+            },
+            {
+              iconCls: "x-fa fa-tasks",
+              leaf: true,
+              rowCls: "actions",
+              text: "Actions",
+            },
+            {
+              iconCls: "x-fa fa-cog",
+              leaf: true,
+              rowCls: "services",
+              text: "Services",
+              tooltip: "Services",
+            },
+            {
+              iconCls: "x-fa fa-file-code-o",
+              leaf: true,
+              rowCls: "scripts",
+              text: "Scripts",
+            },
+            {
+              iconCls: "x-fa fa-code",
+              leaf: true,
+              rowCls: "templates",
+              text: "Templates",
+            },
+            {
+              iconCls: "x-fa fa-random",
+              leaf: true,
+              rowCls: "rules",
+              text: "Routing Rules",
+            },
+            {
+              iconCls: "x-fa fa-rss",
+              leaf: true,
+              rowCls: "endpoints",
+              text: "API Endpoints",
+            },
+            {
+              iconCls: "x-fa fa-flag",
+              leaf: true,
+              rowCls: "fields",
+              text: "Metadata Fields",
+            },
+            {
+              iconCls: "x-fa fa-key",
+              leaf: true,
+              rowCls: "keys",
+              text: "Keys",
+              tooltip: "Keys",
+            },
+            {
               iconCls: "x-fa fa-calendar",
               leaf: true,
-              rowCls: "scheduler",
-              text: "Scheduler",
-              tooltip: "Scheduler",
+              rowCls: "jobs",
+              text: "Jobs",
+              tooltip: "Jobs",
             },
+          ],
+        },
+        {
+          iconCls: "x-fa fa-file",
+          rowCls: "managedata",
+          text: "Data Configuration",
+          expanded: true,
+          children: [
             {
               iconCls: "x-fa fa-cogs",
               leaf: true,
@@ -89,6 +157,27 @@ Ext.define("Amps.view.nav.TreeNav", {
               text: "Providers",
               tooltip: "Providers",
             },
+            {
+              iconCls: "x-fa fa-photo",
+              leaf: true,
+              rowCls: "environments",
+              text: "Environments",
+            },
+            {
+              iconCls: "x-fa fa-magic",
+              leaf: true,
+              rowCls: "demos",
+              text: "Demos",
+              tooltip: "Demos",
+            },
+          ],
+        },
+        {
+          iconCls: "x-fa fa-th-large",
+          rowCls: "tools",
+          text: "Tools",
+          expanded: true,
+          children: [
             {
               iconCls: "x-fa fa-chevron-circle-right",
               leaf: true,
@@ -104,66 +193,6 @@ Ext.define("Amps.view.nav.TreeNav", {
               tooltip: "Wizard",
             },
             {
-              iconCls: "x-fa fa-cog",
-              leaf: true,
-              rowCls: "services",
-              text: "Services",
-              tooltip: "Services",
-            },
-            {
-              iconCls: "x-fa fa-tasks",
-              leaf: true,
-              rowCls: "actions",
-              text: "Actions",
-            },
-            {
-              iconCls: "x-fa fa-random",
-              leaf: true,
-              rowCls: "rules",
-              text: "Routing Rules",
-            },
-            {
-              iconCls: "x-fa fa-flag",
-              leaf: true,
-              rowCls: "fields",
-              text: "Metadata Fields",
-            },
-            {
-              iconCls: "x-fa fa-edit",
-              leaf: true,
-              rowCls: "topics",
-              text: "Topics",
-            },
-            {
-              iconCls: "x-fa fa-key",
-              leaf: true,
-              rowCls: "keys",
-              text: "Keys",
-              tooltip: "Keys",
-            },
-
-            // {
-            //   iconCls: "x-fa fa-arrow-down",
-            //   leaf: true,
-            //   rowCls: "subscribers",
-            //   text: "Subscribers",
-            // },
-
-            {
-              iconCls: "x-fa fa-pencil",
-              leaf: true,
-              rowCls: "defaults",
-              text: "Defaults",
-            },
-          ],
-        },
-        {
-          iconCls: "x-fa fa-cogs",
-          rowCls: "managedata",
-          text: "Manage Data",
-          expanded: true,
-          children: [
-            {
               iconCls: "x-fa fa-cloud-upload",
               leaf: true,
               rowCls: "imports",
@@ -171,6 +200,12 @@ Ext.define("Amps.view.nav.TreeNav", {
               tooltip: "Imports",
             },
           ],
+        },
+        {
+          iconCls: "x-fa fa-pencil",
+          leaf: true,
+          rowCls: "defaults",
+          text: "System Configuration",
         },
         {
           iconCls: "x-fa fa-user-secret",

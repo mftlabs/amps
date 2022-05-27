@@ -98,15 +98,15 @@ Ext.define("Amps.Pages", {
                 itemId: "fpoll",
                 value: "300",
               },
-              {
-                xtype: "textfield",
-                name: "fretry",
-                fieldLabel: "Failure Retry Wait",
-                maskRe: /[0-9]/,
-                // vtypeText: "Please enter a valid Failure Retry Wait",
-                itemId: "fretry",
-                value: "5",
-              },
+              // {
+              //   xtype: "textfield",
+              //   name: "fretry",
+              //   fieldLabel: "Failure Retry Wait",
+              //   maskRe: /[0-9]/,
+              //   // vtypeText: "Please enter a valid Failure Retry Wait",
+              //   itemId: "fretry",
+              //   value: "5",
+              // },
               {
                 xtype: "checkboxfield",
                 name: "regex",
@@ -135,6 +135,17 @@ Ext.define("Amps.Pages", {
                 title: "File Metadata",
                 types: ["string"],
                 name: "fmeta",
+              },
+              {
+                xtype: "numberfield",
+                name: "subs_count",
+                minValue: 1,
+                maxValue: 20,
+                value: 5,
+                fieldLabel: "Subscriber Count",
+                tooltip:
+                  "Number of concurrent processes fetching messages when rule is triggered",
+                allowBlank: false,
               },
               {
                 xtype: "radiogroup",
@@ -178,6 +189,7 @@ Ext.define("Amps.Pages", {
             ],
           },
           download: {
+            window: { height: 300 },
             type: "download",
             name: "Download",
             fields: [
@@ -191,22 +203,67 @@ Ext.define("Amps.Pages", {
                 value: "300",
               },
               {
-                xtype: "textfield",
-                name: "bretry",
-                itemId: "bretry",
-                maskRe: /[0-9]/,
-                fieldLabel: "Get Failure Retry Wait",
-                value: "5",
+                xtype: "numberfield",
+                name: "subs_count",
+                minValue: 1,
+                maxValue: 20,
+                value: 5,
+                fieldLabel: "Subscriber Count",
+                tooltip:
+                  "Number of concurrent processes fetching messages when rule is triggered",
+                allowBlank: false,
               },
-              amfutil.consumerConfig(
-                amfutil.mailboxTopics(),
-                "The user mailbox topic from which to consume files"
-              ),
+              // {
+              //   xtype: "textfield",
+              //   name: "bretry",
+              //   itemId: "bretry",
+              //   maskRe: /[0-9]/,
+              //   fieldLabel: "Get Failure Retry Wait",
+              //   value: "5",
+              // },
+              amfutil.consumerConfig(function (topichandler) {
+                return [
+                  amfutil.combo("Mailbox", "mailbox", null, "name", "name", {
+                    listeners: {
+                      beforerender: async function (scope) {
+                        var user = await amftil.userInfo();
+                        this.setStore(
+                          amfutil.createFieldStore(
+                            "users",
+                            user["_id"],
+                            "mailboxes"
+                          )
+                        );
+                      },
+                      change: async function (scope, val) {
+                        var form = scope.up("form");
+                        var user = await amftil.userInfo();
+
+                        if (val) {
+                          var topic = scope.up("fieldcontainer").down("#topic");
+                          topic.setValue(
+                            `amps.mailbox.${user["username"]}.${val}`
+                          );
+                        }
+                      },
+                    },
+                  }),
+                  amfutil.text("Mailbox Topic", "topic", {
+                    readOnly: true,
+                    itemId: "topic",
+                    listeners: {
+                      change: topichandler,
+                    },
+                  }),
+                ];
+              }, "The user mailbox topic from which to consume files"),
               {
                 xtype: "textfield",
                 name: "folder",
                 itemId: "folder",
                 fieldLabel: "Download Path",
+                value: "./downloads",
+
                 allowBlank: false,
                 tooltip: "The path to store the file",
               },
@@ -340,6 +397,9 @@ Ext.define("Amps.Pages", {
         add: {
           process: function (form, values) {
             console.log(values);
+
+            values.subs_count = values.subs_count.toString();
+
             if (values.fmeta) {
               values.fmeta = JSON.stringify(
                 amfutil.formatArrayField(values.fmeta)
@@ -351,6 +411,8 @@ Ext.define("Amps.Pages", {
         update: {
           process: function (form, values) {
             console.log(values);
+            values.subs_count = values.subs_count.toString();
+
             if (values.fmeta) {
               values.fmeta = JSON.stringify(
                 amfutil.formatArrayField(values.fmeta)
@@ -426,7 +488,8 @@ Ext.define("Amps.Pages", {
                 {
                   xtype: "panel",
                   title: "Agent Download",
-                  flex: 3,
+                  flex: 4,
+                  layout: "fit",
 
                   items: [
                     {
@@ -492,126 +555,190 @@ Ext.define("Amps.Pages", {
                         },
                         {
                           xtype: "container",
-                          layout: "hbox",
+                          layout: {
+                            type: "hbox",
+                            align: "stretch",
+                          },
                           items: [
-                            amfutil.tooltip(
-                              {
-                                xtype: "button",
-                                text: "Download",
-                                itemId: "download",
-                                tooltip:
-                                  "You will need your username and password during agent startup. If you need to, you can reset your password on the Account page.",
+                            {
+                              xtype: "combobox",
+                              fieldLabel: "Auth Token",
+                              flex: 1,
+                              name: "token",
+                              allowBlank: false,
+                              forceSelection: true,
+                              store: {
+                                proxy: {
+                                  type: "rest",
+                                  url: `/api/tokens/`,
+                                  headers: {
+                                    Authorization:
+                                      localStorage.getItem("access_token"),
+                                  },
 
-                                flex: 1,
-                                formBind: true,
-                                listeners: {
-                                  click: async function (btn) {
-                                    var form = btn.up("form").getForm();
-                                    var values = form.getValues();
-
-                                    var filename;
-                                    var msgbox = Ext.MessageBox.show({
-                                      title: "Please wait",
-                                      msg: "Downloading...",
-                                      progressText: "Downloading...",
-                                      width: 300,
-                                      progress: true,
-                                      closable: false,
-                                    });
-                                    await amfutil.renew_session();
-                                    await fetch(
-                                      "/api/ufa/agent?" +
-                                        new URLSearchParams(values),
-                                      {
-                                        headers: {
-                                          Authorization:
-                                            localStorage.getItem(
-                                              "access_token"
-                                            ),
-                                        },
-                                      }
-                                    )
-                                      .then(async (response) => {
-                                        if (response.ok) {
-                                          var progress = 0;
-                                          var size;
-                                          for (let entry of response.headers.entries()) {
-                                            if (entry[0] == "content-length") {
-                                              size = entry[1];
-                                            }
-                                            if (
-                                              entry[0] == "content-disposition"
-                                            ) {
-                                              filename =
-                                                entry[1].match(
-                                                  /filename="(.+)"/
-                                                )[1];
-                                            }
-                                          }
-                                          console.log(size);
-
-                                          console.log(response);
-                                          const reader =
-                                            response.body.getReader();
-                                          return new ReadableStream({
-                                            start(controller) {
-                                              return pump();
-                                              function pump() {
-                                                return reader
-                                                  .read()
-                                                  .then(({ done, value }) => {
-                                                    // When no more data needs to be consumed, close the stream
-                                                    if (done) {
-                                                      controller.close();
-                                                      return;
-                                                    }
-                                                    // Enqueue the next data chunk into our target stream
-                                                    progress += value.length;
-                                                    msgbox.updateProgress(
-                                                      progress / size
-                                                    );
-                                                    controller.enqueue(value);
-                                                    return pump();
-                                                  });
-                                              }
-                                            },
-                                          });
-                                        } else {
-                                          msgbox.close();
-                                          Ext.MessageBox.alert(
-                                            "Error",
-                                            "Failed to Download UFA Agent"
-                                          );
-                                          throw new Error(
-                                            "Something went wrong"
-                                          );
-                                        }
-                                      })
-                                      .then((stream) => new Response(stream))
-                                      .then((response) => response.blob())
-                                      .then((blob) => {
-                                        const url = URL.createObjectURL(blob);
-                                        const link =
-                                          document.createElement("a");
-                                        link.href = url;
-                                        link.setAttribute("download", filename);
-                                        document.body.appendChild(link);
-                                        msgbox.close();
-                                        link.click();
-                                        link.remove();
-                                      })
-                                      .catch((err) => console.error(err));
+                                  // extraParams: { filters: JSON.stringify(filters) },
+                                  listeners: {
+                                    load: function (data) {
+                                      console.log(data);
+                                    },
+                                    exception: amfutil.refresh_on_failure,
                                   },
                                 },
+                                autoLoad: true,
                               },
-                              { flex: 1 }
-                            ),
+                              valueField: "id",
+                              displayField: "name",
+                            },
+                            {
+                              xtype: "button",
+                              margin: {
+                                left: 5,
+                              },
+                              iconCls: "x-fa fa-plus",
+                              handler: function () {
+                                var tokensConfig = amfutil.config.tokens;
+                                var win = Ext.create(
+                                  "Amps.form.add",
+                                  tokensConfig.window
+                                );
+                                win.loadForm(
+                                  tokensConfig.object,
+                                  tokensConfig.fields,
+                                  (form, values) => {
+                                    return values;
+                                  },
+                                  "tokens",
+                                  () => {
+                                    this.up()
+                                      .down("combobox")
+                                      .getStore()
+                                      .reload();
+                                  }
+                                );
+                                win.show();
+                              },
+                            },
+                          ],
+                        },
+
+                        {
+                          xtype: "container",
+                          layout: "hbox",
+                          margin: {
+                            top: 10,
+                          },
+
+                          items: [
+                            {
+                              xtype: "button",
+                              text: "Download",
+                              itemId: "download",
+                              flex: 1,
+                              formBind: true,
+                              listeners: {
+                                click: async function (btn) {
+                                  var form = btn.up("form").getForm();
+                                  var values = form.getValues();
+
+                                  var filename;
+                                  var msgbox = Ext.MessageBox.show({
+                                    title: "Please wait",
+                                    msg: "Downloading...",
+                                    progressText: "Downloading...",
+                                    width: 300,
+                                    progress: true,
+                                    closable: false,
+                                  });
+                                  await amfutil.renew_session();
+                                  await fetch(
+                                    "/api/ufa/agent?" +
+                                      new URLSearchParams(values),
+                                    {
+                                      headers: {
+                                        Authorization:
+                                          localStorage.getItem("access_token"),
+                                      },
+                                    }
+                                  )
+                                    .then(async (response) => {
+                                      if (response.ok) {
+                                        var progress = 0;
+                                        var size;
+                                        for (let entry of response.headers.entries()) {
+                                          if (entry[0] == "content-length") {
+                                            size = entry[1];
+                                          }
+                                          if (
+                                            entry[0] == "content-disposition"
+                                          ) {
+                                            filename =
+                                              entry[1].match(
+                                                /filename="(.+)"/
+                                              )[1];
+                                          }
+                                        }
+                                        console.log(size);
+
+                                        console.log(response);
+                                        const reader =
+                                          response.body.getReader();
+                                        return new ReadableStream({
+                                          start(controller) {
+                                            return pump();
+                                            function pump() {
+                                              return reader
+                                                .read()
+                                                .then(({ done, value }) => {
+                                                  // When no more data needs to be consumed, close the stream
+                                                  if (done) {
+                                                    controller.close();
+                                                    return;
+                                                  }
+                                                  // Enqueue the next data chunk into our target stream
+                                                  progress += value.length;
+                                                  msgbox.updateProgress(
+                                                    progress / size
+                                                  );
+                                                  controller.enqueue(value);
+                                                  return pump();
+                                                });
+                                            }
+                                          },
+                                        });
+                                      } else {
+                                        msgbox.close();
+                                        Ext.MessageBox.alert(
+                                          "Error",
+                                          "Failed to Download UFA Agent"
+                                        );
+                                        throw new Error("Something went wrong");
+                                      }
+                                    })
+                                    .then((stream) => new Response(stream))
+                                    .then((response) => response.blob())
+                                    .then((blob) => {
+                                      const url = URL.createObjectURL(blob);
+                                      const link = document.createElement("a");
+                                      link.href = url;
+                                      link.setAttribute("download", filename);
+                                      document.body.appendChild(link);
+                                      msgbox.close();
+                                      link.click();
+                                      link.remove();
+                                    })
+                                    .catch((err) => console.error(err));
+                                },
+                              },
+                            },
                           ],
                         },
                       ],
                       buttons: [],
                     },
                   ],
+                },
+                {
+                  xtype: "splitter",
                 },
                 {
                   xtype: "panel",
@@ -667,10 +794,14 @@ Ext.define("Amps.Pages", {
               listeners: {
                 dblclick: {
                   element: "body", //bind to the underlying body property on the panel
-                  fn: function (grid, rowIndex, e, obj) {
+                  fn: async function (grid, rowIndex, e, obj) {
                     var record = grid.record.data;
 
-                    var updateForm = Ext.create("Amps.form.update");
+                    rulesConfig.store = store;
+                    var user = await amfutil.userInfo();
+                    var updateForm = Ext.create("Amps.form.update", {
+                      entity: user,
+                    });
                     updateForm.loadForm(
                       rulesConfig,
                       record,
@@ -847,6 +978,12 @@ Ext.define("Amps.Pages", {
     inbox: function () {
       var store = Ext.create("Ext.data.Store", {
         remoteSort: true,
+        sorters: [
+          {
+            property: "mtime",
+            direction: "DESC",
+          },
+        ],
         proxy: {
           type: "rest",
           url: `/api/inbox`,
@@ -876,20 +1013,9 @@ Ext.define("Amps.Pages", {
         },
         autoLoad: true,
       });
-
-      store.sort("mtime", "DESC");
-
-      console.log(store);
-
       return {
         actionbar: [
-          {
-            xtype: "button",
-            iconCls: "x-fa fa-search",
-            handler: function () {
-              store.reload();
-            },
-          },
+          amfutil.searchbtn("main-grid"),
           {
             xtype: "button",
             iconCls: "x-fa fa-refresh",
@@ -897,18 +1023,50 @@ Ext.define("Amps.Pages", {
               store.reload();
             },
           },
+          {
+            xtype: "button",
+            itemId: "clearfilter",
+            html: '<img src="resources/images/clear-filters.png" />',
+            handler: "onClearFilter",
+            tooltip: "Clear Filter",
+            style: "cursor:pointer;",
+          },
         ],
         view: {
           xtype: "grid",
-
           title: "Inbox",
-
           store: store,
-
+          itemId: "main-grid",
           columns: [
+            {
+              text: "Mailbox",
+              dataIndex: "mailbox",
+              type: "tag",
+              searchOpts: {
+                store: {
+                  proxy: {
+                    type: "ajax",
+                    url: "api/mailboxes",
+                    headers: {
+                      Authorization: localStorage.getItem("access_token"),
+                    },
+                  },
+                  autoLoad: true,
+                },
+                displayField: "name",
+                valueField: "name",
+              },
+            },
+            {
+              text: "Message ID",
+              dataIndex: "msgid",
+              type: "text",
+              flex: 1,
+            },
             {
               text: "File Name",
               dataIndex: "fname",
+              type: "text",
               flex: 1,
             },
             {
@@ -916,16 +1074,19 @@ Ext.define("Amps.Pages", {
               dataIndex: "fsize",
               flex: 1,
               renderer: amfutil.renderFileSize,
+              type: "fileSize",
             },
             {
               text: "Mailbox Time",
               dataIndex: "mtime",
               flex: 1,
+              type: "date",
             },
             {
               text: "Status",
               dataIndex: "status",
               flex: 1,
+              type: "text",
             },
             {
               xtype: "actioncolumn",
@@ -994,7 +1155,7 @@ Ext.define("Amps.Pages", {
                           msgbox.close();
                           Ext.MessageBox.alert(
                             "Error",
-                            "Failed to Download UFA Agent"
+                            "Failed to Download Message"
                           );
                           throw new Error("Something went wrong");
                         }
@@ -1046,6 +1207,101 @@ Ext.define("Amps.Pages", {
             xtype: "pagingtoolbar",
             displayInfo: true,
           },
+          listeners: {
+            cellcontextmenu: function (
+              table,
+              td,
+              cellIndex,
+              record,
+              tr,
+              rowIndex,
+              e
+            ) {
+              CLIPBOARD_CONTENTS = td.innerText;
+              amfutil.copyTextdata(e);
+            },
+          },
+        },
+      };
+    },
+    mailboxes: function () {
+      var config = amfutil.config.mailboxes;
+      var store = Ext.create("Ext.data.Store", {
+        remoteSort: true,
+        proxy: {
+          type: "rest",
+          url: `/api/mailboxes`,
+          headers: {
+            Authorization: localStorage.getItem("access_token"),
+          },
+          reader: {
+            type: "json",
+            rootProperty: "rows",
+            totalProperty: "count",
+          },
+          listeners: {
+            load: function (data) {
+              console.log(data);
+            },
+            // exception: async function (proxy, response, options, eOpts) {
+            //   console.log("exception");
+            //   if (response.status == 401) {
+            //     await amfutil.renew_session();
+            //     proxy.setHeaders({
+            //       Authorization: localStorage.getItem("access_token"),
+            //     });
+            //     store.reload();
+            //   }
+            // },
+          },
+        },
+        autoLoad: true,
+      });
+      return {
+        actionbar: [
+          amfutil.addbtn(config, store, "mailboxes"),
+          // amfutil.searchbtn("main-grid"),
+          {
+            xtype: "button",
+            iconCls: "x-fa fa-refresh",
+            handler: function () {
+              store.reload();
+            },
+          },
+          // {
+          //   xtype: "button",
+          //   itemId: "clearfilter",
+          //   html: '<img src="resources/images/clear-filters.png" />',
+          //   handler: "onClearFilter",
+          //   tooltip: "Clear Filter",
+          //   style: "cursor:pointer;",
+          // },
+        ],
+        view: {
+          xtype: "grid",
+          title: config.title,
+          store: store,
+          itemId: "main-grid",
+          columns: config.columns,
+          bbar: {
+            xtype: "pagingtoolbar",
+            displayInfo: true,
+          },
+          listeners: {
+            cellcontextmenu: function (
+              table,
+              td,
+              cellIndex,
+              record,
+              tr,
+              rowIndex,
+              e
+            ) {
+              CLIPBOARD_CONTENTS = td.innerText;
+              amfutil.copyTextdata(e);
+            },
+            dblclick: amfutil.updateHandler(config),
+          },
         },
       };
     },
@@ -1056,9 +1312,17 @@ Ext.define("Amps.Pages", {
         object: "User",
         fields: [
           {
-            xtype: "textfield",
+            xtype: "displayfield",
             name: "username",
             fieldLabel: "User Name",
+            allowBlank: false,
+            submitValue: true,
+          },
+          {
+            xtype: "displayfield",
+            name: "email",
+            submitValue: true,
+            fieldLabel: "Email",
             allowBlank: false,
           },
           {
@@ -1081,21 +1345,37 @@ Ext.define("Amps.Pages", {
             fieldLabel: "Phone",
             allowBlank: false,
           },
-          {
-            xtype: "textfield",
-            name: "email",
-            fieldLabel: "Email",
-            allowBlank: false,
-          },
         ],
       };
 
       var updateForm = Ext.create("Amps.form.update");
       updateForm.loadForm(config, user, false, "user", false);
 
+      var tokensConfig = amfutil.config.tokens;
+
+      var store = Ext.create("Ext.data.Store", {
+        proxy: {
+          type: "rest",
+          url: `/api/tokens/`,
+          headers: {
+            Authorization: localStorage.getItem("access_token"),
+          },
+
+          // extraParams: { filters: JSON.stringify(filters) },
+          listeners: {
+            load: function (data) {
+              console.log(data);
+            },
+            exception: amfutil.refresh_on_failure,
+          },
+        },
+        autoLoad: true,
+      });
+
       return {
         view: {
           xtype: "tabpanel",
+          layout: "fit",
           items: [
             {
               title: "Info",
@@ -1234,7 +1514,230 @@ Ext.define("Amps.Pages", {
                 },
               ],
             },
+            {
+              title: "Auth Tokens",
+              xtype: "grid",
+              iconCls: "x-fa fa-lock",
+              listeners: {
+                cellcontextmenu: function (
+                  table,
+                  td,
+                  cellIndex,
+                  record,
+                  tr,
+                  rowIndex,
+                  e
+                ) {
+                  CLIPBOARD_CONTENTS = td.innerText;
+                  amfutil.copyTextdata(e);
+                },
+              },
+              lbar: [
+                {
+                  iconCls: "x-fa fa-plus",
+                  handler: function () {
+                    var win = Ext.create("Amps.form.add", tokensConfig.window);
+                    win.loadForm(
+                      tokensConfig.object,
+                      tokensConfig.fields,
+                      (form, values) => {
+                        return values;
+                      },
+                      "tokens",
+                      function () {
+                        store.reload();
+                      }
+                    );
+                    win.show();
+                  },
+                },
+                {
+                  iconCls: "x-fa fa-refresh",
+                  handler: function () {
+                    store.reload();
+                  },
+                },
+              ],
+              store: store,
+              columns: [
+                {
+                  dataIndex: "name",
+                  text: "Name",
+                  flex: 1,
+                },
+                {
+                  dataIndex: "id",
+                  text: "Id",
+                  flex: 1,
+                },
+                {
+                  xtype: "actioncolumn",
+
+                  items: [
+                    {
+                      iconCls: "x-fa fa-key actionicon",
+                      handler: async function (grid, rowIndex, colIndex) {
+                        console.log(rowIndex);
+                        var rec = grid.getStore().getAt(rowIndex).data;
+                        this.up("grid").setLoading(true);
+                        amfutil.ajaxRequest({
+                          url: `/api/tokens/secret/${rec._id}`,
+                          success: (resp) => {
+                            var secret = Ext.decode(resp.responseText);
+                            amfutil.copyToClipboard(secret);
+                            this.up("grid").setLoading(false);
+                          },
+                          failure: () => {
+                            Ext.toast("Could not fetch token secret");
+                            this.up("grid").setLoading(false);
+                          },
+                        });
+                      },
+                    },
+                    amfutil.deleteAction(
+                      "Confirm Token Deletion",
+                      "Delete this token?",
+                      "tokens",
+                      store
+                    ),
+                  ],
+                },
+              ],
+            },
           ],
+        },
+      };
+    },
+
+    ufa_logs: function () {
+      var store = Ext.create("Ext.data.Store", {
+        remoteSort: true,
+        proxy: {
+          type: "rest",
+          url: `/api/ufa_logs`,
+          headers: {
+            Authorization: localStorage.getItem("access_token"),
+          },
+          extraParams: {},
+          reader: {
+            type: "json",
+            rootProperty: "rows",
+            totalProperty: "count",
+          },
+          listeners: {
+            load: function (data) {
+              console.log(data);
+            },
+            // exception: async function (proxy, response, options, eOpts) {
+            //   console.log("exception");
+            //   if (response.status == 401) {
+            //     await amfutil.renew_session();
+            //     proxy.setHeaders({
+            //       Authorization: localStorage.getItem("access_token"),
+            //     });
+            //     store.reload();
+            //   }
+            // },
+          },
+        },
+        autoLoad: true,
+      });
+
+      store.sort("etime", "DESC");
+
+      console.log(store);
+
+      return {
+        sorters: [{ property: "etime", direction: "DESC" }],
+        actionbar: [
+          amfutil.searchbtn("main-grid"),
+          {
+            xtype: "button",
+            iconCls: "x-fa fa-refresh",
+            handler: function () {
+              console.log(store);
+              store.reload();
+            },
+          },
+          {
+            xtype: "button",
+            itemId: "clearfilter",
+            html: '<img src="resources/images/clear-filters.png" />',
+            handler: "onClearFilter",
+            tooltip: "Clear Filter",
+            style: "cursor:pointer;",
+          },
+        ],
+        view: {
+          xtype: "grid",
+          itemId: "main-grid",
+          title: "UFA Logs",
+
+          store: store,
+
+          columns: [
+            {
+              text: "Event Time",
+              dataIndex: "etime",
+              flex: 1,
+              type: "date",
+              renderer: function (val) {
+                var date = new Date(val);
+                return date.toString();
+              },
+            },
+            {
+              text: "Operation",
+              dataIndex: "operation",
+              flex: 1,
+              value: "true",
+              type: "text",
+            },
+            {
+              text: "Rule",
+              dataIndex: "rule",
+              flex: 1,
+              value: "true",
+              type: "text",
+            },
+            {
+              text: "Message ID",
+              dataIndex: "msgid",
+              flex: 1,
+              value: "true",
+              type: "text",
+            },
+            {
+              text: "File Name",
+              dataIndex: "fname",
+              flex: 1,
+              type: "text",
+            },
+            {
+              text: "Status",
+              dataIndex: "status",
+              flex: 1,
+              type: "text",
+            },
+          ],
+          bbar: {
+            xtype: "pagingtoolbar",
+            displayInfo: true,
+          },
+          listeners: {
+            cellcontextmenu: function (
+              table,
+              td,
+              cellIndex,
+              record,
+              tr,
+              rowIndex,
+              e
+            ) {
+              CLIPBOARD_CONTENTS = td.innerText;
+              amfutil.copyTextdata(e);
+            },
+          },
         },
       };
     },

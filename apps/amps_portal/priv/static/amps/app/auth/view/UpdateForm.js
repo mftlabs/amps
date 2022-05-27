@@ -163,6 +163,7 @@ Ext.define("Amps.form.update", {
           listeners: {
             click: async function (btn) {
               var form = btn.up("form").getForm();
+              var config = btn.up("form").config;
               var values = form.getValues();
               var mask = new Ext.LoadMask({
                 msg: "Please wait...",
@@ -170,10 +171,11 @@ Ext.define("Amps.form.update", {
               });
               mask.show();
               console.log(values);
-              values = btn.up("form").process(btn.up("form"), values);
-              console.log(values);
               values = amfutil.convertNumbers(form, values);
               console.log(values);
+              values = btn.up("form").process(btn.up("form"), values);
+              console.log(values);
+
               var user = await amfutil.userInfo();
               console.log(scope);
               if (scope.audit) {
@@ -203,6 +205,9 @@ Ext.define("Amps.form.update", {
                   var item = btn.up("form").item;
                   mask.hide();
                   Ext.toast(`${item} updated`);
+                  if (config.store) {
+                    config.store.reload();
+                  }
                   //   amfutil.broadcastEvent("update", {
                   //     page: Ext.util.History.getToken().split("/")[0],
                   //   });

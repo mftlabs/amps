@@ -266,7 +266,7 @@ Ext.define("Amps.form.Matchpattern", {
                   listeners: {
                     change: "onChange",
                   },
-                  store: amfutil.createCollectionStore("fields"),
+                  store: "metadata",
                   itemId: "field",
                 },
                 {

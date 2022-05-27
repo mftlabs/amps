@@ -10,13 +10,42 @@ defmodule Amps.Startup do
 
   def startup() do
     nats()
+    # python()
   end
 
   def nats() do
-    gnat = Process.whereis(:gnat)
+    gnatconf = Application.fetch_env!(:amps, :gnat)
+
+    {:ok, gnat} = Gnat.start_link(%{host: gnatconf[:host], port: gnatconf[:port]})
+    # gnat = Process.whereis(gnat)
 
     create_streams(gnat)
     # create_action_consumers(gnat)
+  end
+
+  def python() do
+    args = [
+      "-m",
+      "pip",
+      "install",
+      "--user",
+      "-r",
+      Path.join([:code.priv_dir(:amps), "py", "requirements.txt"])
+    ]
+
+    Logger.info("Installing python dependencies from requirements.txt")
+
+    {res, code} = System.cmd("python3", args, stderr_to_stdout: true)
+
+    case code do
+      0 ->
+        Logger.info("Successfully Installed python package requirements")
+        res
+
+      _ ->
+        Logger.error("Failed to install python package requirements")
+        res
+    end
   end
 
   def create_streams(gnat) do
@@ -30,6 +59,12 @@ defmodule Amps.Startup do
     Enum.each(streams, fn {subjects, name} ->
       subjects = Atom.to_string(subjects)
 
+      create_stream(gnat, name, subjects, 0)
+    end)
+  end
+
+  def create_stream(gnat, name, subjects, retries) do
+    if retries < 5 do
       case Jetstream.API.Stream.info(gnat, name) do
         {:ok, _res} ->
           Logger.info(name <> " Stream Exists")
@@ -54,47 +89,12 @@ defmodule Amps.Startup do
             {:error, error} ->
               Logger.info("Couldn't Create Stream " <> name)
               Logger.error(error)
+              Process.sleep(1000)
+              create_stream(gnat, name, subjects, retries + 1)
 
               # IO.inspect(error)
           end
       end
-    end)
-  end
-
-  def create_action_consumers(_gnat) do
-    actions = Application.get_env(:amps, :actions)
-    # Logger.info("actions")
-    # IO.inspect(actions)
-    actions = Enum.into(actions, %{})
-    # IO.inspect(actions)
-
-    Enum.each(actions, fn {topic, _module} ->
-      topic = Atom.to_string(topic)
-      filter = "amps.actions." <> topic <> ".*"
-      _name = filter |> String.replace("*", "_") |> String.replace(".", "_")
-      "amps.actions." <> topic <> ".*"
-      # Jetstream.API.Consumer.delete(gnat, "ACTIONS", name)
-      # case Jetstream.API.Consumer.info(gnat, "ACTIONS", name) do
-      #   {:ok, res} ->
-      #     Logger.info("Consumer Data")
-      #     IO.inspect(res)
-
-      #   {:error, error} ->
-      #     IO.inspect(error)
-      #     Logger.info("Creating Consumer")
-
-      #     case Jetstream.API.Consumer.create(gnat, %Jetstream.API.Consumer{
-      #            name: name,
-      #            stream_name: "ACTIONS",
-      #            filter_subject: filter
-      #          }) do
-      #       {:ok, res} ->
-      #         IO.inspect(res)
-
-      #       {:error, error} ->
-      #         IO.inspect(error)
-      #     end
-      # end
-    end)
+    end
   end
 end

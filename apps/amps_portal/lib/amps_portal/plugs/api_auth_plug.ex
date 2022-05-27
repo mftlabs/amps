@@ -80,20 +80,29 @@ defmodule AmpsPortal.APIAuthPlug do
   """
   @spec renew(Conn.t(), Config.t()) :: {Conn.t(), map() | nil}
   def renew(conn, config) do
+    alias Pow.Store.Base
     store_config = store_config(config)
+    IO.inspect(store_config)
 
-    with {:ok, signed_token} <- fetch_access_token(conn),
-         {:ok, token} <- verify_token(conn, signed_token, config),
-         {user, metadata} <- PersistentSessionCache.get(store_config, token) do
-      CredentialsCache.delete(store_config, metadata[:access_token])
-      PersistentSessionCache.delete(store_config, token)
+    {:ok, signed_token} = fetch_access_token(conn)
+    {:ok, token} = verify_token(conn, signed_token, config)
 
-      create(conn, user, config)
-    else
-      _any ->
-        IO.puts("didnt renew")
-        {conn, nil}
-    end
+    {user, metadata} =
+      Pow.Store.Base.get(store_config, PersistentSessionCache.backend_config(store_config), token)
+
+    {user, metadata} =
+      AmpsPortal.Users.get_by(%{"_id" => user.id}, config)
+      |> case do
+        nil -> nil
+        user -> {user, metadata}
+      end
+
+    IO.inspect(user)
+
+    CredentialsCache.delete(store_config, metadata[:access_token])
+    PersistentSessionCache.delete(store_config, token)
+
+    create(conn, user, config)
   end
 
   defp sign_token(conn, token, config) do

@@ -1,6 +1,7 @@
 // We import the CSS which is extracted to its own file by esbuild.
 // Remove this line if you add a your own CSS build pipeline (e.g postcss).
 import "../css/app.css";
+import "cropperjs/dist/cropper.css";
 
 // If you want to use Phoenix channels, run `mix help phx.gen.channel`
 // to get started and then uncomment the line below.
@@ -20,11 +21,12 @@ import "../css/app.css";
 //
 
 // Include phoenix_html to handle method=PUT/DELETE in forms and buttons.
-import "phoenix_html";
 // Establish Phoenix Socket and LiveView configuration.
 import { Socket } from "phoenix";
 import { LiveSocket } from "phoenix_live_view";
 import topbar from "../vendor/topbar";
+import * as monaco from "monaco-editor";
+import Cropper from "cropperjs";
 
 let csrfToken = document
   .querySelector("meta[name='csrf-token']")
@@ -44,6 +46,20 @@ window.addEventListener("phx:page-loading-stop", (info) => topbar.hide());
 // connect if there are any LiveViews on the page
 liveSocket.connect();
 
+// require.config({ paths: { vs: "../vendor/min/vs" } });
+self.MonacoEnvironment = {
+  getWorkerUrl: function (moduleId, label) {
+    if (label === "json") {
+      return "./assets/js/vs/language/json/json.worker.js";
+    }
+    return "./assets/js/vs/editor/editor.worker.js";
+  },
+};
+monaco.editor.setTheme("vs-dark");
+// monaco.editor.create(document.getElementById("container"), {
+//   value: ["def test:"].join("\n"),
+//   language: "python",
+// });
 // userSocket.connect();
 
 // expose liveSocket on window for web console debug logs and latency simulation:
@@ -54,3 +70,6 @@ window.liveSocket = liveSocket;
 // window.userSocket = userSocket;
 
 window.pSocket = Socket;
+window.monaco = monaco;
+window.cropper = Cropper;
+require("./client");

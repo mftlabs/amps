@@ -6,7 +6,7 @@ defmodule Amps.Scheduler do
   require Logger
 
   def init(config) do
-    sched = DB.find("scheduler")
+    sched = DB.find("jobs")
 
     jobs =
       Enum.reduce(sched, [], fn job, acc ->
@@ -15,13 +15,13 @@ defmodule Amps.Scheduler do
         [qj | acc]
       end)
 
-    config = Keyword.put(config, :jobs, jobs)
+    config = Keyword.put(config, :jobs, config[:jobs] ++ jobs)
     IO.inspect(config)
     config
   end
 
   def load(name) do
-    case DB.find_one("scheduler", %{name: name}) do
+    case DB.find_one("jobs", %{name: name}) do
       nil ->
         Logger.info("Could not load")
 
@@ -30,9 +30,9 @@ defmodule Amps.Scheduler do
     end
   end
 
-  def update(job) do
-    delete_job(String.to_atom(job["name"]))
-    load(job["name"])
+  def update(name) do
+    delete_job(String.to_atom(name))
+    load(name)
   end
 
   defp get_job_config(job) do
@@ -48,7 +48,21 @@ defmodule Amps.Scheduler do
           :inactive
         end,
       task: fn ->
-        AmpsEvents.send(job["meta"], %{"output" => job["topic"]}, %{})
+        msg =
+          Map.merge(
+            %{"msgid" => AmpsUtil.get_id(), "action" => "Job: " <> job["name"] <> "Execution"},
+            job["meta"]
+          )
+
+        {msg, sid} = AmpsEvents.start_session(msg, %{"service" => "Job: " <> job["name"]}, "")
+
+        AmpsEvents.send(
+          msg,
+          %{"output" => job["topic"]},
+          %{}
+        )
+
+        AmpsEvents.end_session(sid, "")
       end,
       timezone: :utc
     }

@@ -107,6 +107,7 @@ $border-layout-ct-background-color: white;
   .x-grid-cell {
     .actionicon {
       margin-right: 0.5em;
+      width: min-content;
       &.active {
         color: green;
       }
@@ -175,6 +176,46 @@ $border-layout-ct-background-color: white;
   background-color: #32404e;
 }
 
+.secondary-button {
+  &.x-btn-default-small {
+    // color: white;
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+  }
+  &.x-btn-default-medium {
+    // color: white;
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+  }
+  &.x-btn-default-large {
+    // color: white;
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+  }
+
+  &.x-btn-default-toolbar-small {
+    .x-btn-icon-el-default-toolbar-small {
+      color: white;
+    }
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+  }
+  &.x-btn-default-toolbar-medium {
+    .x-btn-icon-el-default-toolbar-medium {
+      color: white;
+    }
+    color: white;
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+  }
+  &.x-btn-default-toolbar-large {
+    .x-btn-icon-el-default-toolbar-large {
+      color: white;
+    }
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+  }
+}
 
                         
 

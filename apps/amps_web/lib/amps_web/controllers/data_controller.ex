@@ -1,10 +1,3 @@
-defimpl Jason.Encoder, for: BSON.ObjectId do
-  def encode(val, _opts \\ []) do
-    BSON.ObjectId.encode!(val)
-    |> Jason.encode!()
-  end
-end
-
 defmodule AmpsWeb.DataController do
   use AmpsWeb, :controller
   require Logger
@@ -12,6 +5,7 @@ defmodule AmpsWeb.DataController do
   alias Amps.DB
   #alias AmpsWeb.Encryption
   alias Amps.SvcManager
+  alias Amps.VaultDatabase
   alias AmpsWeb.Util
   alias AmpsWeb.ServiceController
   alias Elixlsx.Workbook
@@ -41,6 +35,50 @@ defmodule AmpsWeb.DataController do
 
   plug(AmpsWeb.AuditPlug)
 
+  def upload_demo(conn, %{"file" => file}) do
+    folder = String.trim(file.filename, ".zip")
+    IO.inspect(File.ls())
+    id = AmpsUtil.get_id()
+    cwd = Path.join(Amps.Defaults.get("storage_temp"), id)
+    res = :zip.unzip(File.read!(file.path), cwd: cwd)
+    path = cwd
+    demo = Jason.decode!(File.read!(Path.join(path, "demo.json")))
+
+    case DB.find_one("demos", Map.take(demo, ["name", "description"])) do
+      nil ->
+        imports =
+          Enum.reduce(demo["imports"], [], fn imp, acc ->
+            acc ++ [Map.put(imp, "rows", import_excel_data(Path.join(path, imp["file"])))]
+          end)
+
+        {:ok, readme, []} = Earmark.as_html(File.read!(Path.join(path, "README.md")))
+        scripts = Path.wildcard(Path.join([path, demo["scripts"], "*.py"]))
+
+        scripts =
+          Enum.reduce(scripts, [], fn script, acc ->
+            [
+              %{
+                name: Path.rootname(Path.basename(script)),
+                data: File.read!(script)
+              }
+              | acc
+            ]
+          end)
+
+        demo =
+          demo
+          |> Map.put("imports", imports)
+          |> Map.put("readme", readme)
+          |> Map.put("scripts", scripts)
+
+        {:ok, id} = Amps.DB.insert("demos", demo)
+        json(conn, id)
+
+      duplicate ->
+        send_resp(conn, 400, "Demo with name #{duplicate["name"]} already exists")
+    end
+  end
+
   def change_admin_password(conn, %{"id" => id}) do
     body = conn.body_params()
     password = body["password"]
@@ -66,12 +104,12 @@ defmodule AmpsWeb.DataController do
     obj = Amps.DB.find_one("users", %{"_id" => id})
     _length = 15
 
-    symbols = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMOPQRSTUVWXYZ$@~!@#$%^&*'
-
-    symbol_count = Enum.count(symbols)
+    symbol_count = Enum.count(@symbols)
 
     password =
-      for _ <- 1..15, into: "", do: <<Enum.at(symbols, :crypto.rand_uniform(0, symbol_count))>>
+      for _ <- 1..15,
+          into: "",
+          do: <<Enum.at(@symbols, :crypto.rand_uniform(0, symbol_count))>>
 
     # IO.inspect(password)
     # res = PowResetPassword.Plug.update_user_password(conn, %{"password" => hashed})
@@ -92,33 +130,80 @@ defmodule AmpsWeb.DataController do
   end
 
   def reset_password(conn, %{"id" => id}) do
-    obj = Amps.DB.find_one("users", %{"_id" => id})
+    index = Util.index(conn.assigns().env, "users")
     _length = 15
 
-    symbols = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMOPQRSTUVWXYZ$@~!@#$%^&*'
-
-    symbol_count = Enum.count(symbols)
-
-    password =
-      for _ <- 1..15, into: "", do: <<Enum.at(symbols, :crypto.rand_uniform(0, symbol_count))>>
+    password = Util.create_password()
 
     # IO.inspect(password)
     %{password_hash: hashed} = add_hash(password)
+
     # res = PowResetPassword.Plug.update_user_password(conn, %{"password" => hashed})
 
-    Amps.DB.find_one_and_update("users", %{"username" => obj["username"]}, %{
+    Amps.DB.find_one_and_update(index, %{"_id" => id}, %{
       "password" => hashed
     })
+
+    # onb = fn msg, obj, env ->
+    #   obj = obj |> Map.put("password", password)
+    #   msg = Map.put(msg, "data", Jason.encode!(obj))
+
+    #   Amps.Onboarding.onboard(
+    #     msg,
+    #     obj,
+    #     conn.assigns().env
+    #   )
+    #   Map.merge(msg, %{"onboarding" => true, "user_id" => obj["_id"]})
+    # end
+
+    Util.ui_event(index, id, "reset_password", conn.assigns().env)
+
+    json(conn, %{success: %{password: password}})
+  end
+
+  def approve_user(conn, %{"id" => id, "group" => group}) do
+    index = Util.index(conn.assigns().env, "users")
+    _length = 15
+
+    password = Util.create_password()
+
+    # IO.inspect(password)
+    %{password_hash: hashed} = add_hash(password)
+
+    # res = PowResetPassword.Plug.update_user_password(conn, %{"password" => hashed})
+
+    Amps.DB.find_one_and_update(index, %{"_id" => id}, %{
+      "password" => hashed,
+      "approved" => true,
+      "group" => group
+    })
+
+    # onb = fn msg, obj, env ->
+    #   obj = obj |> Map.put("password", password)
+    #   msg = Map.put(msg, "data", Jason.encode!(obj))
+
+    #   Amps.Onboarding.onboard(
+    #     msg,
+    #     obj,
+    #     env
+    #   )
+    #   Map.merge(msg, %{"onboarding" => true, "user_id" => obj["_id"]})
+    # end
+
+    Util.ui_event(index, id, "approve_user", conn.assigns().env)
 
     json(conn, %{success: %{password: password}})
   end
 
   @spec upload(Plug.Conn.t(), map) :: Plug.Conn.t()
   def upload(conn, %{"topic" => topic, "file" => file, "meta" => meta}) do
+    user = Pow.Plug.current_user(conn)
+
     msgid = AmpsUtil.get_id()
     dir = AmpsUtil.tempdir(msgid)
     fpath = Path.join(dir, msgid)
-    File.cp(file.path, fpath)
+    res = File.cp(file.path, fpath)
+    IO.inspect(res)
     info = File.stat!(fpath)
     meta = Jason.decode!(meta)
 
@@ -129,12 +214,17 @@ defmodule AmpsWeb.DataController do
           "fname" => file.filename,
           "fpath" => fpath,
           "fsize" => info.size,
-          "ftime" => DateTime.to_iso8601(DateTime.utc_now())
+          "ftime" => DateTime.to_iso8601(DateTime.utc_now()),
+          "user" => user.username,
+          "service" => "Topic Upload"
         },
         meta
       )
 
-    AmpsEvents.send(msg, %{"output" => topic}, %{})
+    {msg, sid} = AmpsEvents.start_session(msg, %{"service" => "Topic Upload"}, conn.assigns().env)
+
+    AmpsEvents.send(msg, %{"output" => AmpsUtil.env_topic(topic, conn.assigns().env)}, %{})
+    AmpsEvents.end_session(sid, conn.assigns().env)
     json(conn, :ok)
   end
 
@@ -295,6 +385,7 @@ defmodule AmpsWeb.DataController do
 
   def create_sheet(name, headers, contents) do
     formatted_contents = Enum.map(contents, fn x -> Enum.map(x, fn y -> [y] end) end)
+
     headers |> Enum.map(fn x -> [x, bold: true] end)
     row_data = [headers | formatted_contents]
     _newsheet = %Sheet{name: name, rows: row_data}
@@ -323,7 +414,9 @@ defmodule AmpsWeb.DataController do
     {:ok, {_name, binary}} = Elixlsx.write_to_memory(%Workbook{sheets: sheets}, collection)
 
     conn
-    |> send_download({:binary, binary}, filename: "#{collection}_#{field}_template.xlsx")
+    |> send_download({:binary, binary},
+      filename: "#{collection}_#{field}_template.xlsx"
+    )
   end
 
   def create_sample_sheets(collection, data) do
@@ -333,7 +426,10 @@ defmodule AmpsWeb.DataController do
           data["headers"]
           |> Enum.map(fn x -> [x, bold: true] end)
 
-        [%Sheet{name: collection, rows: [headers]} |> Sheet.set_pane_freeze(1, 0)]
+        [
+          %Sheet{name: collection, rows: [headers]}
+          |> Sheet.set_pane_freeze(1, 0)
+        ]
 
       _ ->
         Enum.reduce(data["types"], [], fn {k, v}, acc ->
@@ -341,7 +437,10 @@ defmodule AmpsWeb.DataController do
             (data["headers"] ++ v)
             |> Enum.map(fn x -> [x, bold: true] end)
 
-          [%Sheet{name: k, rows: [headers]} |> Sheet.set_pane_freeze(1, 0) | acc]
+          [
+            %Sheet{name: k, rows: [headers]} |> Sheet.set_pane_freeze(1, 0)
+            | acc
+          ]
         end)
     end
   end
@@ -351,19 +450,47 @@ defmodule AmpsWeb.DataController do
     json(conn, data)
   end
 
-  def export_collection(conn, %{
-        "collection" => collection
-      }) do
+  def export(collection, env) do
     data = DB.find(collection)
+    IO.inspect(data)
+    base_coll = Util.base_index(env, collection)
+    IO.inspect(base_coll)
 
-    sheets = get_excel_data(collection, data)
+    sheets = get_excel_data(base_coll, data)
 
     {:ok, {_name, binary}} =
       %Workbook{sheets: sheets}
-      |> Elixlsx.write_to_memory(collection)
+      |> Elixlsx.write_to_memory(base_coll)
+
+    binary
+  end
+
+  def export_collection(conn, %{
+        "collection" => collection
+      }) do
+    binary = export(collection, conn.assigns().env)
 
     conn
     |> send_download({:binary, binary}, filename: "#{collection}.xlsx")
+  end
+
+  def export_sub(collection, id, field, env) do
+    data = DB.find_one(collection, %{"_id" => id})
+    base_coll = Util.base_index(env, collection)
+    sheets = get_excel_data(base_coll, data[field], field)
+
+    {:ok, {_name, binary}} =
+      %Workbook{sheets: sheets}
+      |> Elixlsx.write_to_memory(base_coll)
+
+    filename =
+      if base_coll == "users" do
+        "#{data["username"]}_#{field}.xlsx"
+      else
+        "#{data["name"]}_#{field}.xlsx"
+      end
+
+    {binary, filename}
   end
 
   def export_sub_collection(conn, %{
@@ -372,15 +499,10 @@ defmodule AmpsWeb.DataController do
         "field" => field
       }) do
     _body = conn.body_params()
-    data = DB.find_one(collection, %{"_id" => id})
-    sheets = get_excel_data(collection, data[field], field)
-
-    {:ok, {_name, binary}} =
-      %Workbook{sheets: sheets}
-      |> Elixlsx.write_to_memory(collection)
+    {binary, filename} = export_sub(collection, id, field, conn.assigns().env)
 
     conn
-    |> send_download({:binary, binary}, filename: "#{collection}_#{field}.xlsx")
+    |> send_download({:binary, binary}, filename: filename)
   end
 
   def export_selection(conn, %{"collection" => collection}) do
@@ -394,12 +516,15 @@ defmodule AmpsWeb.DataController do
       |> Elixlsx.write_to_memory(collection)
 
     conn
-    |> send_download({:binary, binary}, filename: "#{collection}_#{Enum.count(rows)}.xlsx")
+    |> send_download({:binary, binary},
+      filename: "#{collection}_#{Enum.count(rows)}.xlsx"
+    )
   end
 
   def write_in_workbook(sheet_name, column_headers, contents) do
     # formatted_contents = Enum.map(contents, fn x  -> Enum.map(x, fn y -> [y, {:bold, false}] end)  end)
     formatted_contents = Enum.map(contents, fn x -> Enum.map(x, fn y -> [y] end) end)
+
     row_data = [column_headers | formatted_contents]
     newsheet = %Sheet{name: sheet_name, rows: row_data}
 
@@ -409,22 +534,120 @@ defmodule AmpsWeb.DataController do
   end
 
   def send_event(conn, %{"topic" => topic, "meta" => meta}) do
+    user = Pow.Plug.current_user(conn)
+
     msgid = AmpsUtil.get_id()
     dir = AmpsUtil.tempdir(msgid)
     _fpath = Path.join(dir, msgid)
-    meta = Jason.decode!(meta)
 
-    AmpsEvents.send(meta, %{"output" => topic}, %{})
+    meta =
+      Map.merge(
+        %{"msgid" => msgid, "user" => user.username, "service" => "Topic Event"},
+        Jason.decode!(meta)
+      )
+
+    {msg, sid} = AmpsEvents.start_session(meta, %{"service" => "Topic Event"}, conn.assigns().env)
+
+    AmpsEvents.send(msg, %{"output" => AmpsUtil.env_topic(topic, conn.assigns().env)}, %{})
+    AmpsEvents.end_session(sid, conn.assigns().env)
     json(conn, :ok)
   end
 
-  def reprocess(conn, %{"msgid" => msgid}) do
-    obj = Amps.DB.find_one("message_events", %{"msgid" => msgid, "status" => "started"})
+  def reprocess(conn, %{"msgid" => id}) do
+    obj =
+      Amps.DB.find_one(Util.index(conn.assigns().env, "message_events"), %{
+        "_id" => id
+      })
+
     topic = obj["topic"]
+    IO.inspect(obj)
+
     msg = obj |> Map.drop(["status", "action", "topic", "_id", "index", "etime"])
+
+    {msg, sid} = AmpsEvents.start_session(msg, %{"service" => "Reprocess"}, conn.assigns().env)
+
     AmpsEvents.send(msg, %{"output" => topic}, %{})
+    AmpsEvents.end_session(sid, conn.assigns().env)
 
     json(conn, :ok)
+  end
+
+  def clear_env(conn, %{"name" => name}) do
+    AmpsUtil.clear_env(name)
+    json(conn, :ok)
+  end
+
+  def export_env(conn, %{"env" => env}) do
+    id = AmpsUtil.get_id()
+    dir = AmpsUtil.tempdir(id)
+
+    demo = conn.body_params()
+
+    imports =
+      Enum.reduce(AmpsWeb.Util.order(), [], fn index, imports ->
+        pieces = String.split(index, "/")
+        index = Enum.at(pieces, 0)
+
+        case Enum.count(pieces) do
+          1 ->
+            binary = export(Util.index(env, index), env)
+            filename = "#{index}.xlsx"
+            File.write(Path.join(dir, filename), binary)
+
+            [
+              %{
+                "type" => "collection",
+                "collection" => index,
+                "idtype" => "provided",
+                "file" => filename
+              }
+              | imports
+            ]
+
+          2 ->
+            envindex = Util.index(env, index)
+
+            subimports =
+              Enum.reduce(DB.find(envindex), [], fn obj, subimports ->
+                entity = obj["_id"]
+                field = Enum.at(pieces, 1)
+                {binary, filename} = export_sub(envindex, entity, field, env)
+                File.write(Path.join(dir, filename), binary)
+
+                [
+                  %{
+                    "type" => "field",
+                    "collection" => index,
+                    "entity" => entity,
+                    "field" => field,
+                    "idtype" => "provided",
+                    "file" => filename
+                  }
+                  | subimports
+                ]
+              end)
+
+            subimports ++ imports
+        end
+      end)
+
+    imports = Enum.reverse(imports)
+    demo = demo |> Map.put("imports", imports) |> Map.put("scripts", "scripts")
+    IO.inspect(demo)
+    File.write(Path.join(dir, "demo.json"), Jason.encode!(demo) |> Jason.Formatter.pretty_print())
+    IO.inspect(demo)
+    readme = "# #{demo["name"]}\n## #{demo["desc"]}"
+    IO.inspect(readme)
+    File.write!(Path.join(dir, "README.md"), readme)
+    File.cp_r!(AmpsUtil.get_mod_path(env), Path.join(dir, "scripts"))
+
+    files = File.ls!(dir) |> Enum.map(&String.to_charlist/1)
+
+    zippath = AmpsUtil.tempdir(AmpsUtil.get_id())
+    zippath = Path.join(zippath, "#{demo["name"]}.zip")
+    {:ok, zip} = :zip.create(zippath, files, cwd: dir)
+
+    send_download(conn, {:file, zip}, disposition: :attachment)
   end
 
   def reroute(conn, %{"id" => id}) do
@@ -432,8 +655,12 @@ defmodule AmpsWeb.DataController do
     body = conn.body_params()
     topic = body["topic"]
     meta = Jason.decode!(body["meta"])
+
     msg = obj |> Map.drop(["status", "action", "topic", "_id", "index", "etime"])
+    {msg, sid} = AmpsEvents.start_session(msg, %{"service" => "Reroute"}, conn.assigns().env)
+
     AmpsEvents.send(Map.merge(msg, meta), %{"output" => topic}, %{})
+    AmpsEvents.end_session(sid, conn.assigns().env)
 
     json(conn, :ok)
   end
@@ -449,80 +676,68 @@ defmodule AmpsWeb.DataController do
       body = conn.body_params()
       topic = body["topic"]
       meta = Jason.decode!(body["meta"])
+
       msg = obj |> Map.drop(["status", "action", "topic", "_id", "index", "etime"])
+
       AmpsEvents.send(Map.merge(msg, meta), %{"output" => topic}, %{})
     end)
 
     json(conn, :ok)
   end
 
+  def update_logo(conn, %{"logo" => logo}) do
+    DB.find_one_and_update("config", %{"name" => "SYSTEM"}, %{"logo" => logo})
+
+    img = Base.decode64!(logo)
+    path = Path.join(:code.priv_dir(:amps_web), "static/images/logo")
+    portal_path = Path.join(:code.priv_dir(:amps_portal), "static/images/logo")
+    File.write(path, img)
+    File.write(portal_path, img)
+
+    json(conn, :ok)
+  end
+
   def index(conn, %{"collection" => collection}) do
-    if vault_collection(collection) do
-      data = VaultDatabase.get_rows(collection)
+    data =
+      DB.get_rows(conn, %{
+        "collection" => collection
+      })
 
-      json(
-        conn,
-        data
-      )
-    else
-      data =
-        DB.get_rows(conn, %{
-          "collection" => collection
-        })
+    rows =
+      Map.get(data, :rows)
+      |> Enum.reject(fn row ->
+        row["systemdefault"] == true
+      end)
 
-      rows =
-        Map.get(data, :rows)
-        |> Enum.reject(fn row ->
-          row["systemdefault"] == true
-        end)
+    data = Map.put(data, :rows, rows)
 
-      data = Map.put(data, :rows, rows)
-
-      json(
-        conn,
-        data
-      )
-    end
+    json(
+      conn,
+      data
+    )
   end
 
   def create(conn, %{"collection" => collection}) do
-    body = Util.before_create(collection, conn.body_params())
+    body = Util.before_create(collection, conn.body_params(), conn.assigns().env)
 
-    {:ok, res} =
-      if vault_collection(collection) do
-        VaultDatabase.insert(collection, body)
-      else
-        DB.insert(collection, body)
-      end
+    {:ok, res} = DB.insert(collection, body)
 
-    Util.after_create(collection, body)
+    Util.after_create(collection, Map.merge(body, %{"_id" => res}), conn.assigns().env)
 
     json(conn, res)
   end
 
   def create_with_id(conn, %{"collection" => collection, "id" => id}) do
-    body = Util.before_create(collection, conn.body_params())
+    body = Util.before_create(collection, conn.body_params(), conn.assigns().env)
+    {:ok, res} = DB.insert_with_id(collection, body, id)
 
-    {:ok, res} =
-      if vault_collection(collection) do
-        VaultDatabase.insert(collection, body)
-      else
-        DB.insert_with_id(collection, body, id)
-      end
-
-    Util.after_create(collection, body)
+    Util.after_create(collection, body, conn.assigns().env)
 
     json(conn, res)
   end
 
   def show(conn, %{"collection" => collection, "id" => id}) do
-    object =
-      if vault_collection(collection) do
-        {:ok, data} = VaultDatabase.read(collection, id)
-        data
-      else
-        DB.find_one(collection, %{"_id" => id})
-      end
+    object = DB.find_by_id(collection, id)
 
     object =
       case collection do
@@ -543,89 +758,38 @@ defmodule AmpsWeb.DataController do
   end
 
   def update(conn, %{"collection" => collection, "id" => id}) do
-    old = DB.find_one("actions", %{"_id" => id})
+    old = DB.find_by_id(collection, id)
+    body = conn.body_params()
 
-    body =
-      case collection do
-        "actions" ->
-          case old["type"] do
-            "batch" ->
-              Util.delete_batch_consumer(old)
-              conn.body_params()
+    body = Util.before_update(collection, id, body, conn.assigns().env, old)
 
-            _ ->
-              conn.body_params()
-          end
+    result = DB.update(collection, body, id)
 
-        _ ->
-          conn.body_params()
-      end
+    Util.after_update(collection, id, body, conn.assigns().env, old)
+    Util.ui_event(collection, id, "update", conn.assigns().env)
 
-    result =
-      if vault_collection(collection) do
-        {:ok, resp} = VaultDatabase.update(collection, body, id)
-        resp
-      else
-        DB.update(collection, body, id)
-      end
+    json(conn, result)
+  end
 
-    case collection do
-      "accounts" ->
-        S3.update_schedule(id)
+  def update_with_id(conn, %{"collection" => collection, "id" => id}) do
+    old = DB.find_by_id(collection, id)
+    body = conn.body_params()
 
-      "services" ->
-        service = DB.find_one("services", %{"_id" => id})
+    body = Util.before_update(collection, id, body, conn.assigns().env, old)
 
-        if service["type"] == "subscriber" do
-          if old["topic"] != service["topic"] do
-            {stream, consumer} = AmpsUtil.get_names(body)
-            AmpsUtil.delete_consumer(stream, consumer)
-            AmpsUtil.create_consumer(stream, consumer, service["topic"])
-          end
-        end
+    {:ok, result} = DB.insert_with_id(collection, body, id)
 
-        types = SvcManager.service_types()
-
-        if Map.has_key?(service, "type") do
-          if Map.has_key?(types, String.to_atom(service["type"])) do
-            ServiceController.stop_service(service["name"])
-
-            if service["active"] do
-              ServiceController.start_service(service["name"])
-            end
-          end
-        end
-
-        if service["name"] == "SYSTEM" do
-          Amps.SvcManager.load_system_parms()
-        end
-
-      "actions" ->
-        _action = DB.find_one("actions", %{"_id" => id})
-
-        if body["type"] == "batch" do
-          Util.create_batch_consumer(body)
-        end
-
-      "scheduler" ->
-        Amps.Scheduler.update(body)
-
-      _ ->
-        nil
-    end
+    Util.after_update(collection, id, body, conn.assigns().env, old)
+    Util.ui_event(collection, id, "update", conn.assigns().env)
 
     json(conn, result)
   end
 
   def delete(conn, %{"collection" => collection, "id" => id}) do
-    object =
-      if vault_collection(collection) do
-        VaultDatabase.read(collection, id)
-      else
-        DB.find_one(collection, %{"_id" => id})
-      end
+    object = DB.find_by_id(collection, id)
+    base_index = Util.base_index(conn.assigns().env, collection)
 
-    case collection do
+    case base_index do
       # "accounts" ->
       #   S3.Minio.delete_account(object)
 
@@ -634,11 +798,11 @@ defmodule AmpsWeb.DataController do
           "mailbox" => object["username"]
         })
 
-        rules = object["rules"]
+        rules = object["rules"] || []
 
         Enum.each(rules, fn rule ->
           if rule["type"] == "download" do
-            AmpsPortal.Util.agent_rule_deletion(object, rule)
+            AmpsPortal.Util.agent_rule_deletion(object, rule, conn.assigns().env)
           end
         end)
 
@@ -646,12 +810,25 @@ defmodule AmpsWeb.DataController do
         types = SvcManager.service_types()
 
         if Map.has_key?(types, String.to_atom(object["type"])) do
-          AmpsWeb.ServiceController.stop_service(object["name"])
+          Gnat.pub(:gnat, "amps.events.svcs.handler.#{object["name"]}.stop", "")
         end
 
-        if object["type"] == "subscriber" do
-          {stream, consumer} = AmpsUtil.get_names(object)
-          AmpsUtil.delete_consumer(stream, consumer)
+        if object["type"] == "subscriber" || (object["type"] == "pyservice" && object["receive"]) do
+          Util.delete_config_consumer(object, conn.assigns().env)
+        end
+
+        if object["type"] == "gateway" do
+          mod =
+            case conn.assigns().env do
+              "" ->
+                :"Amps.Gateway.#{object["name"]}"
+
+              env ->
+                :"Amps.Gateway.#{env}.#{object["name"]}"
+            end
+
+          :code.delete(mod)
+          :code.purge(mod)
         end
 
       "actions" ->
@@ -663,18 +840,39 @@ defmodule AmpsWeb.DataController do
         conn.body_params()
     end
 
-    resp =
-      if vault_collection(collection) do
-        {:ok, resp} = VaultDatabase.delete(collection, id)
-        resp
-      else
-        DB.delete_one(collection, %{"_id" => id})
-      end
+    resp = DB.delete_by_id(collection, id)
+
+    case base_index do
+      "environments" ->
+        Gnat.pub(:gnat, "amps.events.env.handler.#{object["name"]}.destroy", "")
+        Gnat.pub(:gnat, "amps.events.archive.handler.stop.#{object["name"]}", "")
+
+      _ ->
+        nil
+    end
+
+    # onb = fn msg, obj, env ->
+    #   msg = Map.put(msg, "data", Jason.encode!(obj))
+
+    #   Amps.Onboarding.onboard(
+    #     msg,
+    #     obj,
+    #     conn.assigns().env
+    #   )
+
+    #   Map.merge(msg, %{"onboarding" => true, "user_id" => obj["_id"]})
+    # end
+
+    Util.ui_delete_event(collection, object, conn.assigns().env)
 
     json(conn, resp)
   end
 
-  def get_field(conn, %{"collection" => collection, "id" => id, "field" => field}) do
+  def get_field(conn, %{
+        "collection" => collection,
+        "id" => id,
+        "field" => field
+      }) do
     data = DB.find_one(collection, %{"_id" => id})
     json(conn, data[field])
   end
@@ -684,14 +882,62 @@ defmodule AmpsWeb.DataController do
     json(conn, streams)
   end
 
-  def add_to_field(conn, %{"collection" => collection, "id" => id, "field" => field}) do
+  def add_to_field(conn, %{
+        "collection" => collection,
+        "id" => id,
+        "field" => field
+      }) do
     Logger.debug("Adding Field")
     body = conn.body_params()
+
+    body =
+      Util.before_field_create(
+        Util.base_index(conn.assigns().env, collection),
+        id,
+        field,
+        body,
+        conn.assigns().env
+      )
 
     fieldid = DB.add_to_field(collection, body, id, field)
     updated = DB.find_one(collection, %{"_id" => id})
 
-    Util.after_field_create(collection, id, field, fieldid, body, updated)
+    Util.after_field_create(
+      Util.base_index(conn.assigns().env, collection),
+      id,
+      field,
+      fieldid,
+      body,
+      updated,
+      conn.assigns().env
+    )
+
+    json(conn, updated)
+  end
+
+  def add_to_field_with_id(conn, %{
+        "collection" => collection,
+        "id" => id,
+        "field" => field,
+        "fieldid" => fieldid
+      }) do
+    Logger.debug("Adding Field")
+    body = conn.body_params()
+
+    fieldid = DB.add_to_field_with_id(collection, body, id, field, fieldid)
+    updated = DB.find_one(collection, %{"_id" => id})
+
+    Util.after_field_create(
+      Util.base_index(conn.assigns().env, collection),
+      id,
+      field,
+      fieldid,
+      body,
+      updated,
+      conn.assigns().env
+    )
+
+    Util.ui_field_event(collection, id, field, fieldid, "create", conn.assigns().env)
 
     json(conn, updated)
   end
@@ -708,9 +954,15 @@ defmodule AmpsWeb.DataController do
     json(conn, result)
   end
 
-  def update_field(conn, %{"collection" => collection, "id" => id, "field" => field}) do
+  def update_field(conn, %{
+        "collection" => collection,
+        "id" => id,
+        "field" => field
+      }) do
     body = conn.body_params()
+    IO.inspect(%{field => body})
     DB.find_one_and_update(collection, %{"_id" => id}, %{field => body})
+    Util.ui_event(collection, id, "update.#{field}", conn.assigns().env)
     json(conn, :ok)
   end
 
@@ -724,11 +976,15 @@ defmodule AmpsWeb.DataController do
     body = conn.body_params()
     result = DB.update_in_field(collection, body, id, field, fieldid)
 
-    case collection do
+    case Util.base_index(conn.assigns().env, collection) do
       "services" ->
         case field do
           "defaults" ->
-            Application.put_env(:amps, String.to_atom(body["field"]), body["value"])
+            Application.put_env(
+              :amps,
+              String.to_atom(body["field"]),
+              body["value"]
+            )
 
           _ ->
             nil
@@ -737,7 +993,7 @@ defmodule AmpsWeb.DataController do
       "users" ->
         case field do
           "rules" ->
-            AmpsPortal.Util.agent_rule_update(id, body)
+            AmpsPortal.Util.agent_rule_update(id, body, conn.assigns().env)
 
           _ ->
             nil
@@ -746,6 +1002,8 @@ defmodule AmpsWeb.DataController do
       _ ->
         nil
     end
+
+    Util.ui_field_event(collection, id, field, fieldid, "update", conn.assigns().env)
 
     json(conn, result)
   end
@@ -772,7 +1030,7 @@ defmodule AmpsWeb.DataController do
     item = DB.get_in_field(collection, id, field, fieldid)
     result = DB.delete_from_field(collection, body, id, field, fieldid)
 
-    case collection do
+    case Util.base_index(conn.assigns().env, collection) do
       "services" ->
         case field do
           "defaults" ->
@@ -785,7 +1043,10 @@ defmodule AmpsWeb.DataController do
       "users" ->
         case field do
           "rules" ->
-            AmpsPortal.Util.agent_rule_deletion(obj, item)
+            AmpsPortal.Util.agent_rule_deletion(obj, item, conn.assigns().env)
+
+          "tokens" ->
+            AmpsPortal.Util.after_token_delete(obj, item, conn.assigns().env)
 
           _ ->
             nil
@@ -795,15 +1056,9 @@ defmodule AmpsWeb.DataController do
         nil
     end
 
+    Util.ui_delete_event(collection, obj, conn.assigns().env)
+
     json(conn, result)
-  end
-
-  def vault_collection(collection) do
-    collections = [
-      "keys"
-    ]
-
-    Enum.member?(collections, collection)
   end
 end
 
@@ -818,7 +1073,9 @@ defmodule AmpsWeb.Encryption do
       |> binary_part(0, 32)
 
     plaintext = pad(plaintext, 32)
+
     encrypted_text = :crypto.crypto_one_time(:aes_256_cbc, secret_key, iv, plaintext, true)
+
     encrypted_text = iv <> encrypted_text
     :base64.encode(encrypted_text)
   end
@@ -830,7 +1087,9 @@ defmodule AmpsWeb.Encryption do
 
     ciphertext = :base64.decode(ciphertext)
     <<iv::binary-16, ciphertext::binary>> = ciphertext
+
     decrypted_text = :crypto.crypto_one_time(:aes_256_cbc, secret_key, iv, ciphertext, false)
+
     unpad(decrypted_text)
   end
 
@@ -848,21 +1107,26 @@ end
 
 defmodule Filter do
   def convert_dates(map, acc) do
-    if Kernel.is_map(map) do
-      cond do
-        Map.has_key?(map, "$date") ->
-          # with {:ok, datetime, _} <- DateTime.from_iso8601(Map.get(map, "$date")), do: datetime
-          Map.get(map, "$date")
+    cond do
+      is_map(map) ->
+        cond do
+          is_struct(map) ->
+            map
 
-        # Map.has_key?(map, "$regex") ->
-        #   %BSON.Regex{pattern: Map.get(map, "$regex")}
-        true ->
-          Enum.reduce(map, acc, fn {key, value}, acc ->
-            Map.put(acc, key, convert_dates(value, acc))
-          end)
-      end
-    else
-      map
+          Map.has_key?(map, "$date") ->
+            # with {:ok, datetime, _} <- DateTime.from_iso8601(Map.get(map, "$date")), do: datetime
+            Map.get(map, "$date")
+
+          # Map.has_key?(map, "$regex") ->
+          #   %BSON.Regex{pattern: Map.get(map, "$regex")}
+          true ->
+            Enum.reduce(map, acc, fn {key, value}, acc ->
+              Map.put(acc, key, convert_dates(value, acc))
+            end)
+        end
+
+      true ->
+        map
     end
   end
 
@@ -919,7 +1183,8 @@ defmodule Filter do
 
       date =
         Date.from_iso8601!(
-          Enum.at(pieces, 2) <> "-" <> Enum.at(pieces, 0) <> "-" <> Enum.at(pieces, 1)
+          Enum.at(pieces, 2) <>
+            "-" <> Enum.at(pieces, 0) <> "-" <> Enum.at(pieces, 1)
         )
 
       {:ok, datetime} = DateTime.new!(date, Time.new(0, 0, 0, 0))
@@ -955,7 +1220,10 @@ defmodule S3 do
   def create_schedule(account) do
     schedule = %{
       "account" => %{
-        "stime" => DateTime.utc_now() |> DateTime.truncate(:millisecond) |> DateTime.to_iso8601(),
+        "stime" =>
+          DateTime.utc_now()
+          |> DateTime.truncate(:millisecond)
+          |> DateTime.to_iso8601(),
         "debug" => to_string(account["debug"]),
         "logfile" => account["logpath"],
         "hinterval" => account["hinterval"],
@@ -997,7 +1265,10 @@ defmodule S3 do
 
     schedule = %{
       "account" => %{
-        "stime" => DateTime.utc_now() |> DateTime.truncate(:millisecond) |> DateTime.to_iso8601(),
+        "stime" =>
+          DateTime.utc_now()
+          |> DateTime.truncate(:millisecond)
+          |> DateTime.to_iso8601(),
         "debug" => to_string(account["debug"]),
         "logfile" => account["logpath"],
         "hinterval" => account["hinterval"],
@@ -1009,7 +1280,11 @@ defmodule S3 do
     schedule =
       Enum.reduce(account["rules"], schedule, fn rule, acc ->
         name = rule["name"]
-        rule = rule |> Map.drop(["name"]) |> Map.put("active", to_string(rule["active"]))
+
+        rule =
+          rule
+          |> Map.drop(["name"])
+          |> Map.put("active", to_string(rule["active"]))
 
         rule =
           if Map.has_key?(rule, "regex") do

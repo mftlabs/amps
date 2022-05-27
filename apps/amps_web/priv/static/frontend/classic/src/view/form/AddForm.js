@@ -73,7 +73,21 @@ Ext.define("Amps.form.add", {
     {
       xtype: "form",
       entity: null,
+      // layout: {
+      //   type: "vbox",
+      //   align: "stretch",
+      // },
 
+      getInvalidFields: function () {
+        var invalidFields = [];
+        Ext.suspendLayouts();
+        this.form.getFields().filterBy(function (field) {
+          if (field.validate()) return;
+          invalidFields.push(field);
+        });
+        Ext.resumeLayouts(true);
+        return invalidFields;
+      },
       bodyPadding: 10,
       defaults: {
         padding: 5,
@@ -95,13 +109,14 @@ Ext.define("Amps.form.add", {
             click: function (btn) {
               var scope = btn.up("addform");
               var grid = amfutil.getElementByID("main-grid");
+              var win = btn.up("window");
               var form = btn.up("form").getForm();
               var values = form.getValues();
               console.log(values);
+              values = amfutil.convertNumbers(form, values);
+              console.log(values);
 
               values = this.up("window").process(btn.up("form"), values);
-              console.log(values);
-              values = amfutil.convertNumbers(form, values);
               console.log(values);
 
               var user = amfutil.get_user();
@@ -158,7 +173,7 @@ Ext.define("Amps.form.add", {
                   failure: function (response) {
                     mask.hide();
                     btn.setDisabled(false);
-                    amfutil.onFailure("Failed to Create User", response);
+                    amfutil.onFailure(`Failed to Create ${win.item}`, response);
                   },
                 });
               }
@@ -171,6 +186,8 @@ Ext.define("Amps.form.add", {
           itemId: "accounts_cancel",
           listeners: {
             click: function (btn) {
+              // var fields = this.up("form").getInvalidFields();
+              // console.log(fields);
               this.up("window").close();
             },
           },

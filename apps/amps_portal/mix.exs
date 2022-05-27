@@ -24,7 +24,7 @@ defmodule AmpsPortal.MixProject do
   def application do
     [
       mod: {AmpsPortal.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: [:logger, :runtime_tools, :os_mon]
     ]
   end
 
@@ -38,7 +38,7 @@ defmodule AmpsPortal.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:phoenix, "~> 1.6.0"},
+      {:phoenix, "~> 1.6.6"},
       {:phoenix_html, "~> 3.0"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_live_view, "~> 0.17.5"},
@@ -50,7 +50,9 @@ defmodule AmpsPortal.MixProject do
       {:gettext, "~> 0.18"},
       {:jason, "~> 1.2"},
       {:plug_cowboy, "~> 2.5"},
-      {:cors_plug, "~> 2.0"}
+      {:cors_plug, "~> 2.0"},
+      {:argon2_elixir, "~> 2.0"},
+      {:swoosh, "~> 1.3"}
     ]
   end
 
@@ -59,8 +61,8 @@ defmodule AmpsPortal.MixProject do
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     [
-      setup: ["deps.get"],
-      "assets.deploy": ["esbuild default --minify", "phx.digest"]
+      # setup: ["deps.get"],
+      "assets.deploy": ["esbuild amps_portal --minify", "phx.digest"]
     ]
   end
 end

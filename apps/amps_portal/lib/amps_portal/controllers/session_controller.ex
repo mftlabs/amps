@@ -3,13 +3,22 @@ defmodule AmpsPortal.SessionController do
 
   alias AmpsPortal.APIAuthPlug
   alias Plug.Conn
+  alias AmpsPortal.Util
 
   @spec create(Conn.t(), map()) :: Conn.t()
   def create(conn, %{"user" => user_params}) do
     conn
-    |> Pow.Plug.authenticate_user(user_params)
+    |> custom_auth(user_params)
     |> case do
       {:ok, conn} ->
+        user =
+          Amps.DB.find_one(AmpsUtil.index(conn.assigns().env, "users"), %{
+            "username" => user_params["username"]
+          })
+          |> Map.put("password", user_params["password"])
+
+        # Task.start_link(fn -> Amps.Onboarding.synchronize(user, conn.assigns().env) end)
+
         json(conn, %{
           data: %{
             user: Pow.Plug.current_user(conn),
@@ -25,13 +34,31 @@ defmodule AmpsPortal.SessionController do
     end
   end
 
+  def custom_auth(conn, params) do
+    config =
+      Pow.Plug.fetch_config(conn)
+      |> Keyword.put(:env, conn.assigns().env)
+
+    AmpsPortal.Users.authenticate(params, config)
+    |> case do
+      nil -> {:error, conn}
+      user -> {:ok, Pow.Plug.create(conn, user, config)}
+    end
+  end
+
   @spec renew(Conn.t(), map()) :: Conn.t()
   def renew(conn, _params) do
-    config = Pow.Plug.fetch_config(conn)
+    config =
+      Pow.Plug.fetch_config(conn)
+      |> Keyword.put(:env, conn.assigns().env)
 
-    conn
-    |> APIAuthPlug.renew(config)
-    |> case do
+    IO.inspect(config)
+
+    res = APIAuthPlug.renew(conn, config)
+
+    IO.inspect(res)
+
+    case res do
       {conn, nil} ->
         conn
         |> put_status(401)

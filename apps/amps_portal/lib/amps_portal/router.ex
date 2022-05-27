@@ -7,17 +7,23 @@ defmodule AmpsPortal.Router do
     plug(:fetch_live_flash)
     plug(:protect_from_forgery)
     plug(:put_secure_browser_headers)
+    plug(AmpsPortal.EnvPlug)
   end
 
   pipeline :api do
     plug(:accepts, ["json"])
+    plug(AmpsPortal.EnvPlug)
+
     plug(AmpsPortal.APIAuthPlug, otp_app: :amps_portal)
   end
 
   pipeline :api_protected do
     plug(:fetch_session)
     plug(:fetch_live_flash)
-    plug(Pow.Plug.RequireAuthenticated, error_handler: AmpsPortal.APIAuthErrorHandler)
+
+    plug(Pow.Plug.RequireAuthenticated,
+      error_handler: AmpsPortal.APIAuthErrorHandler
+    )
   end
 
   scope "/", AmpsPortal do
@@ -29,12 +35,22 @@ defmodule AmpsPortal.Router do
   scope "/api", AmpsPortal do
     pipe_through(:api)
     get("/ampstest", PageController, :execute_test)
-    resources("/session", SessionController, singleton: true, only: [:create, :delete])
+
+    resources("/session", SessionController,
+      singleton: true,
+      only: [:create, :delete]
+    )
+
+    get("/util/email", DataController, :email)
+
     post("/session/renew", SessionController, :renew)
     post("/users/reg", UserController, :register)
     get("/users/token/:token", UserController, :parse_user_token)
     post("/users/link/:email", UserController, :send_user_link)
     post("/users/password", UserController, :reset_password)
+    post("/ufa/login", UFAController, :agent_login)
+    get("/duplicate_username/:username", UserController, :duplicate_username)
+    get("/duplicate_email/:email", UserController, :duplicate_email)
   end
 
   scope "/api", AmpsPortal do
@@ -49,8 +65,17 @@ defmodule AmpsPortal.Router do
 
     get("/ufa/download/:rule", UFAController, :handle_download)
     get("/ufa/agent", UFAController, :get_agent)
+    get("/tokens", UserController, :get_tokens)
+    resources("/mailboxes", MailboxController, except: [:new, :edit])
+    get("/tokens/secret/:id", UserController, :get_token_secret)
+
+    post("/tokens", UserController, :create_token)
+    delete("/tokens/:id", UserController, :delete_token)
 
     get("/inbox", DataController, :get_messages)
+    get("/inbox/:mailbox", DataController, :get_messages)
+
+    get("/ufa_logs", DataController, :ufa_logs)
     get("/user", UserController, :get)
     put("/user", UserController, :update)
     get("/rules", UFAController, :get_agent_rules)

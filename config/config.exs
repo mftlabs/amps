@@ -14,23 +14,30 @@ config :amps_portal,
 
 config :amps, env: Mix.env()
 
+config :phoenix, :filter_parameters, ["password", "token", "logo"]
+
 # Configures the endpoint
 config :amps_portal, AmpsPortal.Endpoint,
   url: [host: "localhost"],
-  render_errors: [view: AmpsPortal.ErrorView, accepts: ~w(html json), layout: false],
+  render_errors: [
+    view: AmpsPortal.ErrorView,
+    accepts: ~w(html json),
+    layout: false
+  ],
   pubsub_server: AmpsPortal.PubSub,
   live_view: [signing_salt: "IzQCGrqZ"]
 
 # Configure esbuild (the version is required)
 config :esbuild,
-  version: "0.12.18",
+  version: "0.14.23",
   amps_portal: [
     args: ~w(js/app.js --bundle --target=es2016 --outdir=../priv/static/assets),
     cd: Path.expand("../apps/amps_portal/assets", __DIR__),
     env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
   ],
   amps_web: [
-    args: ~w(js/app.js --bundle --target=es2016 --outdir=../priv/static/assets),
+    args:
+      ~w(js/app.js --bundle --target=es2016 --loader:.svg=file --loader:.ttf=file --outdir=../priv/static/assets),
     cd: Path.expand("../apps/amps_web/assets", __DIR__),
     env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
   ]
@@ -48,7 +55,7 @@ config :master_proxy,
   protocol_options: [
     request_timeout: 10000
   ],
-  http: [:inet6, port: 4080],
+  http: [:inet6, port: System.get_env("AMPS_PORT", "4080")],
   log_requests: false,
   # https: [:inet6, port: 4443],
   backends: [
@@ -57,23 +64,31 @@ config :master_proxy,
       phoenix_endpoint: AmpsWeb.Endpoint
     },
     %{
-      host: ~r/^#{System.get_env("AMPS_HOST", "localhost")}$/,
+      host: ~r/#{System.get_env("AMPS_HOST", "localhost")}$/,
       phoenix_endpoint: AmpsPortal.Endpoint
     }
   ]
 
 config :amps,
-  db: "es"
+  db: System.get_env("AMPS_DB_PROVIDER", "mongo")
 
 config :amps, :gnat,
   host: String.to_charlist(System.get_env("AMPS_NATS_HOST", "localhost")),
   port: String.to_integer(System.get_env("AMPS_NATS_PORT", "4222"))
 
+config :amps, Amps.Logger, level: :debug, format: "$message"
+
 config :amps, Amps.Mailer, adapter: Swoosh.Adapters.Local
 
-config :amps, Amps.Cluster, url: "http://localhost:9200"
-# username: "admin",
-# password: "admin"
+config :amps, Amps.Cluster,
+  url: System.get_env("AMPS_OPENSEARCH_ADDR", "https://localhost:9200"),
+  username: System.get_env("AMPS_OPENSEARCH_USERNAME", "admin"),
+  password: System.get_env("AMPS_OPENSEARCH_PASSWORD", "admin"),
+  conn_opts: [
+    transport_opts: [
+      verify: :verify_none
+    ]
+  ]
 
 # Swoosh API client is needed for adapters other than SMTP.
 config :swoosh, :api_client, false
@@ -83,7 +98,11 @@ config :amps_web,
 
 # Configures the endpoint
 config :amps_web, AmpsWeb.Endpoint,
-  render_errors: [view: AmpsWeb.ErrorView, accepts: ~w(html json), layout: false],
+  render_errors: [
+    view: AmpsWeb.ErrorView,
+    accepts: ~w(html json),
+    layout: false
+  ],
   pubsub_server: Amps.PubSub,
   live_view: [signing_salt: "kl+/cr/G"],
   url: [host: System.get_env("AMPS_ADMIN_HOST", "admin.localhost")],
@@ -91,6 +110,7 @@ config :amps_web, AmpsWeb.Endpoint,
     port: System.get_env("AMPS_HOST_PORT", "4000"),
     protocol_options: [idle_timeout: 5_000_000]
   ],
+  use_ssl: String.to_atom(String.downcase(System.get_env("AMPS_USE_SSL", "FALSE"))),
   # https: [
   #   port: 443,
   #   # cipher_suite: :strong,
@@ -102,6 +122,7 @@ config :amps_web, AmpsWeb.Endpoint,
   authmethod: System.get_env("AMPS_AUTH_METHOD") || "db",
   vault_addr: System.get_env("AMPS_VAULT_ADDR", "http://localhost:8200"),
   mongo_addr: System.get_env("AMPS_MONGO_ADDR", "mongodb://localhost:27017/amps"),
+  nats_addr: System.get_env("AMPS_NATS_ADDR", "http://localhost:8222"),
   minio_addr:
     System.get_env("AMPS_S3_SCHEME", "http://") <>
       System.get_env("AMPS_S3_HOST", "localhost") <>
@@ -117,14 +138,31 @@ config :amps_web, AmpsWeb.Endpoint,
 # For production it's recommended to configure a different adapter
 # at the `config/runtime.exs`.
 
-config :amps, :pow,
+# config :mnesia, dir: to_charlist(System.get_env("MNESIA_DIR", "/Users/abhayram/mnesia"))
+
+config :mnesiac,
+  stores: [Amps.Defaults],
+  schema_type: :disc_copies
+
+# defaults to :ram_copies
+
+if config_env() == :prod do
+  config :logger,
+    level: :info
+end
+
+config :logger,
+  utc_log: true
+
+config :amps_web, :pow,
   user: AmpsWeb.Users.User,
   users_context: AmpsWeb.Users,
   extensions: [PowResetPassword],
   controller_callbacks: Pow.Extension.Phoenix.ControllerCallbacks,
-  mailer_backend: AmpsWeb.PowMailer
+  mailer_backend: AmpsWeb.PowMailer,
+  cache_store_backend: Pow.Store.Backend.MnesiaCache
 
-config :amps, :pow_assent,
+config :amps_web, :pow_assent,
   user: AmpsWeb.Users.User,
   users_context: AmpsWeb.Users,
   providers: [
@@ -140,7 +178,8 @@ config :amps_portal, :pow,
   users_context: AmpsPortal.Users,
   extensions: [PowResetPassword],
   controller_callbacks: Pow.Extension.Phoenix.ControllerCallbacks,
-  mailer_backend: AmpsWeb.PowMailer
+  mailer_backend: AmpsWeb.PowMailer,
+  cache_store_backend: Pow.Store.Backend.MnesiaCache
 
 config :amps_portal, :pow_assent,
   user: AmpsPortal.Users.User,
@@ -180,6 +219,10 @@ config :ex_aws, :hackney_opts, recv_timeout: 240_000
 #   host: System.get_env("AMPS_S3_HOST") || "localhost",
 #   port: System.get_env("AMPS_S3_PORT") || "9000"
 
+config :kafka_ex,
+  kafka_version: "kayrock",
+  disable_default_worker: true
+
 config :amps,
   sched_interval: 10000,
   retry_delay: 60000,
@@ -195,19 +238,17 @@ config :amps, :streams,
   "amps.actions": "ACTIONS",
   "amps.delivery": "DELIVERY",
   "amps.mailbox": "MAILBOX",
-  "amps.data": "DATA"
-
-config :amps, :elsa,
-  endpoints: [localhost: 29092],
-  name: :amps_elsa
+  "amps.data": "DATA",
+  "amps.objects": "OBJECTS"
 
 config :amps, :services,
   subscriber: Amps.EventConsumer,
   history: Amps.HistoryConsumer,
   sftpd: Amps.SftpServer,
   httpd: Amps.MailboxApi,
-  kafka: Amps.KafkaConsumer,
-  s3: Amps.S3Consumer
+  gateway: Amps.Gateway,
+  kafka: Amps.GenConsumer,
+  pyservice: Amps.PyProcess
 
 config :amps, :actions,
   strrepl: StringReplaceAction,
@@ -234,6 +275,14 @@ config :amps, :actions,
 #      max_keepalive: 5_000_000
 #    ]
 #  ]
+config :amps, Amps.Scheduler,
+  jobs: [
+    heartbeat: [
+      schedule: "* * * * *",
+      task: {Amps.Heartbeat, :send, []},
+      run_strategy: Quantum.RunStrategy.Local
+    ]
+  ]
 
 config :amps, :pyworker,
   config: [
@@ -243,6 +292,29 @@ config :amps, :pyworker,
     {:max_overflow, 2}
   ]
 
+if String.upcase(System.get_env("AMPS_CLUSTER", "FALSE")) == "TRUE" do
+  config :libcluster,
+    topologies: [
+      amps: [
+        # The selected clustering strategy. Required.
+        strategy: Cluster.Strategy.LocalEpmd,
+        # Configuration for the provided strategy. Optional.
+        # The function to use for connecting nodes. The node
+        # name will be appended to the argument list. Optional
+        connect: {:net_kernel, :connect_node, []},
+        # The function to use for disconnecting nodes. The node
+        # name will be appended to the argument list. Optional
+        disconnect: {:erlang, :disconnect_node, []},
+        # The function to use for listing nodes.
+        # This function must return a list of node names. Optional
+        list_nodes: {:erlang, :nodes, [:connected]}
+      ]
+    ]
+else
+  config :libcluster,
+    topologies: []
+end
+
 # Configure esbuild (the version is required)
 # config :esbuild,
 #   version: "0.12.18",
@@ -251,6 +323,8 @@ config :amps, :pyworker,
 config :logger, :console,
   format: "$time $metadata[$level] $message\n",
   metadata: [:request_id]
+
+config :logger, :backends, [:console, Amps.Logger]
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason

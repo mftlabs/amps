@@ -15,12 +15,10 @@ Ext.define("Amps.view.form.Key", {
     var name = args["name"];
     console.log(args);
     this.setHeight(args.height);
-    var fieldLabel = args["fieldLabel"];
     var items = [
       {
         xtype: "textarea",
         name: name,
-        fieldLabel: fieldLabel,
         flex: 1,
         allowBlank: false,
         value: args["value"],

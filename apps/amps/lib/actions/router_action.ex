@@ -5,7 +5,7 @@ defmodule RouterAction do
 
   """
 
-  def run(msg, parms, state) do
+  def run(msg, parms, {state, env}) do
     Logger.info("input #{inspect(msg)}")
     Logger.info("state #{inspect(state)}")
 
@@ -17,50 +17,49 @@ defmodule RouterAction do
         msg
       end
 
-    rule = evaluate(parms, msg)
+    rule = evaluate(parms, msg, env)
     Logger.info("rule #{inspect(rule)}")
     msgid = AmpsUtil.get_id()
-    msg = Map.merge(msg, %{"msgid" => msgid, "parent" => msg["msgid"]})
-
-    AmpsEvents.send(msg, %{"output" => rule["output"]}, state)
+    msg = Map.merge(msg, %{"msgid" => msgid, "parent" => msg["msgid"], "topic" => rule["output"]})
+    AmpsEvents.send(msg, %{"output" => AmpsUtil.env_topic(rule["output"], env)}, state)
   end
 
-  def run(subject, body) do
-    try do
-      data = Poison.decode!(body)
-      msg = data[:msg]
-      state = data[:state]
+  # def run(subject, body) do
+  #   try do
+  #     data = Poison.decode!(body)
+  #     msg = data[:msg]
+  #     state = data[:state]
 
-      case evaluate(subject, msg) do
-        nil ->
-          # no user rules found, try system defaults
-          Logger.info("eval system rules")
+  #     case evaluate(subject, msg, env) do
+  #       nil ->
+  #         # no user rules found, try system defaults
+  #         Logger.info("eval system rules")
 
-          case evaluate("SYSTEM", msg) do
-            nil ->
-              Logger.info("rule not found")
-              {:error, "system error - no default rule"}
+  #         case evaluate("SYSTEM", msg) do
+  #           nil ->
+  #             Logger.info("rule not found")
+  #             {:error, "system error - no default rule"}
 
-            rule ->
-              # found system rule
-              Logger.info("rule found #{inspect(rule)}")
-              process_action(msg, rule, state)
-          end
+  #           rule ->
+  #             # found system rule
+  #             Logger.info("rule found #{inspect(rule)}")
+  #             process_action(msg, rule, state)
+  #         end
 
-        rule ->
-          # found user rule
-          process_action(msg, rule, state)
-      end
-    rescue
-      error ->
-        Logger.warning("invalid message #{inspect(error)}")
-    end
-  end
+  #       rule ->
+  #         # found user rule
+  #         process_action(msg, rule, state)
+  #     end
+  #   rescue
+  #     error ->
+  #       Logger.warning("invalid message #{inspect(error)}")
+  #   end
+  # end
 
-  def evaluate(parms, msg) do
+  def evaluate(parms, msg, env \\ "") do
     rules =
       Enum.reduce(parms["rules"], [], fn id, acc ->
-        rule = Amps.DB.find_one("rules", %{"_id" => id})
+        rule = Amps.DB.find_one(AmpsUtil.index(env, "rules"), %{"_id" => id})
 
         case rule do
           nil ->

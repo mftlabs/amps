@@ -86,7 +86,19 @@ Ext.define("Amps.controller.FieldController", {
   onClearFilter: async function () {
     var tokens = Ext.util.History.getToken().split("/");
     var grid = amfutil.getElementByID(`${tokens[0]}-${tokens[2]}`);
-    grid.getStore().clearFilter();
+    var config = ampsgrids.grids[tokens[0]]().subgrids[tokens[2]];
+
+    if (config.store) {
+      config.store().then((store) => {
+        grid.setStore(store);
+      });
+    } else {
+      grid.getStore().clearFilter();
+    }
+    var window = amfutil.getElementByID("searchwindow");
+    window.clearForm();
+    amfutil.getElementByID("searchpanelbtn").setIconCls("x-fa fa-search");
+    window.hide();
   },
 
   onExportClicked: async function (btn) {

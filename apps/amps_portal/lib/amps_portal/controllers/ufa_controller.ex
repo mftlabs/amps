@@ -4,6 +4,9 @@ defmodule AmpsPortal.UFAController do
   import Jetstream
   alias Amps.DB
   require Logger
+  alias AmpsPortal.Util
+  alias Pow.{Config, Plug, Store.CredentialsCache}
+  alias PowPersistentSession.Store.PersistentSessionCache
 
   def get_sched(conn, %{"username" => username}) do
     case Pow.Plug.current_user(conn) do
@@ -12,7 +15,7 @@ defmodule AmpsPortal.UFAController do
 
       user ->
         if user.username == username do
-          user = DB.find_one("users", %{"username" => username})
+          user = DB.find_one(Util.conn_index(conn, "users"), %{"username" => username})
 
           ufa = user["ufa"]
 
@@ -54,10 +57,9 @@ defmodule AmpsPortal.UFAController do
           encoded = Jason.encode!(schedule)
 
           AmpsEvents.send_history(
-            "amps.events.svcs",
-            "service_events",
+            AmpsUtil.env_topic("amps.events.ufa.#{user["username"]}.logs", conn.assigns().env),
+            "ufa_logs",
             %{
-              "service" => "ufa",
               "user" => user["username"],
               "status" => "success",
               "operation" => "schedule"
@@ -81,10 +83,9 @@ defmodule AmpsPortal.UFAController do
 
       user ->
         AmpsEvents.send_history(
-          "amps.events.svcs",
-          "service_events",
+          AmpsUtil.env_topic("amps.events.ufa.#{user.username}.logs", conn.assigns().env),
+          "ufa_logs",
           %{
-            "service" => "ufa",
             "user" => user.username,
             "status" => "success",
             "operation" => "heartbeat"
@@ -129,24 +130,23 @@ defmodule AmpsPortal.UFAController do
             }
           )
 
-        topic = "amps.svcs.ufa." <> username
+        topic = ("amps.svcs.ufa." <> username) |> AmpsUtil.env_topic(conn.assigns().env)
 
         AmpsEvents.send(msg, %{"output" => topic}, %{})
 
-        AmpsEvents.send_history(
-          "amps.events.messages",
-          "message_events",
-          Map.merge(msg, %{
-            "status" => "received",
-            "output" => topic
-          })
-        )
+        # AmpsEvents.send_history(
+        #   "amps.events.messages",
+        #   "message_events",
+        #   Map.merge(msg, %{
+        #     "status" => "received",
+        #     "output" => topic
+        #   })
+        # )
 
         AmpsEvents.send_history(
-          "amps.events.svcs",
-          "service_events",
+          AmpsUtil.env_topic("amps.events.ufa.#{user.username}.logs", conn.assigns().env),
+          "ufa_logs",
           Map.merge(msg, %{
-            "service" => "ufa",
             "user" => user.username,
             "status" => "success",
             "operation" => "upload"
@@ -163,10 +163,8 @@ defmodule AmpsPortal.UFAController do
         send_resp(conn, 403, "Forbidden")
 
       user ->
-        case receive_message({user, rule}, self()) do
+        case receive_message({user, rule}, conn.assigns().env) do
           {:message, message} ->
-            IO.inspect(message)
-
             msg = Jason.decode!(message.body)["msg"]
 
             conn =
@@ -175,20 +173,26 @@ defmodule AmpsPortal.UFAController do
               |> put_resp_header("amps-message", message.body)
 
             AmpsEvents.send_history(
-              "amps.events.svcs",
-              "service_events",
+              AmpsUtil.env_topic("amps.events.ufa.#{user.username}.logs", conn.assigns().env),
+              "ufa_logs",
               Map.merge(msg, %{
-                "service" => "ufa",
                 "user" => user.username,
+                "rule" => rule,
                 "status" => "started",
                 "operation" => "download"
               })
             )
 
+            IO.inspect(msg)
+
             if msg["data"] do
               send_download(conn, {:binary, msg["data"]}, filename: msg["fname"])
             else
-              send_download(conn, {:file, msg["fpath"]}, filename: msg["fname"])
+              if msg["fpath"] do
+                send_download(conn, {:file, msg["fpath"]}, filename: msg["fname"])
+              else
+                send_download(conn, {:binary, ""}, filename: msg["fname"] || msg["msgid"])
+              end
             end
 
           {:none, nil} ->
@@ -202,38 +206,42 @@ defmodule AmpsPortal.UFAController do
   end
 
   def ack(conn, %{"reply" => reply}) do
-    IO.inspect(conn)
-
     case Pow.Plug.current_user(conn) do
       nil ->
         send_resp(conn, 403, "Forbidden")
 
       user ->
-        IO.inspect(reply)
         res = Jetstream.ack(%{gnat: Process.whereis(:gnat), reply_to: reply})
-
         msg = Jason.decode!(get_req_header(conn, "amps-message"))
+        msg = msg["msg"]
+        rule = get_req_header(conn, "amps-rule")
 
         AmpsEvents.send_history(
-          "amps.events.svcs",
-          "service_events",
+          AmpsUtil.env_topic("amps.events.ufa.#{user.username}.logs", conn.assigns().env),
+          "ufa_logs",
           Map.merge(msg, %{
-            "service" => "ufa",
             "user" => user.username,
             "status" => "completed",
-            "operation" => "download"
+            "operation" => "download",
+            "rule" => rule
           })
         )
 
-        IO.inspect(res)
         json(conn, :ok)
     end
   end
 
-  def receive_message({user, rule}, _pid) do
+  def receive_message({user, rule}, env) do
     listening_topic = "_CON.#{nuid()}"
 
-    {stream, consumer} = {"MAILBOX", user.username <> "_" <> rule}
+    {stream, consumer} =
+      AmpsUtil.get_names(
+        %{
+          "name" => user.username <> "_" <> rule,
+          "topic" => "amps.mailbox.*"
+        },
+        env
+      )
 
     try do
       pid =
@@ -269,6 +277,11 @@ defmodule AmpsPortal.UFAController do
   end
 
   def subscribe(consumer, parms) do
+    group = String.replace(parms["name"], " ", "_")
+
+    {:ok, sid} =
+      Gnat.sub(consumer.connection_pid, self(), consumer.listening_topic, queue_group: group)
+
     :ok =
       Gnat.pub(
         consumer.connection_pid,
@@ -277,11 +290,7 @@ defmodule AmpsPortal.UFAController do
         reply_to: consumer.listening_topic
       )
 
-    group = String.replace(parms["name"], " ", "_")
     # consumer_name = get_consumer(parms, consumer_name)
-
-    {:ok, sid} =
-      Gnat.sub(consumer.connection_pid, self(), consumer.listening_topic, queue_group: group)
 
     sid
   end
@@ -312,6 +321,41 @@ defmodule AmpsPortal.UFAController do
     end
   end
 
+  def get_messages(state, limit \\ 250, messages \\ []) do
+    with {:ok,
+          %{
+            num_pending: pen,
+            num_redelivered: red
+          }} <-
+           Jetstream.API.Consumer.info(
+             state.connection_pid,
+             state.stream_name,
+             state.consumer_name
+           ) do
+      num = pen + red
+      len = Enum.count(messages)
+      Logger.info(len)
+      Logger.info(num)
+
+      if len == limit || len == num do
+        messages
+      else
+        case num do
+          0 ->
+            messages
+
+          _ ->
+            receive do
+              {:msg, message} ->
+                Jetstream.ack_next(message, state.listening_topic)
+                IO.inspect(message)
+                get_messages(state, limit, messages ++ [message])
+            end
+        end
+      end
+    end
+  end
+
   defp nuid(), do: :crypto.strong_rand_bytes(12) |> Base.encode64()
 
   def get_agent_config(conn, _params) do
@@ -320,7 +364,7 @@ defmodule AmpsPortal.UFAController do
         send_resp(conn, 403, "Forbidden")
 
       user ->
-        user = Amps.DB.find_one("users", %{"_id" => user.id})
+        user = Amps.DB.find_one(Util.conn_index(conn, "users"), %{"_id" => user.id})
         # _host = Application.fetch_env!(:amps_portal, AmpsWeb.Endpoint)[:url]
 
         json(conn, user["ufa"])
@@ -335,10 +379,49 @@ defmodule AmpsPortal.UFAController do
 
       user ->
         body = conn.body_params()
-        Amps.DB.find_one_and_update("users", %{"_id" => user.id}, %{"ufa" => body})
+
+        Amps.DB.find_one_and_update(Util.conn_index(conn, "users"), %{"_id" => user.id}, %{
+          "ufa" => body
+        })
 
         json(conn, :ok)
     end
+  end
+
+  defp store_config(config) do
+    backend = Config.get(config, :cache_store_backend, Pow.Store.Backend.EtsCache)
+
+    [backend: backend, pow_config: config]
+  end
+
+  defp sign_token(conn, token, config) do
+    Plug.sign_token(conn, signing_salt(), token, config)
+  end
+
+  defp signing_salt(), do: Atom.to_string(AmpsPortal.APIAuthPlug)
+
+  defp generate_credentials(conn, user) do
+    config = Pow.Plug.fetch_config(conn)
+    store_config = store_config(config)
+    access_token = Pow.UUID.generate()
+    renewal_token = Pow.UUID.generate()
+    # The store caches will use their default `:ttl` settting. To change the
+    # `:ttl`, `Keyword.put(store_config, :ttl, :timer.minutes(10))` can be
+    # passed in as the first argument instead of `store_config`.
+
+    CredentialsCache.put(
+      store_config,
+      access_token,
+      {user, [renewal_token: renewal_token]}
+    )
+
+    PersistentSessionCache.put(
+      store_config,
+      renewal_token,
+      {user, [access_token: access_token]}
+    )
+
+    {sign_token(conn, access_token, config), sign_token(conn, renewal_token, config)}
   end
 
   def get_agent(conn, _params) do
@@ -346,8 +429,8 @@ defmodule AmpsPortal.UFAController do
       nil ->
         send_resp(conn, 403, "Forbidden")
 
-      user ->
-        user = Amps.DB.find_one("users", %{"_id" => user.id})
+      userstruct ->
+        user = Amps.DB.find_one(Util.conn_index(conn, "users"), %{"_id" => userstruct.id})
         # _host = Application.fetch_env!(:amps_portal, AmpsWeb.Endpoint)[:url]
 
         agentdir = Application.app_dir(:amps_portal, "priv/agents")
@@ -355,6 +438,8 @@ defmodule AmpsPortal.UFAController do
         os = query["os"]
         arch = query["arch"]
         host = query["host"]
+        tokenid = query["token"]
+
         {:ok, agentfolder} = Temp.mkdir()
 
         agent =
@@ -388,42 +473,28 @@ defmodule AmpsPortal.UFAController do
             "ufa_agent"
           end
 
-        File.copy(Path.join([agentdir, os, agent]), Path.join(agentfolder, fname))
+        File.copy(
+          Path.join([agentdir, os, agent]),
+          Path.join(agentfolder, fname)
+        )
+
+        tokens =
+          Amps.DB.find_one(Util.index(conn.assigns().env, "tokens"), %{
+            "username" => user["username"]
+          })
+
+        token = tokens[tokenid]
 
         conf =
           File.read!(Path.join(agentdir, "conf"))
           |> String.replace("{UFA_URL}", host)
+          |> String.replace("{UFA_TOKEN}", token)
+          |> String.replace("{UFA_TOKEN_ID}", tokenid)
+          |> String.replace("{UFA_USERNAME}", user["username"])
 
         # IO.inspect(script)
 
-        IO.inspect(File.write(Path.join(agentfolder, "conf"), conf))
-
-        IO.inspect(File.ls(agentfolder))
-
-        # case os do
-        #   "linux" ->
-
-        #   "windows" ->
-        #     IO.inspect(File.cp_r("./agents/windows", agentfolder))
-
-        #     script =
-        #       File.read!(Path.join(agentfolder, "run.bat"))
-        #       |> String.replace("{ACCOUNT}", account["username"])
-        #       |> String.replace("{KEY}", account["username"])
-        #       |> String.replace(
-        #         "{CRED}",
-        #         AmpsWeb.Encryption.decrypt(account["aws_secret_access_key"])
-        #       )
-        #       |> String.replace("{HOST}", host)
-
-        #     IO.inspect(script)
-        #     IO.inspect(File.write(Path.join(agentfolder, "run.bat"), script))
-
-        #     IO.inspect(File.ls(agentfolder))
-
-        #   "mac" ->
-        #     {"run.sh", "mac_" <> arch <> "_agent"}
-        # end
+        File.write(Path.join(agentfolder, "conf"), conf)
 
         zipname = user["username"] <> "_agent.zip"
 
@@ -440,13 +511,65 @@ defmodule AmpsPortal.UFAController do
     end
   end
 
+  def agent_login(conn, %{"username" => username, "token" => token, "tokenid" => tokenid}) do
+    {:ok, parms} = Phoenix.Token.verify(AmpsPortal.Endpoint, "auth", token, max_age: :infinity)
+    %{"uid" => username} = Jason.decode!(parms)
+
+    case DB.find_one(Util.conn_index(conn, "tokens"), %{"username" => username}) do
+      nil ->
+        send_resp(conn, 401, "Invalid Credentials")
+
+      secrets ->
+        if secrets[tokenid] == token do
+          case DB.find_one(Util.conn_index(conn, "users"), %{"username" => username}) do
+            nil ->
+              send_resp(conn, 401, "Invalid Credentials")
+
+            user ->
+              if user["username"] == username do
+                userstruct =
+                  AmpsPortal.Users.get_by(%{"username" => user["username"]},
+                    env: conn.assigns().env
+                  )
+
+                {a, r} = generate_credentials(conn, userstruct)
+
+                AmpsEvents.send_history(
+                  AmpsUtil.env_topic(
+                    "amps.events.ufa.#{user["username"]}.logs",
+                    conn.assigns().env
+                  ),
+                  "ufa_logs",
+                  %{
+                    "user" => user["username"],
+                    "status" => "success",
+                    "operation" => "login"
+                  }
+                )
+
+                json(conn, %{
+                  data: %{
+                    access_token: a,
+                    renewal_token: r
+                  }
+                })
+              else
+                send_resp(conn, 403, "Invalid Credentials")
+              end
+          end
+        else
+          send_resp(conn, 401, "Invalid Credentials")
+        end
+    end
+  end
+
   def get_agent_rules(conn, _params) do
     case Pow.Plug.current_user(conn) do
       nil ->
         send_resp(conn, 403, "Forbidden")
 
       user ->
-        user = DB.find_one("users", %{"username" => user.username})
+        user = DB.find_one(Util.conn_index(conn, "users"), %{"username" => user.username})
         json(conn, user["rules"])
     end
   end
@@ -458,10 +581,11 @@ defmodule AmpsPortal.UFAController do
 
       user ->
         body = conn.body_params()
-        fieldid = DB.add_to_field("users", body, user.id, "rules")
-        user = DB.find_one("users", %{"_id" => user.id})
+        index = Util.conn_index(conn, "users")
+        fieldid = DB.add_to_field(index, body, user.id, "rules")
+        user = DB.find_one(index, %{"_id" => user.id})
         rule = Map.put(body, "_id", fieldid)
-        AmpsPortal.Util.agent_rule_creation(user, rule)
+        AmpsPortal.Util.agent_rule_creation(user, rule, conn.assigns().env)
 
         json(conn, :ok)
     end
@@ -473,11 +597,12 @@ defmodule AmpsPortal.UFAController do
         send_resp(conn, 403, "Forbidden")
 
       user ->
+        index = Util.conn_index(conn, "users")
         body = conn.body_params()
         body = Map.put(body, "_id", id)
-        DB.update_in_field("users", body, user.id, "rules", id)
-        rule = DB.get_in_field("users", user.id, "rules", id)
-        AmpsPortal.Util.agent_rule_update(user.id, rule)
+        DB.update_in_field(index, body, user.id, "rules", id)
+        rule = DB.get_in_field(index, user.id, "rules", id)
+        AmpsPortal.Util.agent_rule_update(user.id, rule, conn.assigns().env)
 
         json(conn, :ok)
     end
@@ -489,7 +614,7 @@ defmodule AmpsPortal.UFAController do
         send_resp(conn, 403, "Forbidden")
 
       user ->
-        rule = DB.get_in_field("users", user.id, "rules", id)
+        rule = DB.get_in_field(Util.conn_index(conn, "users"), user.id, "rules", id)
 
         json(conn, rule)
     end
@@ -502,9 +627,10 @@ defmodule AmpsPortal.UFAController do
 
       user ->
         IO.inspect(user)
-        rule = DB.get_in_field("users", user.id, "rules", id)
-        DB.delete_from_field("users", nil, user.id, "rules", id)
-        user = DB.find_one("users", %{"_id" => user.id})
+        index = Util.conn_index(conn, "users")
+        rule = DB.get_in_field(index, user.id, "rules", id)
+        DB.delete_from_field(index, nil, user.id, "rules", id)
+        user = DB.find_one(index, %{"_id" => user.id})
 
         AmpsPortal.Util.agent_rule_deletion(user, rule)
         json(conn, :ok)

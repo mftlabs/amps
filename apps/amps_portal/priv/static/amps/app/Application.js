@@ -28,27 +28,27 @@ Ext.define("Amps.Application", {
       // var query = window.location.search.substring(0);
       const urlParams = new URLSearchParams(window.location.search);
       var token = urlParams.get("token");
-      var resp = await amfutil.ajaxRequest({
+      amfutil.ajaxRequest({
         method: "GET",
         url: "api/users/token/" + token,
+        success: function (resp) {
+          var result = Ext.decode(resp.responseText);
+          if (result.success) {
+            Ext.create({
+              xtype: "unauthorized",
+              reset: {
+                username: result.username,
+                token: token,
+              },
+            });
+          } else {
+            window.location.href = window.location.pathname;
+          }
+        },
+        failure: function () {
+          window.location.href = window.location.pathname;
+        },
       });
-      console.log(resp);
-      var result = Ext.decode(resp.responseText);
-      if (result.status == "success") {
-        console.log(result.username);
-        Ext.create({
-          xtype: "unauthorized",
-          reset: {
-            username: result.username,
-            token: token,
-          },
-        });
-      } else {
-        window.location.href = window.location.pathname;
-      }
-      if (result.status == "error") {
-        console.log(result.error);
-      }
       // var params = Ext.Object.fromQueryString(query);
       // console.log(params);
     } else {

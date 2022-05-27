@@ -30,7 +30,9 @@ Ext.define("Amps.form.config", {
     var record = this.record;
     var scope = this;
     f.value = record[f.name];
-
+    if (f.name == "type") {
+      console.log(f);
+    }
     if (f.xtype == "radiogroup") {
       f.value = {};
       f.value[f.name] = record[f.name];
@@ -42,11 +44,6 @@ Ext.define("Amps.form.config", {
           })
         );
       }
-    }
-
-    if (f.name == "type") {
-      f.xtype = "displayfield";
-      f.submitValue = true;
     }
 
     return f;
@@ -97,6 +94,7 @@ Ext.define("Amps.form.config", {
     resolve();
   },
   loadForm: function (config, record, title, route = false, audit = true) {
+    var scope = this;
     return new Promise((resolve, reject) => {
       this.config = config;
       this.record = record;
@@ -129,7 +127,9 @@ Ext.define("Amps.form.config", {
               tooltip: "The ID for this record",
             },
             function (comp, value) {
-              return { collection: { _id: value } };
+              var clause = {};
+              clause[scope.collection] = { _id: value };
+              return clause;
             },
             "ID Already Exists"
           ),

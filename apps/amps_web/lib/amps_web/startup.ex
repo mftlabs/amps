@@ -12,7 +12,25 @@ defmodule AmpsWeb.Startup do
     # create_defaults_rules()
     # create_root()
     setup_jetstream()
-    create_history()
+    load_logo()
+    # create_history()
+  end
+
+  def load_logo() do
+    sysconfig = Amps.DB.find_one("config", %{"name" => "SYSTEM"})
+    priv = Path.join(:code.priv_dir(:amps_web), "static/images")
+    priv_portal = Path.join(:code.priv_dir(:amps_portal), "static/images")
+
+    case sysconfig["logo"] do
+      nil ->
+        File.cp(Path.join(priv, "default.png"), Path.join(priv, "logo"))
+        File.cp(Path.join(priv, "default.png"), Path.join(priv_portal, "logo"))
+
+      logo ->
+        img = Base.decode64!(logo)
+        File.write(Path.join(priv, "logo"), img)
+        File.write(Path.join(priv_portal, "logo"), img)
+    end
   end
 
   def create_history() do
