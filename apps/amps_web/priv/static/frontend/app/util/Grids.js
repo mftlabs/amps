@@ -5253,11 +5253,12 @@ Ext.define("Amps.util.Grids", {
             { label: "POST", field: "post" },
             { label: "PUT", field: "put" },
             { label: "DELETE", field: "delete" },
+            { label: "MATCH", field: "match" },
           ],
           "field",
           "label",
           {
-            tooltip: "The HTTP Method for the request.",
+            tooltip: "The HTTP Method for the endpoint.",
             allowBlank: false,
             forceSelection: true,
           }

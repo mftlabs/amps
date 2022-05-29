@@ -476,13 +476,16 @@ defmodule AmpsWeb.Util do
 
         if Map.has_key?(service, "type") do
           if Map.has_key?(types, String.to_atom(service["type"])) do
-            Gnat.pub(
-              :gnat,
-              AmpsUtil.env_topic(
-                "amps.events.svcs.handler.#{service["name"]}.restart",
-                env
-              ),
-              ""
+            AmpsEvents.send(
+              %{},
+              %{
+                "output" =>
+                  AmpsUtil.env_topic(
+                    "amps.events.svcs.handler.#{service["name"]}.restart",
+                    env
+                  )
+              },
+              %{}
             )
           end
         end
@@ -529,6 +532,23 @@ defmodule AmpsWeb.Util do
           env ->
             Amps.EnvScheduler.update(body["name"], env)
         end
+
+      "endpoints" ->
+        gateways = DB.find(Util.index(env, "services"), %{"type" => "gateway", "router" => id})
+
+        Enum.each(gateways, fn gw ->
+          AmpsEvents.send(
+            %{},
+            %{
+              "output" =>
+                AmpsUtil.env_topic(
+                  "amps.events.svcs.handler.#{gw["name"]}.restart",
+                  env
+                )
+            },
+            %{}
+          )
+        end)
 
       _ ->
         nil
