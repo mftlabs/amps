@@ -1,4 +1,4 @@
-defmodule PGPEncrypt do
+defmodule Amps.Actions.PGPEncrypt do
   require Logger
 
   def run(msg, parms, {state, env}) do
@@ -6,7 +6,7 @@ defmodule PGPEncrypt do
 
     {:ok, newmsg} = encrypt(msg, parms, state)
     Logger.info("output #{inspect(newmsg)}")
-    AmpsEvents.send(newmsg, parms, state)
+    {:send, [newmsg]}
   end
 
   defp encrypt(msg, parms, _state) do

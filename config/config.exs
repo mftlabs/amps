@@ -141,7 +141,7 @@ config :amps_web, AmpsWeb.Endpoint,
 # config :mnesia, dir: to_charlist(System.get_env("MNESIA_DIR", "/Users/abhayram/mnesia"))
 
 config :mnesiac,
-  stores: [Amps.Defaults],
+  stores: [Amps.Defaults, Amps.Responders],
   schema_type: :disc_copies
 
 # defaults to :ram_copies
@@ -251,20 +251,20 @@ config :amps, :services,
   pyservice: Amps.PyProcess
 
 config :amps, :actions,
-  strrepl: StringReplaceAction,
-  mailbox: MailboxAction,
-  sftpput: SftpAction,
-  router: RouterAction,
-  unzip: UnzipAction,
-  zip: ZipAction,
-  http: HttpAction,
-  kafkaput: KafkaPut,
-  runscript: RunScriptAction,
-  s3: S3Action,
-  sharepoint: SharePoint,
-  pgpencrypt: PGPEncrypt,
-  pgpdecrypt: PGPDecrypt,
-  batch: BatchAction
+  strrepl: Amps.Actions.StringReplace,
+  mailbox: Amps.Actions.Mailbox,
+  sftpput: Amps.Actions.SftpPut,
+  router: Amps.Actions.Router,
+  unzip: Amps.Actions.Unzip,
+  zip: Amps.Actions.Zip,
+  http: Amps.Actions.Http,
+  kafkaput: Amps.Actions.KafkaPut,
+  runscript: Amps.Actions.RunScript,
+  s3: Amps.Actions.S3,
+  sharepoint: Amps.Actions.SharePoint,
+  pgpencrypt: Amps.Actions.PGPEncrypt,
+  pgpdecrypt: Amps.Actions.PGPDecrypt,
+  batch: Amps.Actions.Batch
 
 # config :amps, :httpapi,
 #  options: [

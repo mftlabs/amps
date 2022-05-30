@@ -1,15 +1,8 @@
-defmodule RunScriptAction do
+defmodule Amps.Actions.RunScript do
   require Logger
 
   def run(msg, parms, {state, env}) do
-    case runscript(msg, parms, env) do
-      {:send, event} ->
-        AmpsEvents.send(event, parms, %{})
-        {:sent, parms["output"]}
-
-      {:ok, result} ->
-        {:ok, result}
-    end
+    runscript(msg, parms, env)
   end
 
   def runscript(msg, parms, env) do
@@ -61,7 +54,7 @@ defmodule RunScriptAction do
             end
 
           IO.inspect(parms)
-          {:send, event}
+          {:send, [event]}
         else
           {:ok, rparm}
         end

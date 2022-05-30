@@ -1,18 +1,11 @@
-defmodule BatchAction do
+defmodule Amps.Action.Batch do
   require Logger
   alias Amps.DB
 
   def run(msg, parms, {state, env}) do
     Logger.info("input #{inspect(msg)}")
 
-    case batch(msg, parms, env) do
-      {:ok, newmsg} ->
-        Logger.info("output #{inspect(newmsg)}")
-        AmpsEvents.send(newmsg, parms, state)
-
-      :ok ->
-        :ok
-    end
+    batch(msg, parms, env)
   end
 
   def batch(msg, parms, env) do
@@ -21,7 +14,8 @@ defmodule BatchAction do
         "topic" ->
           listening_topic = "_CON.#{nuid()}"
 
-          {stream, consumer} = AmpsUtil.get_names(%{"name" => parms["name"], "topic" => parms["input"]}, env)
+          {stream, consumer} =
+            AmpsUtil.get_names(%{"name" => parms["name"], "topic" => parms["input"]}, env)
 
           AmpsWeb.DataController.create_batch_consumer(parms)
 
@@ -58,8 +52,7 @@ defmodule BatchAction do
 
     case len do
       0 ->
-        Logger.info("No messages to batch")
-        :ok
+        {:ok, "No messages to batch"}
 
       _ ->
         Logger.info("Batching #{len} messages")
@@ -90,7 +83,7 @@ defmodule BatchAction do
           })
           |> Map.drop(["data"])
 
-        {:ok, newmsg}
+        {:send, [newmsg]}
     end
   end
 
@@ -122,7 +115,8 @@ defmodule BatchAction do
     group = String.replace(parms["name"], " ", "_")
     # consumer_name = get_consumer(parms, consumer_name)
 
-    {:ok, _sid} = Gnat.sub(consumer.connection_pid, self(), consumer.listening_topic, queue_group: group)
+    {:ok, _sid} =
+      Gnat.sub(consumer.connection_pid, self(), consumer.listening_topic, queue_group: group)
   end
 
   @spec get_messages(

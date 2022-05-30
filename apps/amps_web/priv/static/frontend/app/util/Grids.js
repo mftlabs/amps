@@ -4044,8 +4044,8 @@ Ext.define("Amps.util.Grids", {
         amfutil.check("Archive", "archive", { value: true }),
       ],
     }),
-    demos: () => ({
-      title: "Demos",
+    packages: () => ({
+      title: "Packages",
       overwrite: true,
       dblclick: function () {},
       actionIcons: ["addnewbtn", "refreshbtn"],
@@ -8246,7 +8246,7 @@ Ext.define("Amps.util.Grids", {
           },
           readOnly: ["name"],
         },
-        options: ["active", "delete"],
+        options: ["delete"],
       };
       config.fields = config.fields.concat(amfutil.typeFields(config));
       return config;

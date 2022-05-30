@@ -223,7 +223,13 @@ defmodule AmpsWeb.DataController do
 
     {msg, sid} = AmpsEvents.start_session(msg, %{"service" => "Topic Upload"}, conn.assigns().env)
 
-    AmpsEvents.send(msg, %{"output" => AmpsUtil.env_topic(topic, conn.assigns().env)}, %{})
+    AmpsEvents.send(
+      msg,
+      %{"output" => AmpsUtil.env_topic(topic, conn.assigns().env)},
+      %{},
+      conn.assigns().env
+    )
+
     AmpsEvents.end_session(sid, conn.assigns().env)
     json(conn, :ok)
   end
@@ -548,7 +554,13 @@ defmodule AmpsWeb.DataController do
 
     {msg, sid} = AmpsEvents.start_session(meta, %{"service" => "Topic Event"}, conn.assigns().env)
 
-    AmpsEvents.send(msg, %{"output" => AmpsUtil.env_topic(topic, conn.assigns().env)}, %{})
+    AmpsEvents.send(
+      msg,
+      %{"output" => AmpsUtil.env_topic(topic, conn.assigns().env)},
+      %{},
+      conn.assigns().env
+    )
+
     AmpsEvents.end_session(sid, conn.assigns().env)
     json(conn, :ok)
   end
@@ -566,7 +578,7 @@ defmodule AmpsWeb.DataController do
 
     {msg, sid} = AmpsEvents.start_session(msg, %{"service" => "Reprocess"}, conn.assigns().env)
 
-    AmpsEvents.send(msg, %{"output" => topic}, %{})
+    AmpsEvents.send(msg, %{"output" => topic}, %{}, conn.assigns().env)
     AmpsEvents.end_session(sid, conn.assigns().env)
 
     json(conn, :ok)
@@ -659,7 +671,7 @@ defmodule AmpsWeb.DataController do
     msg = obj |> Map.drop(["status", "action", "topic", "_id", "index", "etime"])
     {msg, sid} = AmpsEvents.start_session(msg, %{"service" => "Reroute"}, conn.assigns().env)
 
-    AmpsEvents.send(Map.merge(msg, meta), %{"output" => topic}, %{})
+    AmpsEvents.send(Map.merge(msg, meta), %{"output" => topic}, %{}, conn.assigns().env)
     AmpsEvents.end_session(sid, conn.assigns().env)
 
     json(conn, :ok)
@@ -679,7 +691,7 @@ defmodule AmpsWeb.DataController do
 
       msg = obj |> Map.drop(["status", "action", "topic", "_id", "index", "etime"])
 
-      AmpsEvents.send(Map.merge(msg, meta), %{"output" => topic}, %{})
+      AmpsEvents.send(Map.merge(msg, meta), %{"output" => topic}, %{}, conn.assigns().env)
     end)
 
     json(conn, :ok)

@@ -2,7 +2,7 @@ defmodule AmpsEvents do
   require Logger
   alias Amps.DB
 
-  def send(msg, parms, state) do
+  def send(msg, parms, state, env \\ "") do
     Logger.debug("Sending to #{parms["output"]}")
     # Logger.debug(msg)
     # Logger.debug(parms)
@@ -12,18 +12,36 @@ defmodule AmpsEvents do
 
     if is_list(output) do
       Enum.each(output, fn topic ->
-        do_send(msg, parms, state, topic)
+        do_send(msg, parms, state, topic, env)
       end)
     else
-      do_send(msg, parms, state, output)
+      do_send(msg, parms, state, output, env)
     end
   end
 
-  def do_send(msg, parms, state, topic) do
+  def do_send(msg, parms, state, topic, env) do
     msg = Map.merge(msg, %{"etime" => AmpsUtil.gettime(), "topic" => topic})
 
     if not AmpsUtil.blank?(topic) do
-      data = %{msg: msg, state: state}
+      data =
+        if state["return"] do
+          contextid = AmpsUtil.get_id()
+
+          subs =
+            DB.find(AmpsUtil.index(env, "services"), %{
+              "type" => "subscriber",
+              "active" => true,
+              "topic" => topic
+            })
+
+          Enum.each(subs, fn sub ->
+            Amps.AsyncResponder.register_message(state["return"], contextid <> sub["name"])
+          end)
+
+          %{msg: msg, state: Map.merge(state, %{"contextid" => contextid})}
+        else
+          %{msg: msg, state: state}
+        end
 
       Gnat.pub(:gnat, topic, Poison.encode!(data))
       # send_history("amps.events.messages", "messages", msg)

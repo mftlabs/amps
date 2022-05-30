@@ -1,4 +1,4 @@
-defmodule S3Action do
+defmodule Amps.Actions.S3 do
   require Logger
   alias Amps.DB
   alias ExAws.S3
@@ -39,11 +39,28 @@ defmodule S3Action do
               list = body.contents
               Logger.info("Got #{Enum.count(list)} objects")
 
-              Enum.each(list, fn obj ->
-                if(AmpsUtil.match(obj.key, parms)) do
-                  get_message(req, parms, obj)
+              events =
+                Enum.reduce(list, [], fn obj, acc ->
+                  if(AmpsUtil.match(obj.key, parms)) do
+                    [get_message(req, parms, obj) | acc]
+                  else
+                    acc
+                  end
+                end)
+
+              events =
+                if parms["ackmode"] == "delete" do
+                  Enum.map(events, fn {event, path} ->
+                    ExAws.S3.delete_object(parms["bucket"], path) |> ExAws.request(req)
+                    event
+                  end)
+                else
+                  Enum.map(events, fn {event, _} ->
+                    event
+                  end)
                 end
-              end)
+
+              {:send, events}
 
             {:error, {:http_error, 404, _}} ->
               raise "Bucket does not exist"
@@ -77,6 +94,7 @@ defmodule S3Action do
           case resp do
             {:ok, _resp} ->
               Logger.info("Uploaded")
+              {:ok, resp}
 
             {:error, error} ->
               raise "#{inspect(error)}"
@@ -96,20 +114,23 @@ defmodule S3Action do
             list = body.contents
             Logger.info("Got #{Enum.count(list)} objects to delete")
 
-            Enum.each(list, fn obj ->
-              if(AmpsUtil.match(obj.key, parms)) do
-                Logger.info("Deleting #{obj.key}")
-                ExAws.S3.delete_object(parms["bucket"], obj.key) |> ExAws.request(req)
-              end
-            end)
+            keys =
+              Enum.reduce(list, [], fn obj, acc ->
+                if(AmpsUtil.match(obj.key, parms)) do
+                  Logger.info("Deleting #{obj.key}")
+                  ExAws.S3.delete_object(parms["bucket"], obj.key) |> ExAws.request(req)
+                end
+
+                [obj.key | acc]
+              end)
+
+            {:ok, Jason.encode!(keys)}
           end
       end
     catch
       e ->
         raise e
     end
-
-    :ok
   end
 
   def req(provider, env) do
@@ -201,10 +222,6 @@ defmodule S3Action do
         #     }
         # end
 
-        if parms["ackmode"] == "delete" do
-          ExAws.S3.delete_object(bucket, path) |> ExAws.request(req)
-        end
-
         event =
           if not AmpsUtil.blank?(parms["format"]) do
             fname = AmpsUtil.format(parms["format"], event)
@@ -214,8 +231,7 @@ defmodule S3Action do
           end
 
         event = Map.merge(event, %{"temp" => true})
-
-        AmpsEvents.send(event, parms, %{})
+        {event, path}
 
       {:error, error} ->
         raise error

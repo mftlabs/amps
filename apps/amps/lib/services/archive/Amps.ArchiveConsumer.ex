@@ -69,7 +69,8 @@ defmodule Amps.ArchiveConsumer do
   defp get_stream(msg, provider, env, chunk_size) do
     case provider["atype"] do
       "s3" ->
-        req = S3Action.req(provider, env)
+        handler = AmpsUtil.get_env_parm(:actions, :s3)
+        req = handler.req(provider, env)
 
         ExAws.S3.download_file(
           provider["bucket"],
@@ -295,7 +296,9 @@ defmodule Amps.ArchivePullConsumer do
   end
 
   def s3_archive(msg, provider, env) do
-    req = S3Action.req(provider, env)
+    handler = AmpsUtil.get_env_parm(:actions, :s3)
+
+    req = handler.req(provider, env)
 
     apath = Amps.ArchiveConsumer.apath(msg, env)
 

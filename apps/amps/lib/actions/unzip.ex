@@ -1,4 +1,4 @@
-defmodule UnzipAction do
+defmodule Amps.Actions.Unzip do
   def run(msg, parms, {state, env}) do
     _tmpdir = AmpsUtil.tempdir(msg[:session])
 
@@ -12,24 +12,27 @@ defmodule UnzipAction do
         raise error
 
       %{'status' => 'success', 'files' => files} ->
-        Enum.each(files, fn file ->
-          file = to_string(file)
+        events =
+          Enum.map(files, fn file ->
+            file = to_string(file)
 
-          {:ok, info} = File.stat(file)
-          msgid = AmpsUtil.get_id()
+            {:ok, info} = File.stat(file)
+            msgid = AmpsUtil.get_id()
 
-          newmsg =
-            Map.merge(msg, %{
-              "fname" => Path.basename(file),
-              "msgid" => msgid,
-              "fsize" => info.size,
-              "fpath" => file,
-              "temp" => true,
-              "parent" => msg["msgid"]
-            })
+            newmsg =
+              Map.merge(msg, %{
+                "fname" => Path.basename(file),
+                "msgid" => msgid,
+                "fsize" => info.size,
+                "fpath" => file,
+                "temp" => true,
+                "parent" => msg["msgid"]
+              })
 
-          AmpsEvents.send(newmsg, parms, state)
-        end)
+            newmsg
+          end)
+
+        {:send, events}
     end
   end
 

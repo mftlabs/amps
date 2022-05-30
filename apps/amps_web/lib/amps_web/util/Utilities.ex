@@ -485,7 +485,8 @@ defmodule AmpsWeb.Util do
                     env
                   )
               },
-              %{}
+              %{},
+              env
             )
           end
         end
@@ -546,7 +547,8 @@ defmodule AmpsWeb.Util do
                   env
                 )
             },
-            %{}
+            %{},
+            env
           )
         end)
 
@@ -784,7 +786,8 @@ defmodule AmpsWeb.Util do
               env
             )
         },
-        %{}
+        %{},
+        env
       )
 
       AmpsEvents.end_session(sid, env)
@@ -825,7 +828,8 @@ defmodule AmpsWeb.Util do
               env
             )
         },
-        %{}
+        %{},
+        env
       )
 
       AmpsEvents.end_session(sid, env)
@@ -865,7 +869,8 @@ defmodule AmpsWeb.Util do
               env
             )
         },
-        %{}
+        %{},
+        env
       )
 
       AmpsEvents.end_session(sid, env)

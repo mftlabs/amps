@@ -1,4 +1,4 @@
-defmodule SftpAction do
+defmodule Amps.Actions.SftpPut do
   require Logger
 
   @doc """

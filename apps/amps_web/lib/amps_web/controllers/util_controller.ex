@@ -616,12 +616,23 @@ defmodule AmpsWeb.UtilController do
                   IO.inspect(meta)
 
                   steps =
-                    find_topics(
-                      action["output"],
-                      Map.merge(meta, %{}),
-                      topics,
-                      env
-                    )
+                    if is_list(action["output"]) do
+                      Enum.map(action["output"], fn topic ->
+                        find_topics(
+                          topic,
+                          Map.merge(meta, %{}),
+                          topics,
+                          env
+                        )
+                      end)
+                    else
+                      find_topics(
+                        action["output"],
+                        Map.merge(meta, %{}),
+                        topics,
+                        env
+                      )
+                    end
 
                   step =
                     step

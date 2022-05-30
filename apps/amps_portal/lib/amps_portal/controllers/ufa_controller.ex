@@ -132,7 +132,7 @@ defmodule AmpsPortal.UFAController do
 
         topic = ("amps.svcs.ufa." <> username) |> AmpsUtil.env_topic(conn.assigns().env)
 
-        AmpsEvents.send(msg, %{"output" => topic}, %{})
+        AmpsEvents.send(msg, %{"output" => topic}, %{}, conn.assigns().env)
 
         # AmpsEvents.send_history(
         #   "amps.events.messages",

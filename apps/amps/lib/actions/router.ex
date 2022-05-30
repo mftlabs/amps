@@ -1,4 +1,4 @@
-defmodule RouterAction do
+defmodule Amps.Actions.Router do
   require Logger
 
   @doc """
@@ -21,7 +21,7 @@ defmodule RouterAction do
     Logger.info("rule #{inspect(rule)}")
     msgid = AmpsUtil.get_id()
     msg = Map.merge(msg, %{"msgid" => msgid, "parent" => msg["msgid"], "topic" => rule["output"]})
-    AmpsEvents.send(msg, %{"output" => AmpsUtil.env_topic(rule["output"], env)}, state)
+    {:send, [msg], AmpsUtil.env_topic(rule["output"], env)}
   end
 
   # def run(subject, body) do

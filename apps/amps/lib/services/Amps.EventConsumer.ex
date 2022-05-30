@@ -174,8 +174,9 @@ defmodule Amps.PullConsumer do
         {msg, sid} =
           AmpsEvents.start_session(data["msg"], %{"service" => parms["name"]}, state.env)
 
+        mstate = data["state"] || %{}
+
         try do
-          mstate = data["state"]
           mctx = {mstate, state.env}
           action_id = parms["handler"]
 
@@ -200,9 +201,45 @@ defmodule Amps.PullConsumer do
           IO.puts("opts after lookup #{inspect(actparms)}")
 
           case handler.run(msg, actparms, mctx) do
-            aparms ->
-              Logger.info("action done #{inspect(aparms)}")
+            {:ok, result} ->
+              Logger.info("Action Completed #{inspect(result)}")
               IO.puts("ack next message")
+
+              if mstate["return"] do
+                Amps.AsyncResponder.put_response(
+                  mstate["return"],
+                  mstate["contextid"] <> parms["name"],
+                  {actparms["name"], msg["msgid"], result}
+                )
+              end
+
+              AmpsEvents.send_history(
+                AmpsUtil.env_topic("amps.events.action", state.env),
+                "message_events",
+                msg,
+                %{
+                  "topic" => AmpsUtil.env_topic(parms["topic"], state.env),
+                  "status" => "completed",
+                  "action" => actparms["name"],
+                  "subscriber" => name
+                }
+              )
+
+            {:send, events} ->
+              if mstate["return"] do
+                Amps.AsyncResponder.resolve_message(
+                  mstate["return"],
+                  mstate["contextid"] <> parms["name"]
+                )
+              end
+
+              Logger.info("Action Completed #{parms["name"]}")
+
+              IO.puts("ack next message")
+
+              Enum.each(events, fn event ->
+                AmpsEvents.send(event, parms, mstate, state.env)
+              end)
 
               AmpsEvents.send_history(
                 AmpsUtil.env_topic("amps.events.action", state.env),
@@ -219,6 +256,16 @@ defmodule Amps.PullConsumer do
         rescue
           error ->
             IO.inspect(error)
+            action_id = parms["handler"]
+            actparms = AmpsDatabase.get_action_parms(action_id)
+
+            if mstate["return"] do
+              Amps.AsyncResponder.put_response(
+                mstate["return"],
+                mstate["contextid"] <> parms["name"],
+                {actparms["name"], msg["msgid"], Exception.message(error)}
+              )
+            end
 
             msg =
               if is_map(msg) do
@@ -228,8 +275,7 @@ defmodule Amps.PullConsumer do
               end
 
             _mctx = data["state"]
-            action_id = parms["handler"]
-            actparms = AmpsDatabase.get_action_parms(action_id)
+
             IO.puts("ack next message after action error")
             Logger.error("Action Failed\n" <> Exception.format(:error, error, __STACKTRACE__))
 

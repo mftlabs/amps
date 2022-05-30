@@ -91,7 +91,8 @@ defmodule Amps.EnvScheduler do
         AmpsEvents.send(
           msg,
           %{"output" => AmpsUtil.env_topic(job["topic"], env)},
-          %{}
+          %{},
+          env
         )
 
         AmpsEvents.end_session(sid, env)

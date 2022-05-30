@@ -593,7 +593,7 @@ Ext.define("Amps.util.Utilities", {
   gridactions: {
     loadDemo: {
       name: "loadMe",
-      tooltip: "Load Demo",
+      tooltip: "Load Package",
       iconCls: "x-fa fa-upload actionicon",
       itemId: "loaddemo",
       handler: "loadDemo",
@@ -769,7 +769,7 @@ Ext.define("Amps.util.Utilities", {
       name: "exportenv",
       iconCls: "x-fa fa-download actionicon",
       itemId: "exportenv",
-      tooltip: "Export Environment as Demo",
+      tooltip: "Export Environment as Package",
       handler: "exportEnv",
     },
     getsecret: {
@@ -2198,7 +2198,7 @@ Ext.define("Amps.util.Utilities", {
   outputTopic: function () {
     return amfutil.dynamicCreate(
       amfutil.tagfield(
-        "Output Topic",
+        "Output Topic(s)",
         "output",
         amfutil.createCollectionStore("topics", {}, { autoLoad: true }),
         "topic",

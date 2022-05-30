@@ -144,7 +144,8 @@ defmodule Amps.PyProcess.New do
       AmpsEvents.send(
         msg,
         parms,
-        %{}
+        %{},
+        env
       )
     else
       Logger.warn(
@@ -312,7 +313,7 @@ defmodule Amps.PyProcess do
     )
   end
 
-  def send_message(msg, parms) do
+  def send_message(msg, parms, env) do
     IO.puts("SENDING MESSAGE")
     msg = Jason.decode!(msg)
     parms = Jason.decode!(parms)
@@ -321,7 +322,8 @@ defmodule Amps.PyProcess do
       AmpsEvents.send(
         msg,
         parms,
-        %{}
+        %{},
+        env
       )
     else
       Logger.warn(
@@ -352,7 +354,8 @@ defmodule Amps.PyProcess do
       AmpsEvents.send(
         msg,
         parms,
-        %{}
+        %{},
+        env
       )
     else
       Logger.warn(
@@ -451,7 +454,8 @@ defmodule Amps.PyProcess do
       AmpsEvents.send(
         msg,
         parms,
-        %{}
+        %{},
+        env
       )
     end
 

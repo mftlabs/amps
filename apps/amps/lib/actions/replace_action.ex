@@ -1,11 +1,11 @@
-defmodule StringReplaceAction do
+defmodule Amps.Actions.StringReplace do
   require Logger
 
   def run(msg, parms, {state, env}) do
     Logger.info("input #{inspect(msg)}")
     {:ok, newmsg} = replace(msg, parms, env)
     Logger.info("output #{inspect(newmsg)}")
-    AmpsEvents.send(newmsg, parms, state)
+    {:send, [newmsg]}
   end
 
   defp replace(msg, parms, env) do

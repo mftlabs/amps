@@ -152,7 +152,8 @@ defmodule :"Amps.Gateway<%= if env do%>.<%= env %><% end %>.<%= name %>" do
         %{
           "output" => topic
         },
-        %{}
+        %{},
+        conn.private.env
       )
 
       case write_file(conn, temp_file) do
@@ -171,7 +172,8 @@ defmodule :"Amps.Gateway<%= if env do%>.<%= env %><% end %>.<%= name %>" do
         %{
           "output" => topic
         },
-        %{}
+        %{},
+        conn.private.env
       )
 
       do_action(msg, route, conn)
@@ -243,22 +245,71 @@ defmodule :"Amps.Gateway<%= if env do%>.<%= env %><% end %>.<%= name %>" do
                 send_resp(conn, 200, Poison.encode!(%{"status" => "completed"}))
               end
 
-            {:sent, topics} ->
-              AmpsEvents.send_history(
-                AmpsUtil.env_topic("amps.events.action", conn.private.env),
-                "message_events",
-                msg,
-                %{
-                  "status" => "completed",
-                  "action" => actparms["name"]
-                }
-              )
+            {:send, events} ->
 
-              topics = Enum.reduce(topics, "", fn topic, acc ->
-                acc <> "\t" <> topic <> "\n"
-              end)
 
-              send_resp(conn, 202, "Action performed successfully\nMessage sent to topic(s):\n" <> topics)
+              case Amps.AsyncResponder.register(events, actparms, conn.private.env, conn.private.opts["timeout"] || 15000) do
+                :pending ->
+                  AmpsEvents.send_history(
+                    AmpsUtil.env_topic("amps.events.action", conn.private.env),
+                    "message_events",
+                    msg,
+                    %{
+                      "status" => "completed",
+                      "action" => actparms["name"]
+                    }
+                  )
+                  topics =
+                  if is_list(actparms["output"]) do
+                    actparms["output"]
+                  else
+                    [actparms["output"]]
+                  end
+
+                  topics = Enum.reduce(topics, "", fn topic, acc ->
+                    acc <> "\t" <> topic <> "\n"
+                  end)
+
+                  send_resp(conn, 202, "Action performed successfully\nMessage sent to topic(s):\n" <> topics)
+                {:resp, responses} ->
+                  AmpsEvents.send_history(
+                    AmpsUtil.env_topic("amps.events.action", conn.private.env),
+                    "message_events",
+                    msg,
+                    %{
+                      "status" => "completed",
+                      "action" => actparms["name"]
+                    }
+                  )
+                  responses = Enum.reduce(responses, %{}, fn {action, msgid, response}, acc ->
+                    if is_map(response) do
+                      if Map.has_key?(response, "async") do
+                        async = response["async"]
+                        [{key, data}] = Enum.to_list(async)
+                        if Map.has_key?(acc, key) do
+                          if is_list(acc[key]) do
+                            Map.put(acc, key, acc[key] ++ [data])
+                          else
+                            Map.put(acc, key, [acc[key]] ++ [data])
+                          end
+                        else
+                          Map.put(acc, key, data)
+
+                        end
+
+                      else
+                        Map.merge(acc, %{action => %{msgid =>response}})
+
+                      end
+                    else
+                      Map.merge(acc, %{action => %{msgid =>response}})
+
+                    end
+                  end)
+                  send_resp(conn, 200, Jason.encode!(responses))
+
+              end
+
           end
         rescue
           e ->

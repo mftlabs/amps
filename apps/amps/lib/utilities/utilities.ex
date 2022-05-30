@@ -734,22 +734,14 @@ defmodule AmpsUtil do
   end
 
   def test do
-    parms = %{
-      "name" => "DonationForm",
-      "service" => "webapp",
-      "config" => %{
-        "port" => 8484
-      },
-      "receive" => true,
-      "topic" => "amps.actions.runscript.test",
-      "policy" => "all",
-      "send_output" => true,
-      "output" => "amps.mailbox.gw01.Outbox"
+    """
+    {
+      item(name: "Foo") {
+        name
+      }
     }
-
-    AmpsWeb.Util.create_config_consumer(parms, "gwdemo")
-
-    {:ok, pid} = Amps.PyProcess.start_link(parms: parms, env: "gwdemo", name: :gwdemo)
+    """
+    |> Absinthe.run(Amps.Schema)
   end
 
   def deliver(email) do

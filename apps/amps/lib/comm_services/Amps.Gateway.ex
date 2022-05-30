@@ -243,7 +243,8 @@ defmodule Amps.Gateway do
         %{
           "output" => topic
         },
-        %{}
+        %{},
+        conn.private.env
       )
 
       case write_file(conn, temp_file) do
@@ -262,7 +263,8 @@ defmodule Amps.Gateway do
         %{
           "output" => topic
         },
-        %{}
+        %{},
+        conn.private.env
       )
 
       do_action(msg, route, conn)

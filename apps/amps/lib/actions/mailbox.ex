@@ -1,4 +1,4 @@
-defmodule MailboxAction do
+defmodule Amps.Actions.Mailbox do
   require Logger
 
   def run(msg, parms, {state, env}) do
@@ -8,7 +8,7 @@ defmodule MailboxAction do
     case AmpsAuth.mailbox_info(recipient, mailbox, env) do
       nil ->
         Logger.warning("mailbox #{mailbox} not found for #{recipient}")
-        {:error, "recipient does not have a registered mailbox #{recipient}"}
+        raise "recipient does not have a registered mailbox #{recipient}"
 
       _found ->
         newmsg =
@@ -19,7 +19,8 @@ defmodule MailboxAction do
         AmpsEvents.send(
           newmsg,
           %{"output" => AmpsUtil.env_topic("amps.mailbox.#{recipient}.#{mailbox}", env)},
-          state
+          state,
+          env
         )
 
         # AmpsMailbox.add_message(recipient, newmsg, env)

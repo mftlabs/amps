@@ -1,4 +1,4 @@
-defmodule HttpAction do
+defmodule Amps.Actions.Http do
   import Logger
 
   def run(msg, parms, {state, env}) do
@@ -113,7 +113,7 @@ defmodule HttpAction do
                 event
               end
 
-            AmpsEvents.send(event, parms, %{})
+            {:send, [event]}
           end
 
         "delete" ->

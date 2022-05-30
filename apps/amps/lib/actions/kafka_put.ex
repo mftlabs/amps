@@ -1,4 +1,4 @@
-defmodule KafkaPut do
+defmodule Amps.Actions.KafkaPut do
   require Logger
   alias Amps.DB
 

@@ -54,21 +54,26 @@ defmodule Amps.MailboxApi do
           if limit do
             try do
               String.to_integer(limit)
-            rescue _ ->
-              {:error, "Invalid parameter: \"limit\" must be textual representation of an integer."}
+            rescue
+              _ ->
+                {:error,
+                 "Invalid parameter: \"limit\" must be textual representation of an integer."}
             end
           else
             100
           end
+
         case limit do
           {:error, e} ->
             send_resp(conn, 400, e)
+
           limit ->
             result = AmpsMailbox.list_messages(user, mailbox, limit, conn.private.env)
             count = Enum.count(result)
             # list successful (200 ok)
             send_resp(conn, 200, Poison.encode!(%{count: count, messages: result}))
         end
+
       {:error, reason} ->
         # auth failure (401 unauthorized)
         send_resp(conn, 401, Poison.encode!(%{error: reason}))
@@ -122,8 +127,8 @@ defmodule Amps.MailboxApi do
 
             mailboxtopic = AmpsUtil.env_topic("amps.mailbox.#{user}.#{mailbox}", conn.private.env)
 
-            svced = AmpsEvents.send(msg, %{"output" => topic}, %{})
-            mailboxed = AmpsEvents.send(msg, %{"output" => mailboxtopic}, %{})
+            svced = AmpsEvents.send(msg, %{"output" => topic}, %{}, conn.private.env)
+            mailboxed = AmpsEvents.send(msg, %{"output" => mailboxtopic}, %{}, conn.private.env)
 
             case {svced, mailboxed} do
               {:ok, :ok} ->

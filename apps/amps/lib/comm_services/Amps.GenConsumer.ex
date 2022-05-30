@@ -86,7 +86,7 @@ defmodule Amps.GenConsumer do
         "amps.#{env}.svcs.#{opts["name"]}.#{ktopic}"
       end
 
-    AmpsEvents.send(event, %{"output" => topic}, %{})
+    AmpsEvents.send(event, %{"output" => topic}, %{}, env)
 
     AmpsEvents.end_session(sid, env)
     # AmpsEvents.send_history(

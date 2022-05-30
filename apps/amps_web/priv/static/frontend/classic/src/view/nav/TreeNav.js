@@ -166,9 +166,9 @@ Ext.define("Amps.view.nav.TreeNav", {
             {
               iconCls: "x-fa fa-magic",
               leaf: true,
-              rowCls: "demos",
-              text: "Demos",
-              tooltip: "Demos",
+              rowCls: "packages",
+              text: "Packages",
+              tooltip: "Package",
             },
           ],
         },

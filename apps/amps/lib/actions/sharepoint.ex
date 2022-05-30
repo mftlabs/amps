@@ -1,4 +1,4 @@
-defmodule SharePoint do
+defmodule Amps.Actions.SharePoint do
   alias Amps.DB
   require Logger
 
@@ -27,7 +27,27 @@ defmodule SharePoint do
         if Map.has_key?(folder, "error") do
           raise "Folder Not Found"
         else
-          scan_folder(parms, folder, token, url, "", rooturl)
+          events = scan_folder(parms, folder, token, url, "", rooturl, [])
+
+
+          events =
+            if parms["ackmode"] == "delete" do
+              Enum.map(events, fn {event, obj} ->
+                {:ok, _res} =
+                  HTTPoison.delete(
+                    Path.join([rooturl, "items", obj["id"]]),
+                    [{"Authorization", "Bearer " <> token}]
+                  )
+
+                event
+              end)
+            else
+              Enum.map(events, fn {event, _} ->
+                event
+              end)
+            end
+
+          {:send, events}
         end
 
       "upload" ->
@@ -94,7 +114,7 @@ defmodule SharePoint do
     body["id"]
   end
 
-  def scan_folder(parms, folder, token, url, nested, rooturl) do
+  def scan_folder(parms, folder, token, url, nested, rooturl, acc) do
     Enum.each(folder["value"], fn obj ->
       if obj["folder"] do
         if parms["scan"] do
@@ -108,7 +128,9 @@ defmodule SharePoint do
             )
 
           folder = Jason.decode!(res.body)
-          scan_folder(parms, folder, token, url, Path.join(nested, obj["name"]), rooturl)
+          scan_folder(parms, folder, token, url, Path.join(nested, obj["name"]), rooturl, acc)
+        else
+          acc
         end
       else
         obj_path = Path.join(nested, obj["name"])
@@ -153,14 +175,6 @@ defmodule SharePoint do
               file
             )
 
-          if parms["ackmode"] == "delete" do
-            {:ok, _res} =
-              HTTPoison.delete(
-                Path.join([rooturl, "items", obj["id"]]),
-                [{"Authorization", "Bearer " <> token}]
-              )
-          end
-
           event =
             if not AmpsUtil.blank?(parms["format"]) do
               fname = AmpsUtil.format(parms["format"], event)
@@ -170,8 +184,10 @@ defmodule SharePoint do
             end
 
           event = Map.merge(event, %{"temp" => true})
-
-          AmpsEvents.send(event, parms, %{})
+          [{event, obj} | acc]
+          # AmpsEvents.send(event, parms, %{})
+        else
+          acc
         end
       end
     end)
@@ -304,7 +320,7 @@ defmodule SharePoint do
       if not done do
         {finish + 1, remaining - (finish - start)}
       else
-        res
+        {:ok, res}
       end
     end)
   end
@@ -316,10 +332,13 @@ defmodule SharePoint do
 
     url = Path.join(["https://graph.microsoft.com/v1.0/sites/", siteid, "/drive/root:", path])
 
-    HTTPoison.put(
-      url,
-      body,
-      [{"Authorization", "Bearer " <> token}]
-    )
+    resp =
+      HTTPoison.put(
+        url,
+        body,
+        [{"Authorization", "Bearer " <> token}]
+      )
+
+    {:ok, resp}
   end
 end
