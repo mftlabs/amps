@@ -43,6 +43,7 @@ defmodule AmpsEvents do
           %{msg: msg, state: state}
         end
 
+      topic = AmpsUtil.env_topic(topic, env)
       Gnat.pub(:gnat, topic, Poison.encode!(data))
       # send_history("amps.events.messages", "messages", msg)
     else

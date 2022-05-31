@@ -727,7 +727,16 @@ defmodule AmpsUtil do
 
   def convert_output(parms, env) do
     if parms["output"] do
-      Map.put(parms, "output", AmpsUtil.env_topic(parms["output"], env))
+      output =
+        if is_list(parms["output"]) do
+          Enum.map(parms["output"], fn topic ->
+            AmpsUtil.env_topic(topic, env)
+          end)
+        else
+          AmpsUtil.env_topic(parms["output"], env)
+        end
+
+      Map.put(parms, "output", output)
     else
       parms
     end

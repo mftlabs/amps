@@ -184,7 +184,6 @@ defmodule :"Amps.Gateway<%= if env do%>.<%= env %><% end %>.<%= name %>" do
   def do_action(msg, route, conn) do
     actparms =
       DB.find_by_id(AmpsUtil.index(conn.private.env, "actions"), route["action"])
-      |> AmpsUtil.convert_output(conn.private.env)
 
     conn =
       if actparms do
@@ -295,7 +294,6 @@ defmodule :"Amps.Gateway<%= if env do%>.<%= env %><% end %>.<%= name %>" do
                           end
                         else
                           Map.put(acc, key, data)
-
                         end
 
                       else

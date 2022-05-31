@@ -180,9 +180,7 @@ defmodule Amps.PullConsumer do
           mctx = {mstate, state.env}
           action_id = parms["handler"]
 
-          actparms =
-            Amps.DB.find_by_id(AmpsUtil.index(state.env, "actions"), action_id)
-            |> AmpsUtil.convert_output(state.env)
+          actparms = Amps.DB.find_by_id(AmpsUtil.index(state.env, "actions"), action_id)
 
           AmpsEvents.send_history(
             AmpsUtil.env_topic("amps.events.action", state.env),
