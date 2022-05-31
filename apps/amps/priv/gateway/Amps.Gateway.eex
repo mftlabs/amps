@@ -124,6 +124,7 @@ defmodule :"Amps.Gateway<%= if env do%>.<%= env %><% end %>.<%= name %>" do
       "msgid" => msgid,
       "stime" => stime,
       "path_params" => conn.path_params,
+      "query_params" => conn.query_params,
       "service" => conn.private.opts["name"],
       "request_path" => conn.request_path,
       "route_path" => route["path"],

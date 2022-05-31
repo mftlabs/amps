@@ -4196,7 +4196,7 @@ Ext.define("Amps.util.Grids", {
           dataIndex: "etime",
           flex: 1,
           type: "date",
-          renderer: amfutil.dateRenderer(),
+          renderer: amfutil.dateRenderer,
         },
       ],
     }),
@@ -10740,6 +10740,7 @@ Ext.define("Amps.util.Grids", {
                         {
                           service: record.name,
                           status: "received",
+                          parent: { $exists: false },
                         },
                         {
                           sorters: [

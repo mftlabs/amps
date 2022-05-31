@@ -42,7 +42,7 @@ defmodule AmpsWeb.DataController do
     cwd = Path.join(Amps.Defaults.get("storage_temp"), id)
     res = :zip.unzip(File.read!(file.path), cwd: cwd)
     path = cwd
-    demo = Jason.decode!(File.read!(Path.join(path, "demo.json")))
+    demo = Jason.decode!(File.read!(Path.join(path, "pkg.json")))
 
     case DB.find_one("demos", Map.take(demo, ["name", "description"])) do
       nil ->
@@ -646,7 +646,7 @@ defmodule AmpsWeb.DataController do
     imports = Enum.reverse(imports)
     demo = demo |> Map.put("imports", imports) |> Map.put("scripts", "scripts")
     IO.inspect(demo)
-    File.write(Path.join(dir, "demo.json"), Jason.encode!(demo) |> Jason.Formatter.pretty_print())
+    File.write(Path.join(dir, "pkg.json"), Jason.encode!(demo) |> Jason.Formatter.pretty_print())
     IO.inspect(demo)
     readme = "# #{demo["name"]}\n## #{demo["desc"]}"
     IO.inspect(readme)

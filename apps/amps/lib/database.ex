@@ -1310,6 +1310,24 @@ defmodule Amps.DB do
               _ ->
                 if Kernel.is_map(v) do
                   case v do
+                    %{"exists" => val} ->
+                      m =
+                        if val do
+                          "must"
+                        else
+                          "must_not"
+                        end
+
+                      %{
+                        "bool" => %{
+                          m => %{
+                            "exists" => %{
+                              "field" => k
+                            }
+                          }
+                        }
+                      }
+
                     %{"regex" => val} ->
                       %{
                         "query_string" => %{
