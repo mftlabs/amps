@@ -217,7 +217,7 @@ defmodule Amps.PullConsumer do
                 msg,
                 %{
                   "topic" => AmpsUtil.env_topic(parms["topic"], state.env),
-                  "status" => "completed",
+                  "status" => result["status"] || "completed",
                   "action" => actparms["name"],
                   "subscriber" => name
                 }
