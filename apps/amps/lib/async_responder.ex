@@ -37,12 +37,17 @@ defmodule Amps.AsyncResponder do
         end)
 
         receive do
-          {:resp, responses} -> {:resp, responses}
+          {:resp, responses} ->
+            Amps.Responders.delete(id)
+
+            {:resp, responses}
         end
       end)
       |> Task.await(timeout)
     catch
-      :exit, _ -> :pending
+      :exit, _ ->
+        Amps.Responders.delete(id)
+        :pending
     end
   end
 
