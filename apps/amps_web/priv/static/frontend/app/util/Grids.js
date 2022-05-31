@@ -5285,7 +5285,7 @@ Ext.define("Amps.util.Grids", {
         ),
       ],
     }),
-    scheduler: () => {
+    jobs: () => {
       var config = {
         overwrite: true,
 
