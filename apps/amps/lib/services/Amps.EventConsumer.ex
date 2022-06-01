@@ -188,7 +188,7 @@ defmodule Amps.PullConsumer do
             msg,
             %{
               "status" => "started",
-              "topic" => AmpsUtil.env_topic(parms["topic"], state.env),
+              "topic" => parms["topic"],
               "action" => actparms["name"],
               "subscriber" => name
             }
@@ -244,7 +244,7 @@ defmodule Amps.PullConsumer do
                 "message_events",
                 msg,
                 %{
-                  "topic" => AmpsUtil.env_topic(parms["topic"], state.env),
+                  "topic" => parms["topic"],
                   "status" => "completed",
                   "action" => actparms["name"],
                   "subscriber" => name
@@ -283,6 +283,7 @@ defmodule Amps.PullConsumer do
               msg,
               %{
                 status: "failed",
+                topic: parms["topic"],
                 action: actparms["name"],
                 reason: inspect(error)
               }
