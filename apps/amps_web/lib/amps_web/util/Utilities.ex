@@ -124,6 +124,15 @@ defmodule AmpsWeb.Util do
         "subgrids" => nil,
         "types" => nil
       },
+      "jobs" => %{
+        "headers" => ["name", "active", "topic", "meta", "type"],
+        "subgrids" => nil,
+        "types" => %{
+          "daily" => ["time", "daily", "weekdays"],
+          "days" => ["time", "days"],
+          "timer" => ["value", "unit"]
+        }
+      },
       "keys" => %{
         "headers" => ["name", "user", "usage", "type", "data"],
         "subgrids" => nil,
@@ -164,15 +173,6 @@ defmodule AmpsWeb.Util do
         "headers" => ["name", "desc", "output", "patterns"],
         "subgrids" => nil,
         "types" => nil
-      },
-      "scheduler" => %{
-        "headers" => ["name", "active", "topic", "meta", "type"],
-        "subgrids" => nil,
-        "types" => %{
-          "daily" => ["time", "daily", "weekdays"],
-          "days" => ["time", "days"],
-          "timer" => ["value", "unit"]
-        }
       },
       "scripts" => %{
         "headers" => ["name", "data"],
