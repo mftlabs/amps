@@ -4040,6 +4040,13 @@ Ext.define("Amps.util.Grids", {
 
           allowBlank: false,
         },
+        {
+          xtype: "textfield",
+          name: "host",
+          fieldLabel: "User Portal Host",
+          tooltip: "User Portal Host",
+          allowBlank: false,
+        },
         amfutil.check("Active", "active", { value: true }),
         amfutil.check("Archive", "archive", { value: true }),
       ],
@@ -5620,6 +5627,144 @@ Ext.define("Amps.util.Grids", {
       config.fields = config.fields.concat(amfutil.typeFields(config));
       return config;
     },
+    // system_managers: () => {
+    //   return {
+    //     title: "System Managers",
+    //     object: "System Manager",
+    //     window: {
+    //       width: 600,
+    //     },
+    //     actionIcons: [
+    //       "addnewbtn",
+    //       "searchpanelbtn",
+    //       "clearfilter",
+    //       "refreshbtn",
+    //       "export",
+    //     ],
+    //     options: ["downloadsysman", "delete"],
+    //     fields: [
+    //       amfutil.text("Name", "name"),
+    //       amfutil.text("Description", "desc"),
+    //       amfutil.text("Host/IP", "host"),
+    //       amfutil.combo(
+    //         "Action Map",
+    //         "action_map",
+    //         amfutil.createCollectionStore("action_maps"),
+    //         "_id",
+    //         "name"
+    //       ),
+    //     ],
+    //     columns: [
+    //       {
+    //         text: "Name",
+    //         dataIndex: "name",
+    //         flex: 1,
+    //         value: "true",
+    //         type: "combo",
+    //         searchOpts: {
+    //           store: amfutil.createCollectionStore("system_managers"),
+    //           displayField: "name",
+    //           valueField: "name",
+    //         },
+    //       },
+    //       {
+    //         text: "Description",
+    //         dataIndex: "desc",
+    //         flex: 1,
+    //       },
+    //       {
+    //         text: "Host/IP",
+    //         dataIndex: "host",
+    //         flex: 1,
+    //       },
+    //     ],
+    //   };
+    // },
+    // action_maps: () => {
+    //   return {
+    //     title: "Action Maps",
+    //     object: "Action Map",
+    //     window: {
+    //       width: 600,
+    //     },
+    //     actionIcons: [
+    //       "addnewbtn",
+    //       "searchpanelbtn",
+    //       "clearfilter",
+    //       "refreshbtn",
+    //       "export",
+    //     ],
+    //     options: [
+    //       // "download_manager",
+    //       "delete",
+    //     ],
+    //     fields: [
+    //       amfutil.text("Name", "name"),
+    //       amfutil.text("Description", "desc"),
+    //       {
+    //         xtype: "arrayfield",
+    //         title: "Mapping",
+    //         name: "mapping",
+    //         fieldTitle: "Mapping",
+    //         arrayfields: [
+    //           amfutil.text("Name", "name"),
+    //           amfutil.localCombo(
+    //             "Type",
+    //             "type",
+    //             [
+    //               { val: "heartbeat", disp: "Heartbeat" },
+    //               { val: "action", disp: "Action" },
+    //             ],
+    //             "val",
+    //             "disp"
+    //           ),
+    //           amfutil.text("Script", "script"),
+    //           amfutil.localCombo(
+    //             "Script Type",
+    //             "stype",
+    //             [
+    //               { val: "elixir", disp: "Elixir" },
+    //               { val: "shell", disp: "Shell" },
+    //             ],
+    //             "val",
+    //             "disp"
+    //           ),
+    //         ],
+    //       },
+    //     ],
+    //     columns: [
+    //       {
+    //         text: "Name",
+    //         dataIndex: "name",
+    //         flex: 1,
+    //         value: "true",
+    //         type: "combo",
+    //         searchOpts: {
+    //           store: amfutil.createCollectionStore("system_managers"),
+    //           displayField: "name",
+    //           valueField: "name",
+    //         },
+    //       },
+    //       {
+    //         text: "Description",
+    //         dataIndex: "desc",
+    //         flex: 1,
+    //       },
+    //     ],
+    //     add: {
+    //       process: function (form, values) {
+    //         values.mapping = JSON.parse(values.mapping);
+    //         return values;
+    //       },
+    //     },
+    //     update: {
+    //       process: function (form, values) {
+    //         values.mapping = JSON.parse(values.mapping);
+    //         return values;
+    //       },
+    //     },
+    //   };
+    // },
     // messages: () => ({
     //   title: "Messages",
     //   // filter: { parent: { $exists: false } },
@@ -7912,6 +8057,83 @@ Ext.define("Amps.util.Grids", {
               amfutil.outputTopic(),
             ],
           },
+          // system_manager: {
+          //   field: "system_manager",
+          //   label: "System Manager Action",
+          //   fields: [
+          //     {
+          //       xtype: "arrayfield",
+
+          //       name: "actions",
+          //       title: "Actions",
+          //       arrayfields: [
+          //         amfutil.combo(
+          //           "Manager",
+          //           "manager",
+          //           amfutil.createCollectionStore("system_managers"),
+          //           "_id",
+          //           "name",
+          //           {
+          //             listeners: amfutil.renderListeners(async function (
+          //               scope,
+          //               val
+          //             ) {
+          //               if (val) {
+          //                 var mgr = scope.getSelectedRecord();
+          //                 if (mgr) {
+          //                   var data = mgr.data;
+          //                   console.log(mgr);
+          //                   var map = await amfutil.getById(
+          //                     "action_maps",
+          //                     data["action_map"]
+          //                   );
+          //                   scope
+          //                     .up("fieldcontainer")
+          //                     .down("combo[name=action]")
+          //                     .setStore(map["mapping"]);
+          //                 }
+          //               }
+          //             }),
+          //           }
+          //         ),
+          //         amfutil.localCombo("Action", "action", null, "name", "name"),
+          //         {
+          //           xtype: "arrayfield",
+          //           row: true,
+          //           name: "patterns",
+          //           arrayfields: [
+          //             amfutil.combo(
+          //               "Field",
+          //               "field",
+          //               "metadata",
+          //               "field",
+          //               "desc",
+          //               {
+          //                 forceSelection: false,
+          //               }
+          //             ),
+          //             amfutil.check("Regex", "regex"),
+          //             amfutil.text("Pattern", "pattern"),
+          //           ],
+          //           title: "Match Patterns",
+          //         },
+          //       ],
+          //     },
+          //     amfutil.check("Send Output", "send_output", {
+          //       itemId: "send_output",
+          //       listeners: amfutil.renderListeners(function (scope, val) {
+          //         var out = scope.up("form").down("#output_parms");
+          //         out.setHidden(!val);
+          //         out.setDisabled(!val);
+          //       }),
+          //     }),
+          //     amfutil.renderContainer("output_parms", [amfutil.outputTopic()]),
+          //   ],
+          //   process: function (form, values) {
+          //     values.actions = JSON.parse(values.actions);
+          //     return values;
+          //   },
+          // },
           s3: {
             field: "s3",
             label: "S3",

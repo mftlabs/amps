@@ -10,12 +10,10 @@ defmodule AmpsPortal.EnvPlug do
   def call(conn, _opts) do
     host = System.get_env("AMPS_HOST", "localhost")
 
-    env = String.replace(conn.host, ~r/#{host}$/, "") |> String.split(".") |> Enum.at(0)
-
-    if env == "" do
-      assign(conn, :env, env)
+    if host == conn.host do
+      assign(conn, :env, "")
     else
-      case Amps.DB.find_one("environments", %{"name" => env}) do
+      case Amps.DB.find_one("environments", %{"host" => conn.host}) do
         nil ->
           conn
           |> Phoenix.Controller.redirect(
@@ -23,7 +21,7 @@ defmodule AmpsPortal.EnvPlug do
           )
 
         obj ->
-          assign(conn, :env, env)
+          assign(conn, :env, obj["name"])
       end
     end
   end

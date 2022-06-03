@@ -64,7 +64,7 @@ config :master_proxy,
       phoenix_endpoint: AmpsWeb.Endpoint
     },
     %{
-      host: ~r/#{System.get_env("AMPS_HOST", "localhost")}$/,
+      host: ~r/(.*?)/,
       phoenix_endpoint: AmpsPortal.Endpoint
     }
   ]
@@ -292,28 +292,28 @@ config :amps, :pyworker,
     {:max_overflow, 2}
   ]
 
-if String.upcase(System.get_env("AMPS_CLUSTER", "FALSE")) == "TRUE" do
-  config :libcluster,
-    topologies: [
-      amps: [
-        # The selected clustering strategy. Required.
-        strategy: Cluster.Strategy.LocalEpmd,
-        # Configuration for the provided strategy. Optional.
-        # The function to use for connecting nodes. The node
-        # name will be appended to the argument list. Optional
-        connect: {:net_kernel, :connect_node, []},
-        # The function to use for disconnecting nodes. The node
-        # name will be appended to the argument list. Optional
-        disconnect: {:erlang, :disconnect_node, []},
-        # The function to use for listing nodes.
-        # This function must return a list of node names. Optional
-        list_nodes: {:erlang, :nodes, [:connected]}
-      ]
-    ]
-else
-  config :libcluster,
-    topologies: []
-end
+# if String.upcase(System.get_env("AMPS_CLUSTER", "FALSE")) == "TRUE" do
+#   config :libcluster,
+#     topologies: [
+#       amps: [
+#         # The selected clustering strategy. Required.
+#         strategy: Cluster.Strategy.LocalEpmd,
+#         # Configuration for the provided strategy. Optional.
+#         # The function to use for connecting nodes. The node
+#         # name will be appended to the argument list. Optional
+#         connect: {:net_kernel, :connect_node, []},
+#         # The function to use for disconnecting nodes. The node
+#         # name will be appended to the argument list. Optional
+#         disconnect: {:erlang, :disconnect_node, []},
+#         # The function to use for listing nodes.
+#         # This function must return a list of node names. Optional
+#         list_nodes: {:erlang, :nodes, [:connected]}
+#       ]
+#     ]
+# else
+#   config :libcluster,
+#     topologies: []
+# end
 
 # Configure esbuild (the version is required)
 # config :esbuild,

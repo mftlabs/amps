@@ -96,7 +96,7 @@ if config_env() == :prod do
           phoenix_endpoint: AmpsWeb.Endpoint
         },
         %{
-          host: ~r/#{System.get_env("AMPS_HOST", "localhost")}$/,
+          host: ~r/(.*?)/,
           phoenix_endpoint: AmpsPortal.Endpoint
         }
       ]
