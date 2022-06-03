@@ -119,7 +119,6 @@ defmodule :"Amps.Gateway<%= if env do%>.<%= env %><% end %>.<%= name %>" do
   def handle_route(conn, route, user) do
     msgid = AmpsUtil.get_id()
     stime = AmpsUtil.gettime()
-    IO.inspect(conn)
     msg = %{
       "msgid" => msgid,
       "stime" => stime,
@@ -182,6 +181,7 @@ defmodule :"Amps.Gateway<%= if env do%>.<%= env %><% end %>.<%= name %>" do
   end
 
   def do_action(msg, route, conn) do
+    IO.inspect(route)
     actparms =
       DB.find_by_id(AmpsUtil.index(conn.private.env, "actions"), route["action"])
 
@@ -247,8 +247,8 @@ defmodule :"Amps.Gateway<%= if env do%>.<%= env %><% end %>.<%= name %>" do
 
             {:send, events} ->
 
-
-              case Amps.AsyncResponder.register(events, actparms, conn.private.env, conn.private.opts["timeout"] || 15000) do
+              IO.inspect(route["timeout"])
+              case Amps.AsyncResponder.register(events, actparms, conn.private.env, route["timeout"] || 15000) do
                 :pending ->
                   AmpsEvents.send_history(
                     AmpsUtil.env_topic("amps.events.action", conn.private.env),
@@ -360,11 +360,11 @@ defmodule :"Amps.Gateway<%= if env do%>.<%= env %><% end %>.<%= name %>" do
     end
   end
 
-  <%= for %{"method" => method, "path" => path, "action" => action} <- router do %>
+  <%= for %{"method" => method, "path" => path, "action" => action, "timeout" => timeout} <- router do %>
   <%= method %> "<%= path %>" do
     case myauth(conn) do
       {:ok, user} ->
-        handle_route(conn, %{"method" => "<%= method %>", "path" => "<%= path %>", "action" => "<%= action %>"}, user)
+        handle_route(conn, %{"method" => "<%= method %>", "path" => "<%= path %>", "action" => "<%= action %>", "timeout" => <%= timeout %>}, user)
 
       {:error, reason} ->
         send_resp(conn, 401, Poison.encode!(%{error: reason}))

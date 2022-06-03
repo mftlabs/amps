@@ -9,6 +9,7 @@ defmodule AmpsPortal.EnvPlug do
 
   def call(conn, _opts) do
     host = System.get_env("AMPS_HOST", "localhost")
+    IO.inspect(conn.host)
 
     if host == conn.host do
       assign(conn, :env, "")
