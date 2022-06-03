@@ -224,6 +224,10 @@ defmodule Amps.PullConsumer do
               )
 
             {:send, events} ->
+              Enum.each(events, fn event ->
+                AmpsEvents.send(event, actparms, mstate, state.env)
+              end)
+
               if mstate["return"] do
                 Amps.AsyncResponder.resolve_message(
                   mstate["return"],
@@ -234,10 +238,6 @@ defmodule Amps.PullConsumer do
               Logger.info("Action Completed #{parms["name"]}")
 
               IO.puts("ack next message")
-
-              Enum.each(events, fn event ->
-                AmpsEvents.send(event, parms, mstate, state.env)
-              end)
 
               AmpsEvents.send_history(
                 AmpsUtil.env_topic("amps.events.action", state.env),
@@ -255,7 +255,7 @@ defmodule Amps.PullConsumer do
           error ->
             IO.inspect(error)
             action_id = parms["handler"]
-            actparms = AmpsDatabase.get_action_parms(action_id)
+            actparms = Amps.DB.find_by_id(AmpsUtil.index(state.env, "actions"), action_id)
 
             if mstate["return"] do
               Amps.AsyncResponder.put_response(
