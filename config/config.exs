@@ -50,27 +50,66 @@ config :esbuild,
 # For production it's recommended to configure a different adapter
 # at the `config/runtime.exs`.
 
-config :master_proxy,
-  # any Cowboy options are allowed
+backends =
+  if String.to_atom(String.downcase(System.get_env("AMPS_GEN_CERTS", "FALSE"))) do
+    [
+      %{
+        path: ~r{^/.well-known/acme-challenge/.*$},
+        plug: SiteEncrypt.AcmeChallenge,
+        opts: Amps.Proxy,
+        host: ~r/(.*?)/
+      },
+      %{
+        host: ~r/^#{System.get_env("AMPS_ADMIN_HOST", "admin.localhost")}$/,
+        phoenix_endpoint: AmpsWeb.Endpoint
+      },
+      %{
+        host: ~r/(.*?)/,
+        phoenix_endpoint: AmpsPortal.Endpoint
+      }
+    ]
+  else
+    [
+      %{
+        host: ~r/^#{System.get_env("AMPS_ADMIN_HOST", "admin.localhost")}$/,
+        phoenix_endpoint: AmpsWeb.Endpoint
+      },
+      %{
+        host: ~r/(.*?)/,
+        phoenix_endpoint: AmpsPortal.Endpoint
+      }
+    ]
+  end
+
+mp_config = [
   protocol_options: [
     request_timeout: 10000
   ],
-  http: [:inet6, port: System.get_env("AMPS_PORT", "4080")],
+  http: [
+    net: :inet6,
+    port: String.to_integer(System.get_env("AMPS_PORT", "4080"))
+  ],
   log_requests: false,
   # https: [:inet6, port: 4443],
-  backends: [
-    %{
-      host: ~r/^#{System.get_env("AMPS_ADMIN_HOST", "admin.localhost")}$/,
-      phoenix_endpoint: AmpsWeb.Endpoint
-    },
-    %{
-      host: ~r/(.*?)/,
-      phoenix_endpoint: AmpsPortal.Endpoint
-    }
-  ]
+  backends: backends
+]
+
+if String.to_atom(String.downcase(System.get_env("AMPS_USE_SSL", "FALSE"))) do
+  config :master_proxy,
+         mp_config ++ [https: [port: String.to_integer(System.get_env("AMPS_SSL_PORT", "4443"))]]
+else
+  config :master_proxy, mp_config
+end
+
+# any Cowboy options are allowed
 
 config :amps,
-  db: System.get_env("AMPS_DB_PROVIDER", "mongo")
+  db: System.get_env("AMPS_DB_PROVIDER", "mongo"),
+  adminhost: System.get_env("AMPS_ADMIN_HOST", "admin.localhost"),
+  userhost: System.get_env("AMPS_HOST", "localhost"),
+  use_ssl: String.to_atom(String.downcase(System.get_env("AMPS_USE_SSL", "FALSE"))),
+  gen_certs: String.to_atom(String.downcase(System.get_env("AMPS_GEN_CERTS", "FALSE"))),
+  dns_emails: System.get_env("AMPS_DNS_EMAILS", "")
 
 config :amps, :gnat,
   host: String.to_charlist(System.get_env("AMPS_NATS_HOST", "localhost")),

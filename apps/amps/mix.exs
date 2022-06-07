@@ -23,7 +23,7 @@ defmodule Amps.MixProject do
   def application do
     [
       mod: {Amps.Application, []},
-      extra_applications: [:logger, :runtime_tools, :datapio_cluster]
+      extra_applications: [:logger, :runtime_tools]
     ]
   end
 
@@ -63,6 +63,9 @@ defmodule Amps.MixProject do
       {:ex_aws_s3, "~> 2.0"},
       {:quantum, "~> 3.0"},
       {:argon2_elixir, "~> 2.0"},
+      {:master_proxy,
+       git: "https://github.com/jesseshieh/master_proxy.git", branch: "increase-flexibility"},
+      {:site_encrypt, git: "https://github.com/sasa1977/site_encrypt.git", branch: "master"},
       {:tesla, git: "https://github.com/teamon/tesla", override: true},
       {
         :datapio_cluster,

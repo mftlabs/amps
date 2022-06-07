@@ -198,10 +198,10 @@ Ext.define("Amps.override.form.field.VTypes", {
     return ipv.test(value);
   },
 
-  multiplednsvtype: function (value) {
-    var ipv = /[a-zA-Z0-9\-,\.]+(?<!,)$/;
-    return ipv.test(value);
-  },
+  // multiplednsvtype: function (value) {
+  //   var ipv = /[a-zA-Z0-9\-,\.]+(?<!,)$/;
+  //   return ipv.test(value);
+  // },
   multipleemailvtype: function (value) {
     var emailv = /(([a-zA-Z\-0-9\.]+@)([a-zA-Z\-0-9\.]+)[;]*)+/g;
     return emailv.test(value);
@@ -233,15 +233,11 @@ Ext.define("Amps.override.form.field.VTypes", {
     return value == password.getValue();
   },
 
-  
-
-ChangepasswordMatch: function (value, field) {
-  var password = field.up("form").down("#" + "password");
-  return value == password.getValue();
-},
-
+  ChangepasswordMatch: function (value, field) {
+    var password = field.up("form").down("#" + "password");
+    return value == password.getValue();
+  },
 });
-
 
 Ext.define("Amps.overrides.form.field.Base", {
   override: "Ext.form.field.Base",
@@ -261,13 +257,13 @@ Ext.define("Amps.overrides.form.field.Base", {
 });
 
 Ext.override(Ext.form.field.Text, {
-  onBlur: function() {
-          var value = this.getValue();
-          if (value != null) {
-              if (String(value).length != String(value).trim().length) {
-                  this.setValue(String(value).trim());
-                  Ext.toast('Leading and trailing spaces are trimmed');
-              }
-          }
-  }
+  onBlur: function () {
+    var value = this.getValue();
+    if (value != null) {
+      if (String(value).length != String(value).trim().length) {
+        this.setValue(String(value).trim());
+        Ext.toast("Leading and trailing spaces are trimmed");
+      }
+    }
+  },
 });
