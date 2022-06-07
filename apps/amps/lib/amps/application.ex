@@ -179,6 +179,13 @@ defmodule Amps.Application do
       )
     ]
 
+    children =
+      if Application.get_env(:amps, :use_ssl) and Application.get_env(:amps, :gen_certs) do
+        children ++ [{Amps.SSL, Amps.Proxy}]
+      else
+        children ++ [Amps.Proxy]
+      end
+
     res =
       Supervisor.start_link(children,
         strategy: :one_for_one,
