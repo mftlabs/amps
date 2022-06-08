@@ -1614,7 +1614,7 @@ Ext.define("Amps.util.UpdateRecordController", {
                   Authorization: localStorage.getItem("access_token"),
                 },
                 url: "/api/" + route + "/" + record._id,
-                method: "POST",
+                method: "PUT",
                 timeout: 60000,
                 params: {},
                 jsonData: user,
