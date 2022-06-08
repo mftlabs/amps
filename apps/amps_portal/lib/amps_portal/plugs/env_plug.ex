@@ -17,7 +17,7 @@ defmodule AmpsPortal.EnvPlug do
       case Amps.DB.find_one("environments", %{"host" => conn.host}) do
         nil ->
           conn
-          |> send_resp(conn, 404, "Not Found")
+          |> send_resp(404, "Not Found")
 
         obj ->
           assign(conn, :env, obj["name"])
