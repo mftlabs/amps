@@ -16,21 +16,21 @@ defmodule Amps.EventConsumer do
           parms
       end
 
-    IO.puts("starting event listener #{inspect(parms)}")
+    # IO.puts("starting event listener #{inspect(parms)}")
     name = parms[:name]
-    IO.puts("first name #{inspect(name)}")
+    # IO.puts("first name #{inspect(name)}")
     GenServer.start_link(__MODULE__, parms)
   end
 
   def init(opts) do
-    IO.inspect(opts)
+    # IO.inspect(opts)
     Process.send_after(self(), {:initial_connect, opts[:parms]}, 0)
     {:ok, opts}
   end
 
   def child_spec(opts) do
     name = opts[:name]
-    IO.puts("name #{inspect(name)}")
+    # IO.puts("name #{inspect(name)}")
 
     %{
       id: name,
@@ -49,15 +49,15 @@ defmodule Amps.EventConsumer do
 
   # GenServer callbacks
   def handle_info({:initial_connect, opts}, state) do
-    IO.puts("opts #{inspect(opts)}")
-    IO.puts("state #{inspect(state)}")
+    # IO.puts("opts #{inspect(opts)}")
+    # IO.puts("state #{inspect(state)}")
     name = Atom.to_string(state[:name])
     sub = String.to_atom(name <> "_sup")
-    IO.puts("sub: #{inspect(sub)}")
+    # IO.puts("sub: #{inspect(sub)}")
 
     pid = Process.whereis(:gnat)
 
-    IO.puts("pid #{inspect(pid)}")
+    # IO.puts("pid #{inspect(pid)}")
 
     {stream, consumer} = AmpsUtil.get_names(opts, state.env)
     Logger.info("got stream #{stream} #{consumer}")
@@ -81,7 +81,7 @@ defmodule Amps.EventConsumer do
   end
 
   def handle_info({val, _opts}, _state) do
-    IO.puts("got event #{inspect(val)}")
+    # IO.puts("got event #{inspect(val)}")
   end
 
   #  def handle_call({:send, qname, data}, _from, state) do
@@ -114,9 +114,9 @@ defmodule Amps.PullConsumer do
       }) do
     # Process.link(connection_pid)
     listening_topic = "_CON.#{nuid()}"
-    IO.puts("handle init #{inspect(connection_pid)}")
+    # IO.puts("handle init #{inspect(connection_pid)}")
     group = String.replace(parms["name"], " ", "_")
-    IO.puts("group #{group}")
+    # IO.puts("group #{group}")
     consumer_name = get_consumer(parms, consumer_name)
 
     {:ok, _sid} = Gnat.sub(connection_pid, self(), listening_topic, queue_group: group)
@@ -146,7 +146,7 @@ defmodule Amps.PullConsumer do
   end
 
   def get_data(body) do
-    IO.inspect(body)
+    # IO.inspect(body)
 
     try do
       Poison.decode!(body)
@@ -166,7 +166,7 @@ defmodule Amps.PullConsumer do
 
     case get_data(message.body) do
       {:error, _error} ->
-        IO.puts("ack next message after data error")
+        Logger.error("ack next message after data error")
         Jetstream.ack_next(message, state.listening_topic)
         {:noreply, state}
 
@@ -201,7 +201,7 @@ defmodule Amps.PullConsumer do
           case handler.run(msg, actparms, mctx) do
             {:ok, result} ->
               Logger.info("Action Completed #{inspect(result)}")
-              IO.puts("ack next message")
+              # IO.puts("ack next message")
 
               if mstate["return"] do
                 Amps.AsyncResponder.put_response(
@@ -237,7 +237,7 @@ defmodule Amps.PullConsumer do
 
               Logger.info("Action Completed #{parms["name"]}")
 
-              IO.puts("ack next message")
+              # IO.puts("ack next message")
 
               AmpsEvents.send_history(
                 AmpsUtil.env_topic("amps.events.action", state.env),

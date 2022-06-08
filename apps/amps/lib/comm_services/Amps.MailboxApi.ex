@@ -119,13 +119,9 @@ defmodule Amps.MailboxApi do
             #            Amps.MqService.send("registerq", msg)
             msg = Map.put(msg, "mailbox", mailbox)
 
-            topic =
-              AmpsUtil.env_topic(
-                "amps.svcs.#{conn.private.opts["name"]}.#{user}",
-                conn.private.env
-              )
+            topic = "amps.svcs.#{conn.private.opts["name"]}.#{user}"
 
-            mailboxtopic = AmpsUtil.env_topic("amps.mailbox.#{user}.#{mailbox}", conn.private.env)
+            mailboxtopic = "amps.mailbox.#{user}.#{mailbox}"
 
             svced = AmpsEvents.send(msg, %{"output" => topic}, %{}, conn.private.env)
             mailboxed = AmpsEvents.send(msg, %{"output" => mailboxtopic}, %{}, conn.private.env)

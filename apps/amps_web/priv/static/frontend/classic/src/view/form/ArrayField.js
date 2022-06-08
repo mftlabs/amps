@@ -5,10 +5,14 @@ Ext.define("Amps.form.ArrayField", {
   },
   flex: 1,
   xtype: "arrayfield",
-  collapsible: true,
+  scrollable: true,
   fields: [],
   arrayfields: [],
   fieldTitle: "Field",
+  layout: {
+    type: "vbox",
+    align: "stretch",
+  },
 
   constructor: function (args) {
     this.callParent([args]);
@@ -187,9 +191,14 @@ Ext.define("Amps.form.ArrayField.Field", {
   getValue: function () {
     var scope = this;
     var data = {};
+    console.log(this.fields);
     this.fields.forEach((field) => {
       var cmp = amfutil.getElementByID(scope.name + "-" + field.name);
-      data[cmp.name] = cmp.getValue();
+      if (cmp.xtype == "arrayfield") {
+        data[cmp.name] = JSON.parse(cmp.getValue());
+      } else {
+        data[cmp.name] = cmp.getValue();
+      }
       // console.log(cmp);
     });
     return data;
@@ -229,19 +238,40 @@ Ext.define("Amps.form.ArrayField.Field", {
     for (var i = 0; i < fields.length; i++) {
       var ref = this.name + "-" + fields[i].name;
       var field = Object.assign({ id: ref, isFormField: false }, fields[i]);
-      items.push(field);
-      if (items.length == 2) {
-        hbox.items = items;
-        vbox.items.push(Ext.create(hbox));
-        items = [];
-      } else if (i == fields.length - 1) {
-        items.push({
-          xtype: "component",
-        });
-        hbox.items = items;
-        vbox.items.push(Ext.create(hbox));
+      if (field.row) {
+        if (items.length == 2) {
+          hbox.items = items;
+          vbox.items.push(Ext.create(hbox));
+          hbox.items = [field];
+          vbox.items.push(Ext.create(hbox));
+          items = [];
+        } else {
+          items.push({
+            xtype: "component",
+          });
+          hbox.items = items;
+          vbox.items.push(Ext.create(hbox));
+          hbox.items = [field];
+          vbox.items.push(Ext.create(hbox));
 
-        items = [];
+          items = [];
+        }
+      } else {
+        items.push(field);
+
+        if (items.length == 2) {
+          hbox.items = items;
+          vbox.items.push(Ext.create(hbox));
+          items = [];
+        } else if (i == fields.length - 1) {
+          items.push({
+            xtype: "component",
+          });
+          hbox.items = items;
+          vbox.items.push(Ext.create(hbox));
+
+          items = [];
+        }
       }
     }
     console.log(vbox);

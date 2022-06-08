@@ -79,12 +79,7 @@ defmodule Amps.GenConsumer do
 
     ktopic = Regex.replace(~r/[.>* -]/, msg.topic, "_")
 
-    topic =
-      if env == "" do
-        "amps.svcs.#{opts["name"]}.#{ktopic}"
-      else
-        "amps.#{env}.svcs.#{opts["name"]}.#{ktopic}"
-      end
+    topic = "amps.svcs.#{opts["name"]}.#{ktopic}"
 
     AmpsEvents.send(event, %{"output" => topic}, %{}, env)
 

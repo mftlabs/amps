@@ -79,7 +79,6 @@ defmodule Amps.EnvManager do
       case env_active?(name) do
         nil ->
           res = load_env(name)
-          IO.inspect(res)
           res
 
           DB.find_one_and_update("environments", %{"name" => name}, %{
@@ -95,13 +94,11 @@ defmodule Amps.EnvManager do
 
   def service_types do
     list = AmpsUtil.get_env(:services)
-    IO.inspect(list)
     Enum.into(list, %{})
   end
 
   def get_spec(name, args) do
     types = service_types()
-    IO.inspect(args)
 
     try do
       case String.to_atom(args["type"]) do
@@ -109,8 +106,6 @@ defmodule Amps.EnvManager do
         #        {types[:sftpd], name: name, parms: args}
 
         :httpd ->
-          IO.inspect(args)
-
           protocol_options = [
             idle_timeout: args["idle_timeout"],
             request_timeout: args["request_timeout"],
@@ -267,7 +262,6 @@ defmodule Amps.EnvManager do
         rescue
           e ->
             error = "#{inspect(e)}"
-            IO.inspect(e)
             {:error, e}
         end
     end

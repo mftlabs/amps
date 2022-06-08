@@ -792,37 +792,34 @@ Ext.define("Amps.Pages", {
               title: "Agent Rules",
               store: store,
               listeners: {
-                dblclick: {
-                  element: "body", //bind to the underlying body property on the panel
-                  fn: async function (grid, rowIndex, e, obj) {
-                    var record = grid.record.data;
+                rowdblclick: async function (grid, record) {
+                  var record = record.data;
 
-                    rulesConfig.store = store;
-                    var user = await amfutil.userInfo();
-                    var updateForm = Ext.create("Amps.form.update", {
-                      entity: user,
-                    });
-                    updateForm.loadForm(
-                      rulesConfig,
-                      record,
-                      false,
-                      `rules/${record._id}`
-                    );
-                    var win = new Ext.window.Window({
-                      modal: true,
-                      minWidth: 500,
-                      width: 600,
-                      minHeight: 600,
-                      height: 600,
-                      title: "Update Agent Rule",
-                      // maxHeight: 600,
-                      scrollable: true,
-                      // resizable: false,
-                      layout: "fit",
-                      items: [updateForm],
-                    });
-                    win.show();
-                  },
+                  rulesConfig.store = store;
+                  var user = await amfutil.userInfo();
+                  var updateForm = Ext.create("Amps.form.update", {
+                    entity: user,
+                  });
+                  updateForm.loadForm(
+                    rulesConfig,
+                    record,
+                    false,
+                    `rules/${record._id}`
+                  );
+                  var win = new Ext.window.Window({
+                    modal: true,
+                    minWidth: 500,
+                    width: 600,
+                    minHeight: 600,
+                    height: 600,
+                    title: "Update Agent Rule",
+                    // maxHeight: 600,
+                    scrollable: true,
+                    // resizable: false,
+                    layout: "fit",
+                    items: [updateForm],
+                  });
+                  win.show();
                 },
               },
 
@@ -1300,7 +1297,7 @@ Ext.define("Amps.Pages", {
               CLIPBOARD_CONTENTS = td.innerText;
               amfutil.copyTextdata(e);
             },
-            dblclick: amfutil.updateHandler(config),
+            rowdblclick: amfutil.updateHandler(config),
           },
         },
       };

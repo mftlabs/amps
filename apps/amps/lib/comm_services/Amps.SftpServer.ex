@@ -364,20 +364,15 @@ defmodule Amps.SftpHandler do
 
       user = state[:user]
 
-      topic =
-        if env == "" do
-          "amps.svcs.#{service}.#{user}"
-        else
-          "amps.#{env}.svcs.#{service}.#{user}"
-        end
+      topic = "amps.svcs.#{service}.#{user}"
 
-      mailboxtopic = AmpsUtil.env_topic("amps.mailbox.#{user}.#{msg["mailbox"]}", state[:env])
+      mailboxtopic = "amps.mailbox.#{user}.#{msg["mailbox"]}"
 
       IO.inspect(state)
       # state = List.keydelete(state, :options, 0)
 
-      AmpsEvents.send(msg, %{"output" => topic}, %{})
-      AmpsEvents.send(msg, %{"output" => mailboxtopic}, %{})
+      AmpsEvents.send(msg, %{"output" => topic}, %{}, env)
+      AmpsEvents.send(msg, %{"output" => mailboxtopic}, %{}, env)
 
       # AmpsEvents.send_history(
       #   "amps.events.messages",

@@ -18,7 +18,7 @@ defmodule Amps.Actions.Mailbox do
 
         AmpsEvents.send(
           newmsg,
-          %{"output" => AmpsUtil.env_topic("amps.mailbox.#{recipient}.#{mailbox}", env)},
+          %{"output" => "amps.mailbox.#{recipient}.#{mailbox}"},
           state,
           env
         )

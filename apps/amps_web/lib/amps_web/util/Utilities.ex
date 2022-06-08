@@ -479,11 +479,7 @@ defmodule AmpsWeb.Util do
             AmpsEvents.send(
               %{},
               %{
-                "output" =>
-                  AmpsUtil.env_topic(
-                    "amps.events.svcs.handler.#{service["name"]}.restart",
-                    env
-                  )
+                "output" => "amps.events.svcs.handler.#{service["name"]}.restart"
               },
               %{},
               env
@@ -541,11 +537,7 @@ defmodule AmpsWeb.Util do
           AmpsEvents.send(
             %{},
             %{
-              "output" =>
-                AmpsUtil.env_topic(
-                  "amps.events.svcs.handler.#{gw["name"]}.restart",
-                  env
-                )
+              "output" => "amps.events.svcs.handler.#{gw["name"]}.restart"
             },
             %{},
             env
@@ -780,11 +772,7 @@ defmodule AmpsWeb.Util do
       AmpsEvents.send(
         msg,
         %{
-          "output" =>
-            AmpsUtil.env_topic(
-              "amps.objects.#{base_index(env, index)}.#{action}",
-              env
-            )
+          "output" => "amps.objects.#{base_index(env, index)}.#{action}"
         },
         %{},
         env
@@ -822,11 +810,7 @@ defmodule AmpsWeb.Util do
       AmpsEvents.send(
         msg,
         %{
-          "output" =>
-            AmpsUtil.env_topic(
-              "amps.objects.#{base_index(env, index)}.delete",
-              env
-            )
+          "output" => "amps.objects.#{base_index(env, index)}.delete"
         },
         %{},
         env
@@ -863,11 +847,8 @@ defmodule AmpsWeb.Util do
       AmpsEvents.send(
         msg,
         %{
-          "output" =>
-            AmpsUtil.env_topic(
-              "amps.objects.#{base_index(env, index)}.#{field}.#{action}",
-              env
-            )
+          "output" => "amps.objects.#{base_index(env, index)}.#{field}.#{action}",
+
         },
         %{},
         env

@@ -5275,6 +5275,13 @@ Ext.define("Amps.util.Grids", {
           regex: /^\/(?!.*\/$)/,
           regexText: `Route must begin with leading slash ("/") and not ending with trailing slash.`,
         }),
+        {
+          xtype: "numberfield",
+          value: 15000,
+          name: "timeout",
+          allowBlank: false,
+          fieldLabel: "Async Timeout",
+        },
         amfutil.dynamicCreate(
           amfutil.combo(
             "Script Action",
@@ -5656,6 +5663,126 @@ Ext.define("Amps.util.Grids", {
     //     ],
     //     columns: [
     //       {
+    //         text: "Status",
+    //         width: 140,
+    //         resizable: false,
+    //         xtype: "socketcolumn",
+    //         config: function (data, widget) {
+    //           return {
+    //             event: "manager",
+    //             payload: { host: data.host },
+    //             cond: function () {
+    //               var page =
+    //                 Ext.util.History.getToken().split("/")[0] ==
+    //                 "system_managers";
+    //               var visible = widget
+    //                 .up("grid")
+    //                 .getStore()
+    //                 .findRecord("_id", data["_id"]);
+
+    //               if (!visible) {
+    //                 widget.destroy();
+    //               }
+
+    //               return page && visible;
+    //             },
+    //             callback: function (widget, payload) {
+    //               var handler = async function () {
+    //                 var win = new Ext.window.Window({
+    //                   width: window.innerWidth * 0.8,
+    //                   height: window.innerHeight * 0.8,
+    //                   title: "System Manager: " + data.name,
+    //                   modal: true,
+    //                   layout: {
+    //                     type: "hbox",
+    //                   },
+    //                 });
+    //                 win.show();
+    //                 win.setLoading(true);
+    //                 var map = await amfutil.getById(
+    //                   "action_maps",
+    //                   data["action_map"]
+    //                 );
+    //                 win.insert(0, [
+    //                   {
+    //                     xtype: "grid",
+    //                     title: "Actions",
+    //                     store: map["mapping"],
+    //                     columns: [
+    //                       {
+    //                         text: "Name",
+    //                         dataIndex: "name",
+    //                         flex: 1,
+    //                       },
+    //                       {
+    //                         text: "Type",
+    //                         dataIndex: "type",
+    //                         flex: 1,
+    //                       },
+    //                       {
+    //                         text: "Script",
+    //                         dataIndex: "script",
+    //                         flex: 1,
+    //                       },
+    //                       {
+    //                         text: "Script Type",
+    //                         dataIndex: "stype",
+    //                         flex: 1,
+    //                       },
+    //                     ],
+    //                     flex: 1,
+    //                   },
+    //                   {
+    //                     xtype: "panel",
+    //                     title: "Metrics",
+    //                     flex: 1,
+    //                   },
+    //                 ]);
+    //                 win.setLoading(false);
+    //               };
+    //               widget.removeAll();
+    //               widget.insert({
+    //                 xtype: "container",
+
+    //                 cls: "widgetbutton",
+    //                 layout: { type: "hbox", align: "stretch" },
+    //                 defaults: {
+    //                   padding: 7.5,
+    //                 },
+    //                 listeners: {
+    //                   render: function (scope) {
+    //                     scope.getEl().on("click", handler);
+    //                   },
+    //                 },
+    //                 items: [
+    //                   {
+    //                     xtype: "container",
+    //                     layout: "center",
+    //                     items: [
+    //                       {
+    //                         xtype: "component",
+    //                         html: `<div class="led ${
+    //                           payload ? "green" : "red"
+    //                         }"></div>`,
+    //                       },
+    //                     ],
+    //                   },
+
+    //                   {
+    //                     xtype: "component",
+    //                     html: "Console",
+    //                   },
+    //                   {
+    //                     xtype: "component",
+    //                     cls: `x-fa fa-dashboard`,
+    //                   },
+    //                 ],
+    //               });
+    //             },
+    //           };
+    //         },
+    //       },
+    //       {
     //         text: "Name",
     //         dataIndex: "name",
     //         flex: 1,
@@ -5678,6 +5805,96 @@ Ext.define("Amps.util.Grids", {
     //         flex: 1,
     //       },
     //     ],
+    //     subgrids: {
+    //       heartbeat: {
+    //         title: "Metrics",
+    //         actionIcons: ["searchpanelbtn", "clearfilter", "refreshbtn"],
+    //         grid: true,
+    //         crud: false,
+    //         import: false,
+
+    //         store: async function (filters = {}) {
+    //           var pieces = Ext.util.History.getToken().split("/");
+    //           var item = pieces.slice(0, 2).join("/");
+    //           var record = await amfutil.getCurrentItem(item);
+    //           console.log(record);
+    //           return amfutil.createCollectionStore(
+    //             "manager_heartbeat",
+    //             Object.assign(filters, {
+    //               _id: record.id,
+    //             }),
+
+    //             {
+    //               sorters: [
+    //                 {
+    //                   property: "etime",
+    //                   direction: "DESC",
+    //                 },
+    //               ],
+    //             }
+    //           );
+    //         },
+    //         columns: [
+    //           {
+    //             text: "Event Time",
+    //             dataIndex: "etime",
+    //             flex: 2,
+    //             type: "date",
+    //             renderer: amfutil.dateRenderer,
+    //           },
+    //           {
+    //             text: "Memory Usage",
+    //             flex: 1,
+    //             renderer: function (val, meta, record) {
+    //               var data = record.data;
+    //               var mem = data.metrics.system_mem;
+    //               var pct = (
+    //                 ((mem.total_memory - mem.free_memory) / mem.total_memory) *
+    //                 100
+    //               ).toFixed(2);
+    //               return pct + "%";
+    //             },
+    //           },
+
+    //           {
+    //             text: "CPU Avg 1 Min",
+    //             flex: 1,
+    //             renderer: function (val, meta, record) {
+    //               var data = record.data;
+    //               var metrics = data.metrics;
+    //               var count = Object.keys(metrics["cpu_per_core"]).length;
+    //               console.log(count);
+    //               var pct = (metrics["cpu_avg1"] / 256 / count).toFixed(2);
+    //               return pct;
+    //             },
+    //           },
+    //           {
+    //             text: "CPU Avg 5 Min",
+    //             flex: 1,
+    //             renderer: function (val, meta, record) {
+    //               var data = record.data;
+    //               var metrics = data.metrics;
+    //               var count = Object.keys(metrics["cpu_per_core"]).length;
+    //               console.log(count);
+    //               var pct = (metrics["cpu_avg5"] / 256 / count).toFixed(2);
+    //               return pct;
+    //             },
+    //           },
+    //           {
+    //             text: "CPU Avg 15 Min",
+    //             flex: 1,
+    //             renderer: function (val, meta, record) {
+    //               var data = record.data;
+    //               var metrics = data.metrics;
+    //               var count = Object.keys(metrics["cpu_per_core"]).length;
+    //               console.log(count);
+    //               var pct = (metrics["cpu_avg15"] / 256 / count).toFixed(2);
+    //               return pct;
+    //             },
+    //           },
+    //         ],
+    //       },
+    //     },
     //   };
     // },
     // action_maps: () => {
@@ -7026,10 +7243,7 @@ Ext.define("Amps.util.Grids", {
               dataIndex: "etime",
               flex: 1,
               type: "date",
-              renderer: function (val) {
-                var date = new Date(val);
-                return date.toString();
-              },
+              renderer: amfutil.dateRenderer,
             },
             {
               text: "Operation",

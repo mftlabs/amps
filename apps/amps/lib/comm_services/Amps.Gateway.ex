@@ -221,11 +221,7 @@ defmodule Amps.Gateway do
       "method" => conn.method
     }
 
-    topic =
-      AmpsUtil.env_topic(
-        "amps.svcs.#{conn.private.opts["name"]}.#{conn.method}#{route["path"]}",
-        conn.private.env
-      )
+    topic = "amps.svcs.#{conn.private.opts["name"]}.#{conn.method}#{route["path"]}"
 
     msg = get_header_metadata(conn, msg)
 

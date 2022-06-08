@@ -225,7 +225,7 @@ defmodule AmpsWeb.DataController do
 
     AmpsEvents.send(
       msg,
-      %{"output" => AmpsUtil.env_topic(topic, conn.assigns().env)},
+      %{"output" => topic},
       %{},
       conn.assigns().env
     )
@@ -233,6 +233,52 @@ defmodule AmpsWeb.DataController do
     AmpsEvents.end_session(sid, conn.assigns().env)
     json(conn, :ok)
   end
+
+  # def download_manager(conn, %{"id" => id, "os" => os}) do
+  #   mgr = Amps.DB.find_by_id(Util.index(conn.assigns().env, "system_managers"), id)
+
+  #   # _host = Application.fetch_env!(:amps_portal, AmpsWeb.Endpoint)[:url]
+
+  #   mandir = Application.app_dir(:amps_web, "priv/manager")
+
+  #   {:ok, manfolder} = Temp.mkdir()
+
+  #   fname = "system_manager"
+
+  #   File.cp_r(
+  #     Path.join([mandir, os]),
+  #     Path.join(manfolder, fname)
+  #   )
+
+  #   File.copy(
+  #     Path.join([mandir, "start.sh"]),
+  #     Path.join(manfolder, "start.sh")
+  #   )
+
+  #   conf =
+  #     File.read!(Path.join(mandir, "conf"))
+  #     |> String.replace("{NODE}", "#{node()}")
+  #     |> String.replace("{HOST}", mgr["host"])
+  #     |> String.replace("{COOKIE}", "#{Node.get_cookie()}")
+  #     |> String.replace("{NODE_ID}", id)
+  #     |> String.replace("{NODE_ENV}", conn.assigns().env)
+
+  #   # IO.inspect(script)
+
+  #   File.write(Path.join(manfolder, "conf"), conf)
+
+  #   zipname = mgr["name"] <> "_sysmgr.zip"
+
+  #   files = File.ls!(manfolder) |> Enum.map(&String.to_charlist/1)
+
+  #   {:ok, zippath} = Temp.mkdir()
+  #   zippath = Path.join(zippath, zipname)
+  #   {:ok, zip} = :zip.create(zippath, files, cwd: manfolder)
+
+  #   IO.inspect(zip)
+
+  #   send_download(conn, {:file, zip}, disposition: :attachment)
+  # end
 
   # def export(conn, %{"collection" => collection}) do
   #   headers = ["Name", "Type", "Description"]
@@ -556,7 +602,7 @@ defmodule AmpsWeb.DataController do
 
     AmpsEvents.send(
       msg,
-      %{"output" => AmpsUtil.env_topic(topic, conn.assigns().env)},
+      %{"output" => topic},
       %{},
       conn.assigns().env
     )

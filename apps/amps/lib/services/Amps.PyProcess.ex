@@ -190,13 +190,6 @@ defmodule Amps.PyProcess do
         parms: parms,
         env: env
       }) do
-    parms =
-      if parms["output"] do
-        Map.put(parms, "output", AmpsUtil.env_topic(parms["output"], env))
-      else
-        parms
-      end
-
     listening_topic =
       if parms["receive"] do
         listening_topic = "_CON.#{nuid()}"
@@ -369,7 +362,7 @@ defmodule Amps.PyProcess do
   def handle_info({:msg, message}, state) do
     msg = Jason.decode!(message.body)["msg"]
     evtopic = AmpsUtil.env_topic("amps.events.action", state.env)
-    topic = AmpsUtil.env_topic(state.parms["topic"], state.env)
+    topic = state.parms["topic"]
 
     {msg, sid} =
       AmpsEvents.start_session(
