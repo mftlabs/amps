@@ -17,9 +17,7 @@ defmodule AmpsPortal.EnvPlug do
       case Amps.DB.find_one("environments", %{"host" => conn.host}) do
         nil ->
           conn
-          |> Phoenix.Controller.redirect(
-            external: "#{Atom.to_string(conn.scheme)}://#{host}:#{conn.port}"
-          )
+          |> send_resp(conn, 404, "Not Found")
 
         obj ->
           assign(conn, :env, obj["name"])

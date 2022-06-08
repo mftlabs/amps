@@ -11,7 +11,7 @@ Ext.define("Amps.view.Footer", {
   },
   items: [
     {
-      html: "&copy; 2021 Agile Data Inc, All rights are reserved.",
+      html: "&copy; 2022 MFT Labs, All rights reserved.",
       style: "text-align:left;font-size:14px;",
     },
     {
