@@ -80,30 +80,50 @@ defmodule Amps.Actions.LDAP do
           LDAPEx.Client.setup_search(
             baseObject: parms["base"],
             scope: String.to_atom(parms["scope"]),
-            filter: {:and, filter(parms["filter"])}
+            filter: {:and, filter(parms["filter"])},
+            sizeLimit: parms["sizeLimit"]
           )
 
-        case LDAPEx.Client.search(ldap, req) do
+        case LDAPEx.Client.search(ldap, req, parms["timeout"] || 15000) do
           {:ok, {results, _}} ->
             res = Jason.encode!(results)
+            size = byte_size(res)
+            msgid = AmpsUtil.get_id()
 
             msg =
-              msg
-              |> Map.drop(["fpath", "fsize"])
-              |> Map.merge(%{
-                "msgid" => AmpsUtil.get_id(),
-                "data" => res,
-                "parent" => msg["msgid"]
-              })
+              if size > 10000 do
+                dir = AmpsUtil.tempdir(msgid)
+                fpath = Path.join(dir, msgid)
+                File.write(fpath, res)
+
+                msg
+                |> Map.drop(["data"])
+                |> Map.merge(%{
+                  "msgid" => msgid,
+                  "fpath" => fpath,
+                  "fsize" => size,
+                  "parent" => msg["msgid"]
+                })
+              else
+                IO.inspect("SMALLER")
+
+                msg
+                |> Map.drop(["fpath", "fsize"])
+                |> Map.merge(%{
+                  "msgid" => msgid,
+                  "data" => res,
+                  "parent" => msg["msgid"]
+                })
+              end
 
             {:send, [msg]}
 
           {:error, error} ->
-            raise "#{error}"
+            raise error
         end
 
       {:error, error} ->
-        raise "#{error}"
+        raise error
     end
   end
 

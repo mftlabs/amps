@@ -7727,6 +7727,13 @@ Ext.define("Amps.util.Grids", {
                 ),
                 "providers"
               ),
+              {
+                xtype: "numberfield",
+                name: "timeout",
+                fieldLabel: "Timeout",
+                value: 1500,
+                allowBlank: false,
+              },
 
               amfutil.text("Base DN", "base"),
               amfutil.localCombo(
