@@ -18,6 +18,7 @@ defmodule AmpsPortal.EnvPlug do
         nil ->
           conn
           |> send_resp(404, "Not Found")
+          |> halt()
 
         obj ->
           assign(conn, :env, obj["name"])

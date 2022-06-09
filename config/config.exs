@@ -287,7 +287,8 @@ config :amps, :services,
   httpd: Amps.MailboxApi,
   gateway: Amps.Gateway,
   kafka: Amps.GenConsumer,
-  pyservice: Amps.PyProcess
+  pyservice: Amps.PyProcess,
+  sqs: Amps.SQS
 
 config :amps, :actions,
   strrepl: Amps.Actions.StringReplace,
@@ -303,7 +304,8 @@ config :amps, :actions,
   sharepoint: Amps.Actions.SharePoint,
   pgpencrypt: Amps.Actions.PGPEncrypt,
   pgpdecrypt: Amps.Actions.PGPDecrypt,
-  batch: Amps.Actions.Batch
+  batch: Amps.Actions.Batch,
+  ldap: Amps.Actions.LDAP
 
 # config :amps, :httpapi,
 #  options: [

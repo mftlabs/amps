@@ -61,6 +61,7 @@ defmodule Amps.MixProject do
       {:zstream, "~> 0.6.0"},
       {:ex_aws, "~> 2.0"},
       {:ex_aws_s3, "~> 2.0"},
+      {:ex_aws_sqs, "~> 3.3"},
       {:quantum, "~> 3.0"},
       {:argon2_elixir, "~> 2.0"},
       {:master_proxy,
@@ -75,7 +76,8 @@ defmodule Amps.MixProject do
       {:kafka_ex, git: "https://github.com/aram0112/kafka_ex"},
       {:cors_plug, "~> 2.0"},
       {:gen_smtp, "~> 1.0"},
-      {:absinthe, "~> 1.7.0"}
+      {:absinthe, "~> 1.7.0"},
+      {:ldap_ex, "~> 0.2.2"}
       # {:ex_json_schema, "~> 0.9.1"},
       # {:xml_builder, "~> 2.1"},
       # {:jsonpatch, "~> 0.12.0"}

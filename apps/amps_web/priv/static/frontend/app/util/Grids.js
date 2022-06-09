@@ -4247,6 +4247,43 @@ Ext.define("Amps.util.Grids", {
           },
         ],
         types: {
+          ldap: {
+            field: "ldap",
+            label: "LDAP",
+            fields: [
+              amfutil.text("Server", "server"),
+              {
+                xtype: "numberfield",
+                name: "port",
+                fieldLabel: "Port",
+                allowBlank: false,
+              },
+              amfutil.check("SSL", "ssl"),
+              amfutil.text("Username", "username"),
+              amfutil.text("Password", "password", { inputType: "password" }),
+            ],
+          },
+          aws: {
+            field: "aws",
+            label: "AWS",
+            fields: [
+              {
+                xtype: "textfield",
+                name: "key",
+                fieldLabel: "Access Id",
+                tooltip: "Your S3 Access Key ID Credential",
+                allowBlank: false,
+              },
+              {
+                xtype: "textfield",
+                name: "secret",
+                fieldLabel: "Access Key",
+                inputType: "password",
+                tooltip: "Your S3 Secret Access Key Credential",
+                allowBlank: false,
+              },
+            ],
+          },
           s3: {
             field: "s3",
             label: "S3",
@@ -7676,6 +7713,55 @@ Ext.define("Amps.util.Grids", {
               // },
             ],
           },
+          ldap: {
+            field: "ldap",
+            label: "LDAP",
+            fields: [
+              amfutil.dynamicCreate(
+                amfutil.combo(
+                  "Provider",
+                  "provider",
+                  amfutil.createCollectionStore("providers", { type: "ldap" }),
+                  "_id",
+                  "name"
+                ),
+                "providers"
+              ),
+
+              amfutil.text("Base DN", "base"),
+              amfutil.localCombo(
+                "Scope",
+                "scope",
+                [
+                  { field: "wholeSubtree", label: "Whole Subtree" },
+                  { field: "singleLevel", label: "Single Level" },
+                  { field: "baseObject", label: "Base Object" },
+                ],
+                "field",
+                "label"
+              ),
+              amfutil.infoBlock(
+                "A size limit of 0 reflects no limit (unlimited) size."
+              ),
+              {
+                xtype: "numberfield",
+                name: "sizeLimit",
+                fieldLabel: "Size Limit",
+                allowBlank: false,
+                value: 0,
+              },
+              {
+                xtype: "filterfield",
+                name: "filter",
+                title: "Filters",
+              },
+              amfutil.outputTopic(),
+            ],
+            process: function (form, values) {
+              values.filter = JSON.parse(values.filter);
+              return values;
+            },
+          },
           mailbox: {
             field: "mailbox",
             label: "Mailbox",
@@ -8413,36 +8499,83 @@ Ext.define("Amps.util.Grids", {
                 },
                 maxWidth: 700,
                 items: [
-                  {
-                    xtype: "textfield",
-                    name: "bucket",
-                    fieldLabel: "Bucket",
-                    allowBlank: false,
-                    tooltip: "The S3 Bucket from which to get.",
-                  },
-                  {
-                    xtype: "textfield",
-                    name: "prefix",
-                    fieldLabel: "Prefix",
-                    allowBlank: false,
-                    tooltip: "The Bucket Prefix from which to get.",
-                  },
+                  amfutil.combo(
+                    "GET Type",
+                    "count",
+                    [
+                      { field: "many", label: "Many" },
+                      { field: "one", label: "One" },
+                    ],
+                    "field",
+                    "label",
+                    {
+                      listeners: amfutil.renderListeners(function (scope, val) {
+                        var conts = ["many", "one"];
+                        conts.forEach((cont) => {
+                          var cmp = amfutil.getElementByID(cont);
+                          cmp.setHidden(false);
+                          cmp.setDisabled(false);
+                        });
+                        conts.forEach((cont) => {
+                          var cmp = amfutil.getElementByID(cont);
+                          cmp.setHidden(val != cont);
+                          cmp.setDisabled(val != cont);
+                        });
+                      }),
+                    }
+                  ),
 
-                  {
-                    xtype: "textfield",
-                    itemId: "matchpattern",
-                    name: "pattern",
-                    fieldLabel: "File Match Pattern",
-                    allowBlank: false,
-                    tooltip:
-                      "A match pattern to match against when getting files.",
-                  },
-                  {
-                    xtype: "checkbox",
-                    name: "regex",
-                    fieldLabel: "Regex",
-                    tooltip: "Whether to evaluate pattern using regex",
-                  },
+                  amfutil.renderContainer("one", [
+                    {
+                      xtype: "textfield",
+                      name: "bucket",
+                      fieldLabel: "Bucket",
+                      allowBlank: false,
+                      value: "{bucket}",
+                      tooltip: "The S3 Bucket from which to get.",
+                    },
+                    {
+                      xtype: "textfield",
+                      name: "path",
+                      fieldLabel: "Path",
+                      allowBlank: false,
+                      value: "{objkey}",
+                      tooltip: "The S3 Path to fetch.",
+                    },
+                  ]),
+
+                  amfutil.renderContainer("many", [
+                    {
+                      xtype: "textfield",
+                      name: "bucket",
+                      fieldLabel: "Bucket",
+                      allowBlank: false,
+                      tooltip: "The S3 Bucket from which to get.",
+                    },
+                    {
+                      xtype: "textfield",
+                      name: "prefix",
+                      fieldLabel: "Prefix",
+                      allowBlank: false,
+                      tooltip: "The Bucket Prefix from which to get.",
+                    },
+
+                    {
+                      xtype: "textfield",
+                      itemId: "matchpattern",
+                      name: "pattern",
+                      fieldLabel: "File Match Pattern",
+                      allowBlank: false,
+                      tooltip:
+                        "A match pattern to match against when getting files.",
+                    },
+                    {
+                      xtype: "checkbox",
+                      name: "regex",
+                      fieldLabel: "Regex",
+                      tooltip: "Whether to evaluate pattern using regex",
+                    },
+                  ]),
                   {
                     xtype: "radiogroup",
                     fieldLabel: "Acknowledgment",
@@ -8848,10 +8981,11 @@ Ext.define("Amps.util.Grids", {
                         );
                         this.up("fieldcontainer").insert({
                           xtype: "fieldcontainer",
+                          itemId: "serviceparms",
+
                           items: [
                             {
                               xtype: "checkbox",
-                              itemId: "serviceparms",
                               isFormField: false,
                               inputValue: true,
                               fieldLabel: "Wildcard",
@@ -9291,6 +9425,54 @@ Ext.define("Amps.util.Grids", {
           }),
         ],
         types: {
+          sqs: {
+            field: "sqs",
+            label: "SQS Consumer",
+            iconCls: "x-fa fa-line",
+            combo: function (service) {
+              return {
+                xtype: "combo",
+                name: "topicparms",
+                fieldLabel: "Queue Name",
+                itemId: "topicparms",
+                store: [
+                  {
+                    field: service["queue_name"],
+                    label: service["queue_name"],
+                  },
+                ],
+                valueField: "field",
+                displayField: "label",
+              };
+            },
+            fields: [
+              amfutil.text("Queue Name", "queue_name"),
+              amfutil.text("Owner ID", "owner_id"),
+              amfutil.combo(
+                "AWS Provider",
+                "provider",
+                amfutil.createCollectionStore("providers", { type: "aws" }),
+                "_id",
+                "name"
+              ),
+
+              {
+                xtype: "numberfield",
+                name: "wait_time_seconds",
+                fieldLabel: "Wait Time Seconds",
+                allowBlank: false,
+                value: 3,
+              },
+
+              {
+                xtype: "checkbox",
+                inputValue: true,
+                checked: true,
+                hidden: true,
+                name: "communication",
+              },
+            ],
+          },
           gateway: {
             field: "gateway",
             label: "Gateway",

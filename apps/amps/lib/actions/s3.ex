@@ -19,54 +19,72 @@ defmodule Amps.Actions.S3 do
 
   def run(msg, parms, {state, env}) do
     Logger.info("S3 Action Called")
-    provider = DB.find_one(AmpsUtil.index(env, "providers"), %{"_id" => parms["provider"]})
+
+    provider =
+      DB.find_one(AmpsUtil.index(env, "providers"), %{
+        "_id" => parms["provider"]
+      })
 
     req = req(provider, env)
 
     try do
       case parms["operation"] do
         "get" ->
-          opts =
-            if parms["prefix"] do
-              [prefix: parms["prefix"]]
-            else
-              []
-            end
-
-          case ExAws.S3.list_objects(parms["bucket"], opts)
-               |> ExAws.request(req) do
-            {:ok, %{body: body, headers: _headers, status_code: 200}} ->
-              list = body.contents
-              Logger.info("Got #{Enum.count(list)} objects")
-
-              events =
-                Enum.reduce(list, [], fn obj, acc ->
-                  if(AmpsUtil.match(obj.key, parms)) do
-                    [get_message(req, parms, obj) | acc]
-                  else
-                    acc
-                  end
-                end)
-
-              events =
-                if parms["ackmode"] == "delete" do
-                  Enum.map(events, fn {event, path} ->
-                    ExAws.S3.delete_object(parms["bucket"], path) |> ExAws.request(req)
-                    event
-                  end)
+          case parms["count"] do
+            "many" ->
+              opts =
+                if parms["prefix"] do
+                  [prefix: parms["prefix"]]
                 else
-                  Enum.map(events, fn {event, _} ->
-                    event
-                  end)
+                  []
                 end
 
-              {:send, events}
+              case ExAws.S3.list_objects(parms["bucket"], opts)
+                   |> ExAws.request(req) do
+                {:ok, %{body: body, headers: _headers, status_code: 200}} ->
+                  list = body.contents
+                  Logger.info("Got #{Enum.count(list)} objects")
 
-            {:error, {:http_error, 404, _}} ->
-              raise "Bucket does not exist"
+                  events =
+                    Enum.reduce(list, [], fn obj, acc ->
+                      if(AmpsUtil.match(obj.key, parms)) do
+                        [get_message(req, parms, obj.key) | acc]
+                      else
+                        acc
+                      end
+                    end)
 
-            {:error, error} ->
-              raise "Error #{inspect(error)} "
+                  events =
+                    if parms["ackmode"] == "delete" do
+                      Enum.map(events, fn {event, path} ->
+                        ExAws.S3.delete_object(parms["bucket"], path)
+                        |> ExAws.request(req)
+
+                        event
+                      end)
+                    else
+                      Enum.map(events, fn {event, _} ->
+                        event
+                      end)
+                    end
+
+                  {:send, events}
+
+                {:error, {:http_error, 404, _}} ->
+                  raise "Bucket does not exist"
+
+                {:error, error} ->
+                  raise "Error #{inspect(error)} "
+              end
+
+            "one" ->
+              parms = format(msg, parms)
+              {event, path} = get_message(req, parms, parms["path"])
+
+              ExAws.S3.delete_object(parms["bucket"], path)
+              |> ExAws.request(req)
+
+              {:send, [event]}
           end
 
         "put" ->
@@ -87,7 +105,10 @@ defmodule Amps.Actions.S3 do
               |> ExAws.request(req)
             else
               AmpsUtil.stream(msg, env)
-              |> S3.upload(parms["bucket"], Path.join(parms["prefix"], msg["fname"]))
+              |> S3.upload(
+                parms["bucket"],
+                Path.join(parms["prefix"], msg["fname"])
+              )
               |> ExAws.request(req)
             end
 
@@ -118,7 +139,9 @@ defmodule Amps.Actions.S3 do
               Enum.reduce(list, [], fn obj, acc ->
                 if(AmpsUtil.match(obj.key, parms)) do
                   Logger.info("Deleting #{obj.key}")
-                  ExAws.S3.delete_object(parms["bucket"], obj.key) |> ExAws.request(req)
+
+                  ExAws.S3.delete_object(parms["bucket"], obj.key)
+                  |> ExAws.request(req)
                 end
 
                 [obj.key | acc]
@@ -145,7 +168,12 @@ defmodule Amps.Actions.S3 do
           req ++ [region: provider["region"]]
 
         "Minio" ->
-          req ++ [host: provider["host"], port: provider["port"], scheme: provider["scheme"]]
+          req ++
+            [
+              host: provider["host"],
+              port: provider["port"],
+              scheme: provider["scheme"]
+            ]
       end
 
     if provider["proxy"] do
@@ -159,9 +187,8 @@ defmodule Amps.Actions.S3 do
     end
   end
 
-  def get_message(req, parms, obj) do
+  def get_message(req, parms, path) do
     bucket = parms["bucket"]
-    path = obj.key
 
     msgid = AmpsUtil.get_id()
     tmp = AmpsUtil.tempdir(msgid)
@@ -172,11 +199,13 @@ defmodule Amps.Actions.S3 do
       case ExAws.S3.head_object(bucket, path)
            |> ExAws.request!(req) do
         %{status_code: 200, headers: headers} ->
-          with {"Content-Length", fsize} <- List.keyfind(headers, "Content-Length", 0) do
+          with {"Content-Length", fsize} <-
+                 List.keyfind(headers, "Content-Length", 0) do
             fsize = String.to_integer(fsize)
 
             if fsize <= 10000 do
               {:ok, msg} = ExAws.S3.get_object(bucket, path) |> ExAws.request(req)
+
               File.write(fpath, msg.body)
               {:ok, msg}
             else
@@ -203,11 +232,11 @@ defmodule Amps.Actions.S3 do
           "service" => parms["name"],
           "msgid" => msgid,
           "bucket" => parms["bucket"],
-          "prefix" => parms["prefix"],
+          "prefix" => Path.dirname(path),
           "fpath" => fpath,
           "fsize" => info.size,
           "ftime" => DateTime.to_iso8601(DateTime.utc_now()),
-          "fname" => Path.basename(obj.key)
+          "fname" => Path.basename(path)
         }
 
         #   msg ->
@@ -236,5 +265,15 @@ defmodule Amps.Actions.S3 do
       {:error, error} ->
         raise error
     end
+  end
+
+  def format(msg, parms) do
+    bucket = AmpsUtil.format(parms["bucket"], msg)
+    path = AmpsUtil.format(parms["path"], msg)
+
+    Map.merge(parms, %{
+      "bucket" => bucket,
+      "path" => path
+    })
   end
 end
