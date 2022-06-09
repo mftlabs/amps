@@ -7762,10 +7762,21 @@ Ext.define("Amps.util.Grids", {
                 name: "filter",
                 title: "Filters",
               },
+              {
+                xtype: "arrayfield",
+                name: "attributes",
+                fieldLabel: "Attributes",
+                title: "Attributes",
+                fieldTitle: "Attribute",
+                arrayfields: [amfutil.text("Attribute", "attribute")],
+              },
               amfutil.outputTopic(),
             ],
             process: function (form, values) {
               values.filter = JSON.parse(values.filter);
+              values.attributes = JSON.parse(values.attributes).map(
+                (att) => att.attribute
+              );
               return values;
             },
           },

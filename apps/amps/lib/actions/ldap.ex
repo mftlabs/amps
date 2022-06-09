@@ -81,7 +81,8 @@ defmodule Amps.Actions.LDAP do
             baseObject: parms["base"],
             scope: String.to_atom(parms["scope"]),
             filter: {:and, filter(parms["filter"])},
-            sizeLimit: parms["sizeLimit"]
+            sizeLimit: parms["sizeLimit"],
+            attributes: parms["attributes"]
           )
 
         case LDAPEx.Client.search(ldap, req, parms["timeout"] || 15000) do

@@ -36,43 +36,44 @@ Ext.define("Amps.form.ArrayField", {
     this.initField();
     var scope = this;
 
-    if (args["value"]) {
-      var value = args["value"];
-      value.forEach((val) => {
-        console.log(val);
-        if (args.arrayfields.length == 1) {
-          scope.insert(
-            scope.items.length - 1,
-            Ext.create("Amps.form.ArrayField.Field", {
-              readOnly: args["readOnly"],
-              register: scope.register.bind(scope),
-              deregister: scope.deregister.bind(scope),
-              fields: args.arrayfields.map((field) => {
-                var f = Object.assign({}, field);
-                f.value = val;
-                return f;
-              }),
-              title: args.fieldTitle,
-            })
-          );
-        } else {
-          scope.insert(
-            scope.items.length - 1,
-            Ext.create("Amps.form.ArrayField.Field", {
-              readOnly: args["readOnly"],
-              register: scope.register.bind(scope),
-              deregister: scope.deregister.bind(scope),
-              fields: args.arrayfields.map((field) => {
-                var f = Object.assign({}, field);
-                f.value = val[field.name];
-                return f;
-              }),
-              title: args.fieldTitle,
-            })
-          );
-        }
-      });
-    }
+    // if (args["value"]) {
+    //   scope.removeAll();
+    //   var value = args["value"];
+    //   value.forEach((val) => {
+    //     console.log(val);
+    //     if (args.arrayfields.length == 1) {
+    //       scope.insert(
+    //         scope.items.length - 1,
+    //         Ext.create("Amps.form.ArrayField.Field", {
+    //           readOnly: args["readOnly"],
+    //           register: scope.register.bind(scope),
+    //           deregister: scope.deregister.bind(scope),
+    //           fields: args.arrayfields.map((field) => {
+    //             var f = Object.assign({}, field);
+    //             f.value = val;
+    //             return f;
+    //           }),
+    //           title: args.fieldTitle,
+    //         })
+    //       );
+    //     } else {
+    //       scope.insert(
+    //         scope.items.length - 1,
+    //         Ext.create("Amps.form.ArrayField.Field", {
+    //           readOnly: args["readOnly"],
+    //           register: scope.register.bind(scope),
+    //           deregister: scope.deregister.bind(scope),
+    //           fields: args.arrayfields.map((field) => {
+    //             var f = Object.assign({}, field);
+    //             f.value = val[field.name];
+    //             return f;
+    //           }),
+    //           title: args.fieldTitle,
+    //         })
+    //       );
+    //     }
+    //   });
+    // }
 
     this.setReadOnly(args["readOnly"]);
   },
@@ -91,6 +92,11 @@ Ext.define("Amps.form.ArrayField", {
 
   setValue: function (value) {
     var scope = this;
+    value = value || [];
+    console.log(value);
+    while (scope.items.items.length > 1) {
+      scope.remove(0);
+    }
     value.forEach((val) => {
       console.log(val);
       if (scope.arrayfields.length == 1) {
@@ -208,6 +214,7 @@ Ext.define("Amps.form.ArrayField", {
 
 Ext.define("Amps.form.ArrayField.Field", {
   extend: "Ext.form.FieldContainer",
+  xtype: "arraysubfield",
   collapsible: true,
   isFormField: false,
   layout: {
