@@ -33,10 +33,6 @@ if config_env() == :prod do
       ip: {0, 0, 0, 0, 0, 0, 0, 0},
       port: String.to_integer(System.get_env("PORT") || "4001")
     ],
-    url: [
-      host: System.get_env("AMPS_HOST", "localhost"),
-      port: String.to_integer(System.get_env("AMPS_PORT", "4080"))
-    ],
     secret_key_base: secret_key_base,
     force_ssl: force_ssl
 
@@ -131,10 +127,44 @@ if config_env() == :prod do
   ]
 
   if String.to_atom(String.downcase(System.get_env("AMPS_USE_SSL", "FALSE"))) do
+    config :amps_portal, AmpsPortal.Endpoint,
+      url: [
+        host: System.get_env("AMPS_HOST", "localhost"),
+        port: String.to_integer(System.get_env("AMPS_SSL_PORT", "45443"))
+
+      ]
+
+    config :amps_web, AmpsWeb.Endpoint,
+      url: [
+        host: System.get_env("AMPS_ADMIN_HOST", "admin.localhost"),
+        port: String.to_integer(System.get_env("AMPS_SSL_PORT", "45443"))
+      ]
+
+    IO.inspect("USING SSL PORT")
+    IO.inspect(System.get_env("AMPS_SSL_PORT"))
+
     config :master_proxy,
            mp_config ++
-             [https: [port: String.to_integer(System.get_env("AMPS_SSL_PORT", "4443"))]]
+             [
+               https: [
+                 port: String.to_integer(System.get_env("AMPS_SSL_PORT", "45443"))
+               ]
+             ]
   else
+    IO.inspect("USING NORMAL PORT")
+
+    config :amps_web, AmpsWeb.Endpoint,
+      url: [
+        host: System.get_env("AMPS_ADMIN_HOST", "admin.localhost"),
+        port: String.to_integer(System.get_env("AMPS_PORT", "4080"))
+      ]
+
+    config :amps_portal, AmpsPortal.Endpoint,
+      url: [
+        host: System.get_env("AMPS_HOST", "localhost"),
+        port: String.to_integer(System.get_env("AMPS_PORT", "4080"))
+      ]
+
     config :master_proxy, mp_config
   end
 
@@ -148,10 +178,6 @@ if config_env() == :prod do
       # for details about using IPv6 vs IPv4 and loopback vs public addresses.
       ip: {0, 0, 0, 0, 0, 0, 0, 0},
       port: String.to_integer(System.get_env("AMPS_PORT") || "4000")
-    ],
-    url: [
-      host: System.get_env("AMPS_ADMIN_HOST", "admin.localhost"),
-      port: System.get_env("AMPS_PORT")
     ],
     authmethod: System.get_env("AMPS_AUTH_METHOD") || "db",
     vault_addr: System.get_env("AMPS_VAULT_ADDR", "http://localhost:8200"),
