@@ -40,7 +40,7 @@ RUN mix release
 
 FROM elixir:1.12.1
 RUN apt-get update
-RUN apt-get install python3 python3-pip -y
+RUN apt-get install python3 python3-pip certbot -y
 
 RUN mkdir /.local
 RUN mkdir /.cache

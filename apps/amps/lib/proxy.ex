@@ -32,7 +32,7 @@ defmodule Amps.Proxy do
       # Note that native client is very immature. If you want a more stable behaviour, you can
       # provide `:certbot` instead. Note that in this case certbot needs to be installed on the
       # host machine.
-      client: :native,
+      client: :certbot,
       domains: [adminhost, userhost],
       emails: emails,
       # By default the certs will be stored in tmp/site_encrypt_db, which is convenient for
