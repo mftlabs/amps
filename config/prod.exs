@@ -14,9 +14,8 @@ config :amps_portal, AmpsPortal.Endpoint,
     host: System.get_env("AMPS_HOST", "localhost"),
     port: String.to_integer(System.get_env("AMPS_PORT", "4080"))
   ],
-  cache_static_manifest: "priv/static/cache_manifest.json"
-
-# server: false
+  cache_static_manifest: "priv/static/cache_manifest.json",
+  server: false
 
 # ## SSL Support
 #
@@ -67,9 +66,8 @@ config :amps_web, AmpsWeb.Endpoint,
     host: "admin." <> System.get_env("AMPS_HOST", "localhost"),
     port: String.to_integer(System.get_env("AMPS_PORT", "4080"))
   ],
-  cache_static_manifest: "priv/static/cache_manifest.json"
-
-# server: false
+  cache_static_manifest: "priv/static/cache_manifest.json",
+  server: false
 
 # ## SSL Support
 #
