@@ -47,6 +47,10 @@ defmodule AmpsWeb.Router do
   scope "/api", AmpsWeb do
     pipe_through([:api, :api_protected])
 
+    get("/system/ssl", DataController, :ssl)
+
+    get("/system/ssl/certify", DataController, :ssl_certify)
+
     get("/auth/:username", UtilController, :verify)
 
     post("/system/logo", DataController, :update_logo)
