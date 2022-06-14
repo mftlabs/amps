@@ -19,6 +19,13 @@ if config_env() == :prod do
       You can generate one by calling: mix phx.gen.secret
       """
 
+  force_ssl =
+    if String.to_atom(String.downcase(System.get_env("AMPS_USE_SSL", "FALSE"))) do
+      [host: nil]
+    else
+      nil
+    end
+
   config :amps_portal, AmpsPortal.Endpoint,
     http: [
       # Enable IPv6 and bind on all interfaces.
@@ -30,7 +37,8 @@ if config_env() == :prod do
       host: System.get_env("AMPS_HOST", "localhost"),
       port: String.to_integer(System.get_env("AMPS_PORT", "4080"))
     ],
-    secret_key_base: secret_key_base
+    secret_key_base: secret_key_base,
+    force_ssl: force_ssl
 
   # ## Using releases
   #
@@ -132,6 +140,7 @@ if config_env() == :prod do
 
   config :amps_web, AmpsWeb.Endpoint,
     use_ssl: String.to_atom(String.downcase(System.get_env("AMPS_USE_SSL", "FALSE"))),
+    force_ssl: force_ssl,
     http: [
       # Enable IPv6 and bind on all interfaces.
       # Set it to  {0, 0, 0, 0, 0, 0, 0, 1} for local network only access.
