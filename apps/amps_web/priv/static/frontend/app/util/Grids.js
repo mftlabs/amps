@@ -11838,11 +11838,6 @@ Ext.define("Amps.util.Grids", {
               flex: 1,
               items: [
                 {
-                  xtype: "component",
-                  autoEl: "h2",
-                  html: "Logo",
-                },
-                {
                   xtype: "panel",
                   layout: {
                     type: "vbox",
@@ -12278,6 +12273,38 @@ Ext.define("Amps.util.Grids", {
                       ],
                     },
                   ],
+                },
+              ],
+            },
+            {
+              xtype: "panel",
+              title: "Administration",
+              flex: 1,
+              layout: {
+                type: "vbox",
+              },
+              defaults: {
+                margin: 15,
+              },
+              items: [
+                {
+                  xtype: "button",
+                  text: "Perform SSL Certification",
+                  handler: async function () {
+                    this.up("tabpanel").setLoading(true);
+                    var resp = await amfutil.ajaxRequest({
+                      url: "api/system/sslcertify",
+                      failure: function () {
+                        Ext.toast("Failed to Initiate SSL Certification");
+                        this.up("tabpanel").setLoading(false);
+                      },
+                    });
+                    // var text = Ext.decode(resp.responseText);
+                    Ext.toast(
+                      "Initiated Certification, Check System Logs for Details"
+                    );
+                    this.up("tabpanel").setLoading(false);
+                  },
                 },
               ],
             },

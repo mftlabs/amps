@@ -28,12 +28,21 @@ defmodule Amps.Proxy do
     userhost = Application.get_env(:amps, :userhost)
     emails = String.split(Application.get_env(:amps, :dns_emails), ",")
 
+    domains =
+      case Application.get_env(:amps, :extra_domains) do
+        "" ->
+          []
+
+        domains ->
+          String.split(domains, ",")
+      end
+
     SiteEncrypt.configure(
       # Note that native client is very immature. If you want a more stable behaviour, you can
       # provide `:certbot` instead. Note that in this case certbot needs to be installed on the
       # host machine.
       client: :certbot,
-      domains: [adminhost, userhost],
+      domains: [adminhost, userhost] ++ domains,
       emails: emails,
       # By default the certs will be stored in tmp/site_encrypt_db, which is convenient for
       # local development. Make sure that tmp folder is gitignored.

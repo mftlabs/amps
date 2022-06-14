@@ -195,6 +195,19 @@ defmodule AmpsWeb.DataController do
     json(conn, %{success: %{password: password}})
   end
 
+  def ssl_certify(conn, _params) do
+    res = SiteEncrypt.force_certify(Amps.Proxy)
+    IO.inspect(res)
+
+    case res do
+      :ok ->
+        json(conn, "Successfully Initiated Certification")
+
+      :error ->
+        json(conn, "Error Initiating Certification")
+    end
+  end
+
   @spec upload(Plug.Conn.t(), map) :: Plug.Conn.t()
   def upload(conn, %{"topic" => topic, "file" => file, "meta" => meta}) do
     user = Pow.Plug.current_user(conn)
