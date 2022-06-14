@@ -195,6 +195,13 @@ defmodule AmpsWeb.DataController do
     json(conn, %{success: %{password: password}})
   end
 
+  def ssl(conn, _params) do
+    gen_certs = Application.get_env(:amps, :gen_certs)
+    use_ssl = Application.get_env(:amps, :use_ssl)
+
+    json(conn, gen_certs and use_ssl)
+  end
+
   def ssl_certify(conn, _params) do
     res = SiteEncrypt.force_certify(Amps.Proxy)
     IO.inspect(res)

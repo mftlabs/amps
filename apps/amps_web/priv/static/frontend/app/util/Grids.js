@@ -12283,28 +12283,52 @@ Ext.define("Amps.util.Grids", {
               layout: {
                 type: "vbox",
               },
-              defaults: {
-                margin: 15,
-              },
+
+              margin: 15,
+
               items: [
                 {
-                  xtype: "button",
-                  text: "Perform SSL Certification",
-                  handler: async function () {
-                    this.up("tabpanel").setLoading(true);
-                    var resp = await amfutil.ajaxRequest({
-                      url: "api/system/sslcertify",
-                      failure: function () {
-                        Ext.toast("Failed to Initiate SSL Certification");
+                  xtype: "fieldcontainer",
+                  defaults: {
+                    padding: 20,
+                  },
+                  listeners: {
+                    render: async function () {
+                      this.setLoading(true);
+                      var resp = await amfutil.ajaxRequest({
+                        url: "api/system/ssl",
+                        failure: function () {
+                          Ext.toast("Failed to Initiate SSL Certification");
+                          this.up("tabpanel").setLoading(false);
+                        },
+                      });
+
+                      this.setDisabled(!Ext.decode(resp.responseText));
+                      this.setLoading(false);
+                    },
+                  },
+                  items: [
+                    {
+                      xtype: "button",
+                      text: "Perform SSL Certification",
+
+                      handler: async function () {
+                        this.up("tabpanel").setLoading(true);
+                        var resp = await amfutil.ajaxRequest({
+                          url: "api/system/ssl/certify",
+                          failure: function () {
+                            Ext.toast("Failed to Initiate SSL Certification");
+                            this.up("tabpanel").setLoading(false);
+                          },
+                        });
+                        // var text = Ext.decode(resp.responseText);
+                        Ext.toast(
+                          "Initiated Certification, Check System Logs for Details"
+                        );
                         this.up("tabpanel").setLoading(false);
                       },
-                    });
-                    // var text = Ext.decode(resp.responseText);
-                    Ext.toast(
-                      "Initiated Certification, Check System Logs for Details"
-                    );
-                    this.up("tabpanel").setLoading(false);
-                  },
+                    },
+                  ],
                 },
               ],
             },
