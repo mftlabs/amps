@@ -115,6 +115,7 @@ defmodule AmpsWeb.Router do
 
     get("/deps", ScriptController, :get_deps)
     post("/deps", ScriptController, :install_dep)
+    put("/deps/:name", ScriptController, :update_dep)
     delete("/deps/:name", ScriptController, :uninstall_dep)
 
     post("/scripts/duplicate/", ScriptController, :duplicate)

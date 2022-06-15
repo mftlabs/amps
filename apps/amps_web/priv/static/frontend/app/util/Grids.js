@@ -11079,6 +11079,94 @@ Ext.define("Amps.util.Grids", {
                 xtype: "actioncolumn",
                 items: [
                   {
+                    iconCls: "x-fa fa-arrow-circle-up",
+                    handler: function (grid, rowIndex) {
+                      var rec = grid.getStore().getAt(rowIndex);
+
+                      Ext.MessageBox.show({
+                        title: "Upgrade Package",
+                        message: `Are you sure you want to upgrade ${rec.data.name}?`,
+                        buttons: Ext.MessageBox.YESNO,
+                        defaultFocus: "#no",
+                        prompt: false,
+                        fn: function (btn) {
+                          if (btn == "yes") {
+                            var win = new Ext.window.Window({
+                              title: "Upgrading Package",
+                              loading: true,
+                              scrollable: true,
+                              width: 600,
+                              height: 500,
+                              padding: 25,
+                              modal: true,
+                              items: [
+                                {
+                                  xtype: "component",
+                                  itemId: "delresp",
+                                  style: {
+                                    "white-space": "pre-wrap",
+                                  },
+                                },
+                              ],
+                              buttons: [
+                                {
+                                  xtype: "button",
+                                  text: "Close",
+                                  handler: function () {
+                                    win.close();
+                                  },
+                                },
+                              ],
+                              listeners: {
+                                afterrender: function () {
+                                  this.setLoading(true);
+                                  amfutil.ajaxRequest({
+                                    url: `api/deps/${rec.data.name}`,
+                                    headers: {
+                                      Authorization:
+                                        localStorage.getItem("access_token"),
+                                    },
+                                    method: "PUT",
+                                    timeout: 60000,
+                                    params: {},
+                                    success: async (resp) => {
+                                      this.setLoading(false);
+                                      Ext.toast({
+                                        title: "Upgraded Dependency",
+                                        html: "<center>Upgrade Dependency</center>",
+                                        autoCloseDelay: 5000,
+                                      });
+                                      var resp = Ext.decode(resp.responseText);
+                                      amfutil
+                                        .getElementByID("delresp")
+                                        .setHtml(resp);
+                                      grid.getStore().reload();
+                                    },
+                                    failure: function (resp) {
+                                      this.setLoading(false);
+                                      var resp = Ext.decode(resp.responseText);
+                                      amfutil
+                                        .getElementByID("delresp")
+                                        .setHtml(resp);
+                                      Ext.toast({
+                                        title:
+                                          "Failed to Uninstalled Dependency",
+                                        html: "<center>Failed to Uninstalled Dependency</center>",
+                                        autoCloseDelay: 5000,
+                                      });
+                                      grid.getStore().reload();
+                                    },
+                                  });
+                                },
+                              },
+                            });
+                            win.show();
+                          }
+                        },
+                      });
+                    },
+                  },
+                  {
                     iconCls: "x-fa fa-trash",
                     handler: function (grid, rowIndex) {
                       var rec = grid.getStore().getAt(rowIndex);

@@ -163,6 +163,24 @@ defmodule AmpsWeb.ScriptController do
     json(conn, res)
   end
 
+  def update_dep(conn, %{"name" => name}) do
+    args = ["-m", "pip", "install", "--upgrade", "--user", name]
+    Logger.info("Upgrading python package #{name}")
+
+    {res, code} = System.cmd("python3", args, stderr_to_stdout: true)
+
+    case code do
+      0 ->
+        Logger.info("Successfully Installed python package #{name}")
+
+      _ ->
+        Logger.error("Failed to install python package #{name}")
+    end
+
+    IO.inspect(res)
+    json(conn, res)
+  end
+
   def uninstall_dep(conn, %{"name" => name}) do
     Logger.info("Uninstalling python package #{name}")
 
