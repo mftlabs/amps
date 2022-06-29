@@ -237,6 +237,14 @@ defmodule Amps.NatsPullConsumer do
               # IO.inspect(parms)
 
               retry = fn ->
+                if mstate["return"] do
+                  Amps.AsyncResponder.put_response(
+                    mstate["return"],
+                    mstate["contextid"] <> parms["name"],
+                    {actparms["name"], msg["msgid"], Exception.message(error)}
+                  )
+                end
+
                 AmpsEvents.send_history(
                   AmpsUtil.env_topic("amps.events.action", state.env),
                   "message_events",
