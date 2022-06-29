@@ -1622,6 +1622,51 @@ Ext.define("Amps.controller.PageController", {
     }
   },
 
+  skip: async function (grid, rowIndex, colIndex, e) {
+    var mask = new Ext.LoadMask({
+      msg: "Please wait...",
+      target: grid,
+    });
+    var msgbox = Ext.MessageBox.show({
+      title: "Confirm skipping of message",
+      message: "Are you sure you want to skip this message?",
+      buttons: Ext.MessageBox.YESNO,
+      defaultFocus: "#no",
+      prompt: false,
+      fn: function (btn) {
+        if (btn == "yes") {
+          mask.show();
+          var rec = grid.getStore().getAt(rowIndex);
+          console.log(rowIndex);
+          var id = rec.data._id;
+          console.log(rec);
+          amfutil.ajaxRequest({
+            url: `/api/service/skip/${id}`,
+            method: "POST",
+            timeout: 60000,
+            params: {},
+            success: async function (response) {
+              var data = Ext.decode(response.responseText);
+              mask.hide();
+              Ext.toast({
+                title: "Skipping",
+                html: "<center>Message marked for skip</center>",
+                autoCloseDelay: 5000,
+              });
+              console.log(route);
+              grid.getStore().reload();
+            },
+            failure: function (response) {
+              mask.hide();
+              amfutil.onFailure("Error skipping Message", response);
+              grid.getStore().reload();
+            },
+          });
+        }
+      },
+    });
+  },
+
   clearEnv: async function (grid, rowIndex) {
     var record = grid.getStore().getAt(rowIndex).data;
 

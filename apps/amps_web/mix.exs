@@ -66,7 +66,7 @@ defmodule AmpsWeb.MixProject do
       {:temp, "~> 0.4"},
       {:timex, "~> 3.0"},
       {:tesla, git: "https://github.com/teamon/tesla", override: true},
-      {:gnat, "~> 1.2"},
+      {:gnat, "~> 1.5.2"},
       {:x509, "~> 0.8.0"},
       {:elixlsx, "~> 0.5.1"},
       {:xlsxir, "~> 1.6.4"},

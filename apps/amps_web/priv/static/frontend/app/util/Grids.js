@@ -6093,6 +6093,7 @@ Ext.define("Amps.util.Grids", {
         "refreshbtn",
         "reprocess",
         "reroute",
+        "skip",
       ],
       sort: {
         etime: "DESC",
@@ -6191,7 +6192,7 @@ Ext.define("Amps.util.Grids", {
           ],
         },
       ],
-      options: ["reprocess", "reroute"],
+      options: ["reprocess", "reroute", "skip"],
     }),
     groups: () => ({
       title: "Groups",
@@ -9861,6 +9862,72 @@ Ext.define("Amps.util.Grids", {
                 maxValue: 50,
                 value: 1,
               },
+              {
+                xtype: "numberfield",
+                name: "ack_wait",
+                fieldLabel: "Acknowledge Wait (seconds)",
+                tooltip:
+                  "How long the consumer should wait before redelivering a message to this subscriber. (Should be set to longer than the time you expect each message processing action to take.)",
+                allowBlank: false,
+                minValue: 30,
+                value: 30,
+              },
+              amfutil.localCombo(
+                "Retry Mode",
+                "rmode",
+                [
+                  { field: "never", label: "Never" },
+                  { field: "limit", label: "Limit" },
+                  { field: "always", label: "Always" },
+                ],
+                "field",
+                "label",
+                {
+                  listeners: amfutil.renderListeners(function (scope, val) {
+                    var conts = ["limit", "always"];
+
+                    conts.forEach((cont) => {
+                      var cmp = amfutil.getElementByID(cont);
+                      cmp.setDisabled(false);
+                      cmp.setHidden(false);
+                    });
+
+                    conts.forEach((cont) => {
+                      var cmp = amfutil.getElementByID(cont);
+                      cmp.setDisabled(cont != val);
+                      cmp.setHidden(cont != val);
+                    });
+                  }),
+                }
+              ),
+
+              amfutil.renderContainer("limit", [
+                {
+                  xtype: "numberfield",
+                  fieldLabel: "Retry Limit",
+                  name: "rlimit",
+                  allowBlank: false,
+                  value: 10,
+                },
+                {
+                  xtype: "numberfield",
+                  fieldLabel: "Retry Backoff (seconds)",
+                  name: "backoff",
+                  allowBlank: false,
+                  value: 300,
+                },
+              ]),
+
+              amfutil.renderContainer("always", [
+                {
+                  xtype: "numberfield",
+                  fieldLabel: "Retry Backoff (seconds)",
+                  name: "backoff",
+                  allowBlank: false,
+                  value: 300,
+                },
+              ]),
+
               amfutil.dynamicCreate(
                 amfutil.combo(
                   "Action",

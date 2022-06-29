@@ -43,7 +43,7 @@ defmodule Amps.SftpServer do
   end
 
   defp authenticate(handler, env) do
-    IO.inspect("authenticate")
+    # IO.inspect("authenticate")
 
     fn username, password, peer_address, state ->
       accepted =
@@ -62,7 +62,7 @@ defmodule Amps.SftpServer do
   defp init_daemon(options, env) do
     Logger.info("Starting SFTP daemon on #{options["port"]}")
 
-    IO.inspect(options)
+    # IO.inspect(options)
 
     daemon_opts = [
       shell: &dummy_shell/2,
@@ -106,7 +106,7 @@ defmodule Amps.SftpServer do
         {:ok, pid, ref, options}
 
       any ->
-        IO.puts("process monitor not started #{inspect(any)}")
+        # IO.puts("process monitor not started #{inspect(any)}")
         any
     end
   end
@@ -327,7 +327,7 @@ defmodule Amps.SftpHandler do
     # download
     # upload
     if download != nil do
-      IO.puts("close download")
+      # IO.puts("close download")
       result = :file.close(io_device)
       # using temp file
       if download != "" do
@@ -336,7 +336,7 @@ defmodule Amps.SftpHandler do
 
       {result, nstate}
     else
-      IO.puts("close upload")
+      # IO.puts("close upload")
       # check result
       _result = :file.close(io_device)
       user = to_string(state[:user])
@@ -360,7 +360,7 @@ defmodule Amps.SftpHandler do
 
       {msg, sid} = AmpsEvents.start_session(msg, %{"service" => service}, state[:env])
 
-      IO.inspect(state)
+      # IO.inspect(state)
 
       user = state[:user]
 
@@ -368,7 +368,7 @@ defmodule Amps.SftpHandler do
 
       mailboxtopic = "amps.mailbox.#{user}.#{msg["mailbox"]}"
 
-      IO.inspect(state)
+      # IO.inspect(state)
       # state = List.keydelete(state, :options, 0)
 
       AmpsEvents.send(msg, %{"output" => topic}, %{}, env)
@@ -400,7 +400,7 @@ defmodule Amps.SftpHandler do
   end
 
   def del_dir(path, state) do
-    IO.inspect("Directory to delete: #{path}")
+    # IO.inspect("Directory to delete: #{path}")
 
     case Path.split(path) do
       ["/", mailbox] ->
@@ -422,14 +422,11 @@ defmodule Amps.SftpHandler do
   end
 
   def get_cwd(state) do
-    IO.puts("get_cwd: #{inspect(state)}")
+    # IO.puts("get_cwd: #{inspect(state)}")
     {{:ok, '/'}, state}
   end
 
   def is_dir(abs_path, state) do
-    IO.inspect(abs_path)
-    IO.puts("is_dir: #{inspect(state)}")
-
     case Path.split(abs_path) do
       ["/"] ->
         {true, state}
@@ -443,15 +440,15 @@ defmodule Amps.SftpHandler do
   end
 
   def list_dir(abs_path, state) do
-    IO.puts("ls_dir: #{inspect(state)}")
-    IO.inspect(abs_path)
+    # IO.puts("ls_dir: #{inspect(state)}")
+    # IO.inspect(abs_path)
 
     {state, vals} =
       case Path.split(abs_path) do
         ["/"] ->
           mailboxes = AmpsMailbox.get_mailboxes(to_string(state[:user]), state[:env])
 
-          IO.inspect(mailboxes)
+          # IO.inspect(mailboxes)
 
           vals =
             Enum.map(mailboxes, fn mailbox ->
@@ -473,7 +470,7 @@ defmodule Amps.SftpHandler do
               state[:env]
             )
 
-          IO.inspect(flist)
+          # IO.inspect(flist)
           # hlist = Enum.into(flist, %{})
           newstate = List.keystore(state, :flist, 0, {:flist, flist})
 
@@ -497,13 +494,13 @@ defmodule Amps.SftpHandler do
   #  end
 
   def make_dir(dir, state) do
-    IO.inspect("make_dir")
+    # IO.inspect("make_dir")
 
     case Path.split(dir) do
       ["/", mailbox] ->
         user = to_string(state[:user])
-        IO.inspect(mailbox)
-        IO.inspect(state)
+        # IO.inspect(mailbox)
+        # IO.inspect(state)
 
         case AmpsMailbox.create_mailbox(user, mailbox, state[:env]) do
           {:ok, _} ->
@@ -519,12 +516,12 @@ defmodule Amps.SftpHandler do
   end
 
   def make_symlink(_path2, _path, state) do
-    IO.puts("make symlink called, not supported")
+    # IO.puts("make symlink called, not supported")
     {{:error, "not supported"}, state}
   end
 
   def open(path, flags, state) do
-    IO.puts("open called #{path}")
+    # IO.puts("open called #{path}")
 
     case Enum.find(flags, :nak, fn x -> x == :write end) do
       :write ->
@@ -533,7 +530,7 @@ defmodule Amps.SftpHandler do
         fname = Path.basename(path)
         msgid = AmpsUtil.get_id()
         fpath = Amps.Defaults.get("storage_temp") <> "/" <> msgid
-        IO.inspect(fpath)
+        # IO.inspect(fpath)
         dirname = Path.dirname(path)
         ["/", mailbox, fname] = Path.split(path)
 
@@ -556,21 +553,21 @@ defmodule Amps.SftpHandler do
 
       _ ->
         # get
-        IO.puts("starting get")
+        # IO.puts("starting get")
         user = to_string(state[:user])
         ["/", mailbox, bname] = Path.split(path)
-        IO.inspect(user)
-        IO.inspect(mailbox)
-        IO.inspect(bname)
+        # IO.inspect(user)
+        # IO.inspect(mailbox)
+        # IO.inspect(bname)
         msg = state[:current]
-        IO.inspect(msg)
+        # IO.inspect(msg)
 
         if msg["fname"] == bname do
           get_file(msg, flags, state)
         else
           case AmpsMailbox.stat_fname(user, mailbox, bname, state[:env]) do
             nil ->
-              IO.puts("not found")
+              # IO.puts("not found")
               {{:error, :enoent}, state}
 
             msg ->
@@ -583,7 +580,7 @@ defmodule Amps.SftpHandler do
   def get_file(msg, flags, state) do
     # path = AmpsUtil.get_path(msg)
     path = msg["fpath"]
-    IO.inspect(path)
+    # IO.inspect(path)
 
     case File.stat(path) do
       {:ok, _result} ->
@@ -608,8 +605,8 @@ defmodule Amps.SftpHandler do
 
   def read_link(path, state) do
     # never a link
-    IO.puts("read_link")
-    IO.inspect(path)
+    # IO.puts("read_link")
+    # IO.inspect(path)
 
     {{:error, :einval}, state}
   end
@@ -638,10 +635,10 @@ defmodule Amps.SftpHandler do
             {{:ok, finfo}, state}
 
           msg ->
-            IO.puts("found")
+            # IO.puts("found")
             fsize = msg["fsize"] || 99
             ft = msg["ftime"] || DateTime.to_iso8601(DateTime.utc_now())
-            IO.inspect(ft)
+            # IO.inspect(ft)
             {:ok, ftime, _off} = DateTime.from_iso8601(ft)
             finfo = get_file_info(fsize, ftime)
             nstate = List.keystore(state, :current, 0, {:current, msg})
@@ -651,7 +648,7 @@ defmodule Amps.SftpHandler do
   end
 
   def read_file_info(path, state) do
-    IO.puts("called file info #{path}")
+    # IO.puts("called file info #{path}")
     read_link_info(path, state)
   end
 
@@ -674,7 +671,7 @@ defmodule Amps.SftpHandler do
   end
 
   def rename(_path, _path2, state) do
-    IO.puts("rename called, not supported")
+    # IO.puts("rename called, not supported")
     {:ok, state}
   end
 
@@ -685,7 +682,7 @@ defmodule Amps.SftpHandler do
   end
 
   def write_file_info(_path, _info, state) do
-    IO.puts("write_file_info not supported")
+    # IO.puts("write_file_info not supported")
     {:ok, state}
   end
 end

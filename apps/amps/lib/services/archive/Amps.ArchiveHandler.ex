@@ -12,6 +12,20 @@ defmodule Amps.ArchiveHandler do
     Logger.info("Archive Handler for #{env}")
     count = parms["subs_count"]
 
+    {stream, consumer} = AmpsUtil.get_names(parms, env)
+
+    listening_topic = AmpsUtil.env_topic("amps.archive.#{consumer}", env)
+
+    IO.inspect(listening_topic)
+    group = String.replace(parms["name"], " ", "_")
+
+    AmpsUtil.create_consumer(stream, consumer, AmpsUtil.env_topic(parms["topic"], env), %{
+      deliver_policy: :all,
+      deliver_subject: listening_topic,
+      ack_policy: :explicit,
+      deliver_group: group
+    })
+
     children =
       Enum.reduce(1..count, [], fn x, acc ->
         name = String.to_atom(parms["name"] <> Integer.to_string(x))

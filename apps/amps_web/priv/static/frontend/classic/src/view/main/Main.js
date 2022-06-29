@@ -144,6 +144,14 @@ Ext.define("Amps.view.main.Main", {
         },
         {
           xtype: "button",
+          itemId: "skip",
+          iconCls: "x-fa fa-times-circle",
+          tooltip: "Skip",
+          hidden: true,
+          handler: "onSkipClicked",
+        },
+        {
+          xtype: "button",
           itemId: "export",
           iconCls: "x-fa fa-download",
           tooltip: "Export",

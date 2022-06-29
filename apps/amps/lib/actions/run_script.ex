@@ -9,7 +9,7 @@ defmodule Amps.Actions.RunScript do
     result =
       case parms["script_type"] do
         "python" ->
-          Amps.PyService.call(msg, parms, env)
+          Amps.PyService.run(msg, parms, env)
 
         _ ->
           nil

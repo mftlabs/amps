@@ -247,7 +247,11 @@ defmodule AmpsWeb.UtilController do
               nil ->
                 session = DB.find_one(Util.index(env, "sessions"), %{"sid" => sid})
 
-                {Map.put(sessions, idx + 1, Map.merge(session, %{"rows" => [row]})), idx + 1}
+                if session do
+                  {Map.put(sessions, idx + 1, Map.merge(session, %{"rows" => [row]})), idx + 1}
+                else
+                  {sessions, idx}
+                end
 
               {idx, session} ->
                 {Map.put(

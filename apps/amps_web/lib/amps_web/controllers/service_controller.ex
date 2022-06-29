@@ -2,8 +2,9 @@ defmodule AmpsWeb.ServiceController do
   use AmpsWeb, :controller
   require Logger
   # import Argon2
-  # alias Amps.DB
+  alias Amps.DB
   alias Amps.SvcManager
+  alias AmpsWeb.Util
 
   plug(
     AmpsWeb.EnsureRolePlug,
@@ -22,6 +23,54 @@ defmodule AmpsWeb.ServiceController do
       _pid ->
         json(conn, true)
     end
+  end
+
+  def skip(conn, %{"id" => id}) do
+    env = conn.assigns().env
+    do_skip(id, env)
+    json(conn, :ok)
+  end
+
+  def skip(conn, %{"ids" => ids}) do
+    env = conn.assigns().env
+
+    Enum.each(ids, fn id ->
+      do_skip(id, env)
+    end)
+
+    json(conn, :ok)
+  end
+
+  defp do_skip(id, env) do
+    msg = DB.find_by_id(Util.index(env, "message_events"), id)
+
+    {msg, sid} =
+      AmpsEvents.start_session(
+        msg,
+        %{
+          "service" => "UI Skip"
+        },
+        env
+      )
+
+    AmpsEvents.send(
+      %{},
+      %{"output" => "amps.events.svcs.handler.#{msg["subscriber"]}.skip.#{msg["msgid"]}"},
+      %{},
+      env
+    )
+
+    AmpsEvents.send_history(
+      AmpsUtil.env_topic("amps.events.action", env),
+      "message_events",
+      msg,
+      %{
+        "status" => "skipping",
+        "action" => "UI Skip"
+      }
+    )
+
+    AmpsEvents.end_session(sid, env)
   end
 
   def handle_service(conn, %{"name" => name, "action" => action}) do

@@ -6,11 +6,52 @@ defmodule Amps.PyService do
     GenServer.start_link(__MODULE__, default)
   end
 
+  def run(msg, parms, env \\ nil) do
+    parms =
+      if parms["use_provider"] do
+        Map.put(
+          parms,
+          "provider",
+          DB.find_one(AmpsUtil.index(env, "providers"), %{"_id" => parms["provider"]})
+        )
+      else
+        parms
+      end
+
+    path = AmpsUtil.get_mod_path(env)
+    tmp = AmpsUtil.get_env(:storage_temp)
+    # {:ok, pid} = :python.start([{:python_path, to_charlist(path)}])
+    IO.inspect(parms)
+    module = String.to_atom(parms["module"])
+    xparm = %{:msg => msg, :parms => parms, :sysparms => %{"tempdir" => tmp}}
+    jparms = Poison.encode!(xparm)
+
+    {:ok, pid} = :pythra.start_link([String.to_charlist(path)])
+
+    # Process.unlink(pid)
+
+    try do
+      action =
+        :pythra.init(pid, module, module, [], [
+          {:msgdata, jparms}
+        ])
+
+      result = :pythra.method(pid, action, :__run__, [])
+      IO.inspect(result)
+      :pythra.stop(pid)
+      handle_run_result(result, pid)
+    rescue
+      e ->
+        {:error, e}
+    end
+  end
+
   def call(msg, parms, env \\ nil) do
     Task.async(fn ->
       :poolboy.transaction(
         :worker,
         fn pid ->
+          IO.inspect(self())
           GenServer.call(pid, {:pyrun, msg, parms, env}, 60000)
         end,
         60000
@@ -66,6 +107,10 @@ defmodule Amps.PyService do
     jparms = Poison.encode!(xparm)
 
     {:ok, pid} = :pythra.start_link([String.to_charlist(path)])
+    IO.inspect(self())
+    IO.inspect("PYTHON PID")
+    IO.inspect(pid)
+    # Process.unlink(pid)
 
     try do
       action =
@@ -105,6 +150,34 @@ defmodule Amps.PyService do
     rescue
       e ->
         {:reply, {:error, e}, pid}
+    end
+  end
+
+  defp handle_run_result(result, pid) do
+    case result do
+      :undefined ->
+        {:error, "Nothing returned from script"}
+
+      result ->
+        rparm =
+          try do
+            Poison.decode!(result)
+          rescue
+            _ ->
+              {:error, "JSON Encoded object not returned from script"}
+          end
+
+        if is_map(rparm) do
+          status = rparm["status"] || "failed"
+
+          if status == "failed" do
+            {:error, rparm["reason"]}
+          else
+            {:ok, rparm}
+          end
+        else
+          {:error, "JSON Encoded object not returned from script"}
+        end
     end
   end
 

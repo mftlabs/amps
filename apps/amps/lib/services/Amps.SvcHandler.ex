@@ -51,9 +51,13 @@ defmodule Amps.SvcHandler do
     {Enum.at(topic, 0), Enum.at(topic, 1)}
   end
 
-  def handle_service({name, action}) do
+  def handle_service({name, action, msgid}) do
     resp =
       case action do
+        "skip" ->
+          Logger.info("Skipping #{msgid} for #{name}")
+          Amps.EventHandler.skip(Process.whereis(:"#{name}"), msgid)
+
         "start" ->
           Logger.info("Starting #{name}")
           start_service(name)
@@ -132,8 +136,8 @@ defmodule Amps.SvcHandler do
   def handle_info({:msg, message}, state) do
     Logger.info("Service Event Received on Topic #{message.topic}")
 
-    {name, action} = parse_topic(message.topic)
-    handle_service({name, action})
+    {name, action, msgid} = parse_topic(message.topic)
+    handle_service({name, action, msgid})
 
     {:noreply, state}
   end

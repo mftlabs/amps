@@ -51,14 +51,18 @@ defmodule Amps.EnvSvcHandler do
 
     IO.inspect(topic)
 
-    {Enum.at(topic, 0), Enum.at(topic, 1)}
+    {Enum.at(topic, 0), Enum.at(topic, 1), Enum.at(topic, 2, nil)}
   end
 
-  def handle_service({name, action}, env) do
+  def handle_service({name, action, msgid}, env) do
     IO.inspect(action)
 
     resp =
       case action do
+        "skip" ->
+          Logger.info("Skipping #{msgid} for #{name}")
+          Amps.EventHandler.skip(Process.whereis(:"#{env}-#{name}"), msgid)
+
         "start" ->
           Logger.info("Starting #{name}")
           start_service(name, env)
@@ -139,8 +143,8 @@ defmodule Amps.EnvSvcHandler do
   def handle_info({:msg, message}, state) do
     Logger.info("Service Event Received in Environment #{state.env} on Topic #{message.topic}")
 
-    {name, action} = parse_topic(message.topic, state.env)
-    handle_service({name, action}, state.env)
+    {name, action, msgid} = parse_topic(message.topic, state.env)
+    handle_service({name, action, msgid}, state.env)
 
     {:noreply, state}
   end

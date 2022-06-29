@@ -700,6 +700,20 @@ Ext.define("Amps.util.Utilities", {
         }
       },
     },
+    skip: {
+      name: "skip",
+      iconCls: "x-fa fa-times-circle",
+      itemId: "skip",
+      tooltip: "Click here to skip message",
+      handler: "skip",
+      isActionDisabled: function (v, r, c, i, record) {
+        if (record.data.status != "retrying") {
+          return true;
+        } else {
+          return false;
+        }
+      },
+    },
     reset: {
       name: "link",
       iconCls: "x-fa fa-key actionicon",

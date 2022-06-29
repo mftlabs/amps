@@ -979,7 +979,13 @@ Ext.define("Amps.view.messages.MessageStatus", {
                   text: "End Time",
                   dataIndex: "end",
                   flex: 1,
-                  renderer: amfutil.dateRenderer,
+                  renderer: function (val) {
+                    if (val) {
+                      return amfutil.dateRenderer(val);
+                    } else {
+                      return "Ongoing or Failed";
+                    }
+                  },
                 },
               ]);
             },

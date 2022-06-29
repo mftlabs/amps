@@ -41,7 +41,7 @@ defmodule Amps.DB do
            name: :mongo,
            database: "amps",
            url: Application.fetch_env!(:amps_web, AmpsWeb.Endpoint)[:mongo_addr],
-           pool_size: 4
+           pool_size: 15
          ]}
 
       "os" ->

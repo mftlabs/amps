@@ -469,6 +469,7 @@ defmodule AmpsWeb.Util do
             Util.delete_config_consumer(old, env)
 
             Util.create_config_consumer(body, env)
+            DB.find_one_and_update(collection, %{"_id" => id}, %{"updated" => false})
           end
         end
 
@@ -665,14 +666,14 @@ defmodule AmpsWeb.Util do
     Base.decode64(sysconfig["logo"])
   end
 
-  def create_config_consumer(body, env \\ nil) do
+  def create_config_consumer(body, env \\ nil, opts \\ %{}) do
     {stream, consumer} =
       AmpsUtil.get_names(
         body,
         env
       )
 
-    opts =
+    policy =
       if body["policy"] == "by_start_time" do
         %{
           deliver_policy: String.to_atom(body["policy"]),
@@ -684,11 +685,24 @@ defmodule AmpsWeb.Util do
         }
       end
 
+    policy = Map.merge(policy, opts)
+
+    listening_topic = AmpsUtil.env_topic("amps.consumer.#{consumer}", env)
+
+    group = String.replace(body["name"], " ", "_")
+    ack_wait = body["ack_wait"] || 30
+
     AmpsUtil.create_consumer(
       stream,
       consumer,
       AmpsUtil.env_topic(body["topic"], env),
-      opts
+      Map.merge(
+        %{
+          ack_wait: ack_wait * 1_000_000_000,
+          max_ack_pending: body["subs_count"]
+        },
+        opts
+      )
     )
   end
 
@@ -847,8 +861,7 @@ defmodule AmpsWeb.Util do
       AmpsEvents.send(
         msg,
         %{
-          "output" => "amps.objects.#{base_index(env, index)}.#{field}.#{action}",
-
+          "output" => "amps.objects.#{base_index(env, index)}.#{field}.#{action}"
         },
         %{},
         env

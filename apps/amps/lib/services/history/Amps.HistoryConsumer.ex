@@ -67,13 +67,13 @@ defmodule Amps.HistoryConsumer do
 
     IO.inspect(listening_topic)
 
-    AmpsUtil.create_consumer(stream, consumer, AmpsUtil.env_topic(opts["topic"], state.env), %{
-      deliver_policy: :all,
-      deliver_subject: listening_topic,
-      ack_policy: :all
-    })
+    # AmpsUtil.create_consumer(stream, consumer, AmpsUtil.env_topic(opts["topic"], state.env), %{
+    #   deliver_policy: :all,
+    #   deliver_subject: listening_topic,
+    #   ack_policy: :all
+    # })
 
-    Gnat.sub(pid, self(), listening_topic)
+    # Gnat.sub(pid, self(), listening_topic)
     Logger.info("got stream #{stream} #{consumer}")
     opts = Map.put(opts, "id", name)
 
@@ -85,7 +85,8 @@ defmodule Amps.HistoryConsumer do
         stream_name: stream,
         consumer_name: consumer,
         listening_topic: listening_topic,
-        env: state.env
+        env: state.env,
+        handler: state.handler
       }
     )
 
@@ -120,7 +121,7 @@ defmodule Amps.HistoryPullConsumer do
     Logger.info("History queue_group #{group} #{stream_name} #{consumer_name}")
     IO.inspect(listening_topic)
 
-    {:ok, _sid} = Gnat.sub(connection_pid, self(), listening_topic, queue_group: group)
+    {:ok, sid} = Gnat.sub(connection_pid, self(), listening_topic, queue_group: group)
 
     # :ok =
     #   Gnat.pub(
@@ -148,7 +149,8 @@ defmodule Amps.HistoryPullConsumer do
           parms["doc"]
         else
           nil
-        end
+        end,
+      sid: sid
     }
 
     schedule_bulk()
@@ -188,8 +190,6 @@ defmodule Amps.HistoryPullConsumer do
         if is_list(state.index) do
           actions =
             Enum.reduce(state.index, [], fn index, acc ->
-              IO.inspect(acc)
-
               [
                 {AmpsUtil.index(state.env, index), Amps.DB.bulk_insert(doc)} | acc
               ]
@@ -272,6 +272,10 @@ defmodule Amps.HistoryPullConsumer do
   def handle_call(parms, _from, state) do
     IO.puts("handler call called #{inspect(parms)}")
     {:reply, :ok, state}
+  end
+
+  def terminate(reason, state) do
+    Gnat.unsub(:gnat, state.sid)
   end
 
   defp nuid(), do: :crypto.strong_rand_bytes(12) |> Base.encode64()

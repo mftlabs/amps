@@ -513,7 +513,7 @@ defmodule AmpsUtil do
         cons =
           Map.merge(
             %Jetstream.API.Consumer{
-              name: name,
+              durable_name: name,
               stream_name: stream,
               filter_subject: filter
             },
@@ -742,17 +742,6 @@ defmodule AmpsUtil do
     end
   end
 
-  def test do
-    """
-    {
-      item(name: "Foo") {
-        name
-      }
-    }
-    """
-    |> Absinthe.run(Amps.Schema)
-  end
-
   def deliver(email) do
     import Swoosh.Email
 
@@ -861,5 +850,19 @@ defmodule AmpsUtil do
       _ ->
         v
     end
+  end
+
+  def test do
+    AmpsUtil.create_consumer(
+      "TEST-SERVICES",
+      "util_test",
+      "amps.test.svcs.cheese.touch",
+      %{
+        deliver_policy: :all,
+        deliver_subject: "amps.test.consumer.util_test",
+        ack_policy: :explicit,
+        max_ack_pending: 3
+      }
+    )
   end
 end

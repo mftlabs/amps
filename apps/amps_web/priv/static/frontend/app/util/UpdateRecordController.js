@@ -7,7 +7,7 @@ Ext.define("Amps.form.update", {
     align: "stretch",
   },
   defaults: {
-    labelWidth: 175,
+    labelWidth: 100,
   },
   entity: null,
   resizable: true,

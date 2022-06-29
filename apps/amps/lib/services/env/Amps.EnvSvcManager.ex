@@ -347,19 +347,24 @@ defmodule Amps.EnvSvcManager do
         count = opts["subs_count"] || 1
 
         try do
-          Enum.each(1..count, fn x ->
-            name = String.to_atom(env <> "-" <> svcname <> Integer.to_string(x))
+          if parms["type"] == "subscriber" do
+            name = String.to_atom(env <> "-" <> svcname)
+            start_child(name, get_spec(name, opts, env), parms, env)
+          else
+            Enum.each(1..count, fn x ->
+              name = String.to_atom(env <> "-" <> svcname <> Integer.to_string(x))
 
-            case get_spec(name, opts, env) do
-              {:error, error} ->
-                Logger.warn("Service #{name} could not be started. Error: #{inspect(error)}")
+              case get_spec(name, opts, env) do
+                {:error, error} ->
+                  Logger.warn("Service #{name} could not be started. Error: #{inspect(error)}")
 
-                raise error
+                  raise error
 
-              spec ->
-                start_child(name, spec, parms, env)
-            end
-          end)
+                spec ->
+                  start_child(name, spec, parms, env)
+              end
+            end)
+          end
 
           {:ok, "Started #{svcname}"}
         rescue
@@ -436,26 +441,38 @@ defmodule Amps.EnvSvcManager do
         count = opts["subs_count"] || 1
         # children = Supervisor.which_children(Amps.SvcSupervisor)
 
-        names =
-          Enum.reduce(1..count, [], fn x, acc ->
-            name = String.to_atom(env <> "-" <> svcname <> Integer.to_string(x))
-            [name | acc]
-          end)
+        if parms["type"] == "subscriber" do
+          name = String.to_atom(env <> "-" <> svcname)
 
-        case Enum.reduce(names, [], fn name, acc ->
-               case Process.whereis(name) do
-                 nil ->
-                   acc
+          case Process.whereis(name) do
+            nil ->
+              nil
 
-                 pid ->
-                   [pid | acc]
-               end
-             end) do
-          [] ->
-            nil
+            pid ->
+              [pid]
+          end
+        else
+          names =
+            Enum.reduce(1..count, [], fn x, acc ->
+              name = String.to_atom(env <> "-" <> svcname <> Integer.to_string(x))
+              [name | acc]
+            end)
 
-          list ->
-            list
+          case Enum.reduce(names, [], fn name, acc ->
+                 case Process.whereis(name) do
+                   nil ->
+                     acc
+
+                   pid ->
+                     [pid | acc]
+                 end
+               end) do
+            [] ->
+              nil
+
+            list ->
+              list
+          end
         end
     end
   end

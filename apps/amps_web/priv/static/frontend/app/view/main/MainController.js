@@ -1223,6 +1223,58 @@ Ext.define("Amps.view.main.MainController", {
     });
   },
 
+  onSkipClicked: function () {
+    var grid = Ext.ComponentQuery.query("#main-grid")[0];
+    var sel = grid.getSelection();
+    console.log(sel.filter((r) => r.status == "retrying"));
+    var ids = sel
+      .filter((r) => r.status == "retrying")
+      .map((m) => {
+        return m.data._id;
+      });
+    var mask = new Ext.LoadMask({
+      msg: "Please wait...",
+      target: grid,
+    });
+    var msgbox = Ext.MessageBox.show({
+      title: "Confirm skipping of messages",
+      message: `Are you sure you want to skip ${ids.length} message(s)?`,
+      buttons: Ext.MessageBox.YESNO,
+      defaultFocus: "#no",
+      prompt: false,
+      fn: function (btn) {
+        if (btn == "yes") {
+          mask.show();
+          amfutil.ajaxRequest({
+            url: `/api/service/skip`,
+            method: "POST",
+            timeout: 60000,
+            params: {},
+            jsonData: {
+              ids: ids,
+            },
+            success: async function (response) {
+              var data = Ext.decode(response.responseText);
+              mask.hide();
+              Ext.toast({
+                title: "Skipping",
+                html: `<center>Marked ${ids.length} message(s) for skip</center>`,
+                autoCloseDelay: 5000,
+              });
+              console.log(route);
+              grid.getStore().reload();
+            },
+            failure: function (response) {
+              mask.hide();
+              amfutil.onFailure("Error skipping messages", response);
+              grid.getStore().reload();
+            },
+          });
+        }
+      },
+    });
+  },
+
   onRerouteClicked: function () {
     var grid = Ext.ComponentQuery.query("#main-grid")[0];
     var sel = grid.getSelection();

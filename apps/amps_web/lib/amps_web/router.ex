@@ -93,7 +93,12 @@ defmodule AmpsWeb.Router do
     post("/port/:port", UtilController, :in_use)
     post("/env/:name", EnvironmentController, :handle_env)
     get("/env/:name", EnvironmentController, :ping_env)
+    post("/service/skip", ServiceController, :skip)
+
+    post("/service/skip/:id", ServiceController, :skip)
+
     post("/service/:name", ServiceController, :handle_service)
+
     get("/service/:name", ServiceController, :ping_service)
     post("/msg/reprocess/:msgid", DataController, :reprocess)
     post("/msg/reroute/:id", DataController, :reroute)

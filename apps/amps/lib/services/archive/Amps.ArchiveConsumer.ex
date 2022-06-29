@@ -113,7 +113,7 @@ defmodule Amps.ArchiveConsumer do
   def get_message(msg, provider, env) do
     case provider["atype"] do
       "s3" ->
-        req = S3Action.req(provider, env)
+        req = AmpsUtil.get_env(:actions)[:s3].req(provider, env)
         IO.puts("DATA")
 
         resp =
@@ -130,7 +130,7 @@ defmodule Amps.ArchiveConsumer do
   def get_size(msg, provider, env) do
     case provider["atype"] do
       "s3" ->
-        req = S3Action.req(provider, env)
+        req = AmpsUtil.get_env(:actions)[:s3].req(provider, env)
 
         resp =
           ExAws.S3.head_object(
@@ -170,25 +170,10 @@ defmodule Amps.ArchiveConsumer do
     pid = Process.whereis(:gnat)
 
     IO.puts("pid #{inspect(pid)}")
-
     {stream, consumer} = AmpsUtil.get_names(opts, state.env)
-    IO.inspect(stream)
-    IO.inspect(state.env)
-
-    listening_topic = AmpsUtil.env_topic("amps.archive.#{consumer}", state.env)
-
-    IO.inspect(listening_topic)
-
-    AmpsUtil.create_consumer(stream, consumer, AmpsUtil.env_topic(opts["topic"], state.env), %{
-      deliver_policy: :all,
-      deliver_subject: listening_topic,
-      ack_policy: :explicit
-    })
-
-    Gnat.sub(pid, self(), listening_topic)
-
     Logger.info("got stream #{stream} #{consumer}")
     opts = Map.put(opts, "id", name)
+    listening_topic = AmpsUtil.env_topic("amps.archive.#{consumer}", state.env)
 
     GenServer.start_link(
       Amps.ArchivePullConsumer,
@@ -261,15 +246,7 @@ defmodule Amps.ArchivePullConsumer do
     group = String.replace(parms["name"], " ", "_")
     Logger.info("History queue_group #{group} #{stream_name} #{consumer_name}")
 
-    {:ok, _sid} = Gnat.sub(connection_pid, self(), listening_topic, queue_group: group)
-
-    # :ok =
-    #   Gnat.pub(
-    #     connection_pid,
-    #     "$JS.API.CONSUMER.MSG.NEXT.#{stream_name}.#{consumer_name}",
-    #     "1",
-    #     reply_to: listening_topic
-    #   )
+    {:ok, sid} = Gnat.sub(connection_pid, self(), listening_topic, queue_group: group)
 
     state = %{
       parms: parms,
@@ -289,7 +266,8 @@ defmodule Amps.ArchivePullConsumer do
           parms["doc"]
         else
           nil
-        end
+        end,
+      sid: sid
     }
 
     {:ok, state}
@@ -326,7 +304,7 @@ defmodule Amps.ArchivePullConsumer do
         Logger.info("No Data to Archive")
 
       {:ok, resp} ->
-        Logger.info("Uploaded")
+        # Logger.info("Uploaded")
         {:ok, resp}
 
       {:error, error} ->
@@ -339,7 +317,7 @@ defmodule Amps.ArchivePullConsumer do
     try do
       data = Poison.decode!(message.body)
       msg = data["msg"]
-      Logger.info("Archiving Message #{msg["msgid"]}")
+      # Logger.info("Archiving Message #{msg["msgid"]}")
       parms = state[:parms]
       name = parms["name"]
 
@@ -354,7 +332,7 @@ defmodule Amps.ArchivePullConsumer do
             nil
         end
 
-        Logger.info("Archived Message #{msg["msgid"]}")
+        # Logger.info("Archived Message #{msg["msgid"]}")
 
         Jetstream.ack(message)
         Amps.ArchiveHandler.reset_failure(state.handler)
@@ -437,4 +415,9 @@ defmodule Amps.ArchivePullConsumer do
   end
 
   defp nuid(), do: :crypto.strong_rand_bytes(12) |> Base.encode64()
+
+  def terminate(reason, state) do
+    Logger.warn("#{inspect(reason)} in terminate")
+    Gnat.unsub(:gnat, state.sid)
+  end
 end
