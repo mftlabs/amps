@@ -53,6 +53,16 @@ defmodule AmpsWeb.Util do
             "headers"
           ],
           "kafkaput" => ["provider", "topic"],
+          "ldap" => [
+            "provider",
+            "timeout",
+            "base",
+            "scope",
+            "sizeLimit",
+            "filter",
+            "attributes",
+            "output"
+          ],
           "mailbox" => ["recipient", "mailbox", "format"],
           "pgpdecrypt" => ["key", "passphrase", "verify", "signing_key", "format", "output"],
           "pgpencrypt" => [
@@ -78,7 +88,9 @@ defmodule AmpsWeb.Util do
           "s3" => [
             "provider",
             "operation",
+            "count",
             "bucket",
+            "path",
             "prefix",
             "pattern",
             "regex",
@@ -105,12 +117,12 @@ defmodule AmpsWeb.Util do
         }
       },
       "endpoints" => %{
-        "headers" => ["name", "desc", "method", "path", "action"],
+        "headers" => ["name", "desc", "method", "path", "timeout", "action"],
         "subgrids" => nil,
         "types" => nil
       },
       "environments" => %{
-        "headers" => ["name", "desc", "active", "archive"],
+        "headers" => ["name", "desc", "host", "active", "archive"],
         "subgrids" => nil,
         "types" => nil
       },
@@ -153,6 +165,7 @@ defmodule AmpsWeb.Util do
             "secret",
             "bucket"
           ],
+          "aws" => ["key", "secret"],
           "generic" => ["values"],
           "kafka" => [
             "brokers",
@@ -164,6 +177,7 @@ defmodule AmpsWeb.Util do
             "cert",
             "key"
           ],
+          "ldap" => ["server", "port", "ssl", "username", "password"],
           "s3" => ["provider", "scheme", "host", "port", "region", "key", "secret"],
           "sharepoint" => ["tenant", "client_id", "client_secret"],
           "smtp" => ["etype", "relay", "username", "password", "auth", "tls", "ssl", "port"]
@@ -218,7 +232,19 @@ defmodule AmpsWeb.Util do
             "output"
           ],
           "sftpd" => ["port", "server_key", "communication"],
-          "subscriber" => ["subs_count", "handler", "updated", "topic", "policy", "start_time"]
+          "sqs" => ["queue_name", "owner_id", "provider", "wait_time_seconds", "communication"],
+          "subscriber" => [
+            "subs_count",
+            "ack_wait",
+            "rmode",
+            "rlimit",
+            "backoff",
+            "handler",
+            "updated",
+            "topic",
+            "policy",
+            "start_time"
+          ]
         }
       },
       "templates" => %{
