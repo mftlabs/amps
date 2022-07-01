@@ -42,6 +42,7 @@ defmodule AmpsWeb.Router do
     post("/user/reset-password", UserController, :send_password_email)
     post("/user/reg", UserController, :register)
     get("/duplicate_username/:username", UtilController, :duplicate_username)
+    get("/message_events/stream/:id", UtilController, :stream)
   end
 
   scope "/api", AmpsWeb do
@@ -86,7 +87,11 @@ defmodule AmpsWeb.Router do
     post("/admin/changepassword/:id", DataController, :change_admin_password)
 
     get("/message_events/history/:msgid", UtilController, :history)
-    get("/message_events/download/:msgid", UtilController, :download)
+    get("/message_events/download/:id", UtilController, :download)
+
+    get("/message_events/preview/:id", UtilController, :preview)
+    get("/message_events/data/:id", UtilController, :data)
+
     post("/workflow", UtilController, :workflow)
     get("/loop/:sub", UtilController, :loop)
 
@@ -125,6 +130,9 @@ defmodule AmpsWeb.Router do
 
     post("/scripts/duplicate/", ScriptController, :duplicate)
     resources("/scripts/", ScriptController, except: [:new, :edit])
+
+    post("/utilscripts/duplicate/", UtilScriptController, :duplicate)
+    resources("/utilscripts/", UtilScriptController, except: [:new, :edit])
 
     get("/pyservices", ScriptController, :get_services)
 

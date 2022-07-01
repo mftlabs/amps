@@ -48,7 +48,7 @@ defmodule Amps.SvcHandler do
       |> String.replace("amps.events.svcs.handler.", "")
       |> String.split(".")
 
-    {Enum.at(topic, 0), Enum.at(topic, 1)}
+    {Enum.at(topic, 0), Enum.at(topic, 1), Enum.at(topic, 2)}
   end
 
   def handle_service({name, action, msgid}) do

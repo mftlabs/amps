@@ -19,6 +19,9 @@ defmodule Amps.PyService do
       end
 
     path = AmpsUtil.get_mod_path(env)
+    util = Path.join(AmpsUtil.get_mod_path(), "util")
+    IO.inspect(util)
+
     tmp = AmpsUtil.get_env(:storage_temp)
     # {:ok, pid} = :python.start([{:python_path, to_charlist(path)}])
     IO.inspect(parms)
@@ -26,7 +29,7 @@ defmodule Amps.PyService do
     xparm = %{:msg => msg, :parms => parms, :sysparms => %{"tempdir" => tmp}}
     jparms = Poison.encode!(xparm)
 
-    {:ok, pid} = :pythra.start_link([String.to_charlist(path)])
+    {:ok, pid} = :pythra.start_link([String.to_charlist(path), String.to_charlist(util)])
 
     # Process.unlink(pid)
 

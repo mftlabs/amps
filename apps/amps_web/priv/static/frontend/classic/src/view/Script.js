@@ -1,7 +1,6 @@
 Ext.define("Amps.panel.Script", {
   extend: "Ext.panel.Panel",
   xtype: "script",
-  itemId: "script",
   editor: null,
   data: null,
   editing: false,
@@ -9,10 +8,13 @@ Ext.define("Amps.panel.Script", {
   currScript: null,
   prevScript: null,
   closing: false,
+  type: "scripts",
   constructor(args) {
     this.scripts = {};
 
     this.callParent([args]);
+    this.type = args["type"];
+    console.log(this.type);
     amfutil.getElementByID("env").on("updateenv", () => {
       this.closeAll();
     });
@@ -227,7 +229,7 @@ Ext.define("Amps.panel.Script", {
     script.setLoading(true);
     await amfutil.ajaxRequest({
       method: "put",
-      url: `/api/scripts/${toSave.name}`,
+      url: `/api/${this.type}/${toSave.name}`,
       jsonData: {
         data: toSave.model.getValue(),
       },
@@ -259,7 +261,7 @@ Ext.define("Amps.panel.Script", {
       },
       render: function () {
         console.log(this.tabs);
-        var script = amfutil.getElementByID("script");
+        var script = this.up("script");
         script.on("dirtychange", (e) => {
           this.tabs[e.name].setIconCls(e.dirty ? "x-fa fa-circle" : "");
         });
@@ -299,10 +301,11 @@ Ext.define("Amps.panel.Script", {
   },
   loadScript: function (name) {
     this.setLoading(true);
-    console.log(name);
+    console.log(this);
+    console.log(this.type);
     amfutil
       .ajaxRequest({
-        url: `api/scripts/${name}`,
+        url: `api/${this.type}/${name}`,
       })
       .then((resp) => {
         console.log(resp);

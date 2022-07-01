@@ -1,4 +1,4 @@
-defmodule Amps.NatsPullConsumer do
+defmodule Amps.EventPullConsumer do
   use Jetstream.PullConsumer
   use GenServer
   require Logger
@@ -101,7 +101,7 @@ defmodule Amps.NatsPullConsumer do
 
         mstate = data["state"] || %{}
 
-        status =
+        res =
           try do
             mctx = {mstate, state.env}
             action_id = parms["handler"]
@@ -140,77 +140,81 @@ defmodule Amps.NatsPullConsumer do
               handler = AmpsUtil.get_env_parm(:actions, String.to_atom(actparms["type"]))
 
               # IO.puts("opts after lookup #{inspect(actparms)}")
+              status =
+                case handler.run(msg, actparms, mctx) do
+                  {:ok, result} ->
+                    Logger.info("Action Completed #{inspect(result)}")
+                    # IO.puts("ack next message")
 
-              case handler.run(msg, actparms, mctx) do
-                {:ok, result} ->
-                  Logger.info("Action Completed #{inspect(result)}")
-                  # IO.puts("ack next message")
+                    if mstate["return"] do
+                      Amps.AsyncResponder.put_response(
+                        mstate["return"],
+                        mstate["contextid"] <> parms["name"],
+                        {actparms["name"], msg["msgid"], result}
+                      )
+                    end
 
-                  if mstate["return"] do
-                    Amps.AsyncResponder.put_response(
-                      mstate["return"],
-                      mstate["contextid"] <> parms["name"],
-                      {actparms["name"], msg["msgid"], result}
-                    )
-                  end
+                    # IO.inspect(state)
 
-                  # IO.inspect(state)
-
-                  status =
-                    if is_map(result) do
-                      if Map.has_key?(result, "status") do
-                        result["status"]
+                    status =
+                      if is_map(result) do
+                        if Map.has_key?(result, "status") do
+                          result["status"]
+                        else
+                          "completed"
+                        end
                       else
                         "completed"
                       end
-                    else
-                      "completed"
+
+                    AmpsEvents.send_history(
+                      AmpsUtil.env_topic("amps.events.action", state.env),
+                      "message_events",
+                      msg,
+                      %{
+                        "topic" => AmpsUtil.env_topic(parms["topic"], state.env),
+                        "status" => status,
+                        "action" => actparms["name"],
+                        "subscriber" => name
+                      }
+                    )
+
+                    status
+
+                  {:send, events} ->
+                    Enum.each(events, fn event ->
+                      AmpsEvents.send(event, actparms, mstate, state.env)
+                    end)
+
+                    if mstate["return"] do
+                      Amps.AsyncResponder.resolve_message(
+                        mstate["return"],
+                        mstate["contextid"] <> parms["name"]
+                      )
                     end
 
-                  AmpsEvents.send_history(
-                    AmpsUtil.env_topic("amps.events.action", state.env),
-                    "message_events",
-                    msg,
-                    %{
-                      "topic" => AmpsUtil.env_topic(parms["topic"], state.env),
-                      "status" => status,
-                      "action" => actparms["name"],
-                      "subscriber" => name
-                    }
-                  )
+                    Logger.info("Action Completed #{parms["name"]}")
 
-                {:send, events} ->
-                  Enum.each(events, fn event ->
-                    AmpsEvents.send(event, actparms, mstate, state.env)
-                  end)
+                    # IO.puts("ack next message")
 
-                  if mstate["return"] do
-                    Amps.AsyncResponder.resolve_message(
-                      mstate["return"],
-                      mstate["contextid"] <> parms["name"]
+                    AmpsEvents.send_history(
+                      AmpsUtil.env_topic("amps.events.action", state.env),
+                      "message_events",
+                      msg,
+                      %{
+                        "topic" => parms["topic"],
+                        "status" => "completed",
+                        "action" => actparms["name"],
+                        "subscriber" => name
+                      }
                     )
-                  end
 
-                  Logger.info("Action Completed #{parms["name"]}")
-
-                  # IO.puts("ack next message")
-
-                  AmpsEvents.send_history(
-                    AmpsUtil.env_topic("amps.events.action", state.env),
-                    "message_events",
-                    msg,
-                    %{
-                      "topic" => parms["topic"],
-                      "status" => "completed",
-                      "action" => actparms["name"],
-                      "subscriber" => name
-                    }
-                  )
-              end
+                    "completed"
+                end
 
               Amps.EventHandler.deregister(state.handler, msg["msgid"])
               Jetstream.ack(message)
-              {:ack, state}
+              {{:ack, state}, status}
             end
           rescue
             error ->
@@ -258,10 +262,11 @@ defmodule Amps.NatsPullConsumer do
                   }
                 )
 
-                Process.sleep(parms["backoff"] * 1000)
-                Amps.EventHandler.stop_process(state.handler, msg["msgid"])
-
-                {:nack, state}
+                {{:nack, state}, "retrying",
+                 fn ->
+                   Process.sleep(parms["backoff"] * 1000)
+                   Amps.EventHandler.stop_process(state.handler, msg["msgid"])
+                 end}
               end
 
               fail = fn ->
@@ -296,7 +301,7 @@ defmodule Amps.NatsPullConsumer do
                 )
 
                 Amps.EventHandler.deregister(state.handler, msg["msgid"])
-                {:ack, state}
+                {{:ack, state}, "failed"}
               end
 
               case parms["rmode"] do
@@ -315,8 +320,16 @@ defmodule Amps.NatsPullConsumer do
               end
           end
 
-        AmpsEvents.end_session(sid, state.env)
-        status
+        case res do
+          {ackstate, status} ->
+            AmpsEvents.end_session(sid, state.env, status)
+            ackstate
+
+          {ackstate, status, post} ->
+            AmpsEvents.end_session(sid, state.env, status)
+            post.()
+            ackstate
+        end
     end
   end
 end

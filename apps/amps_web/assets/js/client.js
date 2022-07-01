@@ -22,8 +22,8 @@ monaco.languages.register({
 // install Monaco language client services
 MonacoServices.install(monaco);
 
-window.createLangClient = function () {
-  const url = createUrl("/pyserver/websocket", ``);
+window.createLangClient = function (token) {
+  const url = createUrl("/pyserver/websocket", `?token=${token}`);
   const webSocket = createWebSocket(url);
   // listen when the web socket is opened
   listen({

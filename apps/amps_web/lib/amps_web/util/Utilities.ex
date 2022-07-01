@@ -336,7 +336,7 @@ defmodule AmpsWeb.Util do
     ]
   end
 
-  def before_create(collection, body, env \\ "") do
+  def before_create(collection, body, %{env: env, current_user: adminuser}) do
     case String.replace(collection, env <> "-", "") do
       "users" ->
         Map.put(body, "password", nil)
@@ -347,6 +347,38 @@ defmodule AmpsWeb.Util do
              (body["type"] == "pyservice" && body["receive"]) do
           create_config_consumer(body, env)
           body
+        end
+
+        body
+
+      "actions" ->
+        if body["type"] == "mailbox" do
+          index = index(env, "users")
+          user = DB.find_one(index, %{"username" => body["recipient"]})
+
+          exists =
+            Enum.find(user["mailboxes"], fn mbox ->
+              mbox["name"] == body["mailbox"]
+            end)
+
+          name = adminuser.firstname <> " " <> adminuser.lastname
+          time = AmpsUtil.gettime()
+
+          if !exists do
+            DB.add_to_field(
+              index,
+              %{
+                "name" => body["mailbox"],
+                "desc" => body["mailbox"],
+                "created" => time,
+                "createdBy" => name,
+                "modifiedBy" => name,
+                "modified" => time
+              },
+              user["_id"],
+              "mailboxes"
+            )
+          end
         end
 
         body

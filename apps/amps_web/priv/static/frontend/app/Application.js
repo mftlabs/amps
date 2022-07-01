@@ -19,6 +19,11 @@ Ext.define("Amps.Application", {
     },
   },
   launch: async function () {
+    var link = document.createElement("link");
+    link.type = "image/x-icon";
+    link.rel = "icon";
+    link.href = "images/favicon.ico"; //assumes favicon is in the app root as it should be
+    document.getElementsByTagName("head")[0].appendChild(link);
     var route = Ext.util.History.getToken();
     console.log(route);
     amfutil = Amps.util.Utilities;

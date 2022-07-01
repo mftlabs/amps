@@ -78,7 +78,8 @@ defmodule AmpsWeb.MixProject do
          git: "https://github.com/erlport/erlport.git",
          branch: "master"
        ]},
-      {:swoosh, "~> 1.3"}
+      {:swoosh, "~> 1.3"},
+      {:file_type, "~> 0.1.0"}
 
       # {:uuid, "~> 1.1"}
     ]

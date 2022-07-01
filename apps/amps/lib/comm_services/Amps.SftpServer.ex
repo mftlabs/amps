@@ -366,6 +366,8 @@ defmodule Amps.SftpHandler do
 
       topic = "amps.svcs.#{service}.#{user}"
 
+      IO.inspect(msg)
+
       mailboxtopic = "amps.mailbox.#{user}.#{msg["mailbox"]}"
 
       # IO.inspect(state)
@@ -422,26 +424,40 @@ defmodule Amps.SftpHandler do
   end
 
   def get_cwd(state) do
-    # IO.puts("get_cwd: #{inspect(state)}")
+    IO.puts("get_cwd: #{inspect(state)}")
     {{:ok, '/'}, state}
   end
 
   def is_dir(abs_path, state) do
+    IO.inspect(abs_path)
+
     case Path.split(abs_path) do
       ["/"] ->
         {true, state}
 
       ["/", mailbox] ->
-        {true, state}
+        exists = AmpsMailbox.is_mailbox(to_string(state[:user]), mailbox, state[:env])
+
+        exists =
+          if exists do
+            true
+          else
+            false
+          end
+
+        {exists, state}
 
       ["/", mailbox, fname] ->
+        {false, state}
+
+      _ ->
         {false, state}
     end
   end
 
   def list_dir(abs_path, state) do
-    # IO.puts("ls_dir: #{inspect(state)}")
-    # IO.inspect(abs_path)
+    IO.puts("ls_dir: #{inspect(state)}")
+    IO.inspect(abs_path)
 
     {state, vals} =
       case Path.split(abs_path) do
@@ -499,8 +515,8 @@ defmodule Amps.SftpHandler do
     case Path.split(dir) do
       ["/", mailbox] ->
         user = to_string(state[:user])
-        # IO.inspect(mailbox)
-        # IO.inspect(state)
+        IO.inspect(mailbox)
+        IO.inspect(state)
 
         case AmpsMailbox.create_mailbox(user, mailbox, state[:env]) do
           {:ok, _} ->
@@ -521,7 +537,7 @@ defmodule Amps.SftpHandler do
   end
 
   def open(path, flags, state) do
-    # IO.puts("open called #{path}")
+    IO.puts("open called #{path}")
 
     case Enum.find(flags, :nak, fn x -> x == :write end) do
       :write ->
@@ -532,23 +548,46 @@ defmodule Amps.SftpHandler do
         fpath = Amps.Defaults.get("storage_temp") <> "/" <> msgid
         # IO.inspect(fpath)
         dirname = Path.dirname(path)
-        ["/", mailbox, fname] = Path.split(path)
 
-        case :file.open(fpath, flags) do
-          {:ok, pid} ->
-            newstate =
-              List.keystore(state, :fname, 0, {:fname, fname})
-              |> List.keystore(:msgid, 0, {:msgid, msgid})
-              |> List.keystore(:fpath, 0, {:fpath, fpath})
-              |> List.keystore(:dirname, 0, {:dirname, dirname})
-              |> List.keystore(:fsize, 0, {:fsize, 0})
-              |> List.keystore(:flist, 0, {:flist, nil})
-              |> List.keystore(:mailbox, 0, {:mailbox, mailbox})
+        res =
+          case Path.split(path) do
+            ["/", mailbox, fname] ->
+              case AmpsMailbox.is_mailbox(to_string(state[:user]), mailbox, state[:env]) do
+                nil ->
+                  {:error, :eaccess}
 
-            {{:ok, pid}, newstate}
+                mailbox ->
+                  {"/", mailbox, fname}
+              end
 
-          other ->
-            {other, state}
+            ["/", fname] ->
+              {"/", "default", fname}
+
+            _ ->
+              {:error, :eaccess}
+          end
+
+        case res do
+          {root, mailbox, name} ->
+            case :file.open(fpath, flags) do
+              {:ok, pid} ->
+                newstate =
+                  List.keystore(state, :fname, 0, {:fname, fname})
+                  |> List.keystore(:msgid, 0, {:msgid, msgid})
+                  |> List.keystore(:fpath, 0, {:fpath, fpath})
+                  |> List.keystore(:dirname, 0, {:dirname, dirname})
+                  |> List.keystore(:fsize, 0, {:fsize, 0})
+                  |> List.keystore(:flist, 0, {:flist, nil})
+                  |> List.keystore(:mailbox, 0, {:mailbox, mailbox})
+
+                {{:ok, pid}, newstate}
+
+              other ->
+                {other, state}
+            end
+
+          error ->
+            {error, state}
         end
 
       _ ->
@@ -612,6 +651,9 @@ defmodule Amps.SftpHandler do
   end
 
   def read_link_info(path, state) do
+    IO.inspect("READING LINK INFO")
+    user = to_string(state[:user])
+
     case Path.split(path) do
       ["/"] ->
         ftime = DateTime.utc_now()
@@ -619,13 +661,20 @@ defmodule Amps.SftpHandler do
         {{:ok, finfo}, state}
 
       ["/", mailbox] ->
+        IO.inspect(mailbox)
+        exists = AmpsMailbox.is_mailbox(user, mailbox, state[:env])
         ftime = DateTime.utc_now()
-        finfo = get_dir_info(ftime)
-        {{:ok, finfo}, state}
+
+        if exists do
+          finfo = get_dir_info(ftime)
+          {{:ok, finfo}, state}
+        else
+          {{:error, :exist}, state}
+        end
 
       ["/", mailbox, fname] ->
         # IO.puts("read_link_info")
-        user = to_string(state[:user])
+
         # IO.puts("read_link_info #{user} #{mailbox} #{fname}")
         #    msg = Enum.find(flist, nil, fn x -> x["fname"] == fname end)
         case AmpsMailbox.get_message(user, mailbox, fname, state[:env]) do
@@ -637,6 +686,8 @@ defmodule Amps.SftpHandler do
           msg ->
             # IO.puts("found")
             fsize = msg["fsize"] || 99
+            IO.inspect(fsize)
+
             ft = msg["ftime"] || DateTime.to_iso8601(DateTime.utc_now())
             # IO.inspect(ft)
             {:ok, ftime, _off} = DateTime.from_iso8601(ft)
@@ -644,6 +695,9 @@ defmodule Amps.SftpHandler do
             nstate = List.keystore(state, :current, 0, {:current, msg})
             {{:ok, finfo}, nstate}
         end
+
+      rest ->
+        {{:error, :eaccess}, state}
     end
   end
 
@@ -654,6 +708,7 @@ defmodule Amps.SftpHandler do
 
   def get_file_info(fsize, ftime) do
     # IO.puts("get_file_info")
+    IO.inspect(fsize)
 
     {:file_info, fsize, :regular, :read_write,
      {{ftime.year, ftime.month, ftime.day}, {ftime.hour, ftime.minute, ftime.second}},

@@ -340,12 +340,46 @@ defmodule AmpsUtil do
         fname = String.replace(fname, pat, ms)
         check(tail, msg, fname)
 
-      _ ->
-        rep = msg[name]
+      "fnoext" ->
+        rep = msg["fname"]
 
         if rep == nil do
-          raise "file name cannot be formatted, missing message metadata [#{name}]"
+          raise "file name cannot be formatted, missing message metadata [fname]"
         end
+
+        fname = String.replace(fname, pat, Path.rootname(rep))
+        check(tail, msg, fname)
+
+      "ext" ->
+        rep = msg["fname"]
+
+        if rep == nil do
+          raise "file name cannot be formatted, missing message metadata [fname]"
+        end
+
+        fname = String.replace(fname, pat, Path.extname(rep))
+        check(tail, msg, fname)
+
+      "DATETIME" ->
+        rep = format("{YYYY}{MM}{DD}{HH}{mm}{SS}{MS}", msg)
+
+        fname = String.replace(fname, pat, rep)
+        check(tail, msg, fname)
+
+      "DATE" ->
+        rep = format("{YYYY}{MM}{DD}", msg)
+
+        fname = String.replace(fname, pat, rep)
+        check(tail, msg, fname)
+
+      "TIME" ->
+        rep = format("{HH}{mm}{SS}{MS}", msg)
+
+        fname = String.replace(fname, pat, rep)
+        check(tail, msg, fname)
+
+      _ ->
+        rep = msg[name]
 
         fname = String.replace(fname, pat, rep)
         check(tail, msg, fname)

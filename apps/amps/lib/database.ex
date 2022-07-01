@@ -78,7 +78,7 @@ defmodule Amps.DB do
 
     collections = [
       "keys",
-      "demos",
+      "packages",
       "tokens"
     ]
 

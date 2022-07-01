@@ -7,6 +7,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, user-scalable=yes">
     <%= live_title_tag assigns[:page_title] || "AMPS Dashboard", suffix: "" %>
     <link phx-track-static rel="stylesheet" href={Routes.static_path(@conn, "/assets/app.css")}/>
+    <link rel="icon" type="image/x-icon" href={Routes.static_path(@conn, "/images/favicon.ico")}>
+    <link
+    href="https://unpkg.com/video.js@7/dist/video-js.min.css"
+    rel="stylesheet"
+    />
+
+    <!-- City -->
+    <link
+    href="https://unpkg.com/@videojs/themes@1/dist/city/index.css"
+    rel="stylesheet"
+    />
+
     <script defer phx-track-static type="text/javascript" src={Routes.static_path(@conn, "/assets/app.js")}></script>
     <title>Amps</title>
 

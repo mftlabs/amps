@@ -796,7 +796,7 @@ defmodule AmpsWeb.DataController do
   end
 
   def create(conn, %{"collection" => collection}) do
-    body = Util.before_create(collection, conn.body_params(), conn.assigns().env)
+    body = Util.before_create(collection, conn.body_params(), conn.assigns)
 
     {:ok, res} = DB.insert(collection, body)
 

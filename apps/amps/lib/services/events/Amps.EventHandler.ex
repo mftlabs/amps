@@ -76,7 +76,7 @@ defmodule Amps.EventHandler do
         name = String.to_atom(env <> "-" <> parms["name"] <> Integer.to_string(x))
 
         [
-          {Amps.EventPushConsumer, name: name, parms: parms, env: env, handler: self()}
+          {Amps.EventWrapper, name: name, parms: parms, env: env, handler: self()}
           | acc
         ]
       end)

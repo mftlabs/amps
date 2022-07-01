@@ -823,6 +823,7 @@ Ext.define("Amps.util.Utilities", {
     "refreshbtn",
     "reprocess",
     "reroute",
+    "skip",
     "export",
   ],
 
@@ -2340,6 +2341,49 @@ Ext.define("Amps.util.Utilities", {
     );
   },
 
+  dynamicRefresh: function (field, opts = {}) {
+    return Object.assign(
+      {
+        xtype: "fieldcontainer",
+        dynamic: true,
+        layout: {
+          type: "hbox",
+          align: "stretch",
+        },
+        tooltip: field.tooltip ? field.tooltip : null,
+        flex: 1,
+        items: [
+          Ext.apply(field, {
+            flex: 1,
+            tooltip: field.tooltip ? null : field.tooltip,
+          }),
+          {
+            xtype: "container",
+            layout: "center",
+            margin: { left: 5 },
+            cls: "button",
+            items: [
+              {
+                xtype: "button",
+                iconCls: "x-fa fa-refresh",
+                cls: "button_light",
+                focusable: false,
+                style: {
+                  "font-size": "1rem",
+                },
+                handler: async function (btn) {
+                  var cb = btn.up("fieldcontainer").down("combobox");
+                  cb.getStore().source.reload();
+                },
+              },
+            ],
+          },
+        ],
+      },
+      opts
+    );
+  },
+
   dynamicRemove: function (field) {
     var r = field.items[0];
     r.tooltip = field.tooltip;
@@ -2361,6 +2405,7 @@ Ext.define("Amps.util.Utilities", {
             fieldLabel: "File Name Format",
             allowBlank: false,
             tooltip: "Specifies how to build the filename for the message.",
+            value: "{fname}",
           },
           opts
         ),
@@ -2538,6 +2583,23 @@ Ext.define("Amps.util.Utilities", {
       proxy: {
         type: "ajax",
         url: "/api/scripts",
+        headers: {
+          Authorization: localStorage.getItem("access_token"),
+        },
+        reader: {
+          type: "json",
+        },
+      },
+      autoLoad: true,
+    };
+  },
+
+  utilScriptStore: function () {
+    return {
+      storeId: "utilscript",
+      proxy: {
+        type: "ajax",
+        url: "/api/utilscripts",
         headers: {
           Authorization: localStorage.getItem("access_token"),
         },

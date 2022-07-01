@@ -88,9 +88,10 @@ defmodule AmpsEvents do
     {msg, sid}
   end
 
-  def end_session(sid, env) do
+  def end_session(sid, env, status \\ "completed") do
     DB.find_one_and_update(AmpsUtil.index(env, "sessions"), %{"sid" => sid}, %{
-      "end" => AmpsUtil.gettime()
+      "end" => AmpsUtil.gettime(),
+      "status" => status
     })
 
     Logger.metadata(sid: nil)

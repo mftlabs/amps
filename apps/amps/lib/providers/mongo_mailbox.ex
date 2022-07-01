@@ -109,6 +109,30 @@ defmodule AmpsMailbox do
     end
   end
 
+  def is_mailbox(user, mailbox, env \\ "") do
+    user =
+      DB.find_one(AmpsUtil.index(env, "users"), %{
+        "username" => user
+      })
+
+    case user do
+      nil ->
+        nil
+
+      user ->
+        exists =
+          Enum.find(user["mailboxes"], fn mbox ->
+            mbox["name"] == mailbox
+          end)
+
+        if exists do
+          exists["name"]
+        else
+          nil
+        end
+    end
+  end
+
   def stat_fname(user, mailbox, fname, env \\ "") do
     # Mongo.find_one(:mongo, "mailbox", %{"$and" => [%{mailbox: mailbox}, %{fname: fname}]})
     DB.find_one(AmpsUtil.index(env, "mailbox"), %{
