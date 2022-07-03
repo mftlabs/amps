@@ -33,6 +33,16 @@ defmodule Amps.DB do
     end
   end
 
+  def get_page(collection, id, clauses \\ %{}, sort \\ %{}) do
+    case db() do
+      "mongo" ->
+        MongoDB.get_page(collection, id, clauses, sort)
+
+      _ ->
+        raise "Not Implemented"
+    end
+  end
+
   def get_db() do
     case db() do
       "mongo" ->
@@ -463,6 +473,89 @@ defmodule Amps.DB do
         BSON.ObjectId.decode!(id)
       else
         id
+      end
+    end
+
+    def get_page(collection, id, clauses, sort) do
+      obj = Mongo.find_one(:mongo, collection, %{"_id" => objectid(id)})
+      clauses = Filter.parse(clauses)
+
+      IO.inspect(clauses)
+
+      sort =
+        Enum.reduce(sort, %{}, fn {k, v}, acc ->
+          dir =
+            if v == "ASC" do
+              1
+            else
+              -1
+            end
+
+          {k, dir, Map.put(acc, k, dir)}
+        end)
+
+      case sort do
+        {field, dir, sort} ->
+          dir =
+            if dir == 1 do
+              "$lt"
+            else
+              "$gt"
+            end
+
+          countclause =
+            if clauses[field] do
+              Map.put(
+                clauses,
+                field,
+                Map.merge(clauses[field], %{
+                  dir => obj[field]
+                })
+              )
+            else
+              Map.put(clauses, field, %{
+                dir => obj[field]
+              })
+            end
+
+          {:ok, count} =
+            Mongo.count_documents(
+              :mongo,
+              collection,
+              countclause,
+              sort: sort
+            )
+
+          IO.inspect(count)
+
+          page = ceil((count + 1) / 25)
+
+          num = rem(count, 25)
+
+          cursor =
+            Mongo.find(
+              :mongo,
+              collection,
+              clauses,
+              sort: sort,
+              limit: 25,
+              skip: (page - 1) * 25
+            )
+
+          data =
+            cursor
+            |> Enum.to_list()
+
+          exists = BSON.ObjectId.encode!(Enum.at(data, num)["_id"]) == id
+
+          if exists do
+            {:ok, page}
+          else
+            {:error, "Dynamic Data"}
+          end
+
+        _ ->
+          {:error, "Not Sorting"}
       end
     end
 
@@ -1206,6 +1299,13 @@ defmodule Amps.DB do
     end
 
     def find(collection, clauses, opts \\ %{}) do
+      opts =
+        if opts[:limit] do
+          Map.put(opts, :size, opts.limit)
+        else
+          opts
+        end
+
       %{rows: rows, success: _success, count: _count} =
         query(
           collection,

@@ -146,7 +146,7 @@ defmodule AmpsMailbox do
     # Mongo.find(:mongo, "mailbox", %{mailbox: mailbox}, limit: limit, sort: %{time: 1})
     # |> Enum.to_list()
     DB.find(AmpsUtil.index(env, "mailbox"), %{"recipient" => user, "mailbox" => mailbox}, %{
-      size: limit,
+      limit: limit,
       sort: %{"mtime" => -1}
     })
   end
