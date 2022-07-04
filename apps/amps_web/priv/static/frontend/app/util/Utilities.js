@@ -2254,8 +2254,8 @@ Ext.define("Amps.util.Utilities", {
 
   outputTopic: function () {
     return amfutil.dynamicCreate(
-      amfutil.tagfield(
-        "Output Topic(s)",
+      amfutil.combo(
+        "Output Topic",
         "output",
         amfutil.createCollectionStore("topics", {}, { autoLoad: true }),
         "topic",
