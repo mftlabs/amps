@@ -389,16 +389,16 @@ defmodule Amps.SftpHandler do
   end
 
   def delete(path, state) do
-    mailbox = to_string(state[:user])
-    msgid = state[:current]["msgid"]
-    fname = Path.basename(path)
+    IO.inspect("DELETING")
+    user = to_string(state[:user])
 
-    if fname == state[:current]["fname"] do
-      {AmpsMailbox.delete_message(mailbox, msgid), state}
+    case Path.split(path) do
+      ["/", mailbox, fname] ->
+        {AmpsMailbox.delete_message(user, mailbox, fname, state[:env]), state}
+
+      ["/", fname] ->
+        {AmpsMailbox.delete_message(user, "default", fname, state[:env]), state}
     end
-
-    nstate = List.keystore(state, :current, 0, {:current, %{}})
-    {:ok, nstate}
   end
 
   def del_dir(path, state) do

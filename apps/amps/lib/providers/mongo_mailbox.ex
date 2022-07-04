@@ -16,15 +16,14 @@ defmodule AmpsMailbox do
     end
   end
 
-  def delete_message(user, mailbox, msgid, env \\ "") do
+  def delete_message(user, mailbox, fname, env \\ "") do
     result =
       DB.delete_one(AmpsUtil.index(env, "mailbox"), %{
         "recipient" => user,
         "mailbox" => mailbox,
-        "msgid" => msgid
+        "fname" => fname
       })
 
-    IO.inspect(result)
     :ok
   end
 
