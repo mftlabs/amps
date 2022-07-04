@@ -6337,7 +6337,9 @@ Ext.define("Amps.util.Grids", {
       object: "User",
       displayField: "username",
       overwrite: false,
-
+      sort: {
+        username: "ASC",
+      },
       actionIcons: [
         "addnewbtn",
         "searchpanelbtn",

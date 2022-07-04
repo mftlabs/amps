@@ -171,15 +171,27 @@ Ext.define("Amps.controller.PageController", {
         });
         mask.show();
 
+        var filter = localStorage.getItem(`${route}_filter`);
+
+        if (filter) {
+          filter = JSON.parse(filter);
+        } else {
+          filter = config.filter ? config.filter : {};
+        }
+
+        var store = Ext.StoreManager.lookup(route);
+
         grid.reconfigure(
-          amfutil.createPageStore(
-            Ext.util.History.getToken(),
-            config.filter ? config.filter : {}
-          ),
+          store
+            ? store
+            : amfutil.createPageStore(Ext.util.History.getToken(), filter),
           config.columns.concat(config.options ? [column] : null)
         );
 
         var store = grid.getStore();
+
+        var sort = localStorage.getItem(`${route}_sort`);
+
         store.on(
           "load",
           function (scope, records, successful, operation, eOpts) {
@@ -197,16 +209,17 @@ Ext.define("Amps.controller.PageController", {
           }
         );
 
-        if (config.sort) {
-          Object.entries(config.sort).forEach((sort) => {
-            store.sort(sort[0], sort[1]);
-          });
-        }
-
         // grid.clearListeners();
         grid.body.clearListeners();
 
         grid.setListeners({
+          sortchange: function (ct, col, dir) {
+            console.log(col);
+            console.log(dir);
+            var sortval = {};
+            sortval[col["dataIndex"]] = dir;
+            localStorage.setItem(`${route}_sort`, JSON.stringify(sortval));
+          },
           dblclick: {
             element: "body", //bind to the underlying body property on the panel
             fn: function (grid, rowIndex, e, obj) {
@@ -234,6 +247,17 @@ Ext.define("Amps.controller.PageController", {
             amfutil.copyTextdata(e);
           },
         });
+        if (sort) {
+          console.log(sort);
+          amfutil.setGridSort(JSON.parse(sort), route);
+        } else {
+          if (config.sort) {
+            amfutil.setGridSort(config.sort, route);
+          } else {
+            amfutil.setGridSort({ name: "ASC" }, route);
+          }
+        }
+        grid.fireEvent("checkfilter", "");
       }
       amfutil.getElementByID("page-panel-id").setActiveItem(0);
       var window = amfutil.getElementByID("searchwindow");
@@ -241,6 +265,8 @@ Ext.define("Amps.controller.PageController", {
       window.clearForm();
       amfutil.getElementByID("searchpanelbtn").setIconCls("x-fa fa-search");
       window.hide();
+
+      window.loadForm();
       var count = amfutil.getElementByID("edit_container").items.length;
       console.log(count);
       if (count > 0) {

@@ -820,4 +820,17 @@ defmodule AmpsWeb.UtilController do
       data
     )
   end
+
+  def page_num(conn, %{"collection" => collection, "id" => id}) do
+    clauses = Jason.decode!(conn.query_params["filters"] || "{}")
+    sort = Jason.decode!(conn.query_params["sort"] || "{}")
+
+    case DB.get_page(collection, id, clauses, sort) do
+      {:ok, page} ->
+        json(conn, %{"success" => true, "page" => page})
+
+      {:error, error} ->
+        json(conn, %{"success" => false})
+    end
+  end
 end

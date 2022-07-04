@@ -60,6 +60,8 @@ RUN chgrp -R 0 /.config && \
     chmod -R g=u /.config
 WORKDIR /amps
 
+ENV PYTHONUSERBASE=/.local
+
 ENV ERLPORT_PYTHON=/usr/bin/python3
 
 CMD ["./amps/bin/amps", "start"]

@@ -160,14 +160,26 @@
   border-color: #ffffff !important;
   background-color: #ffffff !important;
   margin-left: 4px;
-  margin-top: 5px;
+  margin-bottom: 5px;
   height: 42px;
 }
-.rtb .x-btn-icon-el-default-small {
+
+
+.rtb .x-btn-default-small.active {
+  border-color: var(--main-color) !important;
+  background-color: var(--main-color) !important;
+  outline: none;
+}
+
+.rtb  .x-btn-icon-el-default-small {
   font-size: 17px;
   height: auto;
   color: var(--secondary-color);
   line-height: 24px;
+}
+
+.rtb .x-btn-default-small.active .x-btn-icon-el-default-small {
+  color: #ff7b1c;
 }
 
 .rtb .x-btn-icon-left > .x-btn-icon-el-default-small,

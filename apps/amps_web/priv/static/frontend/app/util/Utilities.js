@@ -95,6 +95,7 @@ const filterTypes = {
         valueField: "field",
         queryMode: "local",
         filterPickList: true,
+        value: field.value,
       },
       opts
     );
@@ -104,6 +105,7 @@ const filterTypes = {
       xtype: "combobox",
       fieldLabel: field.text,
       name: field.dataIndex,
+      value: field.value,
       emptyText: "Filter by " + field.text,
       listeners: {
         beforerender: async function (scope) {
@@ -120,13 +122,14 @@ const filterTypes = {
     xtype: "textfield",
     fieldLabel: field.text,
     name: field.dataIndex,
+    value: field.value ? field.value["$regex"] : "",
     emptyText: "Filter by " + field.text,
   }),
   checkbox: (field) => ({
     xtype: "checkbox",
     name: field.dataIndex,
     fieldLabel: field.text,
-
+    value: field.value,
     uncheckedValue: false,
     inputValue: true,
     allowBlank: false,
@@ -139,6 +142,8 @@ const filterTypes = {
         fieldLabel: field.text,
         name: field.dataIndex,
         displayField: "label",
+        value: field.value,
+
         valueField: "field",
         store: field.options,
         emptyText: "Filter by " + field.text,
@@ -147,8 +152,34 @@ const filterTypes = {
     );
   },
 
-  date: (field) =>
-    new Ext.form.FieldSet({
+  date: (field) => {
+    var from_date;
+    var to_date;
+    var val = null;
+
+    if (field.value) {
+      if (field.value["$lt"]) {
+        var lt = field.value["$lt"]["$date"];
+        to_date = new Date(lt);
+        val = {};
+        val["$lt"] = lt;
+      }
+      if (field.value["$gt"]) {
+        var gt = field.value["$gt"]["$date"];
+        from_date = new Date();
+        if (!val) {
+          val = {};
+        }
+        val["$gt"] = gt;
+      }
+    }
+
+    if (val) {
+      val = JSON.stringify(val);
+    }
+
+    console.log(field.value);
+    return new Ext.form.FieldSet({
       title: field.text,
       items: [
         {
@@ -159,7 +190,8 @@ const filterTypes = {
               xtype: "datefield",
               anchor: "100%",
               fieldLabel: "From",
-              name: "from_date",
+              name: `${field.dataIndex}_from_date`,
+              value: from_date,
               itemId: "fromDate",
               emptyText: "Select Date",
               format: "d-M-Y",
@@ -216,9 +248,11 @@ const filterTypes = {
             },
             {
               xtype: "timefield",
-              name: "fromtime",
+              name: `${field.dataIndex}_from_time`,
               fieldLabel: "",
               increment: 15,
+              value: from_date,
+
               itemId: "fromTime",
               emptyText: "Select Time",
               padding: { left: 4, top: 0, bottom: 0 },
@@ -271,9 +305,11 @@ const filterTypes = {
               xtype: "datefield",
               anchor: "100%",
               fieldLabel: "To",
-              name: "to_date",
+              name: `${field.dataIndex}_to_date`,
               format: "d-M-Y",
               emptyText: "Select Date",
+              value: to_date,
+
               itemId: "maToDate",
               padding: { left: 0, top: 0, bottom: 6 },
               listeners: {
@@ -327,10 +363,12 @@ const filterTypes = {
             },
             {
               xtype: "timefield",
-              name: "totime",
+              name: `${field.dataIndex}_to_time`,
               fieldLabel: "",
               increment: 15,
               itemId: "toTime",
+              value: to_date,
+
               emptyText: "Select Time",
               format: "H:i:s",
               padding: { left: 4, top: 0, bottom: 0 },
@@ -367,6 +405,7 @@ const filterTypes = {
                       curr["$lt"] = date;
                     }
                     console.log(curr);
+                    console.log(hidden);
                     hidden.setValue(JSON.stringify(curr));
                   }
                 },
@@ -378,9 +417,12 @@ const filterTypes = {
           xtype: "hidden",
           itemId: "datefiltervalue",
           name: field.dataIndex,
+          value: val,
         },
       ],
-    }),
+    });
+  },
+
   fileSize: (field) => {
     function setHiddenValue() {
       var curr = {};
@@ -2512,7 +2554,7 @@ Ext.define("Amps.util.Utilities", {
       "Ext.data.Store",
       Object.assign(
         {
-          storeId: "page",
+          storeId: collection,
           remoteSort: true,
           proxy: {
             type: "rest",
@@ -3147,43 +3189,40 @@ Ext.define("Amps.util.Utilities", {
     return obj;
   },
 
-  setGridStore: function (filters, config) {
+  setGridStore: function (filters, collection) {
     // console.log(filters);
     var route = Ext.util.History.currentToken;
     var grid = amfutil.getElementByID("main-grid");
-    grid.setStore(
-      Ext.create("Ext.data.Store", {
-        start: 0,
-        limit: 25,
-        remoteSort: true,
-        proxy: {
-          type: "rest",
-          headers: {
-            Authorization: localStorage.getItem("access_token"),
-          },
-          extraParams: {
-            params: JSON.stringify({ filters: filters ? filters : {} }),
-          },
-          url: `/api/store/${route}`,
-          listeners: {
-            exception: amfutil.refresh_on_failure,
-          },
-          reader: {
-            type: "json",
-            rootProperty: "rows",
-            totalProperty: "count",
-          },
-        },
-        autoLoad: true,
-      })
-    );
-    console.log(config);
 
-    if (config && config.sort) {
-      var store = grid.getStore();
+    var store = grid.getStore();
+    store.getProxy().setExtraParams({
+      params: JSON.stringify({ filters: filters ? filters : {} }),
+    });
 
-      amfutil.setStoreSort(store, config.sort);
-    }
+    store.load();
+
+    localStorage.setItem(`${collection}_filter`, JSON.stringify(filters));
+  },
+
+  setGridSort: function (sort, collection) {
+    var grid = amfutil.getElementByID("main-grid");
+
+    var store = grid.getStore();
+    Object.entries(sort).forEach(([k, v]) => {
+      store.sort(k, v);
+    });
+    localStorage.setItem(`${collection}_sort`, JSON.stringify(sort));
+  },
+  getStoredColl(collection) {
+    return {
+      filters: localStorage.getItem(`${collection}_filter`) || "{}",
+      sort: localStorage.getItem(`${collection}_sort`) || "{}",
+    };
+  },
+
+  putStoredColl(collection, data) {
+    localStorage.setItem(`${collection}_filter`, data.filters);
+    localStorage.setItem(`${collection}_sort`, data.sort);
   },
 
   setStoreSort(store, sort) {
@@ -3255,12 +3294,22 @@ Ext.define("Amps.util.Utilities", {
 
   clearFilter: function () {
     var form = amfutil.getElementByID("searchform");
-    form.reset();
+    if (form) {
+      form.reset();
+    }
     var window = amfutil.getElementByID("searchwindow");
+    window.show();
     window.clearForm();
 
     console.log(form);
-    amfutil.setGridStore({}, ampsgrids.grids[Ext.util.History.getToken()]());
+    var coll = Ext.util.History.getToken();
+    amfutil.setGridStore({}, coll);
+    var config = ampsgrids.grids[coll]();
+    if (config.sort) {
+      amfutil.setGridSort(config.sort, coll);
+    }
+
+    amfutil.getElementByID("main-grid").fireEvent("clear", "");
 
     amfutil.getElementByID("searchwindow").close();
     amfutil.getElementByID("searchpanelbtn").setIconCls("x-fa fa-search");
@@ -3469,9 +3518,14 @@ Ext.define("Amps.util.Utilities", {
     var route = Ext.util.History.currentToken;
     var page = ampsgrids.grids[route]();
     console.log(ampsgrids.grids[route]());
+    var filters = JSON.parse(localStorage.getItem(`${route}_filter`, "{}"));
+    console.log(filters);
     var items =
       page.columns &&
       page.columns.map((field) => {
+        if (filters) {
+          field.value = filters[field.dataIndex];
+        }
         if (field.type) {
           if (field.searchOpts) {
             return filterTypes[field.type](field, field.searchOpts);
@@ -3482,6 +3536,7 @@ Ext.define("Amps.util.Utilities", {
           return;
         }
       });
+    console.log(items);
 
     return new Ext.form.Panel({
       defaults: {
@@ -3509,7 +3564,8 @@ Ext.define("Amps.util.Utilities", {
             console.log(values);
             var filters = amfutil.getFilters(form, fields);
             console.log(filters);
-            amfutil.setGridStore(filters, page);
+            amfutil.setGridStore(filters, route);
+            amfutil.getElementByID("main-grid").fireEvent("checkfilter", "");
 
             amfutil.getElementByID("searchwindow").close();
             amfutil
@@ -3519,9 +3575,95 @@ Ext.define("Amps.util.Utilities", {
         },
         {
           xtype: "button",
+          text: "Apply Filter",
+          itemId: "applyfilterufarule",
+          handler: function (btn) {
+            var form = btn.up("form").getForm();
+            // var dateval = btn.up("form").down("datefiltervalue");
+            // console.log(dateval);
+            var values = form.getValues();
+            var fields = ampsgrids.grids[route]().columns;
+            // var fieldKeys = fields.map((field) => field.field);
+            console.log(fields);
+            console.log(values);
+            var filters = amfutil.getFilters(form, fields);
+            console.log(filters);
+            amfutil.setGridStore(filters, route);
+            amfutil.getElementByID("main-grid").fireEvent("checkfilter", "");
+
+            amfutil.getElementByID("searchwindow").close();
+            amfutil
+              .getElementByID("searchpanelbtn")
+              .setIconCls("x-fa fa-search");
+          },
+        },
+
+        {
+          xtype: "button",
           text: "Clear Filter",
           handler: function (btn) {
             amfutil.clearFilter();
+          },
+        },
+        {
+          xtype: "button",
+          text: "Export Filter",
+          handler: function (btn) {
+            var stored = amfutil.getStoredColl(Ext.util.History.getToken());
+            var encoded = btoa(JSON.stringify(stored));
+            navigator.clipboard.writeText(encoded).then(function () {
+              Ext.toast("Filter copied to clipboard");
+            });
+            console.log(encoded);
+          },
+        },
+
+        {
+          xtype: "button",
+          text: "Load Filter",
+          handler: function (btn) {
+            var searchwin = btn.up("window");
+            var win = new Ext.window.Window({
+              title: "Load Filter",
+              modal: true,
+              layout: "fit",
+              padding: 20,
+              items: [
+                {
+                  xtype: "form",
+                  defaults: {
+                    padding: 10,
+                  },
+                  items: [amfutil.text("Filter", "filter")],
+                  buttons: [
+                    {
+                      text: "Load",
+                      formBind: true,
+                      handler: function () {
+                        try {
+                          var form = this.up("form");
+                          var values = form.getValues();
+                          var filter = values.filter;
+                          var decoded = atob(filter);
+                          var obj = JSON.parse(decoded);
+                          var route = Ext.util.History.getToken();
+                          console.log(obj);
+                          amfutil.setGridStore(JSON.parse(obj.filters), route);
+                          amfutil.setGridSort(JSON.parse(obj.sort), route);
+                          searchwin.loadForm();
+                          searchwin.close();
+                          win.close();
+                        } catch (error) {
+                          console.log(error);
+                          Ext.toast("Could not load filter");
+                        }
+                      },
+                    },
+                  ],
+                },
+              ],
+            });
+            win.show();
           },
         },
       ],
@@ -3535,7 +3677,6 @@ Ext.define("Amps.util.Utilities", {
     console.log(values);
     var filters = {};
     fields.forEach((field) => {
-      console.log(field);
       if (values[field.dataIndex] && values[field.dataIndex] != "") {
         if (field.type == "date") {
           var data = JSON.parse(values[field.dataIndex]);

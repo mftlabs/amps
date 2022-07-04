@@ -137,6 +137,8 @@ defmodule AmpsWeb.Router do
     get("/pyservices", ScriptController, :get_services)
 
     resources("/:collection/", DataController, except: [:new, :edit])
+    get("/:collection/page/:id", UtilController, :page_num)
+
     post("/:collection/create/:id", DataController, :create_with_id)
     post("/:collection/:id", DataController, :update_with_id)
     post("/:collection/:id/:field/create/:fieldid", DataController, :add_to_field_with_id)

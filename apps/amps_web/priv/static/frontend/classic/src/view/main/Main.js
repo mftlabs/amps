@@ -107,6 +107,28 @@ Ext.define("Amps.view.main.Main", {
           iconCls: "x-fa fa-search",
           handler: "onSearchPanel",
           tooltip: "Filter Records",
+          listeners: {
+            beforeshow: function () {
+              var route = Ext.util.History.getToken();
+              var stored = amfutil.getStoredColl(route);
+              if (stored.filters != "{}") {
+                this.addCls("active");
+              }
+              amfutil.getElementByID("main-grid").on("clear", () => {
+                this.removeCls("active");
+              });
+
+              amfutil.getElementByID("main-grid").on("checkfilter", () => {
+                var route = Ext.util.History.getToken();
+                var stored = amfutil.getStoredColl(route);
+                if (stored.filters != "{}") {
+                  this.addCls("active");
+                } else {
+                  this.removeCls("active");
+                }
+              });
+            },
+          },
           hidden: true,
         },
         {
