@@ -138,7 +138,7 @@ defmodule AmpsMailbox do
 
   def is_mailbox(user, mailbox, env \\ "") do
     if mailbox == "default" do
-      %{"name" => "default"}
+      "default"
     else
       user =
         DB.find_one(AmpsUtil.index(env, "users"), %{
