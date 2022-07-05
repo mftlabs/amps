@@ -348,7 +348,7 @@ defmodule Amps.SftpHandler do
       mailbox = state[:mailbox]
       fname = state[:fname]
 
-      {msg, to_delete} =
+      {msg, delete} =
         AmpsMailbox.overwrite(
           user,
           mailbox,
@@ -392,11 +392,7 @@ defmodule Amps.SftpHandler do
       AmpsEvents.send(msg, %{"output" => topic}, %{}, env)
       AmpsEvents.send(msg, %{"output" => mailboxtopic}, %{}, env)
 
-      if to_delete do
-        Logger.info("Overwriting #{to_delete["msgid"]}")
-        AmpsMailbox.delete_message(to_string(user), mailbox, to_delete["msgid"], state[:env])
-      end
-
+      delete.()
       # AmpsEvents.send_history(
       #   "amps.events.messages",
       #   "message_events",

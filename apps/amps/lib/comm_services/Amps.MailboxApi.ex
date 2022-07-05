@@ -125,7 +125,7 @@ defmodule Amps.MailboxApi do
             conn.private.env
           )
 
-        {msg, to_delete} =
+        {msg, delete} =
           AmpsMailbox.overwrite(
             user,
             mailbox,
@@ -149,12 +149,7 @@ defmodule Amps.MailboxApi do
 
         case {svced, mailboxed} do
           {:ok, :ok} ->
-            AmpsMailbox.delete_message(
-              user,
-              mailbox,
-              to_delete["msgid"],
-              conn.private.env
-            )
+            delete.()
 
             # AmpsQueue.commitTx()
             # register normal completion (201 created)

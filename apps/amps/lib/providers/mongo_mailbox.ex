@@ -1,5 +1,6 @@
 defmodule AmpsMailbox do
   alias Amps.DB
+  require Logger
 
   @doc """
   """
@@ -177,13 +178,17 @@ defmodule AmpsMailbox do
 
     case stat_fname(user, mailbox, fname, env) do
       nil ->
-        {msg, nil}
+        {msg, fn -> nil end}
 
       to_delete ->
         if overwrite do
-          {msg, to_delete}
+          {msg,
+           fn ->
+             Logger.info("Overwriting #{to_delete["msgid"]} in Mailbox #{mailbox}")
+             delete_message(user, mailbox, to_delete["msgid"], env)
+           end}
         else
-          {Map.put(msg, "fname", fname <> "(" <> msg["msgid"] <> ")"), nil}
+          {Map.put(msg, "fname", fname <> "(" <> msg["msgid"] <> ")"), fn -> nil end}
         end
     end
   end

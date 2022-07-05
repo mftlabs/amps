@@ -22,7 +22,7 @@ defmodule Amps.Actions.Mailbox do
             "fname" => AmpsUtil.format(parms["format"], msg)
           })
 
-        {newmsg, to_delete} =
+        {newmsg, delete} =
           AmpsMailbox.overwrite(recipient, mailbox, newmsg, parms["overwrite"], env)
 
         AmpsEvents.send(
@@ -32,12 +32,7 @@ defmodule Amps.Actions.Mailbox do
           env
         )
 
-        AmpsMailbox.delete_message(
-          recipient,
-          mailbox,
-          to_delete["msgid"],
-          env
-        )
+        delete.()
 
         # AmpsMailbox.add_message(recipient, newmsg, env)
         Logger.info("put message in mailbox #{recipient}")
