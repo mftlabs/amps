@@ -64,16 +64,17 @@ defmodule Amps.EventWrapper do
     Logger.info("got stream #{stream} #{consumer}")
     opts = Map.put(opts, "id", name)
 
-    {:ok, pid} = Amps.EventPullConsumer.start_link(%{
-      parms: opts,
-      connection_pid: pid,
-      stream: stream,
-      listening_topic: listening_topic,
-      consumer: consumer,
-      env: state.env,
-      handler: parms.handler,
-      name: String.to_atom(name <> "_pc")
-    })
+    {:ok, pid} =
+      Amps.EventPullConsumer.start_link(%{
+        parms: opts,
+        connection_pid: pid,
+        stream: stream,
+        listening_topic: listening_topic,
+        consumer: consumer,
+        env: state.env,
+        handler: parms.handler,
+        name: String.to_atom(name <> "_pc")
+      })
 
     {:noreply, %{cpid: pid, opts: opts, pid: pid}}
   end
@@ -99,7 +100,8 @@ defmodule Amps.EventWrapper do
 
   def terminate(reason, state) do
     Logger.info("TERMINATING #{state.opts["name"]}")
-    Process.exit(state.pid, :normal)
+    Process.info(state.pid)
+    Process.exit(state.pid, :kill)
   end
 end
 
