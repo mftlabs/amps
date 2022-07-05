@@ -99,7 +99,7 @@ defmodule Amps.EventWrapper do
   end
 
   def terminate(reason, state) do
-    Logger.info("TERMINATING #{state.parms["name"]}")
+    Logger.info("TERMINATING #{state.opts["name"]}")
     Process.info(state.pid)
     Process.exit(state.pid, :shutdown)
   end
