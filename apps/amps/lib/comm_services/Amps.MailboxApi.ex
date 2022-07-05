@@ -125,24 +125,16 @@ defmodule Amps.MailboxApi do
             conn.private.env
           )
 
-        overwrite = conn.private.opts["overwrite"]
-        fname = msg["fname"]
-
-        {fname, to_delete} =
-          case AmpsMailbox.get_message_by_name(user, mailbox, fname, conn.private.env) do
-            nil ->
-              {fname, nil}
-
-            to_delete ->
-              if overwrite do
-                {fname, to_delete}
-              else
-                {fname <> "(" <> to_delete["msgid"] <> ")", nil}
-              end
-          end
+        {msg, to_delete} =
+          AmpsMailbox.overwrite(
+            user,
+            mailbox,
+            msg,
+            conn.private.opts["overwrite"],
+            conn.private.env
+          )
 
         msg = Map.put(msg, "header", "")
-        msg = Map.put(msg, "fname", fname)
 
         #            :file.delete(temp_file)
         #            Amps.MqService.send("registerq", msg)

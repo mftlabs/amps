@@ -22,28 +22,8 @@ defmodule Amps.Actions.Mailbox do
             "fname" => AmpsUtil.format(parms["format"], msg)
           })
 
-        fname = msg["fname"]
-        overwrite = parms["overwrite"]
-
-        {fname, to_delete} =
-          case AmpsMailbox.get_message_by_name(
-                 recipient,
-                 mailbox,
-                 fname,
-                 env
-               ) do
-            nil ->
-              {fname, nil}
-
-            to_delete ->
-              if overwrite do
-                {fname, to_delete}
-              else
-                {fname <> "(" <> newmsg["msgid"] <> ")", nil}
-              end
-          end
-
-        newmsg = Map.put(newmsg, "fname", fname)
+        {newmsg, to_delete} =
+          AmpsMailbox.overwrite(recipient, mailbox, newmsg, parms["overwrite"], env)
 
         AmpsEvents.send(
           newmsg,

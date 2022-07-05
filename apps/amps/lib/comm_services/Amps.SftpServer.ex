@@ -347,41 +347,32 @@ defmodule Amps.SftpHandler do
       user = to_string(state[:user])
       mailbox = state[:mailbox]
       fname = state[:fname]
-      overwrite = opt["overwrite"]
 
-      IO.inspect(opt)
-      IO.inspect(overwrite)
-
-      {fname, to_delete} =
-        case AmpsMailbox.get_message_by_name(user, mailbox, fname, state[:env]) do
-          nil ->
-            {fname, nil}
-
-          to_delete ->
-            if overwrite do
-              {fname, to_delete}
-            else
-              {fname <> "(" <> state[:msgid] <> ")", nil}
-            end
-        end
+      {msg, to_delete} =
+        AmpsMailbox.overwrite(
+          user,
+          mailbox,
+          %{"msgid" => state[:msgid], "fname" => fname},
+          opt["overwrite"],
+          state[:env]
+        )
 
       _result = :file.close(io_device)
       env = state[:env]
       service = opt["name"]
 
-      msg = %{
-        "mailbox" => mailbox,
-        "service" => service,
-        # "action" => "SFTP PUT",
-        "msgid" => state[:msgid],
-        "fsize" => state[:fsize],
-        "fpath" => state[:fpath],
-        "fname" => fname,
-        "dirname" => state[:dirname],
-        "temp" => true,
-        "ftime" => DateTime.to_iso8601(DateTime.utc_now()),
-        "user" => user
-      }
+      msg =
+        Map.merge(msg, %{
+          "mailbox" => mailbox,
+          "service" => service,
+          # "action" => "SFTP PUT",
+          "fsize" => state[:fsize],
+          "fpath" => state[:fpath],
+          "dirname" => state[:dirname],
+          "temp" => true,
+          "ftime" => DateTime.to_iso8601(DateTime.utc_now()),
+          "user" => user
+        })
 
       {msg, sid} = AmpsEvents.start_session(msg, %{"service" => service}, state[:env])
 

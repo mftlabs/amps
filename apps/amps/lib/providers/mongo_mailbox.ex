@@ -172,6 +172,22 @@ defmodule AmpsMailbox do
     })
   end
 
+  def overwrite(user, mailbox, msg, overwrite, env \\ "") do
+    fname = msg["fname"]
+
+    case stat_fname(user, mailbox, fname, env) do
+      nil ->
+        {msg, nil}
+
+      to_delete ->
+        if overwrite do
+          {msg, to_delete}
+        else
+          {Map.put(msg, "fname", fname <> "(" <> msg["msgid"] <> ")"), nil}
+        end
+    end
+  end
+
   def list_messages(user, mailbox, limit \\ 100, env \\ "") do
     # Mongo.find(:mongo, "mailbox", %{mailbox: mailbox}, limit: limit, sort: %{time: 1})
     # |> Enum.to_list()
