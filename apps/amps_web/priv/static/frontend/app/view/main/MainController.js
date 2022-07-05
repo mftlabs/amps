@@ -1219,7 +1219,7 @@ Ext.define("Amps.view.main.MainController", {
     var sel = grid.getSelection();
     sel.forEach((m) => {
       var data = m.data;
-      amfutil.reprocess(grid, data.msgid);
+      amfutil.reprocess(grid, data._id);
     });
   },
 

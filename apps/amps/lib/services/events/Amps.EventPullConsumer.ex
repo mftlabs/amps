@@ -168,16 +168,27 @@ defmodule Amps.EventPullConsumer do
                           "completed"
                         end
 
+                      reason = result["reason"] || nil
+
+                      event = %{
+                        "topic" => AmpsUtil.env_topic(parms["topic"], state.env),
+                        "status" => status,
+                        "action" => actparms["name"],
+                        "subscriber" => name
+                      }
+
+                      event =
+                        if reason do
+                          Map.put(event, "reason", reason)
+                        else
+                          event
+                        end
+
                       AmpsEvents.send_history(
                         AmpsUtil.env_topic("amps.events.action", state.env),
                         "message_events",
                         msg,
-                        %{
-                          "topic" => AmpsUtil.env_topic(parms["topic"], state.env),
-                          "status" => status,
-                          "action" => actparms["name"],
-                          "subscriber" => name
-                        }
+                        event
                       )
 
                       status
