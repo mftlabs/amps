@@ -56,7 +56,7 @@ defmodule Amps.EventPullConsumer do
                 {msg, sid} =
                   AmpsEvents.start_session(
                     data["msg"],
-                    %{"service" => parms["name"]},
+                    %{"service" => parms["name"], "status" => "started"},
                     state.env
                   )
 
