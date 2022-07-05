@@ -101,8 +101,8 @@ defmodule Amps.EventWrapper do
   def terminate(reason, state) do
     Logger.info("TERMINATING #{state.parms["name"]}")
     Process.unlink(Process.whereis(:gnat))
-    Process.info(state.pid)
-    Process.exit(state.pid, :kill)
+    Process.info(state.cpid)
+    Process.exit(state.cpid, :kill)
   end
 end
 
