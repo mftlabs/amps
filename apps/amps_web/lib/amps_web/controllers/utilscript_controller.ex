@@ -100,6 +100,8 @@ defmodule AmpsWeb.UtilScriptController do
       end
 
     resp = File.write(script, data)
+    DB.insert("utilscripts", %{"name" => name, "data" => data})
+
     IO.inspect(resp)
     json(conn, :ok)
   end
@@ -108,12 +110,24 @@ defmodule AmpsWeb.UtilScriptController do
     body = conn.body_params()
     script = get_path(name)
     File.write(script, body["data"])
+    index = "utilscripts"
+
+    case DB.find_one(index, %{"name" => name}) do
+      nil ->
+        DB.insert(index, %{"name" => name, "data" => body["data"]})
+      script ->
+        DB.find_one_and_update(index, %{"_id" => script["_id"]}, %{
+          "data" => body["data"]
+        })
+    end
     json(conn, :ok)
   end
 
   def delete(conn, %{"id" => name}) do
     script = get_path(name)
     :ok = File.rm(script)
+    DB.delete_one("utilscripts", %{"name" => name})
+
     json(conn, :ok)
   end
 

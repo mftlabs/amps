@@ -101,6 +101,7 @@ defmodule AmpsWeb.ScriptController do
 
     resp = File.write(script, data)
     IO.inspect(resp)
+    DB.insert(Util.index(conn.assigns().env, "scripts"), %{"name" => name, "data" => data})
     json(conn, :ok)
   end
 
@@ -108,12 +109,25 @@ defmodule AmpsWeb.ScriptController do
     body = conn.body_params()
     script = get_path(name, conn.assigns().env)
     File.write(script, body["data"])
+    index = Util.index(conn.assigns().env, "scripts")
+    case DB.find_one(index, %{"name" => name}) do
+      nil ->
+        DB.insert(index, %{"name" => name, "data" => body["data"]})
+      script ->
+        DB.find_one_and_update(index, %{"_id" => script["_id"]}, %{
+          "data" => body["data"]
+        })
+    end
+
+
+
     json(conn, :ok)
   end
 
   def delete(conn, %{"id" => name}) do
     script = get_path(name, conn.assigns().env)
     :ok = File.rm(script)
+    DB.delete_one(Util.index(conn.assigns().env, "scripts"), %{"name" => name})
     json(conn, :ok)
   end
 

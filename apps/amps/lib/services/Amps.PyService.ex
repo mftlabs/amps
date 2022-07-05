@@ -25,6 +25,8 @@ defmodule Amps.PyService do
     tmp = AmpsUtil.get_env(:storage_temp)
     # {:ok, pid} = :python.start([{:python_path, to_charlist(path)}])
     IO.inspect(parms)
+    check_script(parms["module"], env)
+
     module = String.to_atom(parms["module"])
     xparm = %{:msg => msg, :parms => parms, :sysparms => %{"tempdir" => tmp}}
     jparms = Poison.encode!(xparm)
@@ -46,6 +48,23 @@ defmodule Amps.PyService do
     rescue
       e ->
         {:error, e}
+    end
+  end
+
+  def check_script(name, env) do
+    path = AmpsUtil.get_mod_path(env)
+    script_path = Path.join(path, name <> ".py")
+
+    if File.exists?(script_path) do
+      :ok
+    else
+      case DB.find_one(AmpsUtil.index(env, "scripts"), %{"name" => name}) do
+        nil ->
+          raise "Script does not exist"
+
+        script ->
+          File.write(script_path, script["data"])
+      end
     end
   end
 
