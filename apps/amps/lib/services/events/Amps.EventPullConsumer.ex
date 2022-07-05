@@ -121,7 +121,7 @@ defmodule Amps.EventPullConsumer do
                 }
               )
 
-              {:term, state}
+              {{:term, state}, "skipped"}
             else
               AmpsEvents.send_history(
                 AmpsUtil.env_topic("amps.events.action", state.env),

@@ -16,7 +16,7 @@ defmodule AmpsMailbox do
     end
   end
 
-  def delete_message(user, mailbox, fname, env \\ "") do
+  def delete_by_name(user, mailbox, fname, env \\ "") do
     result =
       DB.delete_one(AmpsUtil.index(env, "mailbox"), %{
         "recipient" => user,
@@ -25,6 +25,33 @@ defmodule AmpsMailbox do
       })
 
     :ok
+  end
+
+  def delete_message(user, mailbox, msgid, env \\ "") do
+    IO.inspect(user)
+    IO.inspect(mailbox)
+    IO.inspect(msgid)
+    IO.inspect(env)
+
+    result =
+      DB.delete_one(AmpsUtil.index(env, "mailbox"), %{
+        "recipient" => user,
+        "mailbox" => mailbox,
+        "msgid" => msgid
+      })
+
+    IO.inspect(result)
+
+    :ok
+  end
+
+  def get_message_by_name(user, mailbox, fname, env \\ "") do
+    # Mongo.find_one(:mongo, "mailbox", %{"$and" => [%{mailbox: mailbox}, %{msgid: msgid}]})
+    DB.find_one(AmpsUtil.index(env, "mailbox"), %{
+      "recipient" => user,
+      "mailbox" => mailbox,
+      "fname" => fname
+    })
   end
 
   def get_message(user, mailbox, msgid, env \\ "") do
@@ -109,26 +136,30 @@ defmodule AmpsMailbox do
   end
 
   def is_mailbox(user, mailbox, env \\ "") do
-    user =
-      DB.find_one(AmpsUtil.index(env, "users"), %{
-        "username" => user
-      })
+    if mailbox == "default" do
+      %{"name" => "default"}
+    else
+      user =
+        DB.find_one(AmpsUtil.index(env, "users"), %{
+          "username" => user
+        })
 
-    case user do
-      nil ->
-        nil
-
-      user ->
-        exists =
-          Enum.find(user["mailboxes"], fn mbox ->
-            mbox["name"] == mailbox
-          end)
-
-        if exists do
-          exists["name"]
-        else
+      case user do
+        nil ->
           nil
-        end
+
+        user ->
+          exists =
+            Enum.find(user["mailboxes"], fn mbox ->
+              mbox["name"] == mailbox
+            end)
+
+          if exists do
+            exists["name"]
+          else
+            nil
+          end
+      end
     end
   end
 

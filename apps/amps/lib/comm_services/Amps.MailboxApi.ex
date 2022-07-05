@@ -80,6 +80,107 @@ defmodule Amps.MailboxApi do
     end
   end
 
+  post "/mailbox/:user/" do
+    IO.inspect(conn)
+
+    IO.puts("opts: #{inspect(opts)}")
+    msgid = AmpsUtil.get_id()
+    stime = AmpsUtil.gettime()
+    temp_file = AmpsUtil.tempdir() <> "/" <> msgid
+    IO.puts("temp: #{temp_file}")
+
+    IO.inspect(conn)
+    IO.inspect(conn.body_params())
+    mailbox = "default"
+
+    case myauth(conn, user, mailbox) do
+      {:ok, user} ->
+        msg = get_metadata(conn, user, msgid, stime, temp_file)
+        handle_write(conn, temp_file, msg, user, mailbox)
+
+      {:error, reason} ->
+        # auth failure (401 unauthorized)
+        send_resp(conn, 401, Poison.encode!(%{error: reason}))
+    end
+  end
+
+  def handle_write(conn, temp_file, msg, user, mailbox) do
+    msgid = msg["msgid"]
+
+    case write_file(conn, temp_file) do
+      {:error, reason} ->
+        # cannot write temp file (500 internal service error)
+        send_resp(
+          conn,
+          500,
+          Poison.encode!(%{msgid: msgid, status: reason})
+        )
+
+      {:ok, _conn} ->
+        # temp file written okay
+        {msg, sid} =
+          AmpsEvents.start_session(
+            msg,
+            %{"service" => conn.private.opts["name"]},
+            conn.private.env
+          )
+
+        overwrite = conn.private.opts["overwrite"]
+        fname = msg["fname"]
+
+        {fname, to_delete} =
+          case AmpsMailbox.get_message_by_name(user, mailbox, fname, conn.private.env) do
+            nil ->
+              {fname, nil}
+
+            to_delete ->
+              if overwrite do
+                {fname, to_delete}
+              else
+                {fname <> "(" <> to_delete["msgid"] <> ")", nil}
+              end
+          end
+
+        msg = Map.put(msg, "header", "")
+        msg = Map.put(msg, "fname", fname)
+
+        #            :file.delete(temp_file)
+        #            Amps.MqService.send("registerq", msg)
+        msg = Map.put(msg, "mailbox", mailbox)
+
+        topic = "amps.svcs.#{conn.private.opts["name"]}.#{user}"
+
+        mailboxtopic = "amps.mailbox.#{user}.#{mailbox}"
+
+        svced = AmpsEvents.send(msg, %{"output" => topic}, %{}, conn.private.env)
+        mailboxed = AmpsEvents.send(msg, %{"output" => mailboxtopic}, %{}, conn.private.env)
+
+        case {svced, mailboxed} do
+          {:ok, :ok} ->
+            AmpsMailbox.delete_message(
+              user,
+              mailbox,
+              to_delete["msgid"],
+              conn.private.env
+            )
+
+            # AmpsQueue.commitTx()
+            # register normal completion (201 created)
+            AmpsEvents.end_session(sid, conn.private.env)
+
+            send_resp(
+              conn,
+              201,
+              Poison.encode!(%{msgid: msgid, status: "accepted"})
+            )
+
+            #              :error ->
+            # register reports failure (400 bad request)
+            #                send_resp(conn, 400, Poison.encode!(%{msgid: msgid, status: "rejected"}))
+        end
+    end
+  end
+
   post "/mailbox/:user/:mailbox" do
     IO.inspect(conn)
 
@@ -95,54 +196,7 @@ defmodule Amps.MailboxApi do
     case myauth(conn, user, mailbox) do
       {:ok, user} ->
         msg = get_metadata(conn, user, msgid, stime, temp_file)
-
-        case write_file(conn, temp_file) do
-          {:error, reason} ->
-            # cannot write temp file (500 internal service error)
-            send_resp(
-              conn,
-              500,
-              Poison.encode!(%{msgid: msgid, status: reason})
-            )
-
-          {:ok, _conn} ->
-            # temp file written okay
-            {msg, sid} =
-              AmpsEvents.start_session(
-                msg,
-                %{"service" => conn.private.opts["name"]},
-                conn.private.env
-              )
-
-            msg = Map.put(msg, "header", "")
-            #            :file.delete(temp_file)
-            #            Amps.MqService.send("registerq", msg)
-            msg = Map.put(msg, "mailbox", mailbox)
-
-            topic = "amps.svcs.#{conn.private.opts["name"]}.#{user}"
-
-            mailboxtopic = "amps.mailbox.#{user}.#{mailbox}"
-
-            svced = AmpsEvents.send(msg, %{"output" => topic}, %{}, conn.private.env)
-            mailboxed = AmpsEvents.send(msg, %{"output" => mailboxtopic}, %{}, conn.private.env)
-
-            case {svced, mailboxed} do
-              {:ok, :ok} ->
-                # AmpsQueue.commitTx()
-                # register normal completion (201 created)
-                AmpsEvents.end_session(sid, conn.private.env)
-
-                send_resp(
-                  conn,
-                  201,
-                  Poison.encode!(%{msgid: msgid, status: "accepted"})
-                )
-
-                #              :error ->
-                # register reports failure (400 bad request)
-                #                send_resp(conn, 400, Poison.encode!(%{msgid: msgid, status: "rejected"}))
-            end
-        end
+        handle_write(conn, temp_file, msg, user, mailbox)
 
       {:error, reason} ->
         # auth failure (401 unauthorized)
@@ -228,7 +282,7 @@ defmodule Amps.MailboxApi do
         "fpath" => temp,
         "temp" => "true",
         "stime" => stime,
-        "fsize" => elem(size, 1),
+        "fsize" => elem(size, 1) |> String.to_integer(),
         "ftime" => AmpsUtil.gettime(),
         "service" => conn.private.opts["name"]
       })
@@ -242,7 +296,7 @@ defmodule Amps.MailboxApi do
             end
           end
         else
-          "message.dat"
+          msgid
         end
 
       if fname do
@@ -304,11 +358,7 @@ defmodule Amps.MailboxApi do
           user ->
             if username == user["username"] do
               if mailbox do
-                mailbox =
-                  Enum.find(user["mailboxes"], nil, fn mb ->
-                    IO.inspect(mailbox)
-                    mb["name"] == mailbox
-                  end)
+                mailbox = AmpsMailbox.is_mailbox(username, mailbox, conn.private.env)
 
                 case mailbox do
                   nil ->

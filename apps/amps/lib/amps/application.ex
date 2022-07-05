@@ -193,7 +193,6 @@ defmodule Amps.Application do
       )
 
     Application.put_env(:amps, :initialized, true)
-
     res
   end
 end

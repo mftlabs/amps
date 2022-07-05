@@ -3794,6 +3794,7 @@ Ext.define("Amps.util.Utilities", {
           "field",
           "label",
           {
+            value: "new",
             listeners: amfutil.renderListeners(
               function (scope, val) {
                 var conts = ["by_start_time"];

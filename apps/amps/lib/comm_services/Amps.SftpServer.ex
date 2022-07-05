@@ -113,6 +113,8 @@ defmodule Amps.SftpServer do
 
   def init(args) do
     Process.flag(:trap_exit, true)
+    Process.register(self(), args[:name])
+
     options = args[:parms]
     env = args[:env] || ""
     :ok = :ssh.start()
@@ -319,6 +321,8 @@ defmodule Amps.SftpChannel do
 end
 
 defmodule Amps.SftpHandler do
+  require Logger
+
   def close(io_device, state) do
     # does this get closed on download?  If so we need to check
     # if upload or download
@@ -338,20 +342,41 @@ defmodule Amps.SftpHandler do
     else
       # IO.puts("close upload")
       # check result
-      _result = :file.close(io_device)
-      user = to_string(state[:user])
       opt = state[:options]
+
+      user = to_string(state[:user])
+      mailbox = state[:mailbox]
+      fname = state[:fname]
+      overwrite = opt["overwrite"]
+
+      IO.inspect(opt)
+      IO.inspect(overwrite)
+
+      {fname, to_delete} =
+        case AmpsMailbox.get_message_by_name(user, mailbox, fname, state[:env]) do
+          nil ->
+            {fname, nil}
+
+          to_delete ->
+            if overwrite do
+              {fname, to_delete}
+            else
+              {fname <> "(" <> state[:msgid] <> ")", nil}
+            end
+        end
+
+      _result = :file.close(io_device)
       env = state[:env]
       service = opt["name"]
 
       msg = %{
-        "mailbox" => state[:mailbox],
+        "mailbox" => mailbox,
         "service" => service,
         # "action" => "SFTP PUT",
         "msgid" => state[:msgid],
         "fsize" => state[:fsize],
         "fpath" => state[:fpath],
-        "fname" => state[:fname],
+        "fname" => fname,
         "dirname" => state[:dirname],
         "temp" => true,
         "ftime" => DateTime.to_iso8601(DateTime.utc_now()),
@@ -376,6 +401,11 @@ defmodule Amps.SftpHandler do
       AmpsEvents.send(msg, %{"output" => topic}, %{}, env)
       AmpsEvents.send(msg, %{"output" => mailboxtopic}, %{}, env)
 
+      if to_delete do
+        Logger.info("Overwriting #{to_delete["msgid"]}")
+        AmpsMailbox.delete_message(to_string(user), mailbox, to_delete["msgid"], state[:env])
+      end
+
       # AmpsEvents.send_history(
       #   "amps.events.messages",
       #   "message_events",
@@ -394,10 +424,10 @@ defmodule Amps.SftpHandler do
 
     case Path.split(path) do
       ["/", mailbox, fname] ->
-        {AmpsMailbox.delete_message(user, mailbox, fname, state[:env]), state}
+        {AmpsMailbox.delete_by_name(user, mailbox, fname, state[:env]), state}
 
       ["/", fname] ->
-        {AmpsMailbox.delete_message(user, "default", fname, state[:env]), state}
+        {AmpsMailbox.delete_by_name(user, "default", fname, state[:env]), state}
     end
   end
 
@@ -471,6 +501,8 @@ defmodule Amps.SftpHandler do
               mailbox["name"]
             end)
 
+          vals = vals ++ ["default"]
+
           newstate = List.keystore(state, :flist, 0, {:flist, mailboxes})
 
           {newstate, vals}
@@ -538,11 +570,11 @@ defmodule Amps.SftpHandler do
 
   def open(path, flags, state) do
     IO.puts("open called #{path}")
+    path = to_string(path)
 
     case Enum.find(flags, :nak, fn x -> x == :write end) do
       :write ->
         # put
-
         fname = Path.basename(path)
         msgid = AmpsUtil.get_id()
         fpath = Amps.Defaults.get("storage_temp") <> "/" <> msgid
@@ -550,8 +582,8 @@ defmodule Amps.SftpHandler do
         dirname = Path.dirname(path)
 
         res =
-          case Path.split(path) do
-            ["/", mailbox, fname] ->
+          case String.split(path, "/") do
+            ["", mailbox, fname] ->
               case AmpsMailbox.is_mailbox(to_string(state[:user]), mailbox, state[:env]) do
                 nil ->
                   {:error, :eaccess}
@@ -560,7 +592,7 @@ defmodule Amps.SftpHandler do
                   {"/", mailbox, fname}
               end
 
-            ["/", fname] ->
+            ["", fname] ->
               {"/", "default", fname}
 
             _ ->
@@ -654,13 +686,15 @@ defmodule Amps.SftpHandler do
     IO.inspect("READING LINK INFO")
     user = to_string(state[:user])
 
-    case Path.split(path) do
-      ["/"] ->
+    path = to_string(path)
+
+    case String.split(path, "/") do
+      ["", ""] ->
         ftime = DateTime.utc_now()
         finfo = get_dir_info(ftime)
         {{:ok, finfo}, state}
 
-      ["/", mailbox] ->
+      ["", mailbox] ->
         IO.inspect(mailbox)
         exists = AmpsMailbox.is_mailbox(user, mailbox, state[:env])
         ftime = DateTime.utc_now()
@@ -672,28 +706,53 @@ defmodule Amps.SftpHandler do
           {{:error, :exist}, state}
         end
 
-      ["/", mailbox, fname] ->
+      ["", mailbox, ""] ->
+        IO.inspect(mailbox)
+        exists = AmpsMailbox.is_mailbox(user, mailbox, state[:env])
+        ftime = DateTime.utc_now()
+
+        if exists do
+          finfo = get_dir_info(ftime)
+          {{:ok, finfo}, state}
+        else
+          {{:error, :exist}, state}
+        end
+
+      ["", mailbox, fname] ->
         # IO.puts("read_link_info")
 
         # IO.puts("read_link_info #{user} #{mailbox} #{fname}")
         #    msg = Enum.find(flist, nil, fn x -> x["fname"] == fname end)
-        case AmpsMailbox.get_message(user, mailbox, fname, state[:env]) do
+        case AmpsMailbox.get_message_by_name(user, mailbox, fname, state[:env]) do
           nil ->
             ftime = DateTime.utc_now()
             finfo = get_file_info(0, ftime)
+            IO.inspect(finfo)
             {{:ok, finfo}, state}
 
           msg ->
-            # IO.puts("found")
-            fsize = msg["fsize"] || 99
-            IO.inspect(fsize)
+            IO.inspect(msg)
 
-            ft = msg["ftime"] || DateTime.to_iso8601(DateTime.utc_now())
+            fsize =
+              case msg["fsize"] do
+                nil ->
+                  0
+
+                size when is_binary(size) ->
+                  String.to_integer(size)
+
+                size when is_integer(size) ->
+                  size
+              end
+
+            # # IO.inspect(fsize)
+
+            ft = msg["mtime"] || DateTime.to_iso8601(DateTime.utc_now())
             # IO.inspect(ft)
             {:ok, ftime, _off} = DateTime.from_iso8601(ft)
             finfo = get_file_info(fsize, ftime)
-            nstate = List.keystore(state, :current, 0, {:current, msg})
-            {{:ok, finfo}, nstate}
+            IO.inspect(finfo)
+            {{:ok, finfo}, state}
         end
 
       rest ->
@@ -708,6 +767,9 @@ defmodule Amps.SftpHandler do
 
   def get_file_info(fsize, ftime) do
     # IO.puts("get_file_info")
+
+    ftime = ftime |> Timex.Timezone.convert(Application.get_env(:amps, :timezone))
+    IO.inspect(ftime)
     IO.inspect(fsize)
 
     {:file_info, fsize, :regular, :read_write,
@@ -718,6 +780,7 @@ defmodule Amps.SftpHandler do
   end
 
   def get_dir_info(ftime) do
+    # ftime = Timex.Timezone.cno
     {:file_info, 0, :directory, :read_write,
      {{ftime.year, ftime.month, ftime.day}, {ftime.hour, ftime.minute, ftime.second}},
      {{ftime.year, ftime.month, ftime.day}, {ftime.hour, ftime.minute, ftime.second}},

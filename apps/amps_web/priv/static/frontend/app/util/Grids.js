@@ -7831,6 +7831,8 @@ Ext.define("Amps.util.Grids", {
                 })
               ),
 
+              amfutil.check("Overwrite Duplicates", "overwrite"),
+
               amfutil.formatFileName(),
             ],
           },
@@ -9754,6 +9756,8 @@ Ext.define("Amps.util.Grids", {
                 minValue: 0,
                 value: 100,
               },
+              amfutil.check("Overwrite Duplicate Files", "overwrite"),
+
               {
                 xtype: "checkbox",
                 allowBlank: false,
@@ -9851,6 +9855,8 @@ Ext.define("Amps.util.Grids", {
               amfutil.loadKey("Server Key", "server_key", {
                 tooltip: "The EC Private Key to use for the SFTP Server.",
               }),
+
+              amfutil.check("Overwrite Duplicate Files", "overwrite"),
 
               {
                 xtype: "checkbox",

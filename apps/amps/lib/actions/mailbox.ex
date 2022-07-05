@@ -3,7 +3,13 @@ defmodule Amps.Actions.Mailbox do
 
   def run(msg, parms, {state, env}) do
     recipient = parms["recipient"] || "unknown"
-    mailbox = parms["mailbox"]
+
+    mailbox =
+      if AmpsUtil.blank?(parms["mailbox"]) do
+        "default"
+      else
+        parms["mailbox"]
+      end
 
     case AmpsAuth.mailbox_info(recipient, mailbox, env) do
       nil ->
@@ -16,10 +22,40 @@ defmodule Amps.Actions.Mailbox do
             "fname" => AmpsUtil.format(parms["format"], msg)
           })
 
+        fname = msg["fname"]
+        overwrite = parms["overwrite"]
+
+        {fname, to_delete} =
+          case AmpsMailbox.get_message_by_name(
+                 recipient,
+                 mailbox,
+                 fname,
+                 env
+               ) do
+            nil ->
+              {fname, nil}
+
+            to_delete ->
+              if overwrite do
+                {fname, to_delete}
+              else
+                {fname <> "(" <> newmsg["msgid"] <> ")", nil}
+              end
+          end
+
+        newmsg = Map.put(newmsg, "fname", fname)
+
         AmpsEvents.send(
           newmsg,
           %{"output" => "amps.mailbox.#{recipient}.#{mailbox}"},
           state,
+          env
+        )
+
+        AmpsMailbox.delete_message(
+          recipient,
+          mailbox,
+          to_delete["msgid"],
           env
         )
 

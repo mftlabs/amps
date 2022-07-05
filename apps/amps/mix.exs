@@ -77,7 +77,8 @@ defmodule Amps.MixProject do
       {:cors_plug, "~> 2.0"},
       {:gen_smtp, "~> 1.0"},
       {:absinthe, "~> 1.7.0"},
-      {:ldap_ex, "~> 0.2.2"}
+      {:ldap_ex, "~> 0.2.2"},
+      {:timex, "~> 3.7.8"}
       # {:ex_json_schema, "~> 0.9.1"},
       # {:xml_builder, "~> 2.1"},
       # {:jsonpatch, "~> 0.12.0"}
