@@ -437,19 +437,26 @@ defmodule Amps.SvcManager do
       Application.put_env(:amps, String.to_atom(key), val)
     end)
   end
+
   def check_util() do
     utils = DB.find("utilscripts", %{})
-    path = Path.join(AmpsUtil.get_mod_path(), "util")
 
-    Enum.each(utils, fn util ->
-      script_path = Path.join(path, util["name"] <> ".py")
-
-      if File.exists?(script_path) do
+    case AmpsUtil.get_mod_path() do
+      nil ->
         :ok
-      else
-        File.write(script_path, util["data"])
-      end
-    end)
-  end
 
+      modpath ->
+        path = Path.join(modpath, "util")
+
+        Enum.each(utils, fn util ->
+          script_path = Path.join(path, util["name"] <> ".py")
+
+          if File.exists?(script_path) do
+            :ok
+          else
+            File.write(script_path, util["data"])
+          end
+        end)
+    end
+  end
 end

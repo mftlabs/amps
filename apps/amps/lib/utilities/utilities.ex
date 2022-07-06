@@ -820,13 +820,21 @@ defmodule AmpsUtil do
   end
 
   def get_mod_path(env \\ "", paths \\ [""]) do
-    case env do
-      "" ->
-        Path.join([Amps.Defaults.get("python_path")] ++ paths)
+    pypath = Amps.Defaults.get("python_path")
 
-      env ->
-        Path.join([Amps.Defaults.get("python_path"), "env", env] ++ paths)
+    case pypath do
+      nil ->
+        nil
+      pypath ->
+        case env do
+          "" ->
+            Path.join([pypath] ++ paths)
+
+          env ->
+            Path.join([pypath, "env", env] ++ paths)
+        end
     end
+
   end
 
   def scan(data, fun) do

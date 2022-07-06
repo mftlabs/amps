@@ -502,6 +502,8 @@ defmodule AmpsWeb.Util do
 
         if config["name"] == "SYSTEM" do
           Amps.SvcManager.load_system_parms()
+          Amps.SvcManager.check_util()
+
           archive = Amps.Defaults.get("archive")
           IO.inspect(old["archive"])
           IO.inspect(archive)
