@@ -81,7 +81,7 @@ defmodule Amps.DB do
 
     @impl true
     def get_page(collection, id, clauses, sort) do
-      obj = Mongo.find_one(:mongo, collection, %{"_id" => get_objectid(id)})
+      obj = Mongo.find_one(:mongo, collection, %{"_id" => id})
       clauses = MongoFilter.parse(clauses)
 
 #      IO.inspect(clauses)
@@ -150,7 +150,7 @@ defmodule Amps.DB do
             cursor
             |> Enum.to_list()
 
-          exists = BSON.ObjectId.encode!(Enum.at(data, num)["_id"]) == id
+          exists = Enum.at(data, num)["_id"] == id
 
           if exists do
             {:ok, page}
@@ -171,24 +171,20 @@ defmodule Amps.DB do
       Mongo.update_one(
         :mongo,
         collection,
-        %{"_id" => get_objectid(id)},
-        %{
-          "$push": %{field => body}
-        }
+        %{"_id" => id},
+        %{"$push": %{field => body}}
       )
 
     Mongo.find_one(
       :mongo,
       collection,
-      %{"_id" => get_objectid(id)},
+      %{"_id" => id},
       projection: %{field => true}
     )
   end
 
   @impl true
   def find_one(collection, clauses, opts \\ []) do
-
-    clauses = convert_id(clauses)
     Mongo.find_one(:mongo, collection, clauses, opts)
   end
 
@@ -199,7 +195,7 @@ defmodule Amps.DB do
       Mongo.find_one(
         :mongo,
         collection,
-        %{"_id" => get_objectid(id)}
+        %{"_id" => id}
       )
 
     Enum.find(result[field], fn obj ->
@@ -213,13 +209,13 @@ defmodule Amps.DB do
       Mongo.update_one(
         :mongo,
         collection,
-        %{"_id" => get_objectid(id)},
+        %{"_id" => id},
         %{
           "$set": %{(field <> "." <> idx) => body}
         }
       )
 
-    Mongo.find_one(:mongo, collection, %{"_id" => get_objectid(id)})
+    Mongo.find_one(:mongo, collection, %{"_id" => id})
   end
 
   @impl true
@@ -228,7 +224,7 @@ defmodule Amps.DB do
       Mongo.update_one(
         :mongo,
         collection,
-        %{"_id" => get_objectid(id)},
+        %{"_id" => id},
         %{
           "$pull": %{field => body}
         }
@@ -239,11 +235,13 @@ defmodule Amps.DB do
 
   @impl true
   def insert(collection, body) do
+
+    id =  AmpsUtil.get_id()
+    body = Map.put(body, "_id", id)
     case Mongo.insert_one(:mongo, collection, body) do
       {:error, error} ->
         {:error, error}
       {:ok, result} ->
-        %Mongo.InsertOneResult{:acknowledged => _acknowledged, :inserted_id => id} = result
         {:ok, id}
 
     end
@@ -251,7 +249,7 @@ defmodule Amps.DB do
 
   @impl true
   def delete(collection, clauses) do
-    case Mongo.delete_one(:mongo, collection, clauses) do
+    case Mongo.delete(:mongo, collection, clauses) do
       {:ok, _result} ->
           :ok
 
@@ -370,7 +368,7 @@ defmodule Amps.DB do
     case Mongo.update_one(
         :mongo,
         collection,
-        %{"_id" => get_objectid(id)},
+        %{"_id" => id},
         %{"$set": body}
       ) do
         {:ok, _result} ->
@@ -394,27 +392,29 @@ defmodule Amps.DB do
   @impl true
   def add_to_field_with_id(collection, body, id, field, fieldid) do
     body = Map.put(body, "_id", fieldid)
-    #MongoDB.add_to_field(collection, body, id, field)
     {:ok, _result} =
       Mongo.update_one(
         :mongo,
         collection,
-        %{"_id" => get_objectid(id)},
-        %{
-          "$push": %{field => body}
-        }
+        %{"_id" => id},
+        %{"$push": %{field => body}}
       )
 
-    Mongo.find_one(
-      :mongo,
-      collection,
-      %{"_id" => get_objectid(id)},
-      projection: %{field => true}
+    Mongo.find_one(:mongo, collection, %{"_id" => id}, projection: %{field => true}
     )
   end
 
   @impl true
   def bulk_insert(doc) do
+
+    doc =
+      if doc[:level] != nil do
+        Map.put(doc, :_id, AmpsUtil.get_id())
+      else
+        Map.put(doc, "_id", AmpsUtil.get_id())
+      end
+
+
     case Mongo.BulkOps.get_insert_one(doc) do
       {:insert, [{:error, error}]} ->
         {:error, error}
@@ -425,24 +425,21 @@ defmodule Amps.DB do
 
   @impl true
   def bulk_perform(ops, index) do
-    Mongo.UnorderedBulk.write(ops, :mongo, index, 100_000) |> Stream.run()
+    Mongo.UnorderedBulk.write(ops, :mongo, index, 1000) |> Stream.run()
   end
 
   @impl true
   def find_one_and_update(collection, clauses, body) do
-    Mongo.find_one_and_update(:mongo, collection, convert_id(clauses), %{"$set": body})
+    Mongo.find_one_and_update(:mongo, collection, clauses, %{"$set": body})
   end
 
   @impl true
   def delete_by_id(collection, id) do
-    clauses = convert_id(%{"_id" => id})
-    delete_one(collection, clauses)
+    delete_one(collection, %{"_id" => id})
   end
 
   @impl true
   def find(collection, clauses \\ %{}, opts \\ %{}) do
-    Logger.info("COLLECTION #{inspect(collection)}")
-    clauses = convert_id(clauses)
     clauses = MongoFilter.parse(clauses)
     cursor = Mongo.find(:mongo, collection, clauses, Enum.into(opts, []))
     cursor |> Enum.to_list()
@@ -450,56 +447,16 @@ defmodule Amps.DB do
 
   @impl true
   def find_by_id(collection, id, opts \\ []) do
-    clauses = convert_id(%{"_id" => id})
-    Mongo.find_one(:mongo, collection, clauses, opts)
+    Mongo.find_one(:mongo, collection, %{"_id" => id}, opts)
   end
 
   @impl true
   def insert_with_id(collection, body, id) do
-    case Mongo.replace_one(:mongo, collection, %{"_id" => get_objectid(id)}, body, upsert: true) do
+    case Mongo.replace_one(:mongo, collection, %{"_id" => id}, body, upsert: true) do
         {:ok, _result} ->
           :ok
         {:error, err} ->
           {:error, err}
-    end
-  end
-
-
-  defp get_objectid(id) do
-    IO.puts("get_object: #{inspect(id)}")
-    if is_binary(id) do
-      BSON.ObjectId.decode!(id)
-    else
-      id
-    end
-  end
-
-  defp convert_id(clauses) do
-    cond do
-      Map.has_key?(clauses, "_id") ->
-        if is_binary(clauses["_id"]) do
-          Map.put(
-            clauses,
-            "_id",
-            get_objectid(Map.get(clauses, "_id"))
-          )
-        else
-          clauses
-        end
-
-      Map.has_key?(clauses, :_id) ->
-        if is_binary(clauses[:_id]) do
-          Map.put(
-            clauses,
-            :_id,
-            get_objectid(Map.get(clauses, :_id))
-          )
-        else
-          clauses
-        end
-
-      true ->
-        clauses
     end
   end
 
