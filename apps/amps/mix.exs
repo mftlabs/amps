@@ -53,7 +53,7 @@ defmodule Amps.MixProject do
       {:poolboy, "~> 1.5"},
       {:glob, "~> 1.0"},
       {:sftp_client, "~> 1.4"},
-      {:snap, git: "https://github.com/aram0112/snap"},
+#      {:snap, git: "https://github.com/aram0112/snap"},
       {:jetstream, git: "https://github.com/aram0112/jetstream"},
       {:pythra, git: "https://github.com/aram0112/pythra.git"},
       {:gnat, "~> 1.5.2"},
