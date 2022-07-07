@@ -194,6 +194,8 @@ defmodule AmpsWeb.UtilController do
       Amps.DB.insert("admin", root)
 
       Amps.SvcManager.load_system_parms()
+      Amps.SvcManager.check_util()
+
       send_resp(conn, 200, "Created")
     else
       send_resp(conn, 403, "Application Already Initialized")
@@ -212,20 +214,37 @@ defmodule AmpsWeb.UtilController do
             filename: msg["fname"] || "message.dat"
           )
         else
-          if msg["temp"] do
-            send_download(conn, {:file, msg["fpath"]},
-              disposition: :attachment,
-              filename: msg["fname"] || "message.dat"
-            )
-          else
-            root = AmpsUtil.get_env(:storage_root)
+            stream = AmpsUtil.stream(msg, conn.assigns().env)
 
-            send_download(conn, {:file, Path.join(root, msg["fpath"])},
-              disposition: :attachment,
-              filename: msg["fname"] || "message.dat"
-            )
+            conn =
+              conn
+              |> put_resp_header(
+                "content-disposition",
+                "attachment; filename=\"#{msg["fname"] || "download"}\""
+              )
+              |> send_chunked(200)
+
+            Enum.reduce_while(stream, conn, fn chunk, conn ->
+              case Plug.Conn.chunk(conn, chunk) do
+                {:ok, conn} ->
+                  {:cont, conn}
+
+                {:error, :closed} ->
+                  {:halt, conn}
+              end
+            end)
+
+            # send_download(conn, {:file, msg["fpath"]}, disposition: :attachment)
+
+            # else
+            #   root = AmpsUtil.get_env(:storage_root)
+
+            #   send_download(conn, {:file, Path.join(root, msg["fpath"])},
+            #     disposition: :attachment
+            #   )
+            # end
           end
-        end
+
     end
   end
 
@@ -243,6 +262,7 @@ defmodule AmpsWeb.UtilController do
             send_resp(conn, 404, "Not found")
 
           msg ->
+            fpath = AmpsUtil.local_file(msg, conn.assigns().env)
             offset = get_offset(conn.req_headers)
             file_size = get_file_size(msg["fpath"])
             {:ok, {ext, mime}} = FileType.from_path(msg["fpath"])
@@ -253,7 +273,7 @@ defmodule AmpsWeb.UtilController do
               "content-range",
               "bytes #{offset}-#{file_size - 1}/#{file_size}"
             )
-            |> Plug.Conn.send_file(206, msg["fpath"], offset, file_size - offset)
+            |> Plug.Conn.send_file(206, fpath, offset, file_size - offset)
         end
     end
   end

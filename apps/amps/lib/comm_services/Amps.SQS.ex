@@ -60,56 +60,10 @@ defmodule Amps.SQS do
       |> url(req)
 
     Enum.each(messages, fn %{body: body, receipt_handle: receipt} ->
-      msg =
-        try do
-          event = Jason.decode!(body)
-          [ev] = event["Records"]
-          IO.inspect(ev)
+      msg = %{
+        "data" => body
+      }
 
-          case ev["eventSource"] do
-            "aws:s3" ->
-              region = ev["awsRegion"]
-              bucket = get_in(ev, ["s3", "bucket", "name"])
-
-              objkey = get_in(ev, ["s3", "object", "key"])
-
-              user = get_in(ev, ["userIdentity", "principalId"]) || parms["name"]
-
-              %{
-                "region" => region,
-                "s3provider" => "aws",
-                "bucket" => bucket,
-                "objkey" => objkey,
-                "data" => body,
-                "user" => user
-              }
-
-            "minio:s3" ->
-              bucket = get_in(ev, ["s3", "bucket", "name"])
-
-              objkey = get_in(ev, ["s3", "object", "key"])
-
-              user = get_in(ev, ["userIdentity", "principalId"]) || parms["name"]
-
-              %{
-                "s3provider" => "minio",
-                "bucket" => bucket,
-                "objkey" => objkey,
-                "data" => body,
-                "user" => user
-              }
-
-            _ ->
-              %{
-                "data" => body
-              }
-          end
-        rescue
-          e ->
-            %{
-              "data" => body
-            }
-        end
 
       event =
         Map.merge(msg, %{

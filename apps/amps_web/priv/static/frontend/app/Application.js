@@ -19,6 +19,7 @@ Ext.define("Amps.Application", {
     },
   },
   launch: async function () {
+    Ext.state.Manager.setProvider(new Ext.state.LocalStorageProvider());
     var link = document.createElement("link");
     link.type = "image/x-icon";
     link.rel = "icon";

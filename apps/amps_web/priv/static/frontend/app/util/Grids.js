@@ -6099,7 +6099,13 @@ Ext.define("Amps.util.Grids", {
         etime: "DESC",
       },
       columns: [
-        { text: "Message ID", dataIndex: "msgid", flex: 1, type: "text" },
+        {
+          text: "Message ID",
+          hidden: true,
+          dataIndex: "msgid",
+          flex: 1,
+          type: "text",
+        },
         {
           text: "Action",
           dataIndex: "action",
@@ -6108,6 +6114,14 @@ Ext.define("Amps.util.Grids", {
           type: "text",
         },
         {
+          text: "User",
+          dataIndex: "user",
+          flex: 1,
+          value: "true",
+          type: "text",
+        },
+        {
+          hidden: true,
           text: "Parent",
           dataIndex: "parent",
           xtype: "widgetcolumn",
@@ -7384,6 +7398,25 @@ Ext.define("Amps.util.Grids", {
 
         window: { height: 600, width: 800 },
         types: {
+          aws: {
+            field: "aws",
+            label: "AWS Util",
+            fields: [
+              amfutil.localCombo(
+                "Action",
+                "action",
+                [
+                  {
+                    field: "parse_bucket_event",
+                    label: "Parse S3 Event",
+                  },
+                ],
+                "field",
+                "label"
+              ),
+              amfutil.outputTopic(),
+            ],
+          },
           batch: {
             field: "batch",
             label: "Batch",
@@ -9615,13 +9648,6 @@ Ext.define("Amps.util.Grids", {
                   amfutil.buttonColumn("Action", "action", "actions"),
                 ],
               },
-              {
-                xtype: "checkbox",
-                inputValue: true,
-                checked: true,
-                hidden: true,
-                name: "communication",
-              },
             ],
             process: function (form, values) {
               console.log(values);
@@ -9696,6 +9722,45 @@ Ext.define("Amps.util.Grids", {
               console.log(values);
               return values;
             },
+          },
+          nats: {
+            field: "nats",
+            label: "NATS",
+            iconCls: "kafka-icon",
+            combo: function (service) {
+              var reg = /[.>* -]/;
+              return {
+                xtype: "combo",
+                name: "topicparms",
+                fieldLabel: "NATS Topic",
+                itemId: "topicparms",
+                store: [
+                  {
+                    field: service["topic"].replace(reg, "_"),
+                    label: service["topic"],
+                  },
+                ],
+                valueField: "field",
+                displayField: "label",
+              };
+            },
+            format: function (topic) {
+              var reg = /[.>* -]/;
+              return topic.replace(reg, "_");
+            },
+            fields: [
+              amfutil.text("Topic", "topic"),
+              amfutil.formatFileName({
+                value: "{YYYY}_{MM}_{DD}_{HH}_{mm}_{SS}",
+              }),
+              {
+                xtype: "checkbox",
+                inputValue: true,
+                checked: true,
+                hidden: true,
+                name: "communication",
+              },
+            ],
           },
           httpd: {
             field: "httpd",

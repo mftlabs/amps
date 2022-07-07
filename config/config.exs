@@ -296,7 +296,8 @@ config :amps, :services,
   gateway: Amps.Gateway,
   kafka: Amps.GenConsumer,
   pyservice: Amps.PyProcess,
-  sqs: Amps.SQS
+  sqs: Amps.SQS,
+  nats: Amps.NATS
 
 config :amps, :actions,
   strrepl: Amps.Actions.StringReplace,
@@ -313,7 +314,8 @@ config :amps, :actions,
   pgpencrypt: Amps.Actions.PGPEncrypt,
   pgpdecrypt: Amps.Actions.PGPDecrypt,
   batch: Amps.Actions.Batch,
-  ldap: Amps.Actions.LDAP
+  ldap: Amps.Actions.LDAP,
+  aws: Amps.Actions.AWS
 
 # config :amps, :httpapi,
 #  options: [

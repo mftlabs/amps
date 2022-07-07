@@ -147,7 +147,9 @@ Ext.define("Amps.controller.PageController", {
       } else {
         amfutil.getElementByID("page-handler").setActiveItem(0);
 
-        var grid = this.getView().down("#main-grid");
+        var parent = this.getView().down("#grid-wrapper");
+        parent.removeAll();
+
         var options = ["delete"];
         var config = ampsgrids.grids[route]();
         console.log(config);
@@ -164,10 +166,10 @@ Ext.define("Amps.controller.PageController", {
         };
 
         console.log(route);
-        grid.setTitle(config.title);
+
         var mask = new Ext.LoadMask({
           msg: "Please wait...",
-          target: grid,
+          target: this.getView(),
         });
         mask.show();
 
@@ -181,36 +183,45 @@ Ext.define("Amps.controller.PageController", {
 
         var store = Ext.StoreManager.lookup(route);
 
-        grid.reconfigure(
-          store
-            ? store
-            : amfutil.createPageStore(Ext.util.History.getToken(), filter),
-          config.columns.concat(config.options ? [column] : null)
-        );
+        store = store
+          ? store
+          : amfutil.createPageStore(Ext.util.History.getToken(), filter);
 
-        var store = grid.getStore();
+        if (store.isLoaded) {
+          mask.hide();
+        } else {
+          store.on(
+            "load",
+            function (scope, records, successful, operation, eOpts) {
+              // console.log("wait");
+              // var data;
+              // if (config.process) {
+              //   data = await config.process(records);
+              //   console.log(data);
+              //   scope.loadData(data);
+              // }
+
+              // console.log(data);
+              // console.log("waited");
+              mask.hide();
+            }
+          );
+        }
+
+        var grid = new Amps.view.main.List({
+          title: config.title,
+          stateId: route,
+          store: store,
+          itemId: "main-grid",
+          columns: config.columns.concat(config.options ? [column] : []),
+        });
+
+        console.log(grid);
+
+        parent.insert(grid);
 
         var sort = localStorage.getItem(`${route}_sort`);
-
-        store.on(
-          "load",
-          function (scope, records, successful, operation, eOpts) {
-            // console.log("wait");
-            // var data;
-            // if (config.process) {
-            //   data = await config.process(records);
-            //   console.log(data);
-            //   scope.loadData(data);
-            // }
-
-            // console.log(data);
-            // console.log("waited");
-            mask.hide();
-          }
-        );
-
-        // grid.clearListeners();
-        grid.body.clearListeners();
+        console.log("grid inserted");
 
         grid.setListeners({
           sortchange: function (ct, col, dir) {
@@ -259,6 +270,7 @@ Ext.define("Amps.controller.PageController", {
         }
         grid.fireEvent("checkfilter", "");
       }
+
       amfutil.getElementByID("page-panel-id").setActiveItem(0);
       var window = amfutil.getElementByID("searchwindow");
 

@@ -20,8 +20,15 @@ defmodule Amps.Actions.Router do
     rule = evaluate(parms, msg, env)
     Logger.info("rule #{inspect(rule)}")
     msgid = AmpsUtil.get_id()
-    msg = Map.merge(msg, %{"msgid" => msgid, "parent" => msg["msgid"], "topic" => rule["output"]})
-    {:send, [msg], AmpsUtil.env_topic(rule["output"], env)}
+
+    msg =
+      Map.merge(msg, %{
+        "msgid" => msgid,
+        "parent" => msg["msgid"],
+        "topic" => rule["output"]
+      })
+
+    {:send, [msg], rule["output"]}
   end
 
   # def run(subject, body) do
@@ -153,7 +160,11 @@ defmodule Amps.Actions.Router do
             Logger.warning("*** action not found")
 
           aparms ->
-            apply(String.to_atom("Elixir." <> aparms["module"]), :run, [msg, aparms, state])
+            apply(String.to_atom("Elixir." <> aparms["module"]), :run, [
+              msg,
+              aparms,
+              state
+            ])
         end
     end
 

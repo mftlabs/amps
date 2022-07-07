@@ -22,10 +22,18 @@ Ext.define("Amps.view.main.Page", {
 
           items: [
             {
-              xtype: "mainlist",
-              itemId: "main-grid",
-              flex: 1,
+              xtype: "container",
+              itemId: "grid-wrapper",
+              layout: "fit",
+              items: [
+                {
+                  xtype: "mainlist",
+                  itemId: "main-grid",
+                  flex: 1,
+                },
+              ],
             },
+
             {
               xtype: "container",
               itemId: "main-page",

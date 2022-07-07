@@ -158,56 +158,63 @@ defmodule Amps.HistoryPullConsumer do
   end
 
   def handle_info({:msg, message}, state) do
-    data = Poison.decode!(message.body)
-    msg = data["msg"]
-    # AmpsEvents.send_history(
-    #   AmpsUtil.env_topic("amps.events.action", state.env),
-    #   "message_events",
-    #   msg,
-    #   %{
-    #     "status" => "started",
-    #     "topic" => AmpsUtil.env_topic(parms["topic"], state.env),
-    #     "action" => actparms["name"],
-    #     "subscriber" => name
-    #   }
-    # )
-    parms = state[:parms]
-    name = parms["name"]
+    state =
+      try do
+        data = Poison.decode!(message.body)
+        msg = data["msg"]
+        # AmpsEvents.send_history(
+        #   AmpsUtil.env_topic("amps.events.action", state.env),
+        #   "message_events",
+        #   msg,
+        #   %{
+        #     "status" => "started",
+        #     "topic" => AmpsUtil.env_topic(parms["topic"], state.env),
+        #     "action" => actparms["name"],
+        #     "subscriber" => name
+        #   }
+        # )
+        parms = state[:parms]
+        name = parms["name"]
 
-    Logger.debug("got history message #{name}: #{message.topic} / #{message.body}")
+        Logger.debug("got history message #{name}: #{message.topic} / #{message.body}")
 
-    message =
-      if state.index do
-        doc =
-          if state.doc do
-            state.doc.(message.topic, data["msg"])
+        message =
+          if state.index do
+            doc =
+              if state.doc do
+                state.doc.(message.topic, data["msg"])
+              else
+                Map.merge(data["msg"], %{
+                  "status" => "received"
+                })
+              end
+
+            if is_list(state.index) do
+              actions =
+                Enum.reduce(state.index, [], fn index, acc ->
+                  [
+                    {AmpsUtil.index(state.env, index), Amps.DB.bulk_insert(doc)} | acc
+                  ]
+                end)
+
+              {actions, message}
+            else
+              {[
+                 {AmpsUtil.index(state.env, state.index), Amps.DB.bulk_insert(doc)}
+               ], message}
+            end
           else
-            Map.merge(data["msg"], %{
-              "status" => "received"
-            })
+            {[
+               {AmpsUtil.index(state.env, data["index"]), Amps.DB.bulk_insert(data)}
+             ], message}
           end
 
-        if is_list(state.index) do
-          actions =
-            Enum.reduce(state.index, [], fn index, acc ->
-              [
-                {AmpsUtil.index(state.env, index), Amps.DB.bulk_insert(doc)} | acc
-              ]
-            end)
-
-          {actions, message}
-        else
-          {[
-             {AmpsUtil.index(state.env, state.index), Amps.DB.bulk_insert(doc)}
-           ], message}
-        end
-      else
-        {[
-           {AmpsUtil.index(state.env, data["index"]), Amps.DB.bulk_insert(data)}
-         ], message}
+        Map.put(state, :messages, [message | state.messages])
+      rescue
+        e ->
+          Logger.warn("Unexpected Message in History")
+          Map.put(state, :messages, [{[], message} | state.messages])
       end
-
-    state = Map.put(state, :messages, [message | state.messages])
 
     {:noreply, state}
   end

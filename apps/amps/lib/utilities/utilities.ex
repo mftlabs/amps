@@ -381,6 +381,10 @@ defmodule AmpsUtil do
       _ ->
         rep = msg[name]
 
+        if rep == nil do
+          raise "file name cannot be formatted, missing message metadata [fname]"
+        end
+
         fname = String.replace(fname, pat, rep)
         check(tail, msg, fname)
     end
@@ -825,6 +829,7 @@ defmodule AmpsUtil do
     case pypath do
       nil ->
         nil
+
       pypath ->
         case env do
           "" ->
@@ -834,7 +839,6 @@ defmodule AmpsUtil do
             Path.join([pypath, "env", env] ++ paths)
         end
     end
-
   end
 
   def scan(data, fun) do

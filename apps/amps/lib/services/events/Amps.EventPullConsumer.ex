@@ -47,312 +47,349 @@ defmodule Amps.EventPullConsumer do
           Jetstream.ack(message)
 
         data ->
-          msg = data["msg"]
-          msg = Map.merge(msg, %{sub: Process.info(self())[:registered_name]})
+          try do
+            msg = data["msg"]
+            msg = Map.merge(msg, %{sub: Process.info(self())[:registered_name]})
 
-          {msg, sid, skip} =
-            case Amps.EventHandler.is_registered(state.handler, msg["msgid"]) do
-              :new ->
-                {msg, sid} =
-                  AmpsEvents.start_session(
-                    data["msg"],
-                    %{"service" => parms["name"], "status" => "started"},
-                    state.env
+            {msg, sid, skip} =
+              case Amps.EventHandler.is_registered(state.handler, msg["msgid"]) do
+                :new ->
+                  {msg, sid} =
+                    AmpsEvents.start_session(
+                      data["msg"],
+                      %{"service" => parms["name"], "status" => "started"},
+                      state.env
+                    )
+
+                  Amps.EventHandler.register(
+                    state.handler,
+                    message,
+                    msg["msgid"],
+                    sid
                   )
 
-                Amps.EventHandler.register(
-                  state.handler,
-                  message,
-                  msg["msgid"],
-                  sid
-                )
+                  {msg, sid, false}
 
-                {msg, sid, false}
+                :skip ->
+                  {msg, sid} =
+                    AmpsEvents.start_session(
+                      data["msg"],
+                      %{
+                        "service" =>
+                          parms["name"] <>
+                            " (Skipped)"
+                      },
+                      state.env
+                    )
 
-              :skip ->
-                {msg, sid} =
-                  AmpsEvents.start_session(
-                    data["msg"],
+                  # Amps.EventHandler.process(state.handler, message, msg["msgid"])
+                  {msg, sid, true}
+
+                info ->
+                  {msg, sid} =
+                    AmpsEvents.start_session(
+                      data["msg"],
+                      %{
+                        "service" =>
+                          parms["name"] <>
+                            " (Retry " <> Integer.to_string(info.failures) <> ")"
+                      },
+                      state.env
+                    )
+
+                  Amps.EventHandler.process(state.handler, message, msg["msgid"])
+                  {msg, sid, false}
+              end
+
+            mstate = data["state"] || %{}
+
+            res =
+              try do
+                mctx = {mstate, state.env}
+                action_id = parms["handler"]
+
+                actparms = Amps.DB.find_by_id(AmpsUtil.index(state.env, "actions"), action_id)
+
+                if skip do
+                  AmpsEvents.send_history(
+                    AmpsUtil.env_topic("amps.events.action", state.env),
+                    "message_events",
+                    msg,
                     %{
-                      "service" =>
-                        parms["name"] <>
-                          " (Skipped)"
-                    },
-                    state.env
+                      "status" => "skipped",
+                      "topic" => parms["topic"],
+                      "action" => actparms["name"],
+                      "subscriber" => name
+                    }
                   )
 
-                # Amps.EventHandler.process(state.handler, message, msg["msgid"])
-                {msg, sid, true}
-
-              info ->
-                {msg, sid} =
-                  AmpsEvents.start_session(
-                    data["msg"],
+                  {:term, "skipped"}
+                else
+                  AmpsEvents.send_history(
+                    AmpsUtil.env_topic("amps.events.action", state.env),
+                    "message_events",
+                    msg,
                     %{
-                      "service" =>
-                        parms["name"] <>
-                          " (Retry " <> Integer.to_string(info.failures) <> ")"
-                    },
-                    state.env
+                      "status" => "started",
+                      "topic" => parms["topic"],
+                      "action" => actparms["name"],
+                      "subscriber" => name
+                    }
                   )
 
-                Amps.EventHandler.process(state.handler, message, msg["msgid"])
-                {msg, sid, false}
-            end
+                  # IO.puts("action parms #{inspect(actparms)}")
 
-          mstate = data["state"] || %{}
+                  handler = AmpsUtil.get_env_parm(:actions, String.to_atom(actparms["type"]))
 
-          res =
-            try do
-              mctx = {mstate, state.env}
-              action_id = parms["handler"]
+                  # IO.puts("opts after lookup #{inspect(actparms)}")
+                  status =
+                    case handler.run(msg, actparms, mctx) do
+                      {:ok, result} ->
+                        Logger.info("Action Completed #{inspect(result)}")
+                        # IO.puts("ack next message")
 
-              actparms = Amps.DB.find_by_id(AmpsUtil.index(state.env, "actions"), action_id)
+                        if mstate["return"] do
+                          Amps.AsyncResponder.put_response(
+                            mstate["return"],
+                            mstate["contextid"] <> parms["name"],
+                            {actparms["name"], msg["msgid"], result}
+                          )
+                        end
 
-              if skip do
-                AmpsEvents.send_history(
-                  AmpsUtil.env_topic("amps.events.action", state.env),
-                  "message_events",
-                  msg,
-                  %{
-                    "status" => "skipped",
-                    "topic" => parms["topic"],
-                    "action" => actparms["name"],
-                    "subscriber" => name
-                  }
-                )
+                        # IO.inspect(state)
 
-                {:term, "skipped"}
-              else
-                AmpsEvents.send_history(
-                  AmpsUtil.env_topic("amps.events.action", state.env),
-                  "message_events",
-                  msg,
-                  %{
-                    "status" => "started",
-                    "topic" => parms["topic"],
-                    "action" => actparms["name"],
-                    "subscriber" => name
-                  }
-                )
-
-                # IO.puts("action parms #{inspect(actparms)}")
-
-                handler = AmpsUtil.get_env_parm(:actions, String.to_atom(actparms["type"]))
-
-                # IO.puts("opts after lookup #{inspect(actparms)}")
-                status =
-                  case handler.run(msg, actparms, mctx) do
-                    {:ok, result} ->
-                      Logger.info("Action Completed #{inspect(result)}")
-                      # IO.puts("ack next message")
-
-                      if mstate["return"] do
-                        Amps.AsyncResponder.put_response(
-                          mstate["return"],
-                          mstate["contextid"] <> parms["name"],
-                          {actparms["name"], msg["msgid"], result}
-                        )
-                      end
-
-                      # IO.inspect(state)
-
-                      status =
-                        if is_map(result) do
-                          if Map.has_key?(result, "status") do
-                            result["status"]
+                        {status, reason} =
+                          if is_map(result) do
+                            if Map.has_key?(result, "status") do
+                              status = result["status"]
+                              reason = result["reason"] || nil
+                              {status, reason}
+                            else
+                              {"completed", nil}
+                            end
                           else
-                            "completed"
+                            {"completed", nil}
                           end
-                        else
-                          "completed"
-                        end
 
-                      reason = result["reason"] || nil
-
-                      event = %{
-                        "topic" => AmpsUtil.env_topic(parms["topic"], state.env),
-                        "status" => status,
-                        "action" => actparms["name"],
-                        "subscriber" => name
-                      }
-
-                      event =
-                        if reason do
-                          Map.put(event, "reason", reason)
-                        else
-                          event
-                        end
-
-                      AmpsEvents.send_history(
-                        AmpsUtil.env_topic("amps.events.action", state.env),
-                        "message_events",
-                        msg,
-                        event
-                      )
-
-                      status
-
-                    {:send, events} ->
-                      Enum.each(events, fn event ->
-                        AmpsEvents.send(event, actparms, mstate, state.env)
-                      end)
-
-                      if mstate["return"] do
-                        Amps.AsyncResponder.resolve_message(
-                          mstate["return"],
-                          mstate["contextid"] <> parms["name"]
-                        )
-                      end
-
-                      Logger.info("Action Completed #{parms["name"]}")
-
-                      # IO.puts("ack next message")
-
-                      AmpsEvents.send_history(
-                        AmpsUtil.env_topic("amps.events.action", state.env),
-                        "message_events",
-                        msg,
-                        %{
-                          "topic" => parms["topic"],
-                          "status" => "completed",
+                        event = %{
+                          "topic" => AmpsUtil.env_topic(parms["topic"], state.env),
+                          "status" => status,
                           "action" => actparms["name"],
                           "subscriber" => name
                         }
-                      )
 
-                      "completed"
-                  end
+                        event =
+                          if reason do
+                            Map.put(event, "reason", reason)
+                          else
+                            event
+                          end
 
-                Amps.EventHandler.deregister(state.handler, msg["msgid"])
-                Jetstream.ack(message)
-                {:ack, status}
-              end
-            rescue
-              error ->
-                Logger.error(Exception.format(:error, error, __STACKTRACE__))
-                action_id = parms["handler"]
+                        AmpsEvents.send_history(
+                          AmpsUtil.env_topic("amps.events.action", state.env),
+                          "message_events",
+                          msg,
+                          event
+                        )
 
-                actparms =
-                  Amps.DB.find_by_id(
-                    AmpsUtil.index(state.env, "actions"),
-                    action_id
-                  )
+                        status
 
-                failures = Amps.EventHandler.add_failure(state.handler, msg["msgid"])
+                      {:send, events} ->
+                        Enum.each(events, fn event ->
+                          AmpsEvents.send(event, actparms, mstate, state.env)
+                        end)
 
-                # IO.inspect(failures)
+                        if mstate["return"] do
+                          Amps.AsyncResponder.resolve_message(
+                            mstate["return"],
+                            mstate["contextid"] <> parms["name"]
+                          )
+                        end
 
-                msg =
-                  if is_map(msg) do
-                    msg
-                  else
-                    %{}
-                  end
+                        Logger.info("Action Completed #{parms["name"]}")
 
-                # IO.inspect(parms)
+                        # IO.puts("ack next message")
 
-                retry = fn ->
-                  if mstate["return"] do
-                    Amps.AsyncResponder.put_response(
-                      mstate["return"],
-                      mstate["contextid"] <> parms["name"],
-                      {actparms["name"], msg["msgid"], Exception.message(error)}
-                    )
-                  end
+                        AmpsEvents.send_history(
+                          AmpsUtil.env_topic("amps.events.action", state.env),
+                          "message_events",
+                          msg,
+                          %{
+                            "topic" => parms["topic"],
+                            "status" => "completed",
+                            "action" => actparms["name"],
+                            "subscriber" => name
+                          }
+                        )
 
-                  AmpsEvents.send_history(
-                    AmpsUtil.env_topic("amps.events.action", state.env),
-                    "message_events",
-                    msg,
-                    %{
-                      status: "retrying",
-                      topic: parms["topic"],
-                      action: actparms["name"],
-                      reason: inspect(error),
-                      subscriber: name
-                    }
-                  )
+                        "completed"
 
-                  {:nack, "retrying",
-                   fn ->
-                     Process.sleep(parms["backoff"] * 1000)
-                     Amps.EventHandler.stop_process(state.handler, msg["msgid"])
-                   end}
-                end
+                      {:send, events, topic} ->
+                        Logger.info(topic)
 
-                fail = fn ->
-                  if mstate["return"] do
-                    Amps.AsyncResponder.put_response(
-                      mstate["return"],
-                      mstate["contextid"] <> parms["name"],
-                      {actparms["name"], msg["msgid"], Exception.message(error)}
-                    )
-                  end
+                        Enum.each(events, fn event ->
+                          AmpsEvents.send(event, %{"output" => topic}, mstate, state.env)
+                        end)
 
-                  _mctx = data["state"]
+                        if mstate["return"] do
+                          Amps.AsyncResponder.resolve_message(
+                            mstate["return"],
+                            mstate["contextid"] <> parms["name"]
+                          )
+                        end
 
-                  # IO.puts("ack next message after action error")
+                        Logger.info("Action Completed #{parms["name"]}")
 
-                  Logger.error(
-                    "Action Failed\n" <>
-                      Exception.format(:error, error, __STACKTRACE__)
-                  )
+                        # IO.puts("ack next message")
 
-                  AmpsEvents.send_history(
-                    AmpsUtil.env_topic("amps.events.action", state.env),
-                    "message_events",
-                    msg,
-                    %{
-                      status: "failed",
-                      topic: parms["topic"],
-                      action: actparms["name"],
-                      reason: inspect(error),
-                      subscriber: name
-                    }
-                  )
+                        AmpsEvents.send_history(
+                          AmpsUtil.env_topic("amps.events.action", state.env),
+                          "message_events",
+                          msg,
+                          %{
+                            "topic" => parms["topic"],
+                            "status" => "completed",
+                            "action" => actparms["name"],
+                            "subscriber" => name
+                          }
+                        )
 
-                  Amps.EventHandler.deregister(state.handler, msg["msgid"])
-                  {:ack, "failed"}
-                end
-
-                case parms["rmode"] do
-                  "limit" ->
-                    if failures <= parms["rlimit"] do
-                      retry.()
-                    else
-                      fail.()
+                        "completed"
                     end
 
-                  "always" ->
-                    retry.()
-
-                  _ ->
-                    fail.()
+                  Amps.EventHandler.deregister(state.handler, msg["msgid"])
+                  Jetstream.ack(message)
+                  {:ack, status}
                 end
+              rescue
+                error ->
+                  Logger.error(Exception.format(:error, error, __STACKTRACE__))
+                  action_id = parms["handler"]
+
+                  actparms =
+                    Amps.DB.find_by_id(
+                      AmpsUtil.index(state.env, "actions"),
+                      action_id
+                    )
+
+                  failures = Amps.EventHandler.add_failure(state.handler, msg["msgid"])
+
+                  # IO.inspect(failures)
+
+                  msg =
+                    if is_map(msg) do
+                      msg
+                    else
+                      %{}
+                    end
+
+                  # IO.inspect(parms)
+
+                  retry = fn ->
+                    if mstate["return"] do
+                      Amps.AsyncResponder.put_response(
+                        mstate["return"],
+                        mstate["contextid"] <> parms["name"],
+                        {actparms["name"], msg["msgid"], Exception.message(error)}
+                      )
+                    end
+
+                    AmpsEvents.send_history(
+                      AmpsUtil.env_topic("amps.events.action", state.env),
+                      "message_events",
+                      msg,
+                      %{
+                        status: "retrying",
+                        topic: parms["topic"],
+                        action: actparms["name"],
+                        reason: inspect(error),
+                        subscriber: name
+                      }
+                    )
+
+                    {:nack, "retrying",
+                     fn ->
+                       Process.sleep(parms["backoff"] * 1000)
+                       Amps.EventHandler.stop_process(state.handler, msg["msgid"])
+                     end}
+                  end
+
+                  fail = fn ->
+                    if mstate["return"] do
+                      Amps.AsyncResponder.put_response(
+                        mstate["return"],
+                        mstate["contextid"] <> parms["name"],
+                        {actparms["name"], msg["msgid"], Exception.message(error)}
+                      )
+                    end
+
+                    _mctx = data["state"]
+
+                    # IO.puts("ack next message after action error")
+
+                    Logger.error(
+                      "Action Failed\n" <>
+                        Exception.format(:error, error, __STACKTRACE__)
+                    )
+
+                    AmpsEvents.send_history(
+                      AmpsUtil.env_topic("amps.events.action", state.env),
+                      "message_events",
+                      msg,
+                      %{
+                        status: "failed",
+                        topic: parms["topic"],
+                        action: actparms["name"],
+                        reason: inspect(error),
+                        subscriber: name
+                      }
+                    )
+
+                    Amps.EventHandler.deregister(state.handler, msg["msgid"])
+                    {:ack, "failed"}
+                  end
+
+                  case parms["rmode"] do
+                    "limit" ->
+                      if failures <= parms["rlimit"] do
+                        retry.()
+                      else
+                        fail.()
+                      end
+
+                    "always" ->
+                      retry.()
+
+                    _ ->
+                      fail.()
+                  end
+              end
+
+            ackstate =
+              case res do
+                {ackstate, status} ->
+                  AmpsEvents.end_session(sid, state.env, status)
+                  ackstate
+
+                {ackstate, status, post} ->
+                  AmpsEvents.end_session(sid, state.env, status)
+                  post.()
+                  ackstate
+              end
+
+            case ackstate do
+              :ack ->
+                Jetstream.ack(message)
+
+              :nack ->
+                Jetstream.nack(message)
+
+              :term ->
+                Jetstream.term(message)
             end
-
-          ackstate =
-            case res do
-              {ackstate, status} ->
-                AmpsEvents.end_session(sid, state.env, status)
-                ackstate
-
-              {ackstate, status, post} ->
-                AmpsEvents.end_session(sid, state.env, status)
-                post.()
-                ackstate
-            end
-
-          case ackstate do
-            :ack ->
+          rescue
+            e ->
               Jetstream.ack(message)
-
-            :nack ->
-              Jetstream.nack(message)
-
-            :term ->
-              Jetstream.term(message)
           end
       end
     end)
