@@ -153,45 +153,52 @@ const filterTypes = {
   },
 
   date: (field) => {
-    var from_date;
-    var to_date;
-    var val = null;
-
-    if (field.value) {
-      if (field.value["$lt"]) {
-        var lt = field.value["$lt"]["$date"];
-        to_date = new Date(lt);
-        val = {};
-        val["$lt"] = lt;
-      }
-      if (field.value["$gt"]) {
-        var gt = field.value["$gt"]["$date"];
-        from_date = new Date();
-        if (!val) {
-          val = {};
-        }
-        val["$gt"] = gt;
-      }
-    }
-
-    if (val) {
-      val = JSON.stringify(val);
-    }
-
-    console.log(field.value);
-    return new Ext.form.FieldSet({
+    return {
       title: field.text,
+      xtype: "fieldset",
+      listeners: {
+        afterrender: function (scope) {
+          var val = null;
+          console.log(field.value);
+          if (field.value) {
+            if (field.value["$lt"]) {
+              var lt = field.value["$lt"]["$date"];
+              var to_date = new Date(lt);
+              scope.down("#toDate").setValue(to_date);
+              scope.down("#toTime").setValue(to_date);
+              val = {};
+              val["$lt"] = lt;
+            }
+            if (field.value["$gt"]) {
+              var gt = field.value["$gt"]["$date"];
+              var from_date = new Date(gt);
+              scope.down("#fromDate").setValue(from_date);
+              scope.down("#fromTime").setValue(from_date);
+              val = {};
+              val["$lt"] = lt;
+              if (!val) {
+                val = {};
+              }
+              val["$gt"] = gt;
+            }
+          }
+
+          if (val) {
+            scope.down("#datefiltervalue").setValue(JSON.stringify(val));
+          }
+        },
+      },
       items: [
         {
           xtype: "fieldcontainer",
           layout: "hbox",
+
           items: [
             {
               xtype: "datefield",
               anchor: "100%",
               fieldLabel: "From",
               name: `${field.dataIndex}_from_date`,
-              value: from_date,
               itemId: "fromDate",
               emptyText: "Select Date",
               format: "d-M-Y",
@@ -251,7 +258,6 @@ const filterTypes = {
               name: `${field.dataIndex}_from_time`,
               fieldLabel: "",
               increment: 15,
-              value: from_date,
 
               itemId: "fromTime",
               emptyText: "Select Time",
@@ -290,6 +296,7 @@ const filterTypes = {
                       curr["$gt"] = date;
                     }
                     console.log(curr);
+                    console.log(hidden);
                     hidden.setValue(JSON.stringify(curr));
                   }
                 },
@@ -308,9 +315,8 @@ const filterTypes = {
               name: `${field.dataIndex}_to_date`,
               format: "d-M-Y",
               emptyText: "Select Date",
-              value: to_date,
 
-              itemId: "maToDate",
+              itemId: "toDate",
               padding: { left: 0, top: 0, bottom: 6 },
               listeners: {
                 specialkey: function (field, e) {
@@ -367,7 +373,6 @@ const filterTypes = {
               fieldLabel: "",
               increment: 15,
               itemId: "toTime",
-              value: to_date,
 
               emptyText: "Select Time",
               format: "H:i:s",
@@ -417,10 +422,14 @@ const filterTypes = {
           xtype: "hidden",
           itemId: "datefiltervalue",
           name: field.dataIndex,
-          value: val,
+          listeners: {
+            change: function (scope, val) {
+              console.log(val);
+            },
+          },
         },
       ],
-    });
+    };
   },
 
   fileSize: (field) => {
@@ -3297,9 +3306,9 @@ Ext.define("Amps.util.Utilities", {
     if (form) {
       form.reset();
     }
-    var window = amfutil.getElementByID("searchwindow");
-    window.show();
-    window.clearForm();
+    // var window = amfutil.getElementByID("searchwindow");
+    // window.show();
+    // window.clearForm();
 
     console.log(form);
     var coll = Ext.util.History.getToken();
@@ -3573,30 +3582,6 @@ Ext.define("Amps.util.Utilities", {
               .setIconCls("x-fa fa-search");
           },
         },
-        {
-          xtype: "button",
-          text: "Apply Filter",
-          itemId: "applyfilterufarule",
-          handler: function (btn) {
-            var form = btn.up("form").getForm();
-            // var dateval = btn.up("form").down("datefiltervalue");
-            // console.log(dateval);
-            var values = form.getValues();
-            var fields = ampsgrids.grids[route]().columns;
-            // var fieldKeys = fields.map((field) => field.field);
-            console.log(fields);
-            console.log(values);
-            var filters = amfutil.getFilters(form, fields);
-            console.log(filters);
-            amfutil.setGridStore(filters, route);
-            amfutil.getElementByID("main-grid").fireEvent("checkfilter", "");
-
-            amfutil.getElementByID("searchwindow").close();
-            amfutil
-              .getElementByID("searchpanelbtn")
-              .setIconCls("x-fa fa-search");
-          },
-        },
 
         {
           xtype: "button",
@@ -3676,6 +3661,8 @@ Ext.define("Amps.util.Utilities", {
     console.log(fields);
     console.log(values);
     var filters = {};
+    console.log(form);
+
     fields.forEach((field) => {
       if (values[field.dataIndex] && values[field.dataIndex] != "") {
         if (field.type == "date") {
