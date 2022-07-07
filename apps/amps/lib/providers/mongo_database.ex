@@ -272,8 +272,7 @@ defmodule Amps.DB do
   end
 
 
-  def get_rows(conn, %{"collection" => collection}) do
-    query = conn.query_params()
+  def get_rows(collection, query) do
 
     limit =
       if query["limit"] != nil do

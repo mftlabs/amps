@@ -823,9 +823,7 @@ defmodule AmpsWeb.UtilController do
 
   def create_store(conn, %{"collection" => collection}) do
     data =
-      DB.get_rows(conn, %{
-        "collection" => collection
-      })
+      DB.get_rows(collection, conn.query_params)
 
     rows =
       Map.get(data, :rows)

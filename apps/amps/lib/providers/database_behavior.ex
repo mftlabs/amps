@@ -1,7 +1,7 @@
 # Copyright 2022 Agile Data, Inc <code@mftlabs.io>
 
 defmodule Database.Behaviour do
-  @callback insert(collection :: String.t(), body:: map) :: :ok | {:error, any}
+  @callback insert(collection :: String.t(), body:: map) :: {:ok, any} | {:error, any}
   @callback insert_with_id(collection :: String.t(), body:: map, id :: String.t()) :: :ok | {:error, any}
   @callback update(collection :: String.t(), body:: map, id :: String.t()) :: :ok | {:error, any}
   @callback delete(collection :: String.t(), clauses :: map) :: :ok | {:error, any}
@@ -18,7 +18,7 @@ defmodule Database.Behaviour do
   @callback find(collection :: String.t(), clauses :: map, opts :: map) :: any | {:error, any}
   @callback find_by_id(collection :: String.t(), id :: String.t(), opts :: list) :: any | {:error, any}
 
-  @callback get_rows(collection :: String.t(), queryParms :: map, filter :: any) :: any | {:error, any}
+  @callback get_rows(collection :: String.t(), queryParms :: map) :: any | {:error, any}
   @callback get_in_field(collection :: String.t(), id :: String.t(), field :: String.t(), idx :: String.t()) :: any | {:error, any}
 
   @callback bulk_insert(doc :: list) :: any | {:error, any}

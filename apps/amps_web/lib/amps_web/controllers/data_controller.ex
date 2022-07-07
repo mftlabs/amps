@@ -776,10 +776,8 @@ defmodule AmpsWeb.DataController do
   end
 
   def index(conn, %{"collection" => collection}) do
-    data =
-      DB.get_rows(conn, %{
-        "collection" => collection
-      })
+    params = conn.query_params()
+    data = DB.get_rows(collection, params)
 
     rows =
       Map.get(data, :rows)
