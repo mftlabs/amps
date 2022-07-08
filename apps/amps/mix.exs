@@ -43,7 +43,7 @@ defmodule Amps.MixProject do
       {:plug_cowboy, "~> 2.0"},
       {:uuid, "~> 2.0", hex: :uuid_erl},
       {:poison, "~> 3.1"},
-      {:mongodb_driver, "~> 0.7"},
+#      {:mongodb_driver, "~> 0.7"},
       {:export, "~> 0.0.7"},
       {:erlport,
        [
