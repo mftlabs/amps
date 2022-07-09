@@ -43,7 +43,6 @@ defmodule Amps.MixProject do
       {:plug_cowboy, "~> 2.0"},
       {:uuid, "~> 2.0", hex: :uuid_erl},
       {:poison, "~> 3.1"},
-#      {:mongodb_driver, "~> 0.7"},
       {:export, "~> 0.0.7"},
       {:erlport,
        [
@@ -55,7 +54,6 @@ defmodule Amps.MixProject do
       {:poolboy, "~> 1.5"},
       {:glob, "~> 1.0"},
       {:sftp_client, "~> 1.4"},
-#      {:snap, git: "https://github.com/aram0112/snap"},
       {:jetstream, git: "https://github.com/aram0112/jetstream"},
       {:pythra, git: "https://github.com/aram0112/pythra.git"},
       {:gnat, "~> 1.5.2"},
@@ -75,15 +73,11 @@ defmodule Amps.MixProject do
         github: "datapio/opencore", ref: "main", sparse: "apps/datapio_cluster"
       },
       {:mnesiac, git: "https://github.com/aram0112/mnesiac"},
-      {:kafka_ex, git: "https://github.com/aram0112/kafka_ex"},
       {:cors_plug, "~> 2.0"},
       {:gen_smtp, "~> 1.0"},
       {:absinthe, "~> 1.7.0"},
       {:ldap_ex, "~> 0.2.2"},
       {:timex, "~> 3.7.8"}
-      # {:ex_json_schema, "~> 0.9.1"},
-      # {:xml_builder, "~> 2.1"},
-      # {:jsonpatch, "~> 0.12.0"}
     ]
   end
 

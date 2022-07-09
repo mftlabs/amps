@@ -267,9 +267,9 @@ config :ex_aws, :hackney_opts, recv_timeout: 240_000
 #   host: System.get_env("AMPS_S3_HOST") || "localhost",
 #   port: System.get_env("AMPS_S3_PORT") || "9000"
 
-config :kafka_ex,
-  kafka_version: "kayrock",
-  disable_default_worker: true
+#config :kafka_ex,
+#  kafka_version: "kayrock",
+#  disable_default_worker: true
 
 config :amps,
   sched_interval: 10000,
