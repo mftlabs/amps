@@ -6221,14 +6221,7 @@ Ext.define("Amps.util.Grids", {
         amfutil.redirect(`message_events/${msg._id}`);
       },
       // filter: { parent: { $exists: false } },
-      actionIcons: [
-        "searchpanelbtn",
-        "clearfilter",
-        "refreshbtn",
-        "reprocess",
-        "reroute",
-        "skip",
-      ],
+      actionIcons: ["searchpanelbtn", "clearfilter", "refreshbtn"],
       sort: {
         start: "DESC",
       },

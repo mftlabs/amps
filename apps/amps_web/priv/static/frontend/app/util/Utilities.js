@@ -828,7 +828,6 @@ Ext.define("Amps.util.Utilities", {
                           html: "<center>Requested Session Termination</center>",
                           autoCloseDelay: 5000,
                         });
-                        console.log(route);
                         grid.getStore().reload();
                         termWindow.close();
                       },
