@@ -758,7 +758,7 @@ Ext.define("Amps.util.Utilities", {
       tooltip: "Click here to skip message",
       handler: "skip",
       isActionDisabled: function (v, r, c, i, record) {
-        if (record.data.status != "retrying") {
+        if (record.data.status == "received") {
           return true;
         } else {
           return false;
