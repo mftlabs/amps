@@ -61,7 +61,7 @@ defmodule Amps.EnvSvcHandler do
       case action do
         "skip" ->
           Logger.info("Skipping #{msgid} for #{name}")
-          Amps.EventHandler.skip(Process.whereis(:"#{env}-#{name}"), msgid)
+          Amps.EventHandler.skip(:"#{env}-#{name}", msgid)
 
         "start" ->
           Logger.info("Starting #{name}")

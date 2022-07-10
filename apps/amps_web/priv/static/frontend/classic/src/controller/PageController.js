@@ -1710,7 +1710,7 @@ Ext.define("Amps.controller.PageController", {
 
     Ext.MessageBox.show({
       title: "Clear Environment",
-      message: `Are you sure you want to clear this environment? This will delete all OpenSearch indexes prefixed ${
+      message: `Are you sure you want to clear this environment? This will delete all Database collections prefixed ${
         record.name
       }-, all Vault keys prefixed with ${
         record.name

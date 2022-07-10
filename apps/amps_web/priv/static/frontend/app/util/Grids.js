@@ -6208,6 +6208,91 @@ Ext.define("Amps.util.Grids", {
       ],
       options: ["reprocess", "reroute", "skip"],
     }),
+    sessions: () => ({
+      title: "Sessions",
+      dblclick: async function (record) {
+        var resp = await amfutil.ajaxRequest({
+          url: `api/message_events/session/${record.msgid}`,
+          params: { sid: record.sid },
+          method: "GET",
+        });
+
+        var msg = Ext.decode(resp.responseText);
+        amfutil.redirect(`message_events/${msg._id}`);
+      },
+      // filter: { parent: { $exists: false } },
+      actionIcons: [
+        "searchpanelbtn",
+        "clearfilter",
+        "refreshbtn",
+        "reprocess",
+        "reroute",
+        "skip",
+      ],
+      sort: {
+        start: "DESC",
+      },
+      columns: [
+        {
+          text: "Message ID",
+          hidden: true,
+          dataIndex: "msgid",
+          flex: 1,
+          type: "text",
+        },
+        {
+          text: "Session ID",
+          dataIndex: "sid",
+          flex: 1,
+        },
+        {
+          text: "Service",
+          dataIndex: "service",
+          flex: 1,
+        },
+        {
+          text: "Start Time",
+          dataIndex: "start",
+          type: "date",
+          flex: 1,
+          renderer: amfutil.dateRenderer,
+        },
+        {
+          text: "End Time",
+          dataIndex: "end",
+          type: "date",
+
+          flex: 1,
+          renderer: function (val) {
+            if (val) {
+              return amfutil.dateRenderer(val);
+            } else {
+              return "Ongoing or Failed";
+            }
+          },
+        },
+        {
+          text: "Status Time",
+          dataIndex: "stime",
+          type: "date",
+
+          flex: 1,
+          renderer: function (val) {
+            if (val) {
+              return amfutil.dateRenderer(val);
+            } else {
+              return "Ongoing or Failed";
+            }
+          },
+        },
+        {
+          text: "Status",
+          dataIndex: "status",
+          flex: 1,
+        },
+      ],
+      options: ["terminate"],
+    }),
     groups: () => ({
       title: "Groups",
       object: "Group",
@@ -11945,7 +12030,38 @@ Ext.define("Amps.util.Grids", {
                             fn: function (grid, rowIndex, e, obj) {
                               var record = grid.record.data;
                               console.log(record);
-                              config.dblclick(record);
+                              var win = new Ext.window.Window({
+                                title: `Service Log | Time: ${record["etime"]}`,
+                                width: 700,
+                                height: 500,
+                                layout: "fit",
+                                items: [
+                                  {
+                                    xtype: "container",
+                                    padding: 20,
+                                    style: {
+                                      background: "var(--main-color)",
+                                    },
+                                    scrollable: true,
+
+                                    items: [
+                                      {
+                                        xtype: "component",
+
+                                        style: {
+                                          background: "var(--main-color)",
+                                          "white-space": "pre-wrap",
+                                          "font-weight": "500",
+                                          color: "white",
+                                          // "font-size": "1.5rem",
+                                        },
+                                        html: record["reason"],
+                                      },
+                                    ],
+                                  },
+                                ],
+                              });
+                              win.show();
                             },
                           },
                         });

@@ -189,7 +189,7 @@ config :amps_web, AmpsWeb.Endpoint,
 # config :mnesia, dir: to_charlist(System.get_env("MNESIA_DIR", "/Users/abhayram/mnesia"))
 
 config :mnesiac,
-  stores: [Amps.Defaults, Amps.Responders],
+  stores: [Amps.Defaults, Amps.Responders, Amps.Handlers],
   schema_type: :disc_copies
 
 # defaults to :ram_copies
@@ -267,7 +267,7 @@ config :ex_aws, :hackney_opts, recv_timeout: 240_000
 #   host: System.get_env("AMPS_S3_HOST") || "localhost",
 #   port: System.get_env("AMPS_S3_PORT") || "9000"
 
-#config :kafka_ex,
+# config :kafka_ex,
 #  kafka_version: "kayrock",
 #  disable_default_worker: true
 

@@ -765,6 +765,110 @@ Ext.define("Amps.util.Utilities", {
         }
       },
     },
+    terminate: {
+      name: "terminate",
+      iconCls: "x-fa fa-times",
+      itemId: "terminate",
+      tooltip: "Click here to terminate message processing",
+      handler: async function (grid, rowIndex, colIndex, e) {
+        var mask = new Ext.LoadMask({
+          msg: "Please wait...",
+          target: grid,
+        });
+
+        var termWindow = new Ext.window.Window({
+          title: "Confirm Session Termination",
+          modal: true,
+          width: 300,
+          height: 200,
+          scrollable: true,
+          resizable: false,
+          layout: "fit",
+          padding: 10,
+          items: [
+            {
+              xtype: "form",
+              defaults: {
+                padding: 5,
+                labelWidth: 140,
+              },
+              // layout: {
+              //   type: "vbox",
+              //   align: "stretch",
+              // },
+              scrollable: true,
+              items: [
+                amfutil.check("Redeliver Message", "redeliver", {
+                  value: true,
+                }),
+              ],
+
+              buttons: [
+                {
+                  text: "Terminate",
+                  formBind: true,
+                  handler: function (scope) {
+                    mask.show();
+                    var rec = grid.getStore().getAt(rowIndex);
+                    var values = this.up("form").getValues();
+                    var redeliver = values.redeliver;
+                    console.log(rowIndex);
+                    var id = rec.data._id;
+                    console.log(rec);
+                    amfutil.ajaxRequest({
+                      url: `/api/service/terminate/${id}`,
+                      method: "POST",
+                      timeout: 60000,
+                      jsonData: { redeliver: redeliver },
+                      success: async function (response) {
+                        var data = Ext.decode(response.responseText);
+                        mask.hide();
+                        Ext.toast({
+                          title: "Session Terminating",
+                          html: "<center>Requested Session Termination</center>",
+                          autoCloseDelay: 5000,
+                        });
+                        console.log(route);
+                        grid.getStore().reload();
+                        termWindow.close();
+                      },
+                      failure: function (response) {
+                        mask.hide();
+                        amfutil.onFailure(
+                          "Error terminating Message",
+                          response
+                        );
+                        grid.getStore().reload();
+                      },
+                    });
+                    // msgbox.anchorTo(Ext.getBody(), "br");
+                  },
+                },
+                {
+                  text: "Cancel",
+                  cls: "button_class",
+                  itemId: "cancel",
+                  listeners: {
+                    click: function (btn) {
+                      termWindow.close();
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        });
+        termWindow.show();
+      },
+
+      isActionDisabled: function (v, r, c, i, record) {
+        if (record.data.end) {
+          return true;
+        } else {
+          return false;
+        }
+      },
+    },
     reset: {
       name: "link",
       iconCls: "x-fa fa-key actionicon",
@@ -2519,10 +2623,10 @@ Ext.define("Amps.util.Utilities", {
   dateRenderer: function (val) {
     var date = new Date(val);
     var ms = date.getMilliseconds();
-    var result = date.toLocaleString();
+    var result = date.toLocaleString("en-US", { hourCycle: "h23" });
     var end = result.slice(-3);
     // const result = new Date(str).getTime();
-    return result.slice(0, -3) + ":" + ms + end;
+    return result + ":" + ms;
   },
 
   createHistoryStore: function (msgid, opts = {}) {

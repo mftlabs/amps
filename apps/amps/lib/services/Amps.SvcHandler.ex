@@ -56,7 +56,7 @@ defmodule Amps.SvcHandler do
       case action do
         "skip" ->
           Logger.info("Skipping #{msgid} for #{name}")
-          Amps.EventHandler.skip(Process.whereis(:"#{name}"), msgid)
+          Amps.EventHandler.skip(:"#{name}", msgid)
 
         "start" ->
           Logger.info("Starting #{name}")

@@ -25,6 +25,47 @@ defmodule AmpsWeb.ServiceController do
     end
   end
 
+  def terminate(conn, %{"id" => id, "redeliver" => redeliver}) do
+    env = conn.assigns().env
+    do_terminate(id, redeliver, env)
+    json(conn, :ok)
+  end
+
+  defp do_terminate(id, redeliver, env) do
+    session = DB.find_by_id(Util.index(env, "sessions"), id)
+
+    ackmode =
+      if redeliver do
+        "nack"
+      else
+        "term"
+      end
+
+    Logger.info(ackmode)
+
+    msg =
+      DB.find_one(Util.index(env, "message_events"), %{
+        "msgid" => session["msgid"],
+        "sid" => session["sid"]
+      })
+
+    AmpsEvents.send_history(
+      AmpsUtil.env_topic("amps.events.action", env),
+      "message_events",
+      msg,
+      %{
+        "status" => "terminating"
+      }
+    )
+
+    AmpsEvents.send(
+      %{"ackmode" => ackmode},
+      %{"output" => "amps.eventhandler.#{session["sid"]}.term"},
+      %{},
+      env
+    )
+  end
+
   def skip(conn, %{"id" => id}) do
     env = conn.assigns().env
     do_skip(id, env)

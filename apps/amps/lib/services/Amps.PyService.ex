@@ -191,7 +191,12 @@ defmodule Amps.PyService do
 
         if is_map(rparm) do
           status = rparm["status"] || "failed"
+
+          if rparm["error"] do
+            {:error, rparm["reason"]}
+          else
             {:ok, rparm}
+          end
         else
           {:error, "JSON Encoded object not returned from script"}
         end

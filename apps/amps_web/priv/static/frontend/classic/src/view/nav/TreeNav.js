@@ -18,6 +18,14 @@ Ext.define("Amps.view.nav.TreeNav", {
           cls: "messages",
         },
         {
+          iconCls: "x-fa fa-list-ul",
+          leaf: true,
+          rowCls: "sessions",
+          text: "Sessions",
+          tooltip: "Sessions",
+          cls: "sessions",
+        },
+        {
           iconCls: "x-fa fa-television",
           leaf: true,
           rowCls: "monitoring",

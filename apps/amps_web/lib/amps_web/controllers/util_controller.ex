@@ -214,37 +214,36 @@ defmodule AmpsWeb.UtilController do
             filename: msg["fname"] || "message.dat"
           )
         else
-            stream = AmpsUtil.stream(msg, conn.assigns().env)
+          stream = AmpsUtil.stream(msg, conn.assigns().env)
 
-            conn =
-              conn
-              |> put_resp_header(
-                "content-disposition",
-                "attachment; filename=\"#{msg["fname"] || "download"}\""
-              )
-              |> send_chunked(200)
+          conn =
+            conn
+            |> put_resp_header(
+              "content-disposition",
+              "attachment; filename=\"#{msg["fname"] || "download"}\""
+            )
+            |> send_chunked(200)
 
-            Enum.reduce_while(stream, conn, fn chunk, conn ->
-              case Plug.Conn.chunk(conn, chunk) do
-                {:ok, conn} ->
-                  {:cont, conn}
+          Enum.reduce_while(stream, conn, fn chunk, conn ->
+            case Plug.Conn.chunk(conn, chunk) do
+              {:ok, conn} ->
+                {:cont, conn}
 
-                {:error, :closed} ->
-                  {:halt, conn}
-              end
-            end)
+              {:error, :closed} ->
+                {:halt, conn}
+            end
+          end)
 
-            # send_download(conn, {:file, msg["fpath"]}, disposition: :attachment)
+          # send_download(conn, {:file, msg["fpath"]}, disposition: :attachment)
 
-            # else
-            #   root = AmpsUtil.get_env(:storage_root)
+          # else
+          #   root = AmpsUtil.get_env(:storage_root)
 
-            #   send_download(conn, {:file, Path.join(root, msg["fpath"])},
-            #     disposition: :attachment
-            #   )
-            # end
-          end
-
+          #   send_download(conn, {:file, Path.join(root, msg["fpath"])},
+          #     disposition: :attachment
+          #   )
+          # end
+        end
     end
   end
 
@@ -375,8 +374,6 @@ defmodule AmpsWeb.UtilController do
               Enum.find(sessions, fn {idx, session} ->
                 session["sid"] == sid
               end)
-
-            IO.inspect(row["msgid"] == msgid)
 
             case session do
               nil ->
@@ -822,8 +819,7 @@ defmodule AmpsWeb.UtilController do
   end
 
   def create_store(conn, %{"collection" => collection}) do
-    data =
-      DB.get_rows(collection, conn.query_params)
+    data = DB.get_rows(collection, conn.query_params)
 
     rows =
       Map.get(data, :rows)
@@ -850,5 +846,15 @@ defmodule AmpsWeb.UtilController do
       {:error, error} ->
         json(conn, %{"success" => false})
     end
+  end
+
+  def msg_session(conn, %{"msgid" => msgid, "sid" => sid}) do
+    json(
+      conn,
+      DB.find_one(Util.index(conn.assigns().env, "message_events"), %{
+        "msgid" => msgid,
+        "sid" => sid
+      })
+    )
   end
 end

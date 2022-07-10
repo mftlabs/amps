@@ -3,7 +3,6 @@ defmodule Amps.EventHandler do
   require Logger
 
   def start_link(args) do
-    IO.inspect(args)
     args = Enum.into(args, %{})
 
     args =
@@ -15,14 +14,15 @@ defmodule Amps.EventHandler do
           args
       end
 
-    GenServer.start_link(__MODULE__, args)
+    GenServer.start_link(__MODULE__, args, name: args[:name])
   end
 
   def child_spec(opts) do
     IO.inspect("HANDLER OPTS")
     IO.inspect(opts)
-    name = Atom.to_string(opts[:name]) <> "_mgr"
+    name = Atom.to_string(opts[:name]) <> "_hdlr"
     # IO.puts("name #{inspect(name)}")
+    # Logger.info(opts[:name])
 
     %{
       id: String.to_atom(name),
@@ -32,6 +32,9 @@ defmodule Amps.EventHandler do
 
   def init(args) do
     IO.inspect(args)
+
+    name = Process.info(self())[:registered_name]
+    Amps.Handlers.put(args[:name])
 
     parms = args[:parms]
     IO.inspect(parms)
@@ -60,7 +63,7 @@ defmodule Amps.EventHandler do
 
         if config.config.max_ack_pending != count ||
              config.config.ack_wait != ack_wait do
-          prev = config.delivered.stream_seq + 1
+          prev = config.delivered.stream_seq
 
           AmpsUtil.delete_consumer(stream, consumer)
 
@@ -86,35 +89,35 @@ defmodule Amps.EventHandler do
 
     # After started, we can query the supervisor for information
 
-    {:ok, %{parms: parms, messages: %{}}}
+    {:ok, %{parms: parms, messages: %{}, name: args[:name]}}
   end
 
-  def register(pid, message, msgid, sid) do
-    GenServer.call(pid, {:register, {message, msgid, sid}})
+  def register(pid, message, msgid) do
+    GenServer.call(pid, {:register, {message, msgid}})
   end
 
-  def skip(pid, msgid) do
-    GenServer.call(pid, {:skip, msgid})
+  def skip(name, msgid) do
+    Amps.Handlers.skip(name, msgid)
   end
 
   def process(pid, message, msgid) do
     GenServer.call(pid, {:process, message, msgid})
   end
 
-  def stop_process(pid, msgid) do
-    GenServer.call(pid, {:stop_process, msgid})
+  def stop_process(pid, message, msgid) do
+    GenServer.call(pid, {:stop_process, message, msgid})
   end
 
   def is_registered(pid, msgid) do
     GenServer.call(pid, {:is_registered, msgid})
   end
 
-  def get_failures(pid, msgid) do
-    GenServer.call(pid, {:failures, msgid})
+  def attempts(pid, msgid) do
+    GenServer.call(pid, {:attempts, msgid})
   end
 
-  def add_failure(pid, msgid) do
-    GenServer.call(pid, {:add_fail, msgid})
+  def add_attempt(pid, msgid) do
+    GenServer.call(pid, {:add_attempt, msgid})
   end
 
   def deregister(pid, msgid) do
@@ -127,64 +130,51 @@ defmodule Amps.EventHandler do
     # fname = Jason.decode!(message.body)["msg"]["fname"]
     # IO.inspect("Progress for #{fname} #{curr}")
 
-    message = GenServer.call(pid, {:progress, msgid})
+    in_progress = GenServer.call(pid, {:progress, message, msgid})
 
-    if message do
+    if in_progress do
       acked = Jetstream.ack_progress(message)
 
       progress(pid, message, msgid, curr)
     end
   end
 
-  def handle_call({:register, {message, msgid, sid}}, _, state) do
+  def handle_call({:register, {message, msgid}}, _, state) do
+    info = Amps.Handlers.is_registered(state.name, msgid)
+
     handler = self()
 
-    {:ok, pid} =
-      Task.start(fn ->
-        progress(handler, message, msgid)
-      end)
-
-    {:reply, :ok,
-     Map.put(
-       state,
-       :messages,
-       Map.put(state.messages, msgid, %{
-         sid: sid,
-         failures: 0,
-         processing: true,
-         message: message,
-         skip: false,
-         progress: pid
-       })
-     )}
-  end
-
-  def handle_call({:is_registered, msgid}, _, state) do
     info =
-      if Map.has_key?(state.messages, msgid) do
-        if state.messages[msgid].skip do
+      case info do
+        :new ->
+          {:ok, progress} =
+            Task.start(fn ->
+              progress(handler, message, msgid)
+            end)
+
+          Amps.Handlers.register(state.name, message, msgid, progress)
+
+        :skip ->
           :skip
-        else
-          state.messages[msgid]
-        end
-      else
-        :new
+
+        info ->
+          {:ok, progress} =
+            Task.start(fn ->
+              progress(handler, message, msgid)
+            end)
+
+          Amps.Handlers.process(state.name, message, msgid, progress)
       end
 
     {:reply, info, state}
   end
 
-  def handle_call({:progress, msgid}, _, state) do
-    info =
-      if Map.has_key?(state.messages, msgid) do
-        if state.messages[msgid].processing do
-          state.messages[msgid].message
-        else
-          false
-        end
-      else
-        false
-      end
+  # def handle_call({:is_registered, msgid}, _, state) do
+  #   {:reply, info, state}
+  # end
+
+  def handle_call({:progress, message, msgid}, _, state) do
+    info = Amps.Handlers.progress(state.name, message, msgid)
 
     {:reply, info, state}
   end
@@ -192,64 +182,35 @@ defmodule Amps.EventHandler do
   def handle_call({:process, message, msgid}, _, state) do
     handler = self()
 
-    {:ok, pid} =
+    {:ok, progress} =
       Task.start(fn ->
         progress(handler, message, msgid)
       end)
 
-    state =
-      if Map.has_key?(state.messages, msgid) do
-        state
-        |> put_in([:messages, msgid, :processing], true)
-        |> put_in([:messages, msgid, :message], message)
-        |> put_in([:messages, msgid, :progress], pid)
-      else
-        state
-      end
+    Amps.Handlers.process(state.name, message, msgid, progress)
 
     {:reply, :ok, state}
   end
 
-  def handle_call({:skip, msgid}, _, state) do
-    state =
-      if Map.has_key?(state.messages, msgid) do
-        Process.exit(state.messages[msgid].progress, :shutdown)
-        put_in(state, [:messages, msgid, :skip], true)
-      else
-        state
-      end
+  def handle_call({:stop_process, message, msgid}, _, state) do
+    Amps.Handlers.stop_process(state.name, message, msgid)
 
     {:reply, :ok, state}
   end
 
-  def handle_call({:stop_process, msgid}, _, state) do
-    state =
-      if Map.has_key?(state.messages, msgid) do
-        Process.exit(state.messages[msgid].progress, :shutdown)
-        put_in(state, [:messages, msgid, :processing], false)
-      else
-        state
-      end
+  def handle_call({:add_attempt, msgid}, _, state) do
+    new = Amps.Handlers.add_attempt(state.name, msgid)
 
-    {:reply, :ok, state}
+    {:reply, new, state}
   end
 
-  def handle_call({:add_fail, msgid}, _, state) do
-    new = state.messages[msgid].failures + 1
-    message = Map.put(state.messages[msgid], :failures, new)
-    messages = Map.put(state.messages, msgid, message)
-
-    {:reply, new, Map.put(state, :messages, messages)}
-  end
-
-  def handle_call({:failures, msgid}, _, state) do
-    {:reply, get_in(state.messages, [msgid, :failures]), state}
+  def handle_call({:attempts, msgid}, _, state) do
+    attempts = Amps.Handlers.attempts(state.name, msgid)
+    {:reply, attempts, state}
   end
 
   def handle_cast({:deregister, msgid}, state) do
-    Process.exit(state.messages[msgid].progress, :shutdown)
-
-    messages = Map.drop(state.messages, [msgid])
-    {:noreply, Map.put(state, :messages, messages)}
+    Amps.Handlers.deregister(state.name, msgid)
+    {:noreply, state}
   end
 end

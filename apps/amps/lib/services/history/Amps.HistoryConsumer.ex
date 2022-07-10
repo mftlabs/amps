@@ -16,7 +16,7 @@ defmodule Amps.HistoryConsumer do
           parms
       end
 
-    IO.puts("starting event listener #{inspect(parms)}")
+    # IO.puts("starting event listener #{inspect(parms)}")
     name = parms[:name]
     GenServer.start_link(__MODULE__, parms)
   end
@@ -28,7 +28,7 @@ defmodule Amps.HistoryConsumer do
 
   def child_spec(opts) do
     name = opts[:name]
-    IO.puts("name #{inspect(name)}")
+    # IO.puts("name #{inspect(name)}")
 
     %{
       id: name,
@@ -50,22 +50,22 @@ defmodule Amps.HistoryConsumer do
 
   # GenServer callbacks
   def handle_info({:initial_connect, opts}, state) do
-    IO.puts("opts #{inspect(opts)}")
-    IO.puts("state #{inspect(state)}")
+    # IO.puts("opts #{inspect(opts)}")
+    # IO.puts("state #{inspect(state)}")
     name = Atom.to_string(state[:name])
     sub = String.to_atom(name <> "_sup")
-    IO.puts("sub: #{inspect(sub)}")
+    # IO.puts("sub: #{inspect(sub)}")
 
     pid = Process.whereis(:gnat)
 
-    IO.puts("pid #{inspect(pid)}")
+    # IO.puts("pid #{inspect(pid)}")
 
     {stream, consumer} = AmpsUtil.get_names(opts, state.env)
-    IO.inspect(stream)
-    IO.inspect(state.env)
+    # IO.inspect(stream)
+    # IO.inspect(state.env)
     listening_topic = AmpsUtil.env_topic("amps.history.#{consumer}", state.env)
 
-    IO.inspect(listening_topic)
+    # IO.inspect(listening_topic)
 
     # AmpsUtil.create_consumer(stream, consumer, AmpsUtil.env_topic(opts["topic"], state.env), %{
     #   deliver_policy: :all,
@@ -98,7 +98,7 @@ defmodule Amps.HistoryConsumer do
   end
 
   def handle_info({val, _opts}, state) do
-    IO.puts("got event #{inspect(val)}")
+    # IO.puts("got event #{inspect(val)}")
     {:noreply, state}
   end
 end
@@ -119,7 +119,7 @@ defmodule Amps.HistoryPullConsumer do
     # Process.link(connection_pid)
     group = String.replace(parms["name"], " ", "_")
     Logger.info("History queue_group #{group} #{stream_name} #{consumer_name}")
-    IO.inspect(listening_topic)
+    # IO.inspect(listening_topic)
 
     {:ok, sid} = Gnat.sub(connection_pid, self(), listening_topic, queue_group: group)
 
@@ -267,7 +267,7 @@ defmodule Amps.HistoryPullConsumer do
 
   def handle_info(other, state) do
     require Logger
-    IO.puts("handle info #(inspect(other)) #{inspect(state)}")
+    # IO.puts("handle info #(inspect(other)) #{inspect(state)}")
 
     Logger.error(
       "#{__MODULE__} for #{state.stream_name}.#{state.consumer_name} received unexpected message: #{inspect(other)}"
@@ -277,7 +277,7 @@ defmodule Amps.HistoryPullConsumer do
   end
 
   def handle_call(parms, _from, state) do
-    IO.puts("handler call called #{inspect(parms)}")
+    # IO.puts("handler call called #{inspect(parms)}")
     {:reply, :ok, state}
   end
 

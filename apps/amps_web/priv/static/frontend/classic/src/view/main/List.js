@@ -10,7 +10,6 @@ Ext.define("Amps.view.main.List", {
   },
 
   stateful: true,
-  stateId: "main-grid",
 
   selModel: {
     selType: "checkboxmodel",

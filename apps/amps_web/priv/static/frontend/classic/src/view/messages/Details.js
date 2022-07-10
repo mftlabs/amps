@@ -1018,6 +1018,13 @@ Ext.define("Amps.view.messages.MessageStatus", {
                   dataIndex: "status",
                   flex: 1,
                 },
+                {
+                  xtype: "actioncolumn",
+                  controller: "main",
+                  text: "Actions",
+                  width: 75,
+                  items: [amfutil.gridactions.terminate],
+                },
               ]);
             },
             select: function (scope, record, index, eOpts) {

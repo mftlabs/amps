@@ -85,7 +85,7 @@ defmodule AmpsWeb.Router do
 
     get("/admin/reset/:id", DataController, :reset_admin_password)
     post("/admin/changepassword/:id", DataController, :change_admin_password)
-
+    get("/message_events/session/:msgid", UtilController, :msg_session)
     get("/message_events/history/:msgid", UtilController, :history)
     get("/message_events/download/:id", UtilController, :download)
 
@@ -98,6 +98,10 @@ defmodule AmpsWeb.Router do
     post("/port/:port", UtilController, :in_use)
     post("/env/:name", EnvironmentController, :handle_env)
     get("/env/:name", EnvironmentController, :ping_env)
+
+    post("/service/terminate", ServiceController, :terminate)
+
+    post("/service/terminate/:id", ServiceController, :terminate)
     post("/service/skip", ServiceController, :skip)
 
     post("/service/skip/:id", ServiceController, :skip)

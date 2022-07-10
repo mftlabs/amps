@@ -36,8 +36,7 @@ defmodule Amps.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:amps_mongodb, [git: "https://github.com/mftlabs/amps-mongodb",
-                branch: "main"]},
+      {:amps_mongodb, [git: "https://github.com/mftlabs/amps-mongodb", branch: "main"]},
       {:phoenix_pubsub, "~> 2.0"},
       {:swoosh, "~> 1.3"},
       {:plug_cowboy, "~> 2.0"},

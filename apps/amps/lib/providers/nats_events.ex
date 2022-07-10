@@ -73,11 +73,18 @@ defmodule AmpsEvents do
 
   def start_session(msg, session, env) do
     sid = AmpsUtil.get_id()
+    # Process.register(self, String.to_atom(sid))
     Logger.metadata(sid: sid)
+    time = AmpsUtil.gettime()
 
     DB.insert(
       AmpsUtil.index(env, "sessions"),
-      Map.merge(session, %{"sid" => sid, "start" => AmpsUtil.gettime()})
+      Map.merge(session, %{
+        "sid" => sid,
+        "msgid" => msg["msgid"],
+        "start" => time,
+        "stime" => time
+      })
     )
 
     msg =
@@ -88,11 +95,23 @@ defmodule AmpsEvents do
     {msg, sid}
   end
 
+  def update_session(sid, env, status) do
+    res =
+      DB.find_one_and_update(AmpsUtil.index(env, "sessions"), %{"sid" => sid}, %{
+        "status" => status,
+        "stime" => AmpsUtil.gettime()
+      })
+  end
+
   def end_session(sid, env, status \\ "completed") do
-    DB.find_one_and_update(AmpsUtil.index(env, "sessions"), %{"sid" => sid}, %{
-      "end" => AmpsUtil.gettime(),
-      "status" => status
-    })
+    time = AmpsUtil.gettime()
+
+    res =
+      DB.find_one_and_update(AmpsUtil.index(env, "sessions"), %{"sid" => sid}, %{
+        "end" => time,
+        "stime" => time,
+        "status" => status
+      })
 
     Logger.metadata(sid: nil)
   end
