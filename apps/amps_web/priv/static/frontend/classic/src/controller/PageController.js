@@ -161,8 +161,10 @@ Ext.define("Amps.controller.PageController", {
           // dataIndex: "actions",
           width: "max-content",
           items: config.options
-            ? config.options.map((option) => amfutil.gridactions[option])
-            : [],
+            ? [amfutil.gridactions["copy"]].concat(
+                config.options.map((option) => amfutil.gridactions[option])
+              )
+            : [amfutil.gridactions["copy"]],
         };
 
         console.log(route);

@@ -754,7 +754,7 @@ Ext.define("Amps.util.Utilities", {
     },
     skip: {
       name: "skip",
-      iconCls: "x-fa fa-times-circle",
+      iconCls: "x-fa fa-times-circle actionicon",
       itemId: "skip",
       tooltip: "Click here to skip message",
       handler: "skip",
@@ -768,7 +768,7 @@ Ext.define("Amps.util.Utilities", {
     },
     terminate: {
       name: "terminate",
-      iconCls: "x-fa fa-times",
+      iconCls: "x-fa fa-times actionicon",
       itemId: "terminate",
       tooltip: "Click here to terminate message processing",
       handler: async function (grid, rowIndex, colIndex, e) {
@@ -867,6 +867,35 @@ Ext.define("Amps.util.Utilities", {
         } else {
           return false;
         }
+      },
+    },
+    copy: {
+      name: "copy",
+      iconCls: "x-fa fa-copy actionicon",
+      itemId: "copy",
+      tooltip: "Click here to download row data",
+      handler: function (grid, rowIndex, colIndex, e) {
+        var route = Ext.util.History.getToken();
+        Ext.getBody().mask();
+        var rec = grid.getStore().getAt(rowIndex);
+
+        var data = rec.data;
+
+        delete data.id;
+        var file = new Blob([JSON.stringify(data, null, 2)], {
+          type: "text/plain",
+        });
+        var a = document.createElement("a"),
+          url = URL.createObjectURL(file);
+        a.href = url;
+        a.download = `${route}_${data._id}.json`;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function () {
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+        }, 0);
+        Ext.getBody().unmask();
       },
     },
     reset: {
@@ -2668,6 +2697,7 @@ Ext.define("Amps.util.Utilities", {
               type: "json",
               rootProperty: "rows",
               totalProperty: "count",
+              idProperty: "_id",
             },
             listeners: {
               load: function (data) {
@@ -2704,6 +2734,7 @@ Ext.define("Amps.util.Utilities", {
               type: "json",
               rootProperty: "rows",
               totalProperty: "count",
+              idProperty: "_id",
             },
             listeners: {
               load: function (data) {
@@ -2842,6 +2873,7 @@ Ext.define("Amps.util.Utilities", {
                 type: "json",
                 rootProperty: "rows",
                 totalProperty: "count",
+                idProperty: "_id",
               },
               listeners: {
                 load: function (data) {
