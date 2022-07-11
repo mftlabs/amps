@@ -637,6 +637,7 @@ Ext.define("Amps.util.Utilities", {
   renewPromise: null,
   socketPromise: null,
 
+  plugins: {},
   channel: null,
   socket: null,
   stores: [],
@@ -1388,7 +1389,7 @@ Ext.define("Amps.util.Utilities", {
     );
   },
 
-  typeFields: function (config) {
+  typeFields: function (config, collection) {
     return [
       {
         itemId: "types",
@@ -1462,6 +1463,26 @@ Ext.define("Amps.util.Utilities", {
         ],
       },
     ];
+  },
+
+  getPlugins: async function (collection) {
+    var resp = await amfutil.ajaxRequest({
+      url: `api/ui/plugins/${collection}`,
+      method: "GET",
+    });
+
+    console.log(resp);
+
+    var plugins = Ext.decode(resp.responseText);
+
+    var actions = {};
+
+    plugins.forEach((plugin) => {
+      actions = Object.assign(actions, eval(plugin));
+    });
+    return function () {
+      return actions;
+    };
   },
 
   channelHandlers: async function (channel) {

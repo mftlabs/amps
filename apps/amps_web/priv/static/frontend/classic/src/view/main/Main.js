@@ -31,6 +31,25 @@ Ext.define("Amps.view.main.Main", {
   defaults: {
     xtype: "container",
   },
+  listeners: {
+    beforerender: async function () {
+      Ext.getBody().mask();
+
+      var collections = ["actions", "services", "providers"];
+
+      for (const col of collections) {
+        var extra = await amfutil.getPlugins(col);
+
+        console.log(extra);
+        amfutil.plugins[col] = extra;
+      }
+
+      Ext.getBody().unmask();
+      this.getController().redirectTo(Ext.util.History.getToken(), {
+        force: true,
+      });
+    },
+  },
 
   items: [
     {

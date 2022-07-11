@@ -80,6 +80,8 @@ defmodule AmpsWeb.Router do
       :sample_field_template_download
     )
 
+    get("/ui/plugins/:object", DataController, :get_plugins)
+
     get("/users/reset/:id", DataController, :reset_password)
     post("/users/approve/:id", DataController, :approve_user)
 

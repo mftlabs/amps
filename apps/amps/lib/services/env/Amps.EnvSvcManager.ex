@@ -109,16 +109,12 @@ defmodule Amps.EnvSvcManager do
   def get_spec(name, args, env) do
     types = service_types()
     IO.inspect(args)
+    default = [:subscriber, :sftpd, :pyservice, :sqs, :nats]
     type = String.to_atom(args["type"])
 
     try do
-      case type do
-        #      :sftpd ->
-        #        {types[:sftpd], name: name, parms: args}
-
-        :httpd ->
-          IO.inspect(args)
-
+      cond do
+        type == :httpd ->
           protocol_options = [
             idle_timeout: args["idle_timeout"],
             request_timeout: args["request_timeout"],
@@ -165,9 +161,7 @@ defmodule Amps.EnvSvcManager do
              ]}
           end
 
-        :gateway ->
-          IO.inspect(args)
-
+        type == :gateway ->
           protocol_options = [
             idle_timeout: args["idle_timeout"],
             request_timeout: args["request_timeout"],
@@ -234,68 +228,11 @@ defmodule Amps.EnvSvcManager do
              ]}
           end
 
-        :kafka ->
-          provider =
-            DB.find_one(AmpsUtil.index(env, "providers"), %{
-              "_id" => args["provider"]
-            })
-
-          auth_opts = AmpsUtil.get_kafka_auth(args, provider)
-
-          spec = %{
-            id: name,
-            start:
-              {KafkaEx.ConsumerGroup, :start_link,
-               [
-                 types[:kafka],
-                 args["name"],
-                 args["topics"],
-                 [
-                   uris:
-                     Enum.map(
-                       provider["brokers"],
-                       fn %{"host" => host, "port" => port} ->
-                         {host, port}
-                       end
-                     ),
-                   extra_consumer_args: [args, env]
-                 ] ++
-                   auth_opts
-               ]}
-          }
-
-          spec
-
-        # init_opts = [
-        #   group: args["name"],
-        #   topics: args["topics"],
-        #   # assignment_received_handler: assignment_received_handler(),
-        #   # assignments_revoked_handler: assignments_revoked_handler(),
-        #   handler: types[:kafka],
-        #   handler_init_args: args
-        #   # config: consumer_config()
-        # ]
-
-        # config = AmpsUtil.get_kafka_auth(args, provider)
-
-        # {
-        #   Elsa.Supervisor,
-        #   config: config,
-        #   endpoints:
-        #     Enum.map(
-        #       provider["brokers"],
-        #       fn %{"host" => host, "port" => port} ->
-        #         {host, port}
-        #       end
-        #     ),
-        #   connection: String.to_atom("elsa_" <> args["name"]),
-        #   group_consumer: init_opts
-        # }
-        :sftpd ->
-          {types[:sftpd], name: name, parms: args, env: env}
-
-        type ->
+        Enum.member?(default, type) ->
           {types[type], name: name, parms: args, env: env}
+
+        true ->
+          types[type].get_spec(name, args, env)
       end
     rescue
       e ->

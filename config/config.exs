@@ -267,10 +267,6 @@ config :ex_aws, :hackney_opts, recv_timeout: 240_000
 #   host: System.get_env("AMPS_S3_HOST") || "localhost",
 #   port: System.get_env("AMPS_S3_PORT") || "9000"
 
-# config :kafka_ex,
-#  kafka_version: "kayrock",
-#  disable_default_worker: true
-
 config :amps,
   sched_interval: 10000,
   retry_delay: 60000,
@@ -294,7 +290,6 @@ config :amps, :services,
   sftpd: Amps.SftpServer,
   httpd: Amps.MailboxApi,
   gateway: Amps.Gateway,
-  kafka: Amps.GenConsumer,
   pyservice: Amps.PyProcess,
   sqs: Amps.SQS,
   nats: Amps.NATS
@@ -307,7 +302,6 @@ config :amps, :actions,
   unzip: Amps.Actions.Unzip,
   zip: Amps.Actions.Zip,
   http: Amps.Actions.Http,
-  kafkaput: Amps.Actions.KafkaPut,
   runscript: Amps.Actions.RunScript,
   s3: Amps.Actions.S3,
   sharepoint: Amps.Actions.SharePoint,
@@ -317,15 +311,6 @@ config :amps, :actions,
   ldap: Amps.Actions.LDAP,
   aws: Amps.Actions.AWS
 
-# config :amps, :httpapi,
-#  options: [
-#    port: 8090,
-#    protocol_options: [
-#      idle_timeout: 120_000,
-#      request_timeout: 120_000,
-#      max_keepalive: 5_000_000
-#    ]
-#  ]
 config :amps, Amps.Scheduler,
   jobs: [
     heartbeat: [
@@ -383,3 +368,4 @@ config :phoenix, :json_library, Jason
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"
+import_config "plugins.exs"

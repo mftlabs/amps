@@ -104,13 +104,13 @@ defmodule Amps.SvcManager do
   def get_spec(name, args) do
     types = service_types()
     IO.inspect(args)
+    default = [:subscriber, :sftpd, :pyservice, :sqs, :nats]
+
+    type = String.to_atom(args["type"])
 
     try do
-      case String.to_atom(args["type"]) do
-        #      :sftpd ->
-        #        {types[:sftpd], name: name, parms: args}
-
-        :httpd ->
+      cond do
+        type == :httpd ->
           IO.inspect(args)
 
           protocol_options = [
@@ -159,34 +159,6 @@ defmodule Amps.SvcManager do
              ]}
           end
 
-        :kafka ->
-          provider = DB.find_one("providers", %{"_id" => args["provider"]})
-          auth_opts = AmpsUtil.get_kafka_auth(args, provider)
-
-          spec = %{
-            id: name,
-            start:
-              {KafkaEx.ConsumerGroup, :start_link,
-               [
-                 types[:kafka],
-                 args["name"],
-                 args["topics"],
-                 [
-                   uris:
-                     Enum.map(
-                       provider["brokers"],
-                       fn %{"host" => host, "port" => port} ->
-                         {host, port}
-                       end
-                     ),
-                   extra_consumer_args: args
-                 ] ++
-                   auth_opts
-               ]}
-          }
-
-          spec
-
         # init_opts = [
         #   group: args["name"],
         #   topics: args["topics"],
@@ -213,7 +185,7 @@ defmodule Amps.SvcManager do
         #   group_consumer: init_opts
         # }
 
-        :gateway ->
+        type == :gateway ->
           IO.inspect(args)
 
           protocol_options = [
@@ -283,8 +255,11 @@ defmodule Amps.SvcManager do
              ]}
           end
 
-        type ->
+        Enum.member?(default, type) ->
           {types[type], name: name, parms: args}
+
+        true ->
+          types[type].get_spec(name, args)
       end
     rescue
       e ->
