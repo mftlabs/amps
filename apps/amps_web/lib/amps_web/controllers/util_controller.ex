@@ -261,7 +261,7 @@ defmodule AmpsWeb.UtilController do
             send_resp(conn, 404, "Not found")
 
           msg ->
-            fpath = AmpsUtil.local_file(msg, conn.assigns().env)
+            fpath = AmpsUtil.local_file(msg, env)
             offset = get_offset(conn.req_headers)
             file_size = get_file_size(msg["fpath"])
             {:ok, {ext, mime}} = FileType.from_path(msg["fpath"])

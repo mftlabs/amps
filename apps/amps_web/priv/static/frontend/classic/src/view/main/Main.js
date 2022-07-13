@@ -130,8 +130,10 @@ Ext.define("Amps.view.main.Main", {
             beforeshow: function () {
               var route = Ext.util.History.getToken();
               var stored = amfutil.getStoredColl(route);
-              if (stored.filters != "{}") {
+              if (stored.filters && stored.filters != "{}") {
                 this.addCls("active");
+              } else {
+                this.removeCls("active");
               }
               amfutil.getElementByID("main-grid").on("clear", () => {
                 this.removeCls("active");

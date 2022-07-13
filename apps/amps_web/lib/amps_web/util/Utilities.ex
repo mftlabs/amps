@@ -582,6 +582,19 @@ defmodule AmpsWeb.Util do
           Util.create_batch_consumer(body)
         end
 
+        subs = DB.find(Util.index(env, "services"), %{"type" => "subscriber", "handler" => id})
+
+        Enum.each(subs, fn sub ->
+          AmpsEvents.send(
+            %{},
+            %{
+              "output" => "amps.events.svcs.handler.#{sub["name"]}.restart"
+            },
+            %{},
+            env
+          )
+        end)
+
       "jobs" ->
         case env do
           "" ->

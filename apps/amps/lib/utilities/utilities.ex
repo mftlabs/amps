@@ -382,7 +382,7 @@ defmodule AmpsUtil do
         rep = msg[name]
 
         if rep == nil do
-          raise "file name cannot be formatted, missing message metadata [fname]"
+          raise "file name cannot be formatted, missing message metadata [#{name}]"
         end
 
         fname = String.replace(fname, pat, rep)
@@ -632,7 +632,6 @@ defmodule AmpsUtil do
         false
     end
   end
-
 
   def env_topic(topic, env) do
     if env == "" do

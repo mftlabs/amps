@@ -59,7 +59,23 @@ defmodule AmpsEvents do
     app = Map.merge(app, %{"index" => index, "etime" => AmpsUtil.gettime()})
     data = Map.merge(msg, app)
     Logger.debug("post event #{topic}   #{inspect(data)}")
-    Gnat.pub(:gnat, topic, Poison.encode!(data))
+    Gnat.pub(:gnat, topic, Poison.encode!(%{"msg" => data}))
+  end
+
+  def send_history_update(topic, index, msg, clauses, env \\ "") do
+    Logger.debug("post update event #{topic} msg: #{inspect(msg)} clauses: #{inspect(clauses)}")
+
+    topic = AmpsUtil.env_topic(topic, env)
+
+    Gnat.pub(
+      :gnat,
+      topic,
+      Poison.encode!(%{
+        "msg" => Map.merge(msg, %{"index" => index}),
+        "op" => "update",
+        "clauses" => clauses
+      })
+    )
   end
 
   defp send_event(topic, data) do
@@ -77,14 +93,26 @@ defmodule AmpsEvents do
     Logger.metadata(sid: sid)
     time = AmpsUtil.gettime()
 
-    DB.insert(
-      AmpsUtil.index(env, "sessions"),
+    session =
+      if Map.has_key?(session, "status") do
+        session
+      else
+        Map.put(session, "status", "started")
+      end
+
+    session =
       Map.merge(session, %{
         "sid" => sid,
         "msgid" => msg["msgid"],
         "start" => time,
-        "stime" => time
+        "stime" => time,
+        "index" => "sessions"
       })
+
+    Gnat.pub(
+      :gnat,
+      AmpsUtil.env_topic("amps.events.sessions", env),
+      Poison.encode!(%{"msg" => session})
     )
 
     msg =
@@ -96,22 +124,40 @@ defmodule AmpsEvents do
   end
 
   def update_session(sid, env, status) do
-    res =
-      DB.find_one_and_update(AmpsUtil.index(env, "sessions"), %{"sid" => sid}, %{
-        "status" => status,
-        "stime" => AmpsUtil.gettime()
-      })
+    clauses = %{"sid" => sid}
+
+    msg = %{
+      "status" => status,
+      "stime" => AmpsUtil.gettime()
+    }
+
+    send_history_update(
+      "amps.events.sessions",
+      "sessions",
+      msg,
+      clauses,
+      env
+    )
   end
 
   def end_session(sid, env, status \\ "completed") do
     time = AmpsUtil.gettime()
 
-    res =
-      DB.find_one_and_update(AmpsUtil.index(env, "sessions"), %{"sid" => sid}, %{
-        "end" => time,
-        "stime" => time,
-        "status" => status
-      })
+    clauses = %{"sid" => sid}
+
+    msg = %{
+      "end" => time,
+      "stime" => time,
+      "status" => status
+    }
+
+    send_history_update(
+      "amps.events.sessions",
+      "sessions",
+      msg,
+      clauses,
+      env
+    )
 
     Logger.metadata(sid: nil)
   end

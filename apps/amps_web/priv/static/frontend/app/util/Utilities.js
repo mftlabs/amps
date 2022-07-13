@@ -3462,9 +3462,9 @@ Ext.define("Amps.util.Utilities", {
     if (form) {
       form.reset();
     }
-    // var window = amfutil.getElementByID("searchwindow");
-    // window.show();
-    // window.clearForm();
+    var window = amfutil.getElementByID("searchwindow");
+    window.show();
+    window.clearForm();
 
     console.log(form);
     var coll = Ext.util.History.getToken();

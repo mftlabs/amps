@@ -38,6 +38,7 @@ defmodule Amps.EventPullConsumer do
   @impl true
   def handle_message(message, state) do
     Task.start_link(fn ->
+      actparms = state.actparms
       Process.flag(:trap_exit, true)
 
       parms = state[:parms]
@@ -99,12 +100,6 @@ defmodule Amps.EventPullConsumer do
             mstate = data["state"] || %{}
             process_task = self()
             action_id = parms["handler"]
-
-            actparms =
-              Amps.DB.find_by_id(
-                AmpsUtil.index(state.env, "actions"),
-                action_id
-              )
 
             {:ok, task} =
               Task.start_link(fn ->
@@ -294,12 +289,6 @@ defmodule Amps.EventPullConsumer do
 
                       action_id = parms["handler"]
 
-                      actparms =
-                        Amps.DB.find_by_id(
-                          AmpsUtil.index(state.env, "actions"),
-                          action_id
-                        )
-
                       attempts =
                         Amps.EventHandler.attempts(
                           state.handler,
@@ -480,6 +469,7 @@ defmodule Amps.EventPullConsumer do
           Logger.info("#{inspect(pid)}")
 
           Logger.info(Atom.to_string(reason))
+          Jetstream.nack(message)
           AmpsEvents.end_session(sid, state.env, "Subscriber Stopped")
           kill_task.()
 

@@ -64,11 +64,18 @@ defmodule Amps.EventWrapper do
     Logger.info("got stream #{stream} #{consumer}")
     opts = Map.put(opts, "id", name)
 
+    actparms =
+      Amps.DB.find_by_id(
+        AmpsUtil.index(state.env, "actions"),
+        opts["handler"]
+      )
+
     {:ok, pcpid} =
       Amps.EventPullConsumer.start_link(%{
         parms: opts,
         connection_pid: pid,
         stream: stream,
+        actparms: actparms,
         listening_topic: listening_topic,
         consumer: consumer,
         env: state.env,
