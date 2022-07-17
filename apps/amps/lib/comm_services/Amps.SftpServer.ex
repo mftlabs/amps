@@ -390,7 +390,7 @@ defmodule Amps.SftpHandler do
       # state = List.keydelete(state, :options, 0)
 
       AmpsEvents.send(msg, %{"output" => topic}, %{}, env)
-      AmpsEvents.send(msg, %{"output" => mailboxtopic}, %{}, env)
+      #AmpsEvents.send(msg, %{"output" => mailboxtopic}, %{}, env)
 
       delete.()
       # AmpsEvents.send_history(
