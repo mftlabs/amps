@@ -1138,8 +1138,9 @@ defmodule AmpsWeb.DataController do
   end
 
   def get_plugins(conn, %{"object" => collection}) do
+    plugins = AmpsUtil.get_env(:plugins) || []
     resp =
-      Enum.reduce(AmpsUtil.get_env(:plugins), [], fn plugin, acc ->
+      Enum.reduce(plugins, [], fn plugin, acc ->
         case plugin.ui(collection) do
           nil ->
             acc
