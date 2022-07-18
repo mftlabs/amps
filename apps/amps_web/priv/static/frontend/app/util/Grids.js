@@ -12761,6 +12761,83 @@ Ext.define("Amps.util.Grids", {
                     },
                   ],
                 },
+                {
+                  xtype: "fieldcontainer",
+                  defaults: {
+                    padding: 20,
+                  },
+                  items: [
+                    {
+                      xtype: "button",
+                      text: "Export Default Environment",
+                      handler: function () {
+                        var uploadWindow = new Ext.window.Window({
+                          title: "Export Environment as Demo",
+                          modal: true,
+                          width: 600,
+                          height: 500,
+                          scrollable: true,
+                          resizable: false,
+                          layout: "fit",
+                          padding: 10,
+                          items: [
+                            {
+                              xtype: "form",
+                              defaults: {
+                                padding: 5,
+                                labelWidth: 140,
+                              },
+                              // layout: {
+                              //   type: "vbox",
+                              //   align: "stretch",
+                              // },
+                              scrollable: true,
+                              items: [
+                                amfutil.text("Name", "name", {
+                                  allowBlank: false,
+                                }),
+                                amfutil.text("Description", "desc", {
+                                  allowBlank: false,
+                                }),
+                              ],
+
+                              buttons: [
+                                {
+                                  text: "Export",
+                                  formBind: true,
+                                  handler: function (scope) {
+                                    var form = this.up("form").getForm();
+                                    uploadWindow.setLoading(true);
+                                    var fields = form.getFields();
+                                    var values = form.getValues();
+                                    amfutil.download(
+                                      "api/environments/export/default",
+                                      "post",
+                                      values
+                                    );
+                                    uploadWindow.close();
+                                    // msgbox.anchorTo(Ext.getBody(), "br");
+                                  },
+                                },
+                                {
+                                  text: "Cancel",
+                                  cls: "button_class",
+                                  itemId: "cancel",
+                                  listeners: {
+                                    click: function (btn) {
+                                      uploadWindow.close();
+                                    },
+                                  },
+                                },
+                              ],
+                            },
+                          ],
+                        });
+                        uploadWindow.show();
+                      },
+                    },
+                  ],
+                },
               ],
             },
           ],

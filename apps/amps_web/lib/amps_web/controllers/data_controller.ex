@@ -656,6 +656,13 @@ defmodule AmpsWeb.DataController do
   end
 
   def export_env(conn, %{"env" => env}) do
+    env =
+      if env == "default" do
+        ""
+      else
+        env
+      end
+
     id = AmpsUtil.get_id()
     dir = AmpsUtil.tempdir(id)
 
@@ -718,6 +725,11 @@ defmodule AmpsWeb.DataController do
     IO.inspect(readme)
     File.write!(Path.join(dir, "README.md"), readme)
     File.cp_r!(AmpsUtil.get_mod_path(env), Path.join(dir, "scripts"))
+
+    if env == "" do
+      File.rm_rf(Path.join([dir, "scripts", "env"]))
+      File.rm_rf(Path.join([dir, "scripts", "util"]))
+    end
 
     files = File.ls!(dir) |> Enum.map(&String.to_charlist/1)
 
