@@ -11,7 +11,7 @@ import Config
 
 force_ssl =
   if String.to_atom(String.downcase(System.get_env("AMPS_USE_SSL", "FALSE"))) do
-    [host: nil]
+    [rewrite_on: [:x_forwarded_proto], host: nil]
   else
     nil
   end
@@ -26,7 +26,7 @@ config :phoenix, :filter_parameters, ["password", "token", "logo"]
 # Configures the endpoint
 config :amps_portal, AmpsPortal.Endpoint,
   url: [host: System.get_env("AMPS_HOST", "localhost")],
-  # force_ssl: force_ssl,
+  force_ssl: force_ssl,
   render_errors: [
     view: AmpsPortal.ErrorView,
     accepts: ~w(html json),
@@ -158,7 +158,7 @@ config :amps_web, AmpsWeb.Endpoint,
     port: System.get_env("AMPS_HOST_PORT", "4000"),
     protocol_options: [idle_timeout: 5_000_000]
   ],
-  # force_ssl: force_ssl,
+  force_ssl: force_ssl,
   # https: [
   #   port: 443,
   #   # cipher_suite: :strong,

@@ -21,7 +21,7 @@ if config_env() == :prod do
 
   force_ssl =
     if String.to_atom(String.downcase(System.get_env("AMPS_USE_SSL", "FALSE"))) do
-      [host: nil]
+      [rewrite_on: [:x_forwarded_proto], host: nil]
     else
       nil
     end
@@ -33,9 +33,8 @@ if config_env() == :prod do
       ip: {0, 0, 0, 0, 0, 0, 0, 0},
       port: String.to_integer(System.get_env("PORT") || "4001")
     ],
-    secret_key_base: secret_key_base
-
-  # force_ssl: force_ssl
+    secret_key_base: secret_key_base,
+    force_ssl: force_ssl
 
   # ## Using releases
   #
@@ -170,7 +169,7 @@ if config_env() == :prod do
 
   config :amps_web, AmpsWeb.Endpoint,
     use_ssl: String.to_atom(String.downcase(System.get_env("AMPS_USE_SSL", "FALSE"))),
-    # force_ssl: force_ssl,
+    force_ssl: force_ssl,
     http: [
       # Enable IPv6 and bind on all interfaces.
       # Set it to  {0, 0, 0, 0, 0, 0, 0, 1} for local network only access.
