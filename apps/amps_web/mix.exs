@@ -80,7 +80,8 @@ defmodule AmpsWeb.MixProject do
        ]},
       {:swoosh, "~> 1.3"},
       {:file_type, "~> 0.1.0"},
-      {:amps_mongodb, [git: "https://github.com/mftlabs/amps-mongodb", branch: "main"]}
+      {:amps_mongodb, [git: "https://github.com/mftlabs/amps-mongodb", branch: "main"]},
+      {:unplug, "~> 1.0.0"}
 
       # {:uuid, "~> 1.1"}
     ]
