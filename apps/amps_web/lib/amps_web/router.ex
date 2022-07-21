@@ -10,7 +10,7 @@ defmodule AmpsWeb.Router do
 
     if String.to_atom(String.downcase(System.get_env("AMPS_USE_SSL", "FALSE"))) do
       plug(Plug.SSL,
-        rewrite_on: [:x_forwarded_proto],
+        rewrite_on: [:x_forwarded_host, :x_forwarded_port, :x_forwarded_proto],
         host: nil
       )
     end
