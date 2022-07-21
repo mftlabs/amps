@@ -11,7 +11,7 @@ import Config
 
 force_ssl =
   if String.to_atom(String.downcase(System.get_env("AMPS_USE_SSL", "FALSE"))) do
-    [rewrite_on: [:x_forwarded_proto], host: nil]
+    [rewrite_on: [:x_forwarded_host, :x_forwarded_port, :x_forwarded_proto], host: nil]
   else
     nil
   end
