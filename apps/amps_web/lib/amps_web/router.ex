@@ -7,6 +7,14 @@ defmodule AmpsWeb.Router do
 
   pipeline :browser do
     plug(:accepts, ["html"])
+
+    if String.to_atom(String.downcase(System.get_env("AMPS_USE_SSL", "FALSE"))) do
+      plug(Plug.SSL,
+        rewrite_on: [:x_forwarded_proto],
+        host: nil
+      )
+    end
+
     plug(:fetch_session)
     plug(:fetch_live_flash)
     plug(:protect_from_forgery)
