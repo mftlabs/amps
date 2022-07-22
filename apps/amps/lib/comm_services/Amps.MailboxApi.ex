@@ -48,7 +48,7 @@ defmodule Amps.MailboxApi do
     # IO.inspect(opts)
     case myauth(conn, user, mailbox) do
       {:ok, _} ->
-        limit = conn.query_params()["limit"]
+        limit = conn.query_params["limit"]
 
         limit =
           if limit do
@@ -276,10 +276,10 @@ defmodule Amps.MailboxApi do
 
     if nmsg["fname"] == "" || nmsg["fname"] == nil do
       fname =
-        if conn.body_params() != %Plug.Conn.Unfetched{aspect: :body_params} do
-          if conn.body_params()["upload"] do
-            if Map.has_key?(conn.body_params()["upload"], :filename) do
-              conn.body_params()["upload"].filename
+        if conn.body_params != %Plug.Conn.Unfetched{aspect: :body_params} do
+          if conn.body_params["upload"] do
+            if Map.has_key?(conn.body_params["upload"], :filename) do
+              conn.body_params["upload"].filename
             end
           end
         else
@@ -338,7 +338,7 @@ defmodule Amps.MailboxApi do
   defp myauth(conn, username, mailbox \\ nil) do
     case Plug.BasicAuth.parse_basic_auth(conn) do
       {id, secret} ->
-        case AmpsPortal.Util.verify_token(id, secret, conn.private.env) do
+        case verify_token(id, secret, conn.private.env) do
           nil ->
             {:error, "Access Denied"}
 
@@ -351,7 +351,7 @@ defmodule Amps.MailboxApi do
                   nil ->
                     {:error, "Mailbox does not exist"}
 
-                  mailbox ->
+                  _ ->
                     {:ok, user["username"]}
                 end
               else
@@ -366,4 +366,32 @@ defmodule Amps.MailboxApi do
         {:error, "Authorization denied - invalid HTTP auth header"}
     end
   end
+
+  defp verify_token(tokenid, token, env) do
+    {:ok, parms} = Phoenix.Token.verify(Amps.Gateway, "auth", token, max_age: :infinity)
+    %{"uid" => username} = Jason.decode!(parms)
+
+    case Amps.DB.find_one(AmpsUtil.index(env, "tokens"), %{"username" => username}) do
+      nil ->
+        nil
+
+      secrets ->
+        if secrets[tokenid] == token do
+          case Amps.DB.find_one(AmpsUtil.index(env, "users"), %{"username" => username}) do
+            nil ->
+              nil
+
+            user ->
+              user
+          end
+        else
+          nil
+        end
+    end
+  end
+end
+
+
+defmodule AmpsMailboxException do
+  defexception [:message]
 end

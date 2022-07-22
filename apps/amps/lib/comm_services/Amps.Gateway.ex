@@ -1,8 +1,6 @@
 defmodule Amps.Gateway do
   import Plug.Conn
-  alias Amps.DB
   use Plug.Router
-  require AmpsWeb
   require Logger
   #  use Plug.ErrorHandler
   plug(CORSPlug)
@@ -272,7 +270,7 @@ defmodule Amps.Gateway do
     {msg, sid} = AmpsEvents.start_session(msg, %{"service" => msg["service"]}, conn.private.env)
 
     actparms =
-      DB.find_by_id(AmpsUtil.index(conn.private.env, "actions"), route["action"])
+      Amps.DB.find_by_id(AmpsUtil.index(conn.private.env, "actions"), route["action"])
       |> AmpsUtil.convert_output(conn.private.env)
 
     conn =
@@ -389,32 +387,17 @@ defmodule Amps.Gateway do
     end
   end
 
-  defp index(env, index) do
-    if env == "" do
-      index
-    else
-      if Enum.member?(
-           ["config", "demos", "admin", "environments", "system_logs", "ui_audit", "providers"],
-           index
-         ) do
-        index
-      else
-        env <> "-" <> index
-      end
-    end
-  end
-
   defp verify_token(tokenid, token, env) do
     {:ok, parms} = Phoenix.Token.verify(Amps.Gateway, "auth", token, max_age: :infinity)
     %{"uid" => username} = Jason.decode!(parms)
 
-    case DB.find_one(index(env, "tokens"), %{"username" => username}, []) do
+    case Amps.DB.find_one(AmpsUtil.index(env, "tokens"), %{"username" => username}) do
       nil ->
         nil
 
       secrets ->
         if secrets[tokenid] == token do
-          case DB.find_one(index(env, "users"), %{"username" => username}) do
+          case Amps.DB.find_one(AmpsUtil.index(env, "users"), %{"username" => username}) do
             nil ->
               nil
 
