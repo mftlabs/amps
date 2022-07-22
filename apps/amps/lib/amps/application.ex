@@ -42,7 +42,7 @@ defmodule Amps.Application do
       # Recover from netsplit
       Pow.Store.Backend.MnesiaCache.Unsplit,
       Amps.DB.get_db(),
-      AmpsWeb.Vault,
+#      AmpsWeb.Vault,
       Amps.SvcHandler,
       Amps.SvcSupervisor,
       Amps.SvcManager,
