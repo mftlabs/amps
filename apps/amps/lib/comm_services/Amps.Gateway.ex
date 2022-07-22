@@ -2,6 +2,7 @@ defmodule Amps.Gateway do
   import Plug.Conn
   alias Amps.DB
   use Plug.Router
+  require AmpsWeb
   require Logger
   #  use Plug.ErrorHandler
   plug(CORSPlug)
@@ -133,10 +134,10 @@ defmodule Amps.Gateway do
 
     if nmsg["fname"] == "" || nmsg["fname"] == nil do
       fname =
-        if conn.body_params() != %Plug.Conn.Unfetched{aspect: :body_params} do
-          if conn.body_params()["upload"] do
-            if Map.has_key?(conn.body_params()["upload"], :filename) do
-              conn.body_params()["upload"].filename
+        if conn.body_params != %Plug.Conn.Unfetched{aspect: :body_params} do
+          if conn.body_params["upload"] do
+            if Map.has_key?(conn.body_params["upload"], :filename) do
+              conn.body_params["upload"].filename
             end
           end
         else
@@ -341,15 +342,17 @@ defmodule Amps.Gateway do
             handle_error(conn, e, msg)
         end
       else
-        handle_error(conn, "Action not found", msg)
+        e = AmpsGatewayException.exception("Action not found")
+        handle_error(conn, e, msg)
       end
 
     AmpsEvents.end_session(sid, conn.private.env)
     conn
   end
 
-  def handle_error(conn, e, msg) do
-    Logger.error(e)
+
+  defp handle_error(conn, e, msg) do
+#    Logger.error(IO.inspect(e))
 
     AmpsEvents.send_history(
       AmpsUtil.env_topic("amps.events.action", conn.private.env),
@@ -362,7 +365,7 @@ defmodule Amps.Gateway do
     )
 
     case e do
-      %ErlangError{original: {:python, type, message, stacktrace}} ->
+      %ErlangError{original: {:python, type, message, _stacktrace}} ->
         send_resp(conn, 500, "#{type} #{message}")
 
       _ ->
@@ -373,7 +376,7 @@ defmodule Amps.Gateway do
   defp myauth(conn) do
     case Plug.BasicAuth.parse_basic_auth(conn) do
       {id, secret} ->
-        case AmpsPortal.Util.verify_token(id, secret, conn.private.env) do
+        case verify_token(id, secret, conn.private.env) do
           nil ->
             {:error, "Access Denied"}
 
@@ -385,4 +388,47 @@ defmodule Amps.Gateway do
         {:error, "Authorization denied - invalid HTTP auth header"}
     end
   end
+
+  defp index(env, index) do
+    if env == "" do
+      index
+    else
+      if Enum.member?(
+           ["config", "demos", "admin", "environments", "system_logs", "ui_audit", "providers"],
+           index
+         ) do
+        index
+      else
+        env <> "-" <> index
+      end
+    end
+  end
+
+  defp verify_token(tokenid, token, env) do
+    {:ok, parms} = Phoenix.Token.verify(Amps.Gateway, "auth", token, max_age: :infinity)
+    %{"uid" => username} = Jason.decode!(parms)
+
+    case DB.find_one(index(env, "tokens"), %{"username" => username}, []) do
+      nil ->
+        nil
+
+      secrets ->
+        if secrets[tokenid] == token do
+          case DB.find_one(index(env, "users"), %{"username" => username}) do
+            nil ->
+              nil
+
+            user ->
+              user
+          end
+        else
+          nil
+        end
+    end
+  end
+end
+
+
+defmodule AmpsGatewayException do
+  defexception [:message]
 end
