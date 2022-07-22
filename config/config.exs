@@ -116,6 +116,7 @@ config :amps,
   adminhost: System.get_env("AMPS_ADMIN_HOST", "admin.localhost"),
   userhost: System.get_env("AMPS_HOST", "localhost"),
   use_ssl: String.to_atom(String.downcase(System.get_env("AMPS_USE_SSL", "FALSE"))),
+  force_ssl: String.to_atom(String.downcase(System.get_env("AMPS_FORCE_SSL", "FALSE"))),
   gen_certs: String.to_atom(String.downcase(System.get_env("AMPS_GEN_CERTS", "FALSE"))),
   dns_emails: System.get_env("AMPS_DNS_EMAILS", ""),
   extra_domains: System.get_env("AMPS_EXTRA_DOMAINS", "")

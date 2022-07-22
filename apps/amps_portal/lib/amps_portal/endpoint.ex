@@ -11,7 +11,7 @@ defmodule AmpsPortal.Endpoint do
   ]
 
   plug(Unplug,
-    if: {Unplug.Predicates.AppConfigEquals, {:amps, :use_ssl, true}},
+    if: {Unplug.Predicates.AppConfigEquals, {:amps, :force_ssl, true}},
     do:
       {Plug.SSL,
        [rewrite_on: [:x_forwarded_host, :x_forwarded_port, :x_forwarded_proto], host: nil]}
