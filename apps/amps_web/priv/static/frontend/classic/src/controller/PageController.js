@@ -138,6 +138,8 @@ Ext.define("Amps.controller.PageController", {
       var mp = amfutil.getElementByID("main-page");
       console.log(mp);
       mp.removeAll(true);
+      amfutil.getElementByID("page-panel-id").setActiveItem(0);
+
       if (pages.indexOf(route) >= 0) {
         var config = ampsgrids.pages[route]();
         amfutil.getElementByID("page-handler").setActiveItem(1);
@@ -145,7 +147,9 @@ Ext.define("Amps.controller.PageController", {
         console.log(config.view);
         mp.insert(0, config.view);
       } else {
-        amfutil.getElementByID("page-handler").setActiveItem(0);
+        var pagehandler = amfutil.getElementByID("page-handler");
+        console.log(pagehandler);
+        pagehandler.setActiveItem(0);
 
         var parent = this.getView().down("#grid-wrapper");
         parent.removeAll();
@@ -220,10 +224,15 @@ Ext.define("Amps.controller.PageController", {
 
         console.log(grid);
 
+        console.log(parent);
+        debugger;
         parent.insert(grid);
+        debugger;
+
+        console.log("grid inserted");
 
         var sort = localStorage.getItem(`${route}_sort`);
-        console.log("grid inserted");
+        console.log("getting sort");
 
         grid.setListeners({
           sortchange: function (ct, col, dir) {
@@ -273,7 +282,6 @@ Ext.define("Amps.controller.PageController", {
         grid.fireEvent("checkfilter", "");
       }
 
-      amfutil.getElementByID("page-panel-id").setActiveItem(0);
       var window = amfutil.getElementByID("searchwindow");
 
       window.clearForm();

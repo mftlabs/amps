@@ -368,7 +368,7 @@ defmodule Amps.MailboxApi do
   end
 
   defp verify_token(tokenid, token, env) do
-    {:ok, parms} = Phoenix.Token.verify(Amps.Gateway, "auth", token, max_age: :infinity)
+    {:ok, parms} = Phoenix.Token.verify(AmpsPortal.Endpoint, "auth", token, max_age: :infinity)
     %{"uid" => username} = Jason.decode!(parms)
 
     case Amps.DB.find_one(AmpsUtil.index(env, "tokens"), %{"username" => username}) do
@@ -390,7 +390,6 @@ defmodule Amps.MailboxApi do
     end
   end
 end
-
 
 defmodule AmpsMailboxException do
   defexception [:message]
