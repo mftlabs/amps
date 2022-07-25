@@ -29,9 +29,9 @@ defmodule Amps.EnvManager do
     GenServer.call(__MODULE__, {:start_env, name})
   end
 
-  def stop_env(_name) do
+  def stop_env(name) do
     # need to implement
-
+    GenServer.call(__MODULE__, {:stop_env, name})
   end
 
   # def stop_service(svcname) do
@@ -94,6 +94,13 @@ defmodule Amps.EnvManager do
       end
 
     {:reply, res, state}
+  end
+
+
+  def handle_call({:stop_env, _name}, _from, state) do
+    # implement the stop
+    {:reply, true, state}
+
   end
 
   def service_types do
