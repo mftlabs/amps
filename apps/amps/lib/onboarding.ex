@@ -93,7 +93,7 @@ defmodule Amps.Onboarding do
               "status" => "received",
               "onboarding" => true,
               "action" => "create",
-              "user_id" => DB.id_to_string(user["_id"])
+              "user_id" => user["_id"]
             })
 
             ev =
@@ -104,7 +104,7 @@ defmodule Amps.Onboarding do
                   "status" => "received",
                   "onboarding" => true,
                   "action" => "create",
-                  "user_id" => DB.id_to_string(user["_id"])
+                  "user_id" => user["_id"]
                 }
               )
 
@@ -232,7 +232,7 @@ defmodule Amps.Onboarding do
     end)
   end
 
-  def do_verify(provider, msg, user, env) do
+  def do_verify(provider, msg, _user, env) do
     provider = provider |> replace_env()
 
     handler = providers(provider["atype"])
@@ -375,7 +375,7 @@ defmodule Amps.Onboarding do
       end
 
     case result do
-      {:ok, result} ->
+      {:ok, _result} ->
         Logger.info(
           "Completed onboarding task for user #{user["firstname"]} #{user["lastname"]} to #{provider["atype"]} on node #{node()}"
         )
@@ -455,11 +455,11 @@ defmodule Amps.Onboarding do
         end
       rescue
         e ->
-          {:error, "Failed to run onboarding handler"}
+          {:error, "Failed to run onboarding handler #{inspect(e)}"}
       end
 
     case result do
-      {:ok, result} ->
+      {:ok, _result} ->
         Logger.info(
           "Completed Onboarding profile #{profile["name"]} for user #{user["username"]} to #{profile["type"]} on node #{node()}"
         )

@@ -45,7 +45,7 @@ defmodule Amps.SftpServer do
   defp authenticate(handler, env) do
     # IO.inspect("authenticate")
 
-    fn username, password, peer_address, state ->
+    fn username, password, _peer_address, state ->
       accepted =
         case handler do
           {module, fun} ->
@@ -118,26 +118,32 @@ defmodule Amps.SftpServer do
     options = args[:parms]
     env = args[:env] || ""
     :ok = :ssh.start()
-    key = AmpsUtil.get_key(options["server_key"], env)
+#    key = AmpsUtil.get_key(options["server_key"], env)
+    server_key = options["server_key"]
+    case Amps.DB.find_by_id(AmpsUtil.index(env, "keys"), server_key)["data"] do
+      {nil} ->
+        reason = "cannot start sftp server: server_key npot found for env #{env}"
+        Logger.warning("cannot start sftp server #{reason}")
+        {:error, reason}
 
-    options = Map.put(options, "server_key", key)
+      {:error, reason} ->
+          Logger.warning("cannot start sftp server #{inspect(reason)}")
+          {:error, reason}
 
-    case options do
-      nil ->
-        {:ok, %{options: options, daemons: [], env: env}}
-
-      opts ->
+      key ->
+        opts = Map.put(options, "server_key", key)
         case init_daemon(opts, env) do
           {:ok, pid, ref, options} ->
             {:ok,
              %{
-               options: options,
-               daemons: [%{pid: pid, ref: ref, options: options}],
+                options: options,
+                daemons: [%{pid: pid, ref: ref, options: options}],
                env: env
-             }}
+              }}
 
-          any ->
-            any
+          other ->
+            Logger.warning("cannot start sftp server #{inspect(other)}")
+            {:error, other}
         end
     end
   end
@@ -208,7 +214,7 @@ defmodule Amps.SftpServer do
     end
   end
 
-  def terminate(reason, state) do
+  def terminate(_reason, state) do
     state.daemons
     |> Enum.each(fn d ->
       :ssh.stop_daemon(d.pid)
@@ -384,7 +390,7 @@ defmodule Amps.SftpHandler do
 
       IO.inspect(msg)
 
-      mailboxtopic = "amps.mailbox.#{user}.#{msg["mailbox"]}"
+      #mailboxtopic = "amps.mailbox.#{user}.#{msg["mailbox"]}"
 
       # IO.inspect(state)
       # state = List.keydelete(state, :options, 0)
@@ -464,7 +470,7 @@ defmodule Amps.SftpHandler do
 
         {exists, state}
 
-      ["/", mailbox, fname] ->
+      ["/", _mailbox, _fname] ->
         {false, state}
 
       _ ->
@@ -587,7 +593,7 @@ defmodule Amps.SftpHandler do
           end
 
         case res do
-          {root, mailbox, name} ->
+          {_root, mailbox, _name} ->
             case :file.open(fpath, flags) do
               {:ok, pid} ->
                 newstate =
@@ -661,7 +667,7 @@ defmodule Amps.SftpHandler do
     {:file.read(io_device, len), state}
   end
 
-  def read_link(path, state) do
+  def read_link(_path, state) do
     # never a link
     # IO.puts("read_link")
     # IO.inspect(path)
@@ -742,7 +748,7 @@ defmodule Amps.SftpHandler do
             {{:ok, finfo}, state}
         end
 
-      rest ->
+      _rest ->
         {{:error, :eaccess}, state}
     end
   end
@@ -800,7 +806,7 @@ defmodule AmpsKeyCallback do
 
     if algorithm == al do
       val = Enum.into(opts, %{})
-      [name, key] = val[:key_cb_private]
+      [_name, key] = val[:key_cb_private]
       # IO.puts("sftp svc: #{name}")
       # cfg = AmpsDatabase.get_config(name)
       # key = AmpsUtil.get_key(cfg["server_key"])
