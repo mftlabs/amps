@@ -31,38 +31,6 @@ defmodule Amps.Actions.Router do
     {:send, [msg], rule["output"]}
   end
 
-  # def run(subject, body) do
-  #   try do
-  #     data = Poison.decode!(body)
-  #     msg = data[:msg]
-  #     state = data[:state]
-
-  #     case evaluate(subject, msg, env) do
-  #       nil ->
-  #         # no user rules found, try system defaults
-  #         Logger.info("eval system rules")
-
-  #         case evaluate("SYSTEM", msg) do
-  #           nil ->
-  #             Logger.info("rule not found")
-  #             {:error, "system error - no default rule"}
-
-  #           rule ->
-  #             # found system rule
-  #             Logger.info("rule found #{inspect(rule)}")
-  #             process_action(msg, rule, state)
-  #         end
-
-  #       rule ->
-  #         # found user rule
-  #         process_action(msg, rule, state)
-  #     end
-  #   rescue
-  #     error ->
-  #       Logger.warning("invalid message #{inspect(error)}")
-  #   end
-  # end
-
   def evaluate(parms, msg, env \\ "") do
     rules =
       Enum.reduce(parms["rules"], [], fn id, acc ->
@@ -145,31 +113,5 @@ defmodule Amps.Actions.Router do
         Logger.info("bad regex, failing")
         false
     end
-  end
-
-  defp process_action(msg, rule, state) do
-    raction = rule["action"]
-
-    case raction do
-      "hold" ->
-        Logger.info("*** message held")
-
-      other ->
-        case AmpsDatabase.get_action(other) do
-          nil ->
-            Logger.warning("*** action not found")
-
-          aparms ->
-            apply(String.to_atom("Elixir." <> aparms["module"]), :run, [
-              msg,
-              aparms,
-              state
-            ])
-        end
-    end
-
-    #    output = state["output"] || []
-    #    newlist = List.flatten([output | state["input"]])
-    #    Map.put(state, "input", newlist)
   end
 end

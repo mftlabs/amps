@@ -91,12 +91,14 @@ defmodule Amps.Actions.SftpPut do
 end
 
 defmodule Amps.SSHKeyProvider do
+  #module: diaylzer, supress warnings for function __ex_unit_setup_0/1
+ # @dialyzer {:no_behaviours, 1}
   @moduledoc """
   A provider that loads keys for authentication from the given location.
   Implements the `:ssh_client_key_api` behavior.
   """
 
-  # @behaviour :ssh_client_key_api
+  @behaviour :ssh_client_key_api
 
   require Logger
 
@@ -104,17 +106,17 @@ defmodule Amps.SSHKeyProvider do
     @impl true
     defdelegate add_host_key(host, port, public_key, opts), to: :ssh_file
 
-    # @impl true
+    @impl true
     defdelegate is_host_key(key, host, port, algorithm, opts), to: :ssh_file
   else
-    # @impl true
+    @impl true
     defdelegate add_host_key(host, public_key, opts), to: :ssh_file
 
-    #  @impl true
+    @impl true
     defdelegate is_host_key(key, host, algorithm, opts), to: :ssh_file
   end
 
-  # @impl true
+  @impl true
   def user_key(_, opts) do
     keyname = opts[:user_dir]
     config = AmpsDatabase.get_config(keyname)

@@ -9,6 +9,7 @@ defmodule Amps.Umbrella.MixProject do
       deps: deps(),
       aliases: aliases(),
       elixirc_paths: elixirc_paths(Mix.env()),
+ #     dialyzer: [plt_add_apps: [:mix]],
       releases: [
         amps: [
           applications: [

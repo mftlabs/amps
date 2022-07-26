@@ -1,5 +1,5 @@
 defmodule Amps.Actions.Unzip do
-  def run(msg, parms, {state, env}) do
+  def run(msg, parms, {_state, env}) do
     _tmpdir = AmpsUtil.tempdir(msg[:session])
 
     input = %{msg: msg, parms: parms, env: env}

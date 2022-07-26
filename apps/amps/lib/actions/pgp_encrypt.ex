@@ -1,7 +1,7 @@
 defmodule Amps.Actions.PGPEncrypt do
   require Logger
 
-  def run(msg, parms, {state, env}) do
+  def run(msg, parms, {state, _env}) do
     # Logger.info("input #{inspect(msg)}")
 
     {:ok, newmsg} = encrypt(msg, parms, state)

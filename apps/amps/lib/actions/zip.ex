@@ -8,7 +8,7 @@ defmodule Amps.Actions.Zip do
     {:send, [newmsg]}
   end
 
-  def zip(msg, parms, {state, env}) do
+  def zip(msg, parms, {_state, env}) do
     is = AmpsUtil.stream(msg, env)
     opts = []
 
