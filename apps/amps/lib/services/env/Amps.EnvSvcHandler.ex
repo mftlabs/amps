@@ -1,8 +1,6 @@
 defmodule Amps.EnvSvcHandler do
   use GenServer
   require Logger
-  alias Amps.SvcManager
-  alias Amps.DB
 
   def start_link(env) do
     GenServer.start_link(__MODULE__, env, name: :"#{env}-svchdlr")
@@ -11,7 +9,7 @@ defmodule Amps.EnvSvcHandler do
   def init(env) do
     # Process.link(connection_pid)
     Logger.info("Starting Service Handler for Environment: ")
-    listening_topic = "_CON.#{nuid()}"
+    # listening_topic = "_CON.#{nuid()}"
 
     connection_pid = Process.whereis(:gnat)
     topic = "amps.#{env}.events.svcs.handler.>"
@@ -91,11 +89,11 @@ defmodule Amps.EnvSvcHandler do
         reason
     end
 
-    svc = DB.find_one(AmpsUtil.index(env, "services"), %{"name" => svcname})
+    svc = Amps.DB.find_one(AmpsUtil.index(env, "services"), %{"name" => svcname})
 
     if svc["active"] do
       case GenServer.call(:"#{env}-svcmgr", {:start_service, svcname}) do
-        {:ok, res} ->
+        {:ok, _res} ->
           %{
             "success" => true
           }
@@ -111,7 +109,7 @@ defmodule Amps.EnvSvcHandler do
 
   def start_service(svcname, env) do
     case GenServer.call(:"#{env}-svcmgr", {:start_service, svcname}) do
-      {:ok, res} ->
+      {:ok, _res} ->
         %{
           "success" => true
         }
@@ -129,7 +127,7 @@ defmodule Amps.EnvSvcHandler do
 
     case GenServer.call(:"#{env}-svcmgr", {:stop_service, svcname}) do
       {:ok, res} ->
-        DB.find_one_and_update(AmpsUtil.index(env, "services"), %{"name" => svcname}, %{
+        Amps.DB.find_one_and_update(AmpsUtil.index(env, "services"), %{"name" => svcname}, %{
           "active" => false
         })
 
@@ -149,7 +147,7 @@ defmodule Amps.EnvSvcHandler do
     {:noreply, state}
   end
 
-  def handle_info({:DOWN, ref, :process, pid, reason}, state) do
+  def handle_info({:DOWN, _ref, :process, pid, reason}, state) do
     IO.inspect(Process.info(pid))
 
     Logger.info("Process ended: #{reason}")
@@ -173,6 +171,4 @@ defmodule Amps.EnvSvcHandler do
     Process.monitor(pid)
     {:reply, :ok, state}
   end
-
-  defp nuid(), do: :crypto.strong_rand_bytes(12) |> Base.encode64()
 end

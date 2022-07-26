@@ -13,7 +13,7 @@ defmodule Amps.EnvSupervisor do
     env = config["name"]
     # {Plug.Cowboy, scheme: :http, plug: MyApp, options: [port: 4040]}
     history = history_children(env)
-    archive = archive_children(env)
+    #archive = archive_children(env)
 
     children = [
       Supervisor.child_spec({Amps.EnvSvcSupervisor, [env]}, restart: :transient),
@@ -60,7 +60,7 @@ defmodule Amps.EnvSupervisor do
 
         # This match pattern worked for kafka errors in my local testing, but I worry it is too specific.
 
-        {:shutdown, {:failed_to_start_child, module, {{:badmatch, {:error, {e, stacktrace}}}, _}}} =
+        {:shutdown, {:failed_to_start_child, _module, {{:badmatch, {:error, {e, _stacktrace}}}, _}}} =
           error
 
         error =

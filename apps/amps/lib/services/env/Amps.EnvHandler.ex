@@ -1,17 +1,16 @@
 defmodule Amps.EnvHandler do
   use GenServer
   require Logger
-  alias Amps.EnvManager
-  alias Amps.DB
+  #alias Amps.EnvManager
 
   def start_link(args) do
     GenServer.start_link(__MODULE__, args, name: __MODULE__)
   end
 
-  def init(args) do
+  def init(_args) do
     # Process.link(connection_pid)
     Logger.info("Starting Service Handler")
-    listening_topic = "_CON.#{nuid()}"
+    #listening_topic = "_CON.#{nuid()}"
 
     connection_pid = Process.whereis(:gnat)
 
@@ -74,7 +73,7 @@ defmodule Amps.EnvHandler do
   end
 
   def restart_env(name) do
-    case EnvManager.stop_env(name) do
+    case Amps.EnvManager.stop_env(name) do
       {:ok, res} ->
         res
 
@@ -82,11 +81,11 @@ defmodule Amps.EnvHandler do
         reason
     end
 
-    env = DB.find_one("services", %{"name" => name})
+    env = Amps.DB.find_one("services", %{"name" => name})
 
     if env["active"] do
-      case EnvManager.start_env(name) do
-        {:ok, res} ->
+      case Amps.EnvManager.start_env(name) do
+        {:ok, _res} ->
           %{
             "success" => true
           }
@@ -101,8 +100,8 @@ defmodule Amps.EnvHandler do
   end
 
   def start_env(name) do
-    case EnvManager.start_env(name) do
-      {:ok, res} ->
+    case Amps.EnvManager.start_env(name) do
+      {:ok, _res} ->
         %{
           "success" => true
         }
@@ -118,7 +117,7 @@ defmodule Amps.EnvHandler do
   def stop_env(name) do
     case Amps.EnvSupervisor.stop_child(name) do
       {:ok, res} ->
-        DB.find_one_and_update("environments", %{"name" => name}, %{
+        Amps.DB.find_one_and_update("environments", %{"name" => name}, %{
           "active" => false
         })
 
@@ -138,7 +137,7 @@ defmodule Amps.EnvHandler do
     {:noreply, state}
   end
 
-  def handle_info({:DOWN, ref, :process, pid, reason}, state) do
+  def handle_info({:DOWN, _ref, :process, _pid, reason}, state) do
     Logger.info("Process ended: #{reason}")
     {:noreply, state}
   end
@@ -160,5 +159,4 @@ defmodule Amps.EnvHandler do
     {:reply, :ok, state}
   end
 
-  defp nuid(), do: :crypto.strong_rand_bytes(12) |> Base.encode64()
 end

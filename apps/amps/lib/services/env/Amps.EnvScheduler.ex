@@ -2,7 +2,6 @@ import Crontab.CronExpression
 
 defmodule Amps.EnvScheduler do
   use Quantum, otp_app: :amps
-  alias Amps.DB
   require Logger
 
   def init(config) do
@@ -19,7 +18,7 @@ defmodule Amps.EnvScheduler do
         end
       end)
 
-    sched = DB.find(AmpsUtil.index(config[:env], "jobs"))
+    sched = Amps.DB.find(AmpsUtil.index(config[:env], "jobs"))
 
     jobs =
       Enum.reduce(sched, [], fn job, acc ->
@@ -41,7 +40,7 @@ defmodule Amps.EnvScheduler do
   end
 
   def load(name, env) do
-    case DB.find_one(AmpsUtil.index(env, "jobs"), %{name: name}) do
+    case Amps.DB.find_one(AmpsUtil.index(env, "jobs"), %{name: name}) do
       nil ->
         Logger.info("Could not load job #{name} in environment #{env}")
 
@@ -104,23 +103,22 @@ defmodule Amps.EnvScheduler do
           pieces = ["0", "0", "0", "*", "*", "*"]
           val = "*/" <> job["value"]
 
-          pieces =
-            case job["unit"] do
-              "Hours" ->
-                pieces
-                |> List.replace_at(2, val)
+          case job["unit"] do
+            "Hours" ->
+              pieces
+              |> List.replace_at(2, val)
 
-              "Minutes" ->
-                pieces
-                |> List.replace_at(2, "*")
-                |> List.replace_at(1, val)
+            "Minutes" ->
+              pieces
+              |> List.replace_at(2, "*")
+              |> List.replace_at(1, val)
 
-              "Seconds" ->
-                pieces
-                |> List.replace_at(2, "*")
-                |> List.replace_at(1, "*")
-                |> List.replace_at(0, val)
-            end
+            "Seconds" ->
+              pieces
+              |> List.replace_at(2, "*")
+              |> List.replace_at(1, "*")
+              |> List.replace_at(0, val)
+          end
 
         _ ->
           pieces = ["*", "*", "*", "*", "*", "*"]
