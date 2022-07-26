@@ -17,7 +17,7 @@ defmodule Amps.HistoryConsumer do
       end
 
     # IO.puts("starting event listener #{inspect(parms)}")
-    name = parms[:name]
+    #name = parms[:name]
     GenServer.start_link(__MODULE__, parms)
   end
 
@@ -36,42 +36,13 @@ defmodule Amps.HistoryConsumer do
     }
   end
 
-  defp get_names(parms) do
-    topic = parms["topic"]
-    safe = String.replace(topic, ".", "_")
-    consumer = String.replace(safe, "*", "_")
-
-    [base, part, _other] = String.split(topic, ".", parts: 3)
-
-    stream = AmpsUtil.get_env_parm(:streams, String.to_atom(base <> "." <> part))
-
-    {stream, consumer}
-  end
-
   # GenServer callbacks
   def handle_info({:initial_connect, opts}, state) do
-    # IO.puts("opts #{inspect(opts)}")
-    # IO.puts("state #{inspect(state)}")
     name = Atom.to_string(state[:name])
-    sub = String.to_atom(name <> "_sup")
-    # IO.puts("sub: #{inspect(sub)}")
-
     pid = Process.whereis(:gnat)
 
-    # IO.puts("pid #{inspect(pid)}")
-
     {stream, consumer} = AmpsUtil.get_names(opts, state.env)
-    # IO.inspect(stream)
-    # IO.inspect(state.env)
     listening_topic = AmpsUtil.env_topic("amps.history.#{consumer}", state.env)
-
-    # IO.inspect(listening_topic)
-
-    # AmpsUtil.create_consumer(stream, consumer, AmpsUtil.env_topic(opts["topic"], state.env), %{
-    #   deliver_policy: :all,
-    #   deliver_subject: listening_topic,
-    #   ack_policy: :all
-    # })
 
     # Gnat.sub(pid, self(), listening_topic)
     Logger.info("got stream #{stream} #{consumer}")
@@ -97,7 +68,7 @@ defmodule Amps.HistoryConsumer do
     {:noreply, state}
   end
 
-  def handle_info({val, _opts}, state) do
+  def handle_info({_val, _opts}, state) do
     # IO.puts("got event #{inspect(val)}")
     {:noreply, state}
   end
@@ -106,7 +77,6 @@ end
 defmodule Amps.HistoryPullConsumer do
   use GenServer
   require Logger
-  alias Amps.DB
 
   def init(%{
         parms: parms,
@@ -236,14 +206,13 @@ defmodule Amps.HistoryPullConsumer do
     {:noreply, state}
   end
 
-  def handle_call(parms, _from, state) do
+  def handle_call(_parms, _from, state) do
     # IO.puts("handler call called #{inspect(parms)}")
     {:reply, :ok, state}
   end
 
-  def terminate(reason, state) do
+  def terminate(_reason, state) do
     Gnat.unsub(:gnat, state.sid)
   end
 
-  defp nuid(), do: :crypto.strong_rand_bytes(12) |> Base.encode64()
 end

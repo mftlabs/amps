@@ -2,7 +2,6 @@ defmodule Amps.EventPullConsumer do
   use Jetstream.PullConsumer
   use GenServer
   require Logger
-  alias Amps.DB
 
   def start_link(arg) do
     IO.inspect(arg)
@@ -43,7 +42,7 @@ defmodule Amps.EventPullConsumer do
 
       parms = state[:parms]
       name = parms["name"]
-      id = parms["id"]
+#      id = parms["id"]
       # info = Process.info(self()))
       Logger.info("got message #{state.name} #{name}: #{message.topic} / #{message.body}")
 
@@ -99,7 +98,7 @@ defmodule Amps.EventPullConsumer do
 
             mstate = data["state"] || %{}
             process_task = self()
-            action_id = parms["handler"]
+            #action_id = parms["handler"]
 
             {:ok, task} =
               Task.start_link(fn ->
@@ -287,7 +286,7 @@ defmodule Amps.EventPullConsumer do
                     error ->
                       Logger.error(Exception.format(:error, error, __STACKTRACE__))
 
-                      action_id = parms["handler"]
+                      #action_id = parms["handler"]
 
                       attempts =
                         Amps.EventHandler.attempts(
@@ -296,14 +295,6 @@ defmodule Amps.EventPullConsumer do
                         )
 
                       # IO.inspect(failures)
-
-                      msg =
-                        if is_map(msg) do
-                          msg
-                        else
-                          %{}
-                        end
-
                       # IO.inspect(parms)
 
                       retry = fn ->
@@ -441,7 +432,7 @@ defmodule Amps.EventPullConsumer do
   end
 
   defp term_listener(message, msg, actparms, sid, task, state) do
-    handlername = Process.info(state.handler)[:registered_name]
+    #handlername = Process.info(state.handler)[:registered_name]
     parms = state.parms
     name = parms["name"]
 
@@ -480,6 +471,7 @@ defmodule Amps.EventPullConsumer do
             Jason.decode!(msg.body)["msg"]["ackmode"]
           rescue
             e ->
+              Logger.warning("could not terminate process [#{sid}] reason [#{inspect(e)}]")
               "nack"
           end
       end

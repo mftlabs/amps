@@ -39,7 +39,7 @@ defmodule Amps.HistoryHandler do
       end)
 
     # Now we start the supervisor with the children and a strategy
-    {:ok, pid} = Supervisor.start_link(children, strategy: :one_for_one)
+    {:ok, _pid} = Supervisor.start_link(children, strategy: :one_for_one)
 
     # After started, we can query the supervisor for information
 
@@ -79,7 +79,7 @@ defmodule Amps.HistoryHandler do
             IO.inspect(ops)
           end
 
-          res = Amps.DB.bulk_perform(ops, index)
+          Amps.DB.bulk_perform(ops, index)
         end)
 
         # case res do
