@@ -50,11 +50,11 @@ defmodule Amps.Actions.LDAP do
     ldap(%{}, parms, "")
   end
 
-  def run(msg, parms, {state, env}) do
+  def run(msg, parms, {_state, env}) do
     ldap(msg, parms, env)
   end
 
-  def ldap(msg, parms, env) do
+  def ldap(msg, parms, _env) do
     provider = DB.find_by_id("providers", parms["provider"])
     IO.inspect(provider)
 
@@ -175,7 +175,6 @@ defmodule Amps.Actions.LDAP do
   end
 
   def ex do
-    example =
       {:and,
        [
          {:or,
