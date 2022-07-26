@@ -34,7 +34,7 @@ defmodule Amps.EventHandler do
     IO.inspect(args)
 
     name = Process.info(self())[:registered_name]
-    Amps.Handlers.put(args[:name])
+    Amps.Handlers.put(name)
 
     parms = args[:parms]
     IO.inspect(parms)
@@ -49,13 +49,13 @@ defmodule Amps.EventHandler do
     listening_topic = AmpsUtil.env_topic("amps.consumer.#{consumer}", env)
 
     IO.inspect(listening_topic)
-    {:ok, sid} = Gnat.sub(:gnat, self(), listening_topic)
+    {:ok, _sid} = Gnat.sub(:gnat, self(), listening_topic)
     IO.inspect(listening_topic)
     ack_wait = parms["ack_wait"] * 1_000_000_000
 
     case Jetstream.API.Consumer.info(:gnat, stream, consumer) do
       {:error, %{"code" => 404}} ->
-        AmpsWeb.Util.create_config_consumer(parms, env, %{})
+        create_consumer(parms, env, %{})
 
       {:ok, config} ->
         IO.inspect(config.config.max_ack_pending)
@@ -67,7 +67,7 @@ defmodule Amps.EventHandler do
 
           AmpsUtil.delete_consumer(stream, consumer)
 
-          AmpsWeb.Util.create_config_consumer(parms, env, %{
+          create_consumer(parms, env, %{
             deliver_policy: :by_start_sequence,
             opt_start_seq: prev
           })
@@ -85,11 +85,11 @@ defmodule Amps.EventHandler do
       end)
 
     # Now we start the supervisor with the children and a strategy
-    {:ok, pid} = Supervisor.start_link(children, strategy: :one_for_one)
+    {:ok, _pid} = Supervisor.start_link(children, strategy: :one_for_one)
 
     # After started, we can query the supervisor for information
-
-    {:ok, %{parms: parms, messages: %{}, name: args[:name]}}
+    Supervisor.init(children, strategy: :one_for_one)
+  #  {:ok, %{parms: parms, messages: %{}, name: args[:name]}}
   end
 
   def register(pid, message, msgid) do
@@ -133,7 +133,7 @@ defmodule Amps.EventHandler do
     in_progress = GenServer.call(pid, {:progress, message, msgid})
 
     if in_progress do
-      acked = Jetstream.ack_progress(message)
+      Jetstream.ack_progress(message)
 
       progress(pid, message, msgid, curr)
     end
@@ -157,7 +157,7 @@ defmodule Amps.EventHandler do
         :skip ->
           :skip
 
-        info ->
+        _data ->
           {:ok, progress} =
             Task.start(fn ->
               progress(handler, message, msgid)
@@ -212,5 +212,45 @@ defmodule Amps.EventHandler do
   def handle_cast({:deregister, msgid}, state) do
     Amps.Handlers.deregister(state.name, msgid)
     {:noreply, state}
+  end
+
+
+  defp create_consumer(body, env, opts) do
+    {stream, consumer} =
+      AmpsUtil.get_names(
+        body,
+        env
+      )
+
+#    policy =
+#      if body["policy"] == "by_start_time" do
+#        %{
+#          deliver_policy: String.to_atom(body["policy"]),
+#          opt_start_time: body["start_time"]
+#        }
+#      else
+#        %{
+#          deliver_policy: String.to_atom(body["policy"])
+#        }
+#      end
+
+#    policy = Map.merge(policy, opts)
+
+#    listening_topic = AmpsUtil.env_topic("amps.consumer.#{consumer}", env)
+
+#    group = String.replace(body["name"], " ", "_")
+    ack_wait = body["ack_wait"] || 30
+
+    AmpsUtil.create_consumer(
+      stream,
+      consumer,
+      AmpsUtil.env_topic(body["topic"], env),
+      Map.merge(opts,
+        %{
+          ack_wait: ack_wait * 1_000_000_000,
+          max_ack_pending: body["subs_count"]
+        }
+      )
+    )
   end
 end

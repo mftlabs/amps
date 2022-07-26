@@ -2,7 +2,7 @@ defmodule Amps.Action.Batch do
   require Logger
   alias Amps.DB
 
-  def run(msg, parms, {state, env}) do
+  def run(msg, parms, {_state, env}) do
     Logger.info("input #{inspect(msg)}")
 
     batch(msg, parms, env)
@@ -17,7 +17,7 @@ defmodule Amps.Action.Batch do
           {stream, consumer} =
             AmpsUtil.get_names(%{"name" => parms["name"], "topic" => parms["input"]}, env)
 
-          AmpsWeb.DataController.create_batch_consumer(parms)
+          create_batch_consumer(parms)
 
           parent = self()
 
@@ -156,4 +156,26 @@ defmodule Amps.Action.Batch do
   end
 
   defp nuid(), do: :crypto.strong_rand_bytes(12) |> Base.encode64()
+
+
+  defp create_batch_consumer(body) do
+    if body["inputtype"] == "topic" do
+      {stream, consumer} = AmpsUtil.get_names(%{"name" => body["name"], "topic" => body["input"]})
+
+      opts =
+        if body["policy"] == "by_start_time" do
+          %{
+            deliver_policy: String.to_atom(body["policy"]),
+            opt_start_time: body["start_time"]
+          }
+        else
+          %{
+            deliver_policy: String.to_atom(body["policy"])
+          }
+        end
+
+      AmpsUtil.create_consumer(stream, consumer, body["input"], opts)
+    end
+  end
+
 end

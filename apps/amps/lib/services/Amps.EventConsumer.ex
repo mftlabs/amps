@@ -17,7 +17,7 @@ defmodule Amps.EventConsumer do
       end
 
     # IO.puts("starting event listener #{inspect(parms)}")
-    name = parms[:name]
+    #name = parms[:name]
     # IO.puts("first name #{inspect(name)}")
     GenServer.start_link(__MODULE__, parms)
   end
@@ -38,21 +38,21 @@ defmodule Amps.EventConsumer do
     }
   end
 
-  defp get_names(parms) do
-    topic = parms["topic"]
-    consumer = parms["name"] |> String.replace(" ", "_") |> String.downcase()
-
-    [base, part, _other] = String.split(topic, ".", parts: 3)
-    stream = AmpsUtil.get_env_parm(:streams, String.to_atom(base <> "." <> part))
-    {stream, consumer}
-  end
+#  defp get_names(parms) do
+#    topic = parms["topic"]
+#    consumer = parms["name"] |> String.replace(" ", "_") |> String.downcase()
+#
+#    [base, part, _other] = String.split(topic, ".", parts: 3)
+#    stream = AmpsUtil.get_env_parm(:streams, String.to_atom(base <> "." <> part))
+#    {stream, consumer}
+#  end
 
   # GenServer callbacks
   def handle_info({:initial_connect, opts}, state) do
     # IO.puts("opts #{inspect(opts)}")
     # IO.puts("state #{inspect(state)}")
     name = Atom.to_string(state[:name])
-    sub = String.to_atom(name <> "_sup")
+    #sub = String.to_atom(name <> "_sup")
     # IO.puts("sub: #{inspect(sub)}")
 
     pid = Process.whereis(:gnat)
@@ -62,7 +62,7 @@ defmodule Amps.EventConsumer do
     {stream, consumer} = AmpsUtil.get_names(opts, state.env)
     Logger.info("got stream #{stream} #{consumer}")
 
-    AmpsWeb.Util.create_config_consumer(opts, state.env)
+    create_consumer(opts, state, %{})
 
     opts = Map.put(opts, "id", name)
 
@@ -81,7 +81,7 @@ defmodule Amps.EventConsumer do
   end
 
   def handle_info({val, _opts}, _state) do
-    # IO.puts("got event #{inspect(val)}")
+     IO.puts("got event #{inspect(val)}")
   end
 
   #  def handle_call({:send, qname, data}, _from, state) do
@@ -99,6 +99,28 @@ defmodule Amps.EventConsumer do
   #    Gnat.pub(pid, qname, data)
   #    #   GenServer.call(:evtest1, {:send, qname, data})
   #  end
+
+
+  defp create_consumer(body, env, opts) do
+    {stream, consumer} =
+      AmpsUtil.get_names(
+        body,
+        env
+      )
+    ack_wait = body["ack_wait"] || 30
+
+    AmpsUtil.create_consumer(
+      stream,
+      consumer,
+      AmpsUtil.env_topic(body["topic"], env),
+      Map.merge(opts,
+        %{
+          ack_wait: ack_wait * 1_000_000_000,
+          max_ack_pending: body["subs_count"]
+        }
+      )
+    )
+  end
 end
 
 defmodule Amps.PullConsumer do
@@ -264,16 +286,6 @@ defmodule Amps.PullConsumer do
                 {actparms["name"], msg["msgid"], Exception.message(error)}
               )
             end
-
-            msg =
-              if is_map(msg) do
-                msg
-              else
-                %{}
-              end
-
-            _mctx = data["state"]
-
             IO.puts("ack next message after action error")
             Logger.error("Action Failed\n" <> Exception.format(:error, error, __STACKTRACE__))
 
@@ -314,4 +326,6 @@ defmodule Amps.PullConsumer do
   end
 
   defp nuid(), do: :crypto.strong_rand_bytes(12) |> Base.encode64()
+
+
 end

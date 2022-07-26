@@ -1,13 +1,13 @@
 defmodule Amps.Logger do
-  use GenServer
-  @behaviour :gen_event
+  #use GenServer
+  @behaviour GenEvent
 
   defstruct level: nil,
             format: nil,
             messages: []
 
   @impl true
-  def init(parms) do
+  def init(_parms) do
     # config = Application.get_env(:logger, :console)
     config = Application.get_env(:amps, __MODULE__)
 
@@ -25,7 +25,7 @@ defmodule Amps.Logger do
   end
 
   @impl true
-  def handle_call({:configure, options}, state) do
+  def handle_call({:configure, _options}, _state) do
     {:ok, :ok, :ok}
   end
 
@@ -80,7 +80,24 @@ defmodule Amps.Logger do
       end
     end
   end
+  @impl true
+  def handle_event(:flush, state) do
+    {:ok, flush(state)}
+  end
+  @impl true
+  def handle_event(_, state) do
+    {:ok, state}
+  end
 
+  defp schedule_bulk do
+    if Application.ensure_started(:amps) == :ok do
+      Process.send_after(self(), :bulk, AmpsUtil.hinterval())
+    else
+      Process.send_after(self(), :bulk, 5000)
+    end
+  end
+
+  @impl true
   def handle_info(:bulk, state) do
     schedule_bulk()
 
@@ -101,29 +118,9 @@ defmodule Amps.Logger do
     {:ok, state}
   end
 
-  defp schedule_bulk do
-    if Application.ensure_started(:amps) == :ok do
-      Process.send_after(self(), :bulk, AmpsUtil.hinterval())
-    else
-      Process.send_after(self(), :bulk, 5000)
-    end
-  end
-
-  def handle_info(other, state) do
+  @impl true
+  def handle_info(_other, state) do
     # IO.puts("handle info #(inspect(other)) #{inspect(state)}")
-
-    {:ok, state}
-  end
-
-  def handle_event(:flush, state) do
-    {:ok, flush(state)}
-  end
-
-  def handle_event(_, state) do
-    {:ok, state}
-  end
-
-  def handle_info(_, state) do
     {:ok, state}
   end
 
