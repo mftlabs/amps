@@ -1,14 +1,13 @@
 defmodule Amps.ArchiveManager do
   use GenServer
   require Logger
-  alias Amps.DB
 
   def start_link() do
     Logger.info("starting archive manager")
     GenServer.start_link(__MODULE__, name: :"archive-mgr")
   end
 
-  def init(env) do
+  def init(_env) do
     Process.send_after(self(), :initial_connect, 0)
     {:ok, %{}}
   end
@@ -88,6 +87,16 @@ defmodule Amps.ArchiveManager do
     {:noreply, state}
   end
 
+  def handle_info({:msg, message}, state) do
+    Logger.info("Archive Event Received on Topic #{message.topic}")
+
+    {name, action} = parse_topic(message.topic)
+    handle_service({name, action})
+
+    {:noreply, state}
+  end
+
+
   def handle_service({action, name}) do
     resp =
       case action do
@@ -143,11 +152,11 @@ defmodule Amps.ArchiveManager do
         reason
     end
 
-    env = DB.find_one("environments", %{"name" => name})
+    env = Amps.DB.find_one("environments", %{"name" => name})
 
     if env["active"] do
       case load_archive(name) do
-        {:ok, res} ->
+        {:ok, _res} ->
           %{
             "success" => true
           }
@@ -163,7 +172,7 @@ defmodule Amps.ArchiveManager do
 
   def start_archive(name) do
     case load_archive(name) do
-      {:ok, res} ->
+      {:ok, _res} ->
         %{
           "success" => true
         }
@@ -179,10 +188,10 @@ defmodule Amps.ArchiveManager do
   def stop_archive(name) do
     case Amps.ArchiveSupervisor.stop_child(name) do
       {:ok, res} ->
-        env = DB.find_one("environments", %{"name" => name})
+        env = Amps.DB.find_one("environments", %{"name" => name})
 
         if env do
-          DB.find_one_and_update("environments", %{"name" => name}, %{
+          Amps.DB.find_one_and_update("environments", %{"name" => name}, %{
             "archive" => false
           })
         end
@@ -194,14 +203,6 @@ defmodule Amps.ArchiveManager do
     end
   end
 
-  def handle_info({:msg, message}, state) do
-    Logger.info("Archive Event Received on Topic #{message.topic}")
-
-    {name, action} = parse_topic(message.topic)
-    handle_service({name, action})
-
-    {:noreply, state}
-  end
 
   # def start_service(svcname) do
   #   GenServer.call(Amps.SvcManager, {:start_service, svcname})
@@ -260,9 +261,7 @@ defmodule Amps.ArchiveManager do
         nil ->
           res = load_archive(name)
           IO.inspect(res)
-          res
-
-          DB.find_one_and_update(
+          Amps.DB.find_one_and_update(
             AmpsUtil.index(state, "services"),
             %{"name" => name},
             %{
@@ -365,11 +364,11 @@ defmodule Amps.ArchiveManager do
                 {:ok, "Started #{parms["name"]}"}
 
               pid ->
-                {:ok, "Already Running"}
+                {:ok, "Already Running as pid [#{pid}]"}
             end
           rescue
             e ->
-              error = "#{inspect(e)}"
+#              error = "#{inspect(e)}"
 
               # AmpsEvents.send_history(
               #   AmpsUtil.env_topic("amps.events.svcs.#{svcname}.logs", env),
@@ -404,7 +403,7 @@ defmodule Amps.ArchiveManager do
           Logger.info("Archiver not found for environment #{name}")
           nil
 
-        parms ->
+        _parms ->
           case Process.whereis(:"#{name}-archive") do
             nil ->
               nil

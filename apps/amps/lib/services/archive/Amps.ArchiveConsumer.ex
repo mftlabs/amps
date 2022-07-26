@@ -1,7 +1,6 @@
 defmodule Amps.ArchiveConsumer do
   use GenServer
   require Logger
-  #
   alias ExAws.S3
 
   # alias Jetstream.API.{Consumer, Stream}
@@ -20,9 +19,7 @@ defmodule Amps.ArchiveConsumer do
 
     IO.inspect("ARCHIVEPARMS")
     IO.inspect(parms)
-
     IO.puts("starting event listener #{inspect(parms)}")
-    name = parms[:name]
     GenServer.start_link(__MODULE__, parms)
   end
 
@@ -54,19 +51,7 @@ defmodule Amps.ArchiveConsumer do
     AmpsUtil.format("{env}/{service}/{user}/{msgid}", msg)
   end
 
-  defp get_names(parms) do
-    topic = parms["topic"]
-    safe = String.replace(topic, ".", "_")
-    consumer = String.replace(safe, "*", "_")
-
-    [base, part, _other] = String.split(topic, ".", parts: 3)
-
-    stream = AmpsUtil.get_env_parm(:streams, String.to_atom(base <> "." <> part))
-
-    {stream, consumer}
-  end
-
-  defp get_stream(msg, provider, env, chunk_size) do
+  defp get_stream(msg, provider, env, _chunk_size) do
     case provider["atype"] do
       "s3" ->
         handler = AmpsUtil.get_env_parm(:actions, :s3)
@@ -229,8 +214,6 @@ end
 defmodule Amps.ArchivePullConsumer do
   use GenServer
   require Logger
-  alias Amps.DB
-  import ExAws
   alias ExAws.S3
 
   def init(%{
@@ -318,8 +301,6 @@ defmodule Amps.ArchivePullConsumer do
       data = Poison.decode!(message.body)
       msg = data["msg"]
       # Logger.info("Archiving Message #{msg["msgid"]}")
-      parms = state[:parms]
-      name = parms["name"]
 
       try do
         archive = Amps.DB.find_one("providers", %{"_id" => Amps.Defaults.get("aprovider")})
@@ -338,8 +319,6 @@ defmodule Amps.ArchivePullConsumer do
         Amps.ArchiveHandler.reset_failure(state.handler)
       rescue
         e in NackError ->
-          e
-
           failures = Amps.ArchiveHandler.add_failure(state.handler)
 
           Logger.error(
@@ -367,8 +346,6 @@ defmodule Amps.ArchivePullConsumer do
       end
     rescue
       e in NackError ->
-        e
-
         failures = Amps.ArchiveHandler.add_failure(state.handler)
 
         Logger.error(
@@ -413,8 +390,6 @@ defmodule Amps.ArchivePullConsumer do
     IO.puts("handler call called #{inspect(parms)}")
     {:reply, :ok, state}
   end
-
-  defp nuid(), do: :crypto.strong_rand_bytes(12) |> Base.encode64()
 
   def terminate(reason, state) do
     Logger.warn("#{inspect(reason)} in terminate")

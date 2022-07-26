@@ -33,15 +33,14 @@ defmodule Amps.ArchiveSupervisor do
 
         # This match pattern worked for kafka errors in my local testing, but I worry it is too specific.
 
-        {:shutdown, {:failed_to_start_child, module, {{:badmatch, {:error, {e, stacktrace}}}, _}}} =
-          error
+        {:shutdown,
+         {:failed_to_start_child, _module, {{:badmatch, {:error, {e, _stacktrace}}}, _}}} = error
 
-        error =
-          if e.message do
-            e.message
-          else
-            "#{inspect(error)}"
-          end
+        if e.message do
+          e.message
+        else
+          "#{inspect(error)}"
+        end
 
         # AmpsEvents.send_history(
         #   "amps.events.svcs.#{config["name"]}.logs",
