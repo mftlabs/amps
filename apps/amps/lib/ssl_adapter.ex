@@ -1,16 +1,17 @@
 # Copyright 2022 Agile Data, Inc <code@mftlabs.io>
 
 defmodule Amps.SSL do
-  use SiteEncrypt.Adapter
-  alias SiteEncrypt.Adapter
+  @behaviour SiteEncrypt.Adapter
+  #alias SiteEncrypt.Adapter
 
-  @impl Adapter
+ # @impl Adapter
 
   def start_link(endpoint) do
     IO.inspect(endpoint)
-    Adapter.start_link(__MODULE__, endpoint, endpoint)
+    SiteEncrypt.Adapter.start_link(__MODULE__, endpoint, endpoint)
   end
 
+  @impl true
   def config(_id, endpoint) do
     IO.inspect(endpoint)
 
@@ -20,7 +21,7 @@ defmodule Amps.SSL do
     }
   end
 
-  @impl Adapter
+  @impl true
   def http_port(_id, endpoint) do
     http_config = endpoint.config(:http)
 
