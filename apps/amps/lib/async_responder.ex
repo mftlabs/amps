@@ -71,7 +71,7 @@ defmodule Amps.AsyncResponder do
       nil ->
         false
 
-      {:responder, id, pid, node, pending, responses} ->
+      {:responder, _id, pid, _node, pending, responses} ->
         case pending do
           [] ->
             Process.send(pid, {:resp, responses}, [])
