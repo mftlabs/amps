@@ -7,169 +7,36 @@ defmodule Amps.Application do
 
   @impl true
   def start(_type, _args) do
-    gnatconf = Application.fetch_env!(:amps, :gnat)
     Application.put_env(:amps, :initialized, false)
-
-    gnat_supervisor_settings = %{
-      # (required) the registered named you want to give the Gnat connection
-      name: :gnat,
-      # number of milliseconds to wait between consecutive reconnect attempts (default: 2_000)
-      backoff_period: 4_000,
-      connection_settings: [
-        %{host: gnatconf[:host], port: gnatconf[:port]}
-      ]
-    }
-
     task = Task.async(Amps.Startup, :startup, [])
     Task.await(task, 300_000)
 
-    IO.inspect(gnat_supervisor_settings)
-
     children = [
-      # Start the PubSub system
+      Gnat.ConnectionSupervisor.child_spec(get_gnat_config()),
       {Phoenix.PubSub, name: Amps.PubSub},
-      Supervisor.Spec.worker(Gnat.ConnectionSupervisor, [
-        gnat_supervisor_settings,
-        []
-      ]),
-      {
-        Mnesiac.Supervisor,
-        [
-          [name: Amps.MnesiacSupervisor]
-        ]
-      },
+      {Mnesiac.Supervisor,[[name: Amps.MnesiacSupervisor]]},
       {Pow.Store.Backend.MnesiaCache, extra_db_nodes: {Node, :list, []}},
-      # Recover from netsplit
+      {Mongo, get_mongo_spec()},
       Pow.Store.Backend.MnesiaCache.Unsplit,
-      Amps.DB.get_db(),
-#      AmpsWeb.Vault,
       Amps.SvcHandler,
       Amps.SvcSupervisor,
       Amps.SvcManager,
       Amps.EnvHandler,
       Amps.EnvSupervisor,
       Amps.EnvManager,
-      %{
-        id: "event_handler",
-        start:
-          {Amps.HistoryHandler, :start_link,
-           [
-             %{
-               "name" => "event_handler",
-               "subs_count" => 3,
-               "topic" => "amps.events.*"
-             }
-           ]}
-      },
-      %{
-        id: "action_handler",
-        start:
-          {Amps.HistoryHandler, :start_link,
-           [
-             %{
-               "name" => "action_handler",
-               "subs_count" => 3,
-               "topic" => "amps.actions.>",
-               "receipt" => true,
-               "index" => "message_events"
-             }
-           ]}
-      },
-      %{
-        id: "service_handler",
-        start:
-          {Amps.HistoryHandler, :start_link,
-           [
-             %{
-               "name" => "service_handler",
-               "subs_count" => 3,
-               "topic" => "amps.svcs.>",
-               "receipt" => true,
-               "index" => "message_events"
-             }
-           ]}
-      },
-      %{
-        id: "mailbox_handler",
-        start:
-          {Amps.HistoryHandler, :start_link,
-           [
-             %{
-               "name" => "mailbox_handler",
-               "subs_count" => 3,
-               "topic" => "amps.mailbox.>",
-               "receipt" => true,
-               "index" => ["message_events", "mailbox"],
-               "doc" => fn topic, data ->
-                 pieces =
-                   String.split(topic, ".")
-                   |> Enum.take(-2)
-
-                 Map.merge(data, %{
-                   "recipient" => Enum.at(pieces, 0),
-                   "status" => "mailboxed",
-                   "mailbox" => Enum.at(pieces, 1),
-                   "mtime" => DateTime.utc_now() |> DateTime.to_iso8601()
-                 })
-               end
-             }
-           ]}
-      },
-      %{
-        id: "data_handler",
-        start:
-          {Amps.HistoryHandler, :start_link,
-           [
-             %{
-               "name" => "data_handler",
-               "subs_count" => 3,
-               "topic" => "amps.data.>",
-               "receipt" => true,
-               "index" => "message_events"
-             }
-           ]}
-      },
-      %{
-        id: "object_handler",
-        start:
-          {Amps.HistoryHandler, :start_link,
-           [
-             %{
-               "name" => "object_handler",
-               "subs_count" => 3,
-               "topic" => "amps.objects.>",
-               "receipt" => true,
-               "index" => "message_events"
-             }
-           ]}
-      },
-      %{
-        id: "service_logs",
-        start:
-          {Amps.HistoryHandler, :start_link,
-           [
-             %{
-               "name" => "service_logs",
-               "subs_count" => 3,
-               "topic" => "amps.events.svcs.*.logs"
-             }
-           ]}
-      },
-      %{
-        id: "ufa_logs",
-        start:
-          {Amps.HistoryHandler, :start_link,
-           [
-             %{
-               "name" => "ufa_logs",
-               "subs_count" => 3,
-               "topic" => "amps.events.ufa.*.logs"
-             }
-           ]}
-      },
       Amps.ArchiveSupervisor,
       Amps.ArchiveManager,
+      get_spec("event_handler", 3,"amps.events.*"),
+      get_spec("ufa_logs", 3,"amps.events.ufa.*.logs"),
+      get_spec("service_logs", 3,"amps.events.svcs.*.logs"),
+      get_spec("data_handler", 3, "amps.data.>", true, "message_events"),
+      get_spec("service_handler", 3, "amps.svcs.>", true, "message_events"),
+      get_spec("action_handler", 3, "amps.actions.>", true, "message_events"),
+      get_spec("object_handler", 3, "amps.objects.>", true, "message_events"),
+      get_spec("mailbox_handler", 3, "amps.mailbox.>", true, ["message_events", "mailbox"], get_doc()),
 
+
+#      AmpsWeb.Vault,
       # add this to db config...
 
       # worker pool to run python actions
@@ -194,5 +61,60 @@ defmodule Amps.Application do
 
     Application.put_env(:amps, :initialized, true)
     res
+  end
+
+  defp get_gnat_config() do
+    gnatconf = Application.fetch_env!(:amps, :gnat)
+    %{
+      # (required) the registered named you want to give the Gnat connection
+      name: :gnat,
+      # number of milliseconds to wait between consecutive reconnect attempts (default: 2_000)
+      backoff_period: 4_000,
+      connection_settings: [
+        %{host: gnatconf[:host], port: gnatconf[:port]}
+      ]
+    }
+  end
+
+  defp get_mongo_spec() do
+    [
+      name: :mongo,
+      database: "amps",
+      url: System.get_env("AMPS_MONGO_ADDR", "mongodb://localhost:27017/amps"),
+      pool_size: 15
+    ]
+  end
+
+  defp get_spec(name, count, topic, receipt_flag \\ false, index \\ nil, doc \\ nil) do
+    %{
+      id: name,
+      start:
+        {Amps.HistoryHandler, :start_link,
+         [
+           %{
+             "name" => name,
+             "subs_count" => count,
+             "topic" => topic,
+             "receipt" => receipt_flag,
+             "index" => index,
+             "doc" => doc
+           }
+         ]}
+    }
+  end
+
+  defp get_doc() do
+    fn topic, data ->
+      pieces =
+        String.split(topic, ".")
+        |> Enum.take(-2)
+
+      Map.merge(data, %{
+        "recipient" => Enum.at(pieces, 0),
+        "status" => "mailboxed",
+        "mailbox" => Enum.at(pieces, 1),
+        "mtime" => DateTime.utc_now() |> DateTime.to_iso8601()
+      })
+    end
   end
 end
