@@ -1,15 +1,16 @@
+# Copyright 2022 Agile Data, Inc <code@mftlabs.io>
+
 defmodule AmpsAuth do
   import Argon2
-  alias Amps.DB
 
   def mailbox_info(user, mailbox, env) do
-    DB.find_one(AmpsUtil.index(env, "users"), %{"username" => user, "mailboxes.name" => mailbox})
+    Amps.DB.find_one(AmpsUtil.index(env, "users"), %{"username" => user, "mailboxes.name" => mailbox})
   end
 
   def check_cred(user, pass, env \\ "") do
     # IO.puts("checking password #{user} #{pass}")
 
-    case DB.find_one(AmpsUtil.index(env, "users"), %{username: to_string(user)}) do
+    case Amps.DB.find_one(AmpsUtil.index(env, "users"), %{username: to_string(user)}) do
       nil ->
         IO.puts("not found")
         false

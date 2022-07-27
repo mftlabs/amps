@@ -1,3 +1,5 @@
+# Copyright 2022 Agile Data, Inc <code@mftlabs.io>
+
 defmodule AmpsStorage do
   def store(msg) do
     [date, t] = String.split(msg["ftime"], "T")

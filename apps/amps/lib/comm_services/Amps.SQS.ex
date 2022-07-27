@@ -1,8 +1,9 @@
+# Copyright 2022 Agile Data, Inc <code@mftlabs.io>
+
 defmodule Amps.SQS do
   import ExAws
   import ExAws.SQS
   require Logger
-  alias Amps.DB
 
   use GenServer
 
@@ -22,7 +23,7 @@ defmodule Amps.SQS do
   def init(args) do
     parms = args[:parms]
     env = args[:env] || ""
-    provider = DB.find_by_id("providers", parms["provider"])
+    provider = Amps.DB.find_by_id("providers", parms["provider"])
     req = cred(provider)
     Process.send_after(self(), {:fetch, parms, req, env}, 0)
     {:ok, parms}

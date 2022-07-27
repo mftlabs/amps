@@ -1,12 +1,10 @@
+# Copyright 2022 Agile Data, Inc <code@mftlabs.io>
+
 defmodule AmpsEvents do
   require Logger
-  alias Amps.DB
 
   def send(msg, parms, state, env \\ "") do
     Logger.debug("Sending to #{parms["output"]}")
-    # Logger.debug(msg)
-    # Logger.debug(parms)
-    # Logger.debug(state)
 
     output = parms["output"]
 
@@ -19,7 +17,7 @@ defmodule AmpsEvents do
     end
   end
 
-  def do_send(msg, parms, state, topic, env) do
+  def do_send(msg, _parms, state, topic, env) do
     msg = Map.merge(msg, %{"etime" => AmpsUtil.gettime(), "topic" => topic})
 
     if not AmpsUtil.blank?(topic) do
@@ -28,7 +26,7 @@ defmodule AmpsEvents do
           contextid = AmpsUtil.get_id()
 
           subs =
-            DB.find(AmpsUtil.index(env, "services"), %{
+            Amps.DB.find(AmpsUtil.index(env, "services"), %{
               "type" => "subscriber",
               "active" => true,
               "topic" => topic

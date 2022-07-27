@@ -1,5 +1,6 @@
+# Copyright 2022 Agile Data, Inc <code@mftlabs.io>
+
 defmodule AmpsMailbox do
-  alias Amps.DB
   require Logger
 
   @doc """
@@ -7,7 +8,7 @@ defmodule AmpsMailbox do
   def add_message(recipient, message, env \\ "") do
     newmsg = Map.put(message, "mailbox", recipient)
 
-    case DB.insert(AmpsUtil.index(env, "mailbox"), newmsg) do
+    case Amps.DB.insert(AmpsUtil.index(env, "mailbox"), newmsg) do
       {:ok, _result} ->
         :ok
 
@@ -18,13 +19,11 @@ defmodule AmpsMailbox do
   end
 
   def delete_by_name(user, mailbox, fname, env \\ "") do
-    result =
-      DB.delete_one(AmpsUtil.index(env, "mailbox"), %{
+      Amps.DB.delete_one(AmpsUtil.index(env, "mailbox"), %{
         "recipient" => user,
         "mailbox" => mailbox,
         "fname" => fname
       })
-
     :ok
   end
 
@@ -35,7 +34,7 @@ defmodule AmpsMailbox do
     IO.inspect(env)
 
     result =
-      DB.delete_one(AmpsUtil.index(env, "mailbox"), %{
+      Amps.DB.delete_one(AmpsUtil.index(env, "mailbox"), %{
         "recipient" => user,
         "mailbox" => mailbox,
         "msgid" => msgid
@@ -48,7 +47,7 @@ defmodule AmpsMailbox do
 
   def get_message_by_name(user, mailbox, fname, env \\ "") do
     # Mongo.find_one(:mongo, "mailbox", %{"$and" => [%{mailbox: mailbox}, %{msgid: msgid}]})
-    DB.find_one(AmpsUtil.index(env, "mailbox"), %{
+    Amps.DB.find_one(AmpsUtil.index(env, "mailbox"), %{
       "recipient" => user,
       "mailbox" => mailbox,
       "fname" => fname
@@ -57,7 +56,7 @@ defmodule AmpsMailbox do
 
   def get_message(user, mailbox, msgid, env \\ "") do
     # Mongo.find_one(:mongo, "mailbox", %{"$and" => [%{mailbox: mailbox}, %{msgid: msgid}]})
-    DB.find_one(AmpsUtil.index(env, "mailbox"), %{
+    Amps.DB.find_one(AmpsUtil.index(env, "mailbox"), %{
       "recipient" => user,
       "mailbox" => mailbox,
       "msgid" => msgid
@@ -69,7 +68,7 @@ defmodule AmpsMailbox do
     IO.inspect(user)
 
     user =
-      DB.find_one(index, %{
+      Amps.DB.find_one(index, %{
         "username" => user
       })
 
@@ -79,7 +78,7 @@ defmodule AmpsMailbox do
       nil ->
         name = user["firstname"] <> " " <> user["lastname"]
 
-        DB.add_to_field(
+        Amps.DB.add_to_field(
           index,
           %{
             "name" => mailbox,
@@ -96,7 +95,7 @@ defmodule AmpsMailbox do
         {:ok, "Created"}
 
       mailbox ->
-        {:error, "Exists"}
+        {:error, "Mailbox exists #{mailbox}"}
     end
   end
 
@@ -105,7 +104,7 @@ defmodule AmpsMailbox do
     IO.inspect(user)
 
     user =
-      DB.find_one(index, %{
+      Amps.DB.find_one(index, %{
         "username" => user
       })
 
@@ -116,14 +115,14 @@ defmodule AmpsMailbox do
         {:error, "Mailbox not found"}
 
       mailbox ->
-        DB.delete_from_field(index, mailbox, user["_id"], "mailboxes", mailbox["_id"])
+        Amps.DB.delete_from_field(index, mailbox, user["_id"], "mailboxes", mailbox["_id"])
         {:ok, "Deleted"}
     end
   end
 
   def get_mailboxes(user, env \\ "") do
     user =
-      DB.find_one(AmpsUtil.index(env, "users"), %{
+      Amps.DB.find_one(AmpsUtil.index(env, "users"), %{
         "username" => user
       })
 
@@ -141,7 +140,7 @@ defmodule AmpsMailbox do
       "default"
     else
       user =
-        DB.find_one(AmpsUtil.index(env, "users"), %{
+        Amps.DB.find_one(AmpsUtil.index(env, "users"), %{
           "username" => user
         })
 
@@ -166,7 +165,7 @@ defmodule AmpsMailbox do
 
   def stat_fname(user, mailbox, fname, env \\ "") do
     # Mongo.find_one(:mongo, "mailbox", %{"$and" => [%{mailbox: mailbox}, %{fname: fname}]})
-    DB.find_one(AmpsUtil.index(env, "mailbox"), %{
+    Amps.DB.find_one(AmpsUtil.index(env, "mailbox"), %{
       "mailbox" => mailbox,
       "recipient" => user,
       "fname" => fname
@@ -196,7 +195,7 @@ defmodule AmpsMailbox do
   def list_messages(user, mailbox, limit \\ 100, env \\ "") do
     # Mongo.find(:mongo, "mailbox", %{mailbox: mailbox}, limit: limit, sort: %{time: 1})
     # |> Enum.to_list()
-    DB.find(AmpsUtil.index(env, "mailbox"), %{"recipient" => user, "mailbox" => mailbox}, %{
+    Amps.DB.find(AmpsUtil.index(env, "mailbox"), %{"recipient" => user, "mailbox" => mailbox}, %{
       limit: limit,
       sort: %{"mtime" => -1}
     })
