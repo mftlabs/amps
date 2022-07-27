@@ -1,62 +1,3 @@
-# defmodule Amps.PyProcess do
-#   use GenServer
-#   require Logger
-
-#   # alias Jetstream.API.{Consumer, Stream}
-
-#   def start_link(args) do
-#     parms = Enum.into(args, %{})
-
-#     parms =
-#       case parms[:env] do
-#         nil ->
-#           Map.put(parms, :env, "")
-
-#         _ ->
-#           parms
-#       end
-
-#     IO.puts("starting event listener #{inspect(parms)}")
-#     name = parms[:name]
-#     GenServer.start_link(__MODULE__, parms)
-#   end
-
-#   def init(opts) do
-#     IO.inspect(opts)
-#     Process.send_after(self(), {:initial_connect, opts[:parms]}, 0)
-#     {:ok, opts}
-#   end
-
-#   def child_spec(opts) do
-#     name = opts[:name]
-#     IO.puts("name #{inspect(name)}")
-
-#     %{
-#       id: name,
-#       start: {__MODULE__, :start_link, [opts]}
-#     }
-#   end
-
-#   # GenServer callbacks
-#   def handle_info({:initial_connect, opts}, state) do
-#     opts = Map.put(opts, "id", opts["name"])
-
-#     GenServer.start_link(
-#       Amps.PyProcessHandler,
-#       %{
-#         parms: opts,
-#         env: state.env
-#       }
-#     )
-
-#     {:noreply, %{}}
-#   end
-
-#   def handle_info({val, _opts}, _state) do
-#     IO.puts("got event #{inspect(val)}")
-#   end
-# end
-
 defmodule Amps.PyProcess.Logger do
   require Logger
 
@@ -73,7 +14,7 @@ defmodule Amps.PyProcess.Logger do
       end
 
     IO.puts("starting event listener #{inspect(parms)}")
-    {:ok, pid} = GenServer.start_link(__MODULE__, parms)
+    GenServer.start_link(__MODULE__, parms)
   end
 
   def init(state) do
@@ -85,7 +26,7 @@ defmodule Amps.PyProcess.Logger do
     {:noreply, state}
   end
 
-  def handle_info(other, state) do
+  def handle_info(_other, state) do
     {:noreply, state}
   end
 end
@@ -106,7 +47,7 @@ defmodule Amps.PyProcess.New do
       end
 
     IO.puts("starting event listener #{inspect(parms)}")
-    {:ok, pid} = GenServer.start_link(__MODULE__, parms)
+    GenServer.start_link(__MODULE__, parms)
   end
 
   def init(state) do
@@ -158,7 +99,7 @@ defmodule Amps.PyProcess.New do
     {:noreply, state}
   end
 
-  def handle_info(other, state) do
+  def handle_info(_other, state) do
     {:noreply, state}
   end
 end
@@ -296,69 +237,6 @@ defmodule Amps.PyProcess do
     {:noreply, state}
   end
 
-  def log(level, message, md) do
-    Logger.log(
-      level,
-      message,
-      Enum.map(md, fn {k, v} ->
-        {k, List.to_string(v)}
-      end)
-    )
-  end
-
-  def send_message(msg, parms, env) do
-    IO.puts("SENDING MESSAGE")
-    msg = Jason.decode!(msg)
-    parms = Jason.decode!(parms)
-
-    if parms["send_output"] do
-      AmpsEvents.send(
-        msg,
-        parms,
-        %{},
-        env
-      )
-    else
-      Logger.warn(
-        "Attempted to Send Message in Service #{parms["name"]} when \"Send Output\" disabled."
-      )
-    end
-  end
-
-  def new_message(msg, parms, env) do
-    IO.inspect("new")
-    msg = Jason.decode!(msg)
-
-    parms = Jason.decode!(parms)
-
-    env = List.to_string(env)
-    IO.inspect(msg)
-    IO.inspect(parms)
-    IO.inspect(env)
-
-    {msg, sid} =
-      AmpsEvents.start_session(
-        msg,
-        %{"service" => parms["name"]},
-        env
-      )
-
-    if parms["send_output"] do
-      AmpsEvents.send(
-        msg,
-        parms,
-        %{},
-        env
-      )
-    else
-      Logger.warn(
-        "Attempted to Send Message in Service #{parms["name"]} when \"Send Output\" disabled."
-      )
-    end
-
-    AmpsEvents.end_session(sid, env)
-  end
-
   def handle_info({:msg, message}, state) do
     msg = Jason.decode!(message.body)["msg"]
     evtopic = AmpsUtil.env_topic("amps.events.action", state.env)
@@ -466,6 +344,70 @@ defmodule Amps.PyProcess do
     )
 
     {:noreply, state}
+  end
+
+
+  def log(level, message, md) do
+    Logger.log(
+      level,
+      message,
+      Enum.map(md, fn {k, v} ->
+        {k, List.to_string(v)}
+      end)
+    )
+  end
+
+  def send_message(msg, parms, env) do
+    IO.puts("SENDING MESSAGE")
+    msg = Jason.decode!(msg)
+    parms = Jason.decode!(parms)
+
+    if parms["send_output"] do
+      AmpsEvents.send(
+        msg,
+        parms,
+        %{},
+        env
+      )
+    else
+      Logger.warn(
+        "Attempted to Send Message in Service #{parms["name"]} when \"Send Output\" disabled."
+      )
+    end
+  end
+
+  def new_message(msg, parms, env) do
+    IO.inspect("new")
+    msg = Jason.decode!(msg)
+
+    parms = Jason.decode!(parms)
+
+    env = List.to_string(env)
+    IO.inspect(msg)
+    IO.inspect(parms)
+    IO.inspect(env)
+
+    {msg, sid} =
+      AmpsEvents.start_session(
+        msg,
+        %{"service" => parms["name"]},
+        env
+      )
+
+    if parms["send_output"] do
+      AmpsEvents.send(
+        msg,
+        parms,
+        %{},
+        env
+      )
+    else
+      Logger.warn(
+        "Attempted to Send Message in Service #{parms["name"]} when \"Send Output\" disabled."
+      )
+    end
+
+    AmpsEvents.end_session(sid, env)
   end
 
   def handle_call(parms, _from, state) do

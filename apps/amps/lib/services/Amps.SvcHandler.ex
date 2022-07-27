@@ -1,17 +1,15 @@
 defmodule Amps.SvcHandler do
   use GenServer
   require Logger
-  alias Amps.SvcManager
-  alias Amps.DB
 
   def start_link(args) do
     GenServer.start_link(__MODULE__, args, name: __MODULE__)
   end
 
-  def init(args) do
+  def init(_args) do
     # Process.link(connection_pid)
     Logger.info("Starting Service Handler")
-    listening_topic = "_CON.#{nuid()}"
+    #listening_topic = "_CON.#{nuid()}"
 
     connection_pid = Process.whereis(:gnat)
 
@@ -78,7 +76,7 @@ defmodule Amps.SvcHandler do
   end
 
   def restart_service(svcname) do
-    case SvcManager.stop_service(svcname) do
+    case Amps.SvcManager.stop_service(svcname) do
       {:ok, res} ->
         res
 
@@ -86,11 +84,11 @@ defmodule Amps.SvcHandler do
         reason
     end
 
-    svc = DB.find_one("services", %{"name" => svcname})
+    svc = Amps.DB.find_one("services", %{"name" => svcname})
 
     if svc["active"] do
-      case SvcManager.start_service(svcname) do
-        {:ok, res} ->
+      case Amps.SvcManager.start_service(svcname) do
+        {:ok, _res} ->
           %{
             "success" => true
           }
@@ -105,8 +103,8 @@ defmodule Amps.SvcHandler do
   end
 
   def start_service(svcname) do
-    case SvcManager.start_service(svcname) do
-      {:ok, res} ->
+    case Amps.SvcManager.start_service(svcname) do
+      {:ok, _res} ->
         %{
           "success" => true
         }
@@ -120,9 +118,9 @@ defmodule Amps.SvcHandler do
   end
 
   def stop_service(svcname) do
-    case SvcManager.stop_service(svcname) do
+    case Amps.SvcManager.stop_service(svcname) do
       {:ok, res} ->
-        DB.find_one_and_update("services", %{"name" => svcname}, %{
+        Amps.DB.find_one_and_update("services", %{"name" => svcname}, %{
           "active" => false
         })
 
@@ -142,7 +140,7 @@ defmodule Amps.SvcHandler do
     {:noreply, state}
   end
 
-  def handle_info({:DOWN, ref, :process, pid, reason}, state) do
+  def handle_info({:DOWN, _ref, :process, pid, reason}, state) do
     IO.inspect(Process.info(pid))
 
     Logger.info("Process ended: #{reason}")
@@ -166,6 +164,4 @@ defmodule Amps.SvcHandler do
     Process.monitor(pid)
     {:reply, :ok, state}
   end
-
-  defp nuid(), do: :crypto.strong_rand_bytes(12) |> Base.encode64()
 end

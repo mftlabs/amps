@@ -1,7 +1,6 @@
 defmodule Amps.SvcManager do
   use GenServer
   require Logger
-  alias Amps.DB
 
   def start_link(_args) do
     Logger.info("starting service manager")
@@ -80,11 +79,8 @@ defmodule Amps.SvcManager do
     res =
       case service_active?(name) do
         nil ->
-          res = load_service(name)
-          IO.inspect(res)
-          res
-
-          DB.find_one_and_update("services", %{"name" => name}, %{
+          load_service(name)
+          Amps.DB.find_one_and_update("services", %{"name" => name}, %{
             "active" => true
           })
 
@@ -133,7 +129,7 @@ defmodule Amps.SvcManager do
                 {cert, {keytype, key}}
               rescue
                 e ->
-                  raise "Error parsing key and/or certificate"
+                  raise "Error parsing key and/or certificate #{inspect(e)}"
               end
 
             {Plug.Cowboy,
@@ -196,7 +192,7 @@ defmodule Amps.SvcManager do
 
           router =
             Enum.reduce(args["router"], [], fn id, acc ->
-              case DB.find_by_id("endpoints", id) do
+              case Amps.DB.find_by_id("endpoints", id) do
                 nil ->
                   acc
 
@@ -229,7 +225,7 @@ defmodule Amps.SvcManager do
                 {cert, {keytype, key}}
               rescue
                 e ->
-                  raise "Error parsing key and/or certificate"
+                  raise "Error parsing key and/or certificate #{inspect(e)}"
               end
 
             {Plug.Cowboy,
@@ -408,13 +404,13 @@ defmodule Amps.SvcManager do
       end
 
     Enum.each(parms, fn {key, val} ->
-      res = Amps.Defaults.put(key, val)
+      Amps.Defaults.put(key, val)
       Application.put_env(:amps, String.to_atom(key), val)
     end)
   end
 
   def check_util() do
-    utils = DB.find("utilscripts", %{})
+    utils = Amps.DB.find("utilscripts", %{})
 
     case AmpsUtil.get_mod_path() do
       nil ->

@@ -1,6 +1,5 @@
 defmodule Amps.PyService do
   use GenServer
-  alias Amps.DB
 
   def start_link(default) when is_list(default) do
     GenServer.start_link(__MODULE__, default)
@@ -12,7 +11,7 @@ defmodule Amps.PyService do
         Map.put(
           parms,
           "provider",
-          DB.find_one(AmpsUtil.index(env, "providers"), %{"_id" => parms["provider"]})
+          Amps.DB.find_one(AmpsUtil.index(env, "providers"), %{"_id" => parms["provider"]})
         )
       else
         parms
@@ -58,7 +57,7 @@ defmodule Amps.PyService do
     if File.exists?(script_path) do
       :ok
     else
-      case DB.find_one(AmpsUtil.index(env, "scripts"), %{"name" => name}) do
+      case Amps.DB.find_one(AmpsUtil.index(env, "scripts"), %{"name" => name}) do
         nil ->
           raise "Script does not exist"
 
@@ -114,7 +113,7 @@ defmodule Amps.PyService do
         Map.put(
           parms,
           "provider",
-          DB.find_one(AmpsUtil.index(env, "providers"), %{"_id" => parms["provider"]})
+          Amps.DB.find_one(AmpsUtil.index(env, "providers"), %{"_id" => parms["provider"]})
         )
       else
         parms
@@ -150,7 +149,7 @@ defmodule Amps.PyService do
     end
   end
 
-  def handle_call({:onboard, msg, parms, env}, _from, _pid) do
+  def handle_call({:onboard, msg, parms, _env}, _from, _pid) do
     path = Path.join([:code.priv_dir(:amps), "py", "onboarding"])
     tmp = AmpsUtil.get_env(:storage_temp)
     # {:ok, pid} = :python.start([{:python_path, to_charlist(path)}])
@@ -175,7 +174,7 @@ defmodule Amps.PyService do
     end
   end
 
-  defp handle_run_result(result, pid) do
+  defp handle_run_result(result, _pid) do
     case result do
       :undefined ->
         {:error, "Nothing returned from script"}
@@ -190,7 +189,7 @@ defmodule Amps.PyService do
           end
 
         if is_map(rparm) do
-          status = rparm["status"] || "failed"
+          #status = rparm["status"] || "failed"
 
           if rparm["error"] do
             {:error, rparm["reason"]}
