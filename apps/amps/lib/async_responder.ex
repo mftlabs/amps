@@ -1,5 +1,6 @@
+# Copyright 2022 Agile Data, Inc <code@mftlabs.io>
+
 defmodule Amps.AsyncResponder do
-  # alias Amps.DB
   require Logger
   use GenServer
 

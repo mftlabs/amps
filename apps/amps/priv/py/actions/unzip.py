@@ -1,3 +1,6 @@
+# Copyright 2022 Agile Data, Inc <code@mftlabs.io>
+
+
 import zipfile
 import json
 import os

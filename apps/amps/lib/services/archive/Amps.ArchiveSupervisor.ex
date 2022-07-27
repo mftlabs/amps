@@ -1,3 +1,5 @@
+# Copyright 2022 Agile Data, Inc <code@mftlabs.io>
+
 defmodule Amps.ArchiveSupervisor do
   use DynamicSupervisor
   require Logger

@@ -1,6 +1,7 @@
+# Copyright 2022 Agile Data, Inc <code@mftlabs.io>
+
 defmodule Amps.Onboarding do
   require Logger
-  alias Amps.DB
 
   def providers(type) do
     %{
@@ -33,7 +34,7 @@ defmodule Amps.Onboarding do
     mapping = key_mapping(prof_or_provider, object["type"])
 
     Enum.reduce(mapping, object, fn k, acc ->
-      case DB.find_by_id(AmpsUtil.index(env, "keys"), object[k]) do
+      case Amps.DB.find_by_id(AmpsUtil.index(env, "keys"), object[k]) do
         nil ->
           raise "Could not find key with id #{object[k]}"
 
@@ -45,7 +46,7 @@ defmodule Amps.Onboarding do
 
   defp replace_provider(object) do
     if object["provider"] do
-      case DB.find_by_id("provider", object["provider"]) do
+      case Amps.DB.find_by_id("provider", object["provider"]) do
         nil ->
           raise "Could not find provider with id #{object["provider"]}"
 
@@ -85,7 +86,7 @@ defmodule Amps.Onboarding do
         nil ->
           Logger.info("No prior heartbeat found for node #{node()} - treating as new node.")
           index = AmpsUtil.index(env, "users")
-          users = DB.find(index)
+          users = Amps.DB.find(index)
 
           Enum.map(users, fn user ->
             IO.inspect(%{
@@ -116,7 +117,7 @@ defmodule Amps.Onboarding do
           evaluate(env, heartbeat["etime"])
       end
 
-    DB.insert(AmpsUtil.index(env, "reports"), %{
+    Amps.DB.insert(AmpsUtil.index(env, "reports"), %{
       "type" => "onboarding",
       "actions" => actions,
       "node" => Atom.to_string(node()),
@@ -202,10 +203,10 @@ defmodule Amps.Onboarding do
   end
 
   def verify(user, env \\ "") do
-    group = DB.find_by_id(AmpsUtil.index(env, "groups"), user["group"])
+    group = Amps.DB.find_by_id(AmpsUtil.index(env, "groups"), user["group"])
 
     Enum.reduce(group["providers"], [], fn provider, acc ->
-      provider = DB.find_by_id("providers", provider)
+      provider = Amps.DB.find_by_id("providers", provider)
 
       msg = %{
         "data" => Jason.encode!(user),
@@ -283,12 +284,12 @@ defmodule Amps.Onboarding do
   end
 
   def synchronize_local_onboard(msg, user, env) do
-    group = DB.find_by_id(AmpsUtil.index(env, "groups"), user["group"])
+    group = Amps.DB.find_by_id(AmpsUtil.index(env, "groups"), user["group"])
 
     Logger.info("Starting onboarding tasks for user #{user["firstname"]} #{user["lastname"]}")
 
     Enum.each(group["providers"], fn provider ->
-      provider = DB.find_by_id("providers", provider)
+      provider = Amps.DB.find_by_id("providers", provider)
 
       if provider["local"] do
         :rpc.multicall(Amps.Onboarding, :onboard_provider, [provider, msg, user, env])
@@ -301,12 +302,12 @@ defmodule Amps.Onboarding do
   end
 
   def do_local_onboard(msg, user, env) do
-    group = DB.find_by_id(AmpsUtil.index(env, "groups"), user["group"])
+    group = Amps.DB.find_by_id(AmpsUtil.index(env, "groups"), user["group"])
 
     Logger.info("Starting onboarding tasks for user #{user["firstname"]} #{user["lastname"]}")
 
     Enum.each(group["providers"], fn provider ->
-      provider = DB.find_by_id("providers", provider)
+      provider = Amps.DB.find_by_id("providers", provider)
 
       if provider["local"] do
         onboard_provider(provider, msg, user, env)
@@ -319,12 +320,12 @@ defmodule Amps.Onboarding do
   end
 
   def do_onboard(msg, user, env) do
-    group = DB.find_by_id(AmpsUtil.index(env, "groups"), user["group"])
+    group = Amps.DB.find_by_id(AmpsUtil.index(env, "groups"), user["group"])
 
     Logger.info("Starting onboarding tasks for user #{user["firstname"]} #{user["lastname"]}")
 
     Enum.each(group["providers"], fn provider ->
-      provider = DB.find_by_id("providers", provider)
+      provider = Amps.DB.find_by_id("providers", provider)
 
       if provider["local"] do
         res = :rpc.multicall(Amps.Onboarding, :onboard_provider, [provider, msg, user, env])

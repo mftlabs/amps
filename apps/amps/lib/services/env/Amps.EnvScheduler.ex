@@ -1,7 +1,8 @@
-import Crontab.CronExpression
+# Copyright 2022 Agile Data, Inc <code@mftlabs.io>
 
 defmodule Amps.EnvScheduler do
   use Quantum, otp_app: :amps
+  import Crontab.CronExpression
   require Logger
 
   def init(config) do

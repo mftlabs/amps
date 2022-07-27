@@ -1,3 +1,5 @@
+# Copyright 2022 Agile Data, Inc <code@mftlabs.io>
+
 defmodule Amps.Application do
   # See https://hexdocs.pm/elixir/Application.html
   # for more information on OTP Applications

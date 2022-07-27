@@ -1,3 +1,6 @@
+# Copyright 2022 Agile Data, Inc <code@mftlabs.io>
+
+
 from amps import Action
 from xml.dom.minidom import parseString
 import traceback

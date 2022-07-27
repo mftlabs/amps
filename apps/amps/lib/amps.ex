@@ -1,3 +1,5 @@
+# Copyright 2022 Agile Data, Inc <code@mftlabs.io>
+
 defmodule Amps do
   @moduledoc """
   Amps keeps the contexts that define your domain

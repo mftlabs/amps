@@ -1,3 +1,5 @@
+# Copyright 2022 Agile Data, Inc <code@mftlabs.io>
+
 defmodule :"Amps.Gateway<%= if env do%>.<%= env %><% end %>.<%= name %>" do
   import Plug.Conn
   alias Amps.DB

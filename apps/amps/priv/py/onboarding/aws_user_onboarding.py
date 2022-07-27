@@ -1,3 +1,6 @@
+# Copyright 2022 Agile Data, Inc <code@mftlabs.io>
+
+
 from requests.auth import HTTPBasicAuth
 from amps import Action
 import json

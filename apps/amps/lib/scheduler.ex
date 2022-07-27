@@ -1,12 +1,12 @@
-import Crontab.CronExpression
+# Copyright 2022 Agile Data, Inc <code@mftlabs.io>
 
 defmodule Amps.Scheduler do
   use Quantum, otp_app: :amps
-  alias Amps.DB
+  import Crontab.CronExpression
   require Logger
 
   def init(config) do
-    sched = DB.find("jobs")
+    sched = Amps.DB.find("jobs")
 
     jobs =
       Enum.reduce(sched, [], fn job, acc ->
@@ -21,7 +21,7 @@ defmodule Amps.Scheduler do
   end
 
   def load(name) do
-    case DB.find_one("jobs", %{name: name}) do
+    case Amps.DB.find_one("jobs", %{name: name}) do
       nil ->
         Logger.info("Could not load")
 
@@ -75,23 +75,21 @@ defmodule Amps.Scheduler do
         "timer" ->
           pieces = ["0", "0", "0", "*", "*", "*"]
           val = "*/" <> job["value"]
+          case job["unit"] do
+            "Hours" ->
+              pieces
+              |> List.replace_at(2, val)
 
-          pieces =
-            case job["unit"] do
-              "Hours" ->
-                pieces
-                |> List.replace_at(2, val)
+            "Minutes" ->
+              pieces
+              |> List.replace_at(2, "*")
+              |> List.replace_at(1, val)
 
-              "Minutes" ->
-                pieces
-                |> List.replace_at(2, "*")
-                |> List.replace_at(1, val)
-
-              "Seconds" ->
-                pieces
-                |> List.replace_at(2, "*")
-                |> List.replace_at(1, "*")
-                |> List.replace_at(0, val)
+            "Seconds" ->
+              pieces
+              |> List.replace_at(2, "*")
+              |> List.replace_at(1, "*")
+              |> List.replace_at(0, val)
             end
 
         _ ->
