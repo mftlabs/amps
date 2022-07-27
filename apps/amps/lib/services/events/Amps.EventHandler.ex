@@ -20,8 +20,8 @@ defmodule Amps.EventHandler do
   end
 
   def child_spec(opts) do
-    IO.inspect("HANDLER OPTS")
-    IO.inspect(opts)
+    #IO.inspect("HANDLER OPTS")
+    #IO.inspect(opts)
     name = Atom.to_string(opts[:name]) <> "_hdlr"
     # IO.puts("name #{inspect(name)}")
     # Logger.info(opts[:name])
@@ -33,26 +33,26 @@ defmodule Amps.EventHandler do
   end
 
   def init(args) do
-    IO.inspect(args)
+    #IO.inspect(args)
 
     name = Process.info(self())[:registered_name]
     Amps.Handlers.put(name)
 
     parms = args[:parms]
-    IO.inspect(parms)
+    #IO.inspect(parms)
     env = args[:env]
 
     count = parms["subs_count"]
 
     {stream, consumer} = AmpsUtil.get_names(parms, env)
-    IO.inspect(stream)
-    IO.inspect(env)
+    #IO.inspect(stream)
+    #IO.inspect(env)
 
     listening_topic = AmpsUtil.env_topic("amps.consumer.#{consumer}", env)
 
-    IO.inspect(listening_topic)
+    #IO.inspect(listening_topic)
     {:ok, _sid} = Gnat.sub(:gnat, self(), listening_topic)
-    IO.inspect(listening_topic)
+    #IO.inspect(listening_topic)
     ack_wait = parms["ack_wait"] * 1_000_000_000
 
     case Jetstream.API.Consumer.info(:gnat, stream, consumer) do
@@ -60,8 +60,8 @@ defmodule Amps.EventHandler do
         create_consumer(parms, env, %{})
 
       {:ok, config} ->
-        IO.inspect(config.config.max_ack_pending)
-        IO.inspect(count)
+    #    IO.inspect(config.config.max_ack_pending)
+    #    IO.inspect(count)
 
         if config.config.max_ack_pending != count ||
              config.config.ack_wait != ack_wait do

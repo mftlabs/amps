@@ -19,13 +19,13 @@ defmodule Amps.EventWrapper do
           parms
       end
 
-    name = parms[:name]
+    #name = parms[:name]
     GenServer.start_link(__MODULE__, parms)
   end
 
   def init(opts) do
     Process.flag(:trap_exit, true)
-    Logger.info("starting event listener #{opts[:name]} #{inspect(opts)}")
+#    Logger.info("starting event listener #{opts[:name]} #{inspect(opts)}")
 
     Process.register(self(), opts[:name])
 
@@ -35,7 +35,7 @@ defmodule Amps.EventWrapper do
 
   def child_spec(opts) do
     name = opts[:name]
-    IO.puts("name #{inspect(name)}")
+    #IO.puts("name #{inspect(name)}")
 
     %{
       id: name,
@@ -46,24 +46,24 @@ defmodule Amps.EventWrapper do
   # GenServer callbacks
   def handle_info({:initial_connect, parms}, state) do
     opts = parms[:parms]
-    IO.puts("opts #{inspect(opts)}")
-    IO.puts("state #{inspect(state)}")
+    #IO.puts("opts #{inspect(opts)}")
+    #IO.puts("state #{inspect(state)}")
     name = Atom.to_string(state[:name])
     sub = String.to_atom(name <> "_sup")
-    IO.puts("sub: #{inspect(sub)}")
+    #IO.puts("sub: #{inspect(sub)}")
 
     pid = Process.whereis(:gnat)
 
-    IO.puts("pid #{inspect(pid)}")
+    #IO.puts("pid #{inspect(pid)}")
     Process.flag(:trap_exit, true)
 
     {stream, consumer} = AmpsUtil.get_names(opts, state.env)
-    IO.inspect(stream)
-    IO.inspect(state.env)
+    #IO.inspect(stream)
+    #IO.inspect(state.env)
 
     listening_topic = AmpsUtil.env_topic("amps.consumer.#{consumer}", state.env)
 
-    Logger.info("got stream #{stream} #{consumer}")
+    #Logger.info("got stream #{stream} #{consumer}")
     opts = Map.put(opts, "id", name)
 
     actparms =
@@ -107,7 +107,7 @@ defmodule Amps.EventWrapper do
     {:noreply, state}
   end
 
-  def terminate(reason, state) do
+  def terminate(_reason, state) do
     Logger.info("TERMINATING #{Process.info(self())[:registered_name]}")
     Process.exit(state.cpid, :normal)
   end

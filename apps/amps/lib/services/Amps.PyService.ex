@@ -21,11 +21,11 @@ defmodule Amps.PyService do
 
     path = AmpsUtil.get_mod_path(env)
     util = Path.join(AmpsUtil.get_mod_path(), "util")
-    IO.inspect(util)
+    #IO.inspect(util)
 
     tmp = AmpsUtil.get_env(:storage_temp)
     # {:ok, pid} = :python.start([{:python_path, to_charlist(path)}])
-    IO.inspect(parms)
+#    IO.inspect(parms)
     check_script(parms["module"], env)
 
     module = String.to_atom(parms["module"])
@@ -43,7 +43,7 @@ defmodule Amps.PyService do
         ])
 
       result = :pythra.method(pid, action, :__run__, [])
-      IO.inspect(result)
+      #IO.inspect(result)
       :pythra.stop(pid)
       handle_run_result(result, pid)
     rescue
@@ -74,7 +74,7 @@ defmodule Amps.PyService do
       :poolboy.transaction(
         :worker,
         fn pid ->
-          IO.inspect(self())
+          #IO.inspect(self())
           GenServer.call(pid, {:pyrun, msg, parms, env}, 60000)
         end,
         60000
@@ -103,7 +103,7 @@ defmodule Amps.PyService do
     path = AmpsUtil.get_env(:python_path)
 
     with {:ok, pid} <- :python.start([{:python_path, to_charlist(path)}]) do
-      IO.puts("started python worker")
+      #IO.puts("started python worker")
       {:ok, pid}
     end
   end
@@ -124,15 +124,15 @@ defmodule Amps.PyService do
     path = AmpsUtil.get_mod_path(env)
     tmp = AmpsUtil.get_env(:storage_temp)
     # {:ok, pid} = :python.start([{:python_path, to_charlist(path)}])
-    IO.inspect(parms)
+    #IO.inspect(parms)
     module = String.to_atom(parms["module"])
     xparm = %{:msg => msg, :parms => parms, :sysparms => %{"tempdir" => tmp}}
     jparms = Poison.encode!(xparm)
 
     {:ok, pid} = :pythra.start_link([String.to_charlist(path)])
-    IO.inspect(self())
-    IO.inspect("PYTHON PID")
-    IO.inspect(pid)
+    #IO.inspect(self())
+    #IO.inspect("PYTHON PID")
+    #IO.inspect(pid)
     # Process.unlink(pid)
 
     try do
@@ -142,7 +142,7 @@ defmodule Amps.PyService do
         ])
 
       result = :pythra.method(pid, action, :__run__, [])
-      IO.inspect(result)
+      #IO.inspect(result)
       :pythra.stop(pid)
       handle_result(result, pid)
     rescue

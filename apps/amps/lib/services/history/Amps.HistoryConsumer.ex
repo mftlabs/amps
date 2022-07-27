@@ -47,7 +47,7 @@ defmodule Amps.HistoryConsumer do
     listening_topic = AmpsUtil.env_topic("amps.history.#{consumer}", state.env)
 
     # Gnat.sub(pid, self(), listening_topic)
-    Logger.info("got stream #{stream} #{consumer}")
+    #Logger.info("got stream #{stream} #{consumer}")
     opts = Map.put(opts, "id", name)
 
     GenServer.start_link(

@@ -62,7 +62,7 @@ defmodule Amps.EventConsumer do
     # IO.puts("pid #{inspect(pid)}")
 
     {stream, consumer} = AmpsUtil.get_names(opts, state.env)
-    Logger.info("got stream #{stream} #{consumer}")
+    #Logger.info("got stream #{stream} #{consumer}")
 
     create_consumer(opts, state, %{})
 
@@ -218,7 +218,7 @@ defmodule Amps.PullConsumer do
             }
           )
 
-          IO.puts("action parms #{inspect(actparms)}")
+#          IO.puts("action parms #{inspect(actparms)}")
           handler = AmpsUtil.get_env_parm(:actions, String.to_atom(actparms["type"]))
           IO.puts("opts after lookup #{inspect(actparms)}")
 
@@ -277,7 +277,7 @@ defmodule Amps.PullConsumer do
           end
         rescue
           error ->
-            IO.inspect(error)
+           # IO.inspect(error)
             action_id = parms["handler"]
             actparms = Amps.DB.find_by_id(AmpsUtil.index(state.env, "actions"), action_id)
 

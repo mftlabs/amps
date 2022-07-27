@@ -14,14 +14,9 @@ defmodule Amps.Logger do
     config = Application.get_env(:amps, __MODULE__)
 
     level = Keyword.get(config, :level, :debug)
-    IO.inspect(Keyword.get(config, :format))
     format = Logger.Formatter.compile(Keyword.get(config, :format))
-    IO.inspect(format)
-
     state = %__MODULE__{level: level, format: format}
-
     schedule_bulk()
-    # device = Keyword.get(config, :device, :user)
 
     {:ok, state}
   end

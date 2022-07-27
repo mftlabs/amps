@@ -16,7 +16,7 @@ defmodule Amps.SvcSupervisor do
     # {Plug.Cowboy, scheme: :http, plug: MyApp, options: [port: 4040]}
     case DynamicSupervisor.start_child(__MODULE__, spec) do
       {:ok, pid} ->
-        IO.inspect(name)
+        #IO.inspect(name)
         Process.register(pid, name)
 
         AmpsEvents.send_history(

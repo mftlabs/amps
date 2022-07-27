@@ -6,16 +6,16 @@ defmodule Amps.EventPullConsumer do
   require Logger
 
   def start_link(arg) do
-    IO.inspect(arg)
+    #IO.inspect(arg)
 
     Jetstream.PullConsumer.start_link(__MODULE__, arg)
   end
 
   @impl true
   def init(arg) do
-    Logger.info("arg #{inspect(arg)}")
-    Logger.info("stream #{arg.stream}")
-    Logger.info("stream #{arg.consumer}")
+#    Logger.info("arg #{inspect(arg)}")
+#    Logger.info("stream #{arg.stream}")
+#    Logger.info("stream #{arg.consumer}")
 
     {:ok, arg, connection_name: :gnat, stream_name: arg.stream, consumer_name: arg.consumer}
   end

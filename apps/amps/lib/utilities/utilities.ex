@@ -149,7 +149,7 @@ defmodule AmpsUtil do
     elem = String.slice(una, 1..1)
     term = String.slice(una, 5..5)
     rest = String.slice(leader, 9..200)
-    IO.inspect({una, sub, elem, term, rest})
+#    IO.inspect({una, sub, elem, term, rest})
     parse_unb(rest, sub, elem, term)
   end
 

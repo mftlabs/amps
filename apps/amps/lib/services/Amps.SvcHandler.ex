@@ -25,12 +25,12 @@ defmodule Amps.SvcHandler do
   end
 
   def start_monitor(pid) do
-    IO.inspect("Calling Start")
+   # IO.inspect("Calling Start")
     GenServer.call(__MODULE__, {:monitor, pid})
   end
 
   def get_data(body) do
-    IO.inspect(body)
+#    IO.inspect(body)
 
     try do
       Poison.decode!(body)
@@ -143,7 +143,7 @@ defmodule Amps.SvcHandler do
   end
 
   def handle_info({:DOWN, _ref, :process, pid, reason}, state) do
-    IO.inspect(Process.info(pid))
+    #IO.inspect(Process.info(pid))
 
     Logger.info("Process ended: #{reason}")
     {:noreply, state}
@@ -161,7 +161,7 @@ defmodule Amps.SvcHandler do
   end
 
   def handle_call({:monitor, pid}, _from, state) do
-    IO.inspect(Process.info(pid))
+    #IO.inspect(Process.info(pid))
     Logger.info("Monitoring #{inspect(pid)}")
     Process.monitor(pid)
     {:reply, :ok, state}

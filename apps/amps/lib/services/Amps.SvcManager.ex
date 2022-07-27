@@ -50,15 +50,15 @@ defmodule Amps.SvcManager do
     res =
       case service_active?(name) do
         nil ->
-          IO.inspect("not running")
+          #IO.inspect("not running")
           {:error, "Service Not Running"}
 
         pids ->
           service = AmpsDatabase.get_config(name)
-          IO.inspect(service)
+          #IO.inspect(service)
 
           Enum.each(pids, fn pid ->
-            IO.inspect(pid)
+            #IO.inspect(pid)
             DynamicSupervisor.terminate_child(Amps.SvcSupervisor, pid)
           end)
 
@@ -95,13 +95,13 @@ defmodule Amps.SvcManager do
 
   def service_types do
     list = AmpsUtil.get_env(:services)
-    IO.inspect(list)
+    #IO.inspect(list)
     Enum.into(list, %{})
   end
 
   def get_spec(name, args) do
     types = service_types()
-    IO.inspect(args)
+    #IO.inspect(args)
     default = [:subscriber, :sftpd, :pyservice, :sqs, :nats]
 
     type = String.to_atom(args["type"])
@@ -109,7 +109,7 @@ defmodule Amps.SvcManager do
     try do
       cond do
         type == :httpd ->
-          IO.inspect(args)
+#          IO.inspect(args)
 
           protocol_options = [
             idle_timeout: args["idle_timeout"],
@@ -184,7 +184,7 @@ defmodule Amps.SvcManager do
         # }
 
         type == :gateway ->
-          IO.inspect(args)
+#          IO.inspect(args)
 
           protocol_options = [
             idle_timeout: args["idle_timeout"],

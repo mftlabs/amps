@@ -34,7 +34,7 @@ defmodule Amps.ArchiveConsumer do
 
   def child_spec(opts) do
     name = opts[:name]
-    IO.puts("name #{inspect(name)}")
+    #IO.puts("name #{inspect(name)}")
 
     %{
       id: name,
@@ -158,7 +158,7 @@ defmodule Amps.ArchiveConsumer do
 
     IO.puts("pid #{inspect(pid)}")
     {stream, consumer} = AmpsUtil.get_names(opts, state.env)
-    Logger.info("got stream #{stream} #{consumer}")
+    #Logger.info("got stream #{stream} #{consumer}")
     opts = Map.put(opts, "id", name)
     listening_topic = AmpsUtil.env_topic("amps.archive.#{consumer}", state.env)
 

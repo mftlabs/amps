@@ -48,7 +48,7 @@ defmodule Amps.PyProcess.New do
           parms
       end
 
-    IO.puts("starting event listener #{inspect(parms)}")
+    #IO.puts("starting event listener #{inspect(parms)}")
     GenServer.start_link(__MODULE__, parms)
   end
 
@@ -79,9 +79,9 @@ defmodule Amps.PyProcess.New do
         Map.put(msg, "user", "#{parms["name"]} generated")
       end
 
-    IO.inspect(msg)
-    IO.inspect(parms)
-    IO.inspect(env)
+    #IO.inspect(msg)
+    #IO.inspect(parms)
+    #IO.inspect(env)
 
     if parms["send_output"] do
       AmpsEvents.send(
@@ -122,7 +122,7 @@ defmodule Amps.PyProcess do
           parms
       end
 
-    IO.puts("starting event listener #{inspect(parms)}")
+    #IO.puts("starting event listener #{inspect(parms)}")
     name = parms[:name]
     {:ok, pid} = GenServer.start_link(__MODULE__, parms)
     Process.register(pid, name)
@@ -137,13 +137,13 @@ defmodule Amps.PyProcess do
       if parms["receive"] do
         listening_topic = "_CON.#{nuid()}"
         group = String.replace(parms["name"], " ", "_")
-        IO.puts("group #{group}")
+        #IO.puts("group #{group}")
         {stream, consumer} = AmpsUtil.get_names(parms, env)
 
         {:ok, _sid} = Gnat.sub(:gnat, self(), listening_topic, queue_group: group)
 
-        IO.inspect(stream)
-        IO.inspect(consumer)
+        #IO.inspect(stream)
+        #IO.inspect(consumer)
 
         :ok =
           Gnat.pub(
@@ -163,15 +163,15 @@ defmodule Amps.PyProcess do
         {:cd, String.to_charlist(path)}
       ])
 
-    IO.inspect("pyservice")
-    IO.inspect(pid)
+    #IO.inspect("pyservice")
+    #IO.inspect(pid)
 
     svc = String.to_atom(parms["service"])
     {:ok, new_handler} = Amps.PyProcess.New.start_link(parms: parms, env: env)
     {:ok, log_handler} = Amps.PyProcess.Logger.start_link(parms: parms, env: env)
 
-    IO.inspect(new_handler)
-    IO.inspect(log_handler)
+    #IO.inspect(new_handler)
+    #IO.inspect(log_handler)
 
     service =
       :pythra.init(pid, svc, svc, [], [
@@ -210,7 +210,7 @@ defmodule Amps.PyProcess do
   end
 
   def get_data(body) do
-    IO.inspect(body)
+    #IO.inspect(body)
 
     try do
       Poison.decode!(body)
@@ -308,9 +308,9 @@ defmodule Amps.PyProcess do
     parms = state.parms
 
     env = state.env
-    IO.inspect(msg)
-    IO.inspect(parms)
-    IO.inspect(env)
+    #IO.inspect(msg)
+    #IO.inspect(parms)
+    #IO.inspect(env)
 
     {msg, sid} =
       AmpsEvents.start_session(
@@ -360,7 +360,7 @@ defmodule Amps.PyProcess do
   end
 
   def send_message(msg, parms, env) do
-    IO.puts("SENDING MESSAGE")
+    #IO.puts("SENDING MESSAGE")
     msg = Jason.decode!(msg)
     parms = Jason.decode!(parms)
 
@@ -379,15 +379,15 @@ defmodule Amps.PyProcess do
   end
 
   def new_message(msg, parms, env) do
-    IO.inspect("new")
+   # IO.inspect("new")
     msg = Jason.decode!(msg)
 
     parms = Jason.decode!(parms)
 
     env = List.to_string(env)
-    IO.inspect(msg)
-    IO.inspect(parms)
-    IO.inspect(env)
+    #IO.inspect(msg)
+    #IO.inspect(parms)
+    #IO.inspect(env)
 
     {msg, sid} =
       AmpsEvents.start_session(
