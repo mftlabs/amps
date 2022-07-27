@@ -1,6 +1,4 @@
 defmodule AmpsUtil do
-  #alias Amps.DB
-  #alias Amps.VaultDatabase
   require Logger
 
   def gettime() do

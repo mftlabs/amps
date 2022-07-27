@@ -1,7 +1,5 @@
 defmodule Amps.Startup do
   use Task
-  require Vault
-  # import Argon2
   require Logger
 
   def start_link(_arg) do

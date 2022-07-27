@@ -3,7 +3,8 @@ defmodule Amps.Responders do
   Provides the structure of ExampleStore records for a minimal default of Mnesiac.
   """
   use Mnesiac.Store
-  import Record, only: [defrecord: 3]
+  require Record
+#  import Record, only: [defrecord: 3]
 
   @doc """
   Record definition for ExampleStore default record.
@@ -105,7 +106,7 @@ defmodule Amps.Responders do
     with {:atomic, res} <-
            :mnesia.transaction(fn -> :mnesia.read({:responder, id}) end) do
       case res do
-        [{:responder, id, pid, node, pending, responses}] ->
+        [{:responder, _id, _pid, _node, _pending, _responses}] ->
           [rec] = res
           rec
 

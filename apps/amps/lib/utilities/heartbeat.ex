@@ -1,5 +1,4 @@
 defmodule Amps.Heartbeat do
-  # use GenServer
   require Logger
 
   def start_link(opts \\ []) do
@@ -29,7 +28,6 @@ defmodule Amps.Heartbeat do
 
   def handle_info(:heartbeat, state) do
     schedule_heartbeat()
-    # send(state)
     {:noreply, state}
   end
 end

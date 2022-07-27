@@ -3,7 +3,8 @@ defmodule Amps.Defaults do
   Provides the structure of ExampleStore records for a minimal default of Mnesiac.
   """
   use Mnesiac.Store
-  import Record, only: [defrecord: 3]
+  require Record
+  #import Record, only: [defrecord: 3]
 
   @doc """
   Record definition for ExampleStore default record.
@@ -41,7 +42,7 @@ defmodule Amps.Defaults do
     with {:atomic, res} <-
            :mnesia.transaction(fn -> :mnesia.read({:default, key}) end) do
       case res do
-        [{:default, key, val}] ->
+        [{:default, _key, val}] ->
           val
 
         [] ->

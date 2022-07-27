@@ -3,7 +3,8 @@ defmodule Amps.Handlers do
   Provides the structure of ExampleStore records for a minimal default of Mnesiac.
   """
   use Mnesiac.Store
-  import Record, only: [defrecord: 3]
+  require Record
+  #import Record, only: [defrecord: 3]
 
   @doc """
   Record definition for ExampleStore default record.
@@ -128,7 +129,7 @@ defmodule Amps.Handlers do
   end
 
   def stop_process(name, message, msgid) do
-    {:atomic, res} =
+    {:atomic, _res} =
       :mnesia.transaction(fn ->
         case :mnesia.wread({:handler, name}) do
           [] ->
@@ -149,7 +150,6 @@ defmodule Amps.Handlers do
         end
       end)
 
-    res
     :ok
   end
 
@@ -188,7 +188,7 @@ defmodule Amps.Handlers do
   end
 
   def skip(name, msgid) do
-    {:atomic, res} =
+    {:atomic, _res} =
       :mnesia.transaction(fn ->
         case :mnesia.wread({:handler, name}) do
           [] ->
@@ -207,7 +207,6 @@ defmodule Amps.Handlers do
         end
       end)
 
-    res
     :ok
   end
 
@@ -311,7 +310,7 @@ defmodule Amps.Handlers do
       nil ->
         {:atomic, :ok} = :mnesia.transaction(fn -> :mnesia.write({:handler, name, %{}}) end)
 
-      rec ->
+      _rec ->
         {:atomic, :ok}
     end
   end
@@ -320,7 +319,7 @@ defmodule Amps.Handlers do
     with {:atomic, res} <-
            :mnesia.transaction(fn -> :mnesia.read({:handler, name}) end) do
       case res do
-        [{:handler, name, messages}] ->
+        [{:handler, _name, messages}] ->
           messages
 
         [] ->
