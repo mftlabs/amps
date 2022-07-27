@@ -2,16 +2,13 @@
 
 defmodule Amps.EventPullConsumer do
   use Jetstream.PullConsumer
-  use GenServer
+  #use GenServer
   require Logger
 
   def start_link(arg) do
     IO.inspect(arg)
 
-    Jetstream.PullConsumer.start_link(__MODULE__, arg,
-      name: arg[:name],
-      id: arg[:name]
-    )
+    Jetstream.PullConsumer.start_link(__MODULE__, arg)
   end
 
   @impl true
