@@ -64,7 +64,7 @@ backends =
       %{
         path: ~r{^/.well-known/acme-challenge/.*$},
         plug: SiteEncrypt.AcmeChallenge,
-        opts: Amps.Proxy,
+        opts: AmpsWeb.Proxy,
         host: ~r/(.*?)/
       },
       %{

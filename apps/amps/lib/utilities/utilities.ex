@@ -852,11 +852,4 @@ defmodule AmpsUtil do
       }
     )
   end
-
-  def configure_dns(admin_host, user_host, domains) do
-    Application.put_env(:amps, :adminhost, admin_host)
-    Application.put_env(:amps, :userhost, user_host)
-    Application.put_env(:amps, :extra_domains, domains)
-    SiteEncrypt.force_certify(Amps.Proxy)
-  end
 end

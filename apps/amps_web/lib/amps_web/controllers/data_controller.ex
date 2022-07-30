@@ -203,7 +203,7 @@ defmodule AmpsWeb.DataController do
   end
 
   def ssl_certify(conn, _params) do
-    res = SiteEncrypt.force_certify(Amps.Proxy)
+    res = SiteEncrypt.force_certify(AmpsWeb.Proxy)
     IO.inspect(res)
 
     case res do
