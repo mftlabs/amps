@@ -10011,6 +10011,82 @@ Ext.define("Amps.util.Grids", {
                   }),
                 }),
                 amfutil.renderContainer("receive_parms", [
+                  {
+                    xtype: "numberfield",
+                    name: "subs_count",
+                    fieldLabel: "Subscriber Count",
+                    tooltip:
+                      "The Number of concurrent processes of this subscriber to run on each AMPS node.",
+                    allowBlank: false,
+                    minValue: 1,
+                    maxValue: 50,
+                    value: 1,
+                  },
+                  {
+                    xtype: "numberfield",
+                    name: "ack_wait",
+                    fieldLabel: "Acknowledge Wait (seconds)",
+                    tooltip:
+                      "How long the consumer should wait before redelivering a message to this subscriber. (Should be set to longer than the time you expect each message processing action to take.)",
+                    allowBlank: false,
+                    minValue: 30,
+                    value: 30,
+                  },
+                  amfutil.localCombo(
+                    "Retry Mode",
+                    "rmode",
+                    [
+                      { field: "never", label: "Never" },
+                      { field: "limit", label: "Limit" },
+                      { field: "always", label: "Always" },
+                    ],
+                    "field",
+                    "label",
+                    {
+                      listeners: amfutil.renderListeners(function (scope, val) {
+                        var conts = ["limit", "always"];
+
+                        conts.forEach((cont) => {
+                          var cmp = amfutil.getElementByID(cont);
+                          cmp.setDisabled(false);
+                          cmp.setHidden(false);
+                        });
+
+                        conts.forEach((cont) => {
+                          var cmp = amfutil.getElementByID(cont);
+                          cmp.setDisabled(cont != val);
+                          cmp.setHidden(cont != val);
+                        });
+                      }),
+                    }
+                  ),
+
+                  amfutil.renderContainer("limit", [
+                    {
+                      xtype: "numberfield",
+                      fieldLabel: "Retry Limit",
+                      name: "rlimit",
+                      allowBlank: false,
+                      value: 10,
+                    },
+                    {
+                      xtype: "numberfield",
+                      fieldLabel: "Retry Backoff (seconds)",
+                      name: "backoff",
+                      allowBlank: false,
+                      value: 300,
+                    },
+                  ]),
+
+                  amfutil.renderContainer("always", [
+                    {
+                      xtype: "numberfield",
+                      fieldLabel: "Retry Backoff (seconds)",
+                      name: "backoff",
+                      allowBlank: false,
+                      value: 300,
+                    },
+                  ]),
                   amfutil.consumerConfig(
                     function (topichandler) {
                       return [
@@ -10037,21 +10113,32 @@ Ext.define("Amps.util.Grids", {
                   ),
                 ]),
 
-                amfutil.check("Send Output", "send_output", {
-                  itemId: "send_output",
-                  listeners: amfutil.renderListeners(function (scope, val) {
-                    var out = scope.up("form").down("#output_parms");
-                    out.setHidden(!val);
-                    out.setDisabled(!val);
-                  }),
-                }),
-                amfutil.renderContainer("output_parms", [
-                  amfutil.outputTopic(),
-                ]),
+                {
+                  xtype: "arrayfield",
+                  name: "output_map",
+                  fieldLabel: "Output Map",
+                  title: "Output Map",
+                  fieldTitle: "Output",
+                  arrayfields: [
+                    amfutil.text("Name", "name"),
+                    {
+                      xtype: "combo",
+                      name: "output",
+                      fieldLabel: "Output Topic",
+                      store: amfutil.createCollectionStore("topics"),
+                      displayField: "topic",
+                      valueField: "topic",
+                    },
+                    // amfutil.outputTopic(),
+                  ],
+                },
               ],
+
               process: function (form, values) {
                 values.active = true;
                 values.config = amfutil.formatArrayField(values.config);
+                values.output_map = JSON.parse(values.output_map);
+                // values.output_map = amfutil.formatArrayField(values.output_map);
 
                 return values;
               },
@@ -12085,11 +12172,13 @@ Ext.define("Amps.util.Grids", {
           // defaults: {
           //   margin: 10,
           // },
+          layout: "fit",
           items: [
             {
               xtype: "form",
               title: "System Settings",
               flex: 1,
+              layout: "fit",
 
               loadConfig: async function () {
                 var fc = this.down("fieldcontainer");
@@ -12135,6 +12224,7 @@ Ext.define("Amps.util.Grids", {
                           fieldLabel: "Time to Live(Days)",
                           allowBlank: false,
                         },
+                        amfutil.check("Force SSL", "force_ssl"),
                         amfutil.check("Archive Messages", "archive", {
                           listeners: amfutil.renderListeners(function (
                             scope,
@@ -12191,16 +12281,6 @@ Ext.define("Amps.util.Grids", {
                             },
                           }
                         ),
-                        {
-                          xtype: "displayfield",
-                          name: "modifiedby",
-                          fieldLabel: "Last Modified By",
-                        },
-                        {
-                          xtype: "displayfield",
-                          name: "modified",
-                          fieldLabel: "Modified On",
-                        },
                       ],
                     },
                   ],

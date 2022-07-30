@@ -1,4 +1,4 @@
-defmodule Amps.SSL do
+defmodule AmpsWeb.SSL do
   use SiteEncrypt.Adapter
   alias SiteEncrypt.Adapter
 

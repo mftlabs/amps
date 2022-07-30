@@ -223,16 +223,16 @@ config :amps_web, :pow_assent,
   ]
 
 config :amps_portal, :pow,
-  user: AmpsPortal.Users.User,
-  users_context: AmpsPortal.Users,
+  user: Amps.Users.User,
+  users_context: Amps.Users,
   extensions: [PowResetPassword],
   controller_callbacks: Pow.Extension.Phoenix.ControllerCallbacks,
   mailer_backend: AmpsWeb.PowMailer,
   cache_store_backend: Pow.Store.Backend.MnesiaCache
 
 config :amps_portal, :pow_assent,
-  user: AmpsPortal.Users.User,
-  users_context: AmpsPortal.Users,
+  user: Amps.Users.User,
+  users_context: Amps.Users,
   providers: [
     google: [
       client_id: "63199210559-hmhqeu7hmlkv3epournsu7j8sn9likqv.apps.googleusercontent.com",
@@ -291,7 +291,7 @@ config :amps, :services,
   sftpd: Amps.SftpServer,
   httpd: Amps.MailboxApi,
   gateway: Amps.Gateway,
-  pyservice: Amps.PyProcess,
+  pyservice: Amps.PyHandler,
   sqs: Amps.SQS,
   nats: Amps.NATS
 

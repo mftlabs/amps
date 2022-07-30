@@ -1,4 +1,4 @@
-defmodule Amps.Proxy do
+defmodule AmpsWeb.Proxy do
   require Logger
   require SiteEncrypt
   use MasterProxy.Proxy

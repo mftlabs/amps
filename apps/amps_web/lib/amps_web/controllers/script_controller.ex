@@ -110,16 +110,16 @@ defmodule AmpsWeb.ScriptController do
     script = get_path(name, conn.assigns().env)
     File.write(script, body["data"])
     index = Util.index(conn.assigns().env, "scripts")
+
     case DB.find_one(index, %{"name" => name}) do
       nil ->
         DB.insert(index, %{"name" => name, "data" => body["data"]})
+
       script ->
         DB.find_one_and_update(index, %{"_id" => script["_id"]}, %{
           "data" => body["data"]
         })
     end
-
-
 
     json(conn, :ok)
   end
@@ -219,7 +219,7 @@ defmodule AmpsWeb.ScriptController do
       Path.wildcard(get_service_path("*", conn.assigns().env))
       |> Enum.filter(fn script ->
         bn = Path.basename(script)
-        File.dir?(script) && !String.starts_with?(bn, "__") && bn != "env"
+        File.dir?(script) && !String.starts_with?(bn, "__") && bn != "env" && bn != "util"
       end)
 
     rows =

@@ -468,7 +468,7 @@ defmodule AmpsUtil do
       byte_size(msg["data"])
     else
       if File.exists?(msg["fpath"]) do
-        File.state!(msg["fpath"]).size
+        File.stat!(msg["fpath"]).size
       else
         Amps.ArchiveConsumer.size(msg, env)
       end

@@ -225,9 +225,7 @@ Ext.define("Amps.controller.PageController", {
         console.log(grid);
 
         console.log(parent);
-        debugger;
         parent.insert(grid);
-        debugger;
 
         console.log("grid inserted");
 

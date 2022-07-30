@@ -28,6 +28,7 @@ Ext.define("Amps.Application", {
     var route = Ext.util.History.getToken();
     console.log(route);
     amfutil = Amps.util.Utilities;
+
     amfuploads = Amps.window.Uploads;
 
     // window.addEventListener("beforeunload", function (e) {
@@ -73,6 +74,19 @@ Ext.define("Amps.Application", {
           init: initialized,
         });
       } else {
+        Ext.getBody().mask();
+
+        var collections = ["actions", "services", "providers"];
+
+        for (const col of collections) {
+          var extra = await amfutil.getPlugins(col);
+
+          console.log(extra);
+          amfutil.plugins[col] = extra;
+        }
+
+        Ext.getBody().unmask();
+
         ampsgrids = Amps.util.Grids;
         var routes = Object.keys(ampsgrids.grids).concat(
           Object.keys(ampsgrids.pages)

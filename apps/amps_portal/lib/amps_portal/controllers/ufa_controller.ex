@@ -528,7 +528,7 @@ defmodule AmpsPortal.UFAController do
             user ->
               if user["username"] == username do
                 userstruct =
-                  AmpsPortal.Users.get_by(%{"username" => user["username"]},
+                  Amps.Users.get_by(%{"username" => user["username"]},
                     env: conn.assigns().env
                   )
 

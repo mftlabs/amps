@@ -39,7 +39,7 @@ defmodule AmpsPortal.SessionController do
       Pow.Plug.fetch_config(conn)
       |> Keyword.put(:env, conn.assigns().env)
 
-    AmpsPortal.Users.authenticate(params, config)
+    Amps.Users.authenticate(params, config)
     |> case do
       nil -> {:error, conn}
       user -> {:ok, Pow.Plug.create(conn, user, config)}

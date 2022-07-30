@@ -478,7 +478,7 @@ defmodule AmpsWeb.Util do
     # AmpsEvents.send()
   end
 
-  def before_update(collection, id, body, env, old) do
+  def before_update(collection, _id, body, env, old) do
     case base_index(env, collection) do
       "actions" ->
         case old["type"] do
@@ -623,7 +623,7 @@ defmodule AmpsWeb.Util do
     end
   end
 
-  def before_field_create(collection, id, field, body, env) do
+  def before_field_create(collection, _id, field, body, env) do
     case collection do
       "users" ->
         case field do
@@ -758,11 +758,8 @@ defmodule AmpsWeb.Util do
         }
       end
 
-    policy = Map.merge(policy, opts)
+    opts = Map.merge(policy, opts)
 
-    listening_topic = AmpsUtil.env_topic("amps.consumer.#{consumer}", env)
-
-    group = String.replace(body["name"], " ", "_")
     ack_wait = body["ack_wait"] || 30
 
     AmpsUtil.create_consumer(
@@ -942,5 +939,10 @@ defmodule AmpsWeb.Util do
 
       AmpsEvents.end_session(sid, env)
     end)
+  end
+
+  def force_ssl(val) do
+    result = DB.find_one_and_update("config", %{"name" => "SYSTEM"}, %{"force_ssl" => val})
+    Amps.SvcManager.load_system_parms()
   end
 end

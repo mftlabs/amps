@@ -109,7 +109,7 @@ defmodule AmpsPortal.UserController do
     token = UUID.generate()
     IO.inspect(config)
 
-    AmpsPortal.Users.get_by(params, config)
+    Amps.Users.get_by(params, config)
     |> case do
       nil ->
         {:error, nil, conn}

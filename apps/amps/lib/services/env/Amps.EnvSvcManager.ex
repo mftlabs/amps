@@ -284,7 +284,7 @@ defmodule Amps.EnvSvcManager do
         count = opts["subs_count"] || 1
 
         try do
-          if parms["type"] == "subscriber" do
+          if parms["type"] == "subscriber" || parms["type"] == "pyservice" do
             name = String.to_atom(env <> "-" <> svcname)
             start_child(name, get_spec(name, opts, env), parms, env)
           else
@@ -378,7 +378,7 @@ defmodule Amps.EnvSvcManager do
         count = opts["subs_count"] || 1
         # children = Supervisor.which_children(Amps.SvcSupervisor)
 
-        if parms["type"] == "subscriber" do
+        if parms["type"] == "subscriber" || parms["type"] == "pyservice" do
           name = String.to_atom(env <> "-" <> svcname)
 
           case Process.whereis(name) do

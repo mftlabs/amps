@@ -1,14 +1,14 @@
-defmodule AmpsPortal.UserIdentities do
+defmodule Amps.UserIdentities do
   use PowAssent.Ecto.UserIdentities.Context,
-    users_context: AmpsPortal.Users,
-    user: AmpsPortal.Users.User
+    users_context: Amps.Users,
+    user: Amps.Users.User
 
   def all(user) do
     pow_assent_all(user)
   end
 end
 
-defmodule AmpsPortal.Users do
+defmodule Amps.Users do
   import Pow.Context
   require Logger
 
@@ -36,10 +36,10 @@ defmodule AmpsPortal.Users do
       _ ->
         case authmethod() do
           "vault" ->
-            AmpsPortal.Users.Vault.authenticate(body)
+            Amps.Users.Vault.authenticate(body)
 
           _ ->
-            AmpsPortal.Users.DB.authenticate(body, config)
+            Amps.Users.DB.authenticate(body, config)
         end
     end
 
@@ -49,10 +49,10 @@ defmodule AmpsPortal.Users do
   def create(body) do
     case authmethod() do
       "vault" ->
-        AmpsPortal.Users.Vault.create(body)
+        Amps.Users.Vault.create(body)
 
       _ ->
-        AmpsPortal.Users.DB.create(body)
+        Amps.Users.DB.create(body)
     end
   end
 
@@ -90,7 +90,7 @@ defmodule AmpsPortal.Users do
       Map.put(user, "id", user["_id"])
       |> Map.new(fn {k, v} -> {String.to_atom(k), v} end)
 
-    struct(AmpsPortal.Users.User, user)
+    struct(Amps.Users.User, user)
   end
 
   def google_upsert(params) do
@@ -114,13 +114,13 @@ defmodule AmpsPortal.Users do
       id = Amps.DB.insert("users", user)
 
       user = Map.put(user, :id, id)
-      struct(AmpsPortal.Users.User, user)
+      struct(Amps.Users.User, user)
     end
   end
 end
 
-defmodule AmpsPortal.Users.Vault do
-  alias AmpsPortal.Users, as: Users
+defmodule Amps.Users.Vault do
+  alias Amps.Users, as: Users
   import Pow.Context
   require Logger
 
@@ -186,7 +186,7 @@ defmodule AmpsPortal.Users.Vault do
     id = Amps.DB.insert("users", user)
 
     user = Map.put(user, :id, id)
-    userstruct = struct(AmpsPortal.Users.User, user)
+    userstruct = struct(Amps.Users.User, user)
     {:ok, userstruct}
   end
 
@@ -201,8 +201,8 @@ defmodule AmpsPortal.Users.Vault do
   end
 end
 
-defmodule AmpsPortal.Users.DB do
-  alias AmpsPortal.Users, as: Users
+defmodule Amps.Users.DB do
+  alias Amps.Users, as: Users
   import Pow.Context
   require Logger
   import Argon2
@@ -245,7 +245,7 @@ defmodule AmpsPortal.Users.DB do
 
     IO.inspect(user)
 
-    user = struct(AmpsPortal.Users.User, user)
+    user = struct(Amps.Users.User, user)
     IO.inspect(user)
 
     {:ok, user}
@@ -262,7 +262,7 @@ defmodule AmpsPortal.Users.DB do
   end
 end
 
-defmodule AmpsPortal.Users.User do
+defmodule Amps.Users.User do
   @derive Jason.Encoder
   defstruct firstname: nil,
             phone: nil,

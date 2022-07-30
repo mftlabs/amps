@@ -82,6 +82,7 @@ defmodule Amps.Responders do
 
           [{:responder, id, pid, node, pending, responses}] ->
             responses = responses ++ [response]
+
             pending = List.delete(pending, ctxid)
 
             :mnesia.write({:responder, id, pid, node, pending, responses})
