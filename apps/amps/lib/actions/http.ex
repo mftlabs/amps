@@ -1,7 +1,7 @@
 defmodule Amps.Actions.Http do
-  import Logger
+  require Logger
 
-  def run(msg, parms, {state, env}) do
+  def run(msg, parms, {_state, env}) do
     Logger.info("input #{inspect(msg)}")
     req(msg, parms, env)
     # AmpsEvents.send(newmsg, parms, state)

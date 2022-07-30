@@ -1,7 +1,6 @@
 defmodule Amps.EnvManager do
   use GenServer
   require Logger
-  alias Amps.DB
 
   def start_link(_args) do
     Logger.info("Starting Environment Supervisor")
@@ -28,6 +27,11 @@ defmodule Amps.EnvManager do
 
   def start_env(name) do
     GenServer.call(__MODULE__, {:start_env, name})
+  end
+
+  def stop_env(name) do
+    # need to implement
+    GenServer.call(__MODULE__, {:stop_env, name})
   end
 
   # def stop_service(svcname) do
@@ -78,10 +82,10 @@ defmodule Amps.EnvManager do
     res =
       case env_active?(name) do
         nil ->
-          res = load_env(name)
-          res
+          load_env(name)
+          #res
 
-          DB.find_one_and_update("environments", %{"name" => name}, %{
+          Amps.DB.find_one_and_update("environments", %{"name" => name}, %{
             "active" => true
           })
 
@@ -90,6 +94,13 @@ defmodule Amps.EnvManager do
       end
 
     {:reply, res, state}
+  end
+
+
+  def handle_call({:stop_env, _name}, _from, state) do
+    # implement the stop
+    {:reply, true, state}
+
   end
 
   def service_types do
@@ -126,7 +137,7 @@ defmodule Amps.EnvManager do
                 {cert, {keytype, key}}
               rescue
                 e ->
-                  raise "Error parsing key and/or certificate"
+                  raise "Error parsing key and/or certificate #{inspect(e)}"
               end
 
             {Plug.Cowboy,
@@ -151,34 +162,34 @@ defmodule Amps.EnvManager do
                protocol_options: protocol_options
              ]}
           end
-
-        :kafka ->
-          provider = DB.find_one("providers", %{"_id" => args["provider"]})
-          auth_opts = AmpsUtil.get_kafka_auth(args, provider)
-
-          spec = %{
-            id: name,
-            start:
-              {KafkaEx.ConsumerGroup, :start_link,
-               [
-                 types[:kafka],
-                 args["name"],
-                 args["topics"],
-                 [
-                   uris:
-                     Enum.map(
-                       provider["brokers"],
-                       fn %{"host" => host, "port" => port} ->
-                         {host, port}
-                       end
-                     ),
-                   extra_consumer_args: args
-                 ] ++
-                   auth_opts
-               ]}
-          }
-
-          spec
+        end
+#        :kafka ->
+#          provider = Amps.DB.find_one("providers", %{"_id" => args["provider"]})
+#          auth_opts = AmpsUtil.get_kafka_auth(args, provider)
+#
+#          spec = %{
+#            id: name,
+#            start:
+#              {KafkaEx.ConsumerGroup, :start_link,
+#               [
+#                 types[:kafka],
+#                 args["name"],
+#                 args["topics"],
+#                 [
+#                   uris:
+#                     Enum.map(
+#                       provider["brokers"],
+#                       fn %{"host" => host, "port" => port} ->
+#                         {host, port}
+#                       end
+#                     ),
+#                   extra_consumer_args: args
+#                 ] ++
+#                   auth_opts
+#               ]}
+#          }
+#
+#          spec
 
         # init_opts = [
         #   group: args["name"],
@@ -206,9 +217,9 @@ defmodule Amps.EnvManager do
         #   group_consumer: init_opts
         # }
 
-        type ->
-          {types[type], name: name, parms: args}
-      end
+#        type ->
+#          {types[type], name: name, parms: args}
+#      end
     rescue
       e ->
         Logger.error(Exception.format(:error, e, __STACKTRACE__))
@@ -261,8 +272,7 @@ defmodule Amps.EnvManager do
           {:ok, "Started #{name}"}
         rescue
           e ->
-            error = "#{inspect(e)}"
-            {:error, e}
+            {:error, "cannot create supervisor #{inspect(e)}"}
         end
     end
   end
@@ -286,14 +296,14 @@ defmodule Amps.EnvManager do
 
   def create_stream(name, subjects) do
     case Jetstream.API.Stream.info(:gnat, name) do
-      {:ok, res} ->
+      {:ok, _res} ->
         Logger.info(name <> " Stream Exists")
 
       # IO.inspect(res)
 
-      {:error, error} ->
+      {:error, _error} ->
         # IO.inspect(error)
-        Logger.info("Creating Stream " <> name)
+        Logger.info("Error Creating Stream " <> name)
         subjects = subjects <> ".>"
 
         case Jetstream.API.Stream.create(:gnat, %Jetstream.API.Stream{
@@ -301,14 +311,15 @@ defmodule Amps.EnvManager do
                storage: :file,
                subjects: [subjects]
              }) do
-          {:ok, res} ->
+          {:ok, _res} ->
             Logger.info("Created Stream " <> name)
 
           # IO.inspect(res)
 
           {:error, error} ->
-            Logger.info("Couldn't Create Stream " <> name)
-            Logger.error(error)
+            reason = "error creating stream [#{name}] error [#{inspect(error)}]"
+            Logger.error(reason)
+            Logger.error(reason)
 
             # IO.inspect(error)
         end
@@ -321,7 +332,7 @@ defmodule Amps.EnvManager do
         Logger.info("Environment not found #{name}")
         nil
 
-      parms ->
+      _parms ->
         Process.whereis(String.to_atom("env-" <> name))
     end
   end

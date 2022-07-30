@@ -2,9 +2,9 @@ defmodule Amps.Actions.SftpPut do
   require Logger
 
   @doc """
-  
+
   sftp client action parms may contain the following...
-  
+
   connect_timeout - opt
   host - required
   password - opt or key_name
@@ -12,10 +12,10 @@ defmodule Amps.Actions.SftpPut do
   operation_timeout - opt
   port - required
   user - required
-  
+
   """
 
-  def run(msg, parms, {state, env}) do
+  def run(msg, parms, {_state, env}) do
     Logger.info("SFTP action called")
 
     config = get_config(parms)
@@ -24,17 +24,15 @@ defmodule Amps.Actions.SftpPut do
     case SFTPClient.connect(config) do
       {:ok, conn} ->
         AmpsEvents.session_debug(__MODULE__, session, %{text: "sftp connected/logged in"})
-
-        case deliver_sftp([msg], parms, conn, env) do
-          :ok ->
-            Logger.info("SFTP session ended successfully")
-            AmpsEvents.session_debug(__MODULE__, session, %{text: "session ended normally"})
-            SFTPClient.disconnect(conn)
-
+        try do
+          deliver_sftp([msg], parms, conn, env)
+          Logger.info("SFTP session ended successfully")
+          AmpsEvents.session_debug(__MODULE__, session, %{text: "session ended normally"})
+          SFTPClient.disconnect(conn)
+        catch
           error ->
             SFTPClient.disconnect(conn)
             AmpsUtil.retry_delay(parms)
-
             AmpsEvents.session_warning(__MODULE__, session, %{
               text: "sftp failed #{inspect(error)}"
             })
@@ -69,7 +67,7 @@ defmodule Amps.Actions.SftpPut do
     end
   end
 
-  defp deliver_sftp([], _parms, _conn, env) do
+  defp deliver_sftp([], _parms, _conn, _env) do
     Logger.info("sftp done")
     :ok
   end
@@ -78,7 +76,7 @@ defmodule Amps.Actions.SftpPut do
     Logger.info("sending sftp message #{inspect(msg)}")
     fspec = parms["format"] || "{fname}"
 
-    {is, _os, _val} = AmpsUtil.get_stream(msg)
+    {is, _os, _val} = AmpsUtil.get_stream(msg, env)
     fname = AmpsUtil.format(fspec, msg)
     fpath = Path.join(parms["folder"], fname)
     Logger.info("sending file to #{fpath}")

@@ -1,8 +1,5 @@
 defmodule Amps.Actions.AWS do
   require Logger
-  alias Amps.DB
-  alias ExAws.S3
-
   @doc """
 
   sftp client action parms may contain the following...
@@ -16,8 +13,7 @@ defmodule Amps.Actions.AWS do
   user - required
 
   """
-
-  def run(msg, parms, {state, env}) do
+  def run(msg, parms, {_state, env}) do
     Logger.info("AWS Action Called")
 
     apply(__MODULE__, String.to_atom(parms["action"]), [msg, parms, env])
@@ -71,7 +67,7 @@ defmodule Amps.Actions.AWS do
       {:send, [Map.merge(msg, meta)]}
     rescue
       e ->
-        raise "Invalid Message Data"
+        raise "Invalid Message Data #{inspect(e)}"
     end
   end
 end

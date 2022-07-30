@@ -320,7 +320,8 @@ defmodule :"Amps.Gateway<%= if env do%>.<%= env %><% end %>.<%= name %>" do
   end
 
   def handle_error(conn, e, msg) do
-    Logger.error(e)
+  # if e is an exception, it is a struct, not a strng or iodata
+    Logger.error(inspect(e))
 
     AmpsEvents.send_history(
       AmpsUtil.env_topic("amps.events.action", conn.private.env),

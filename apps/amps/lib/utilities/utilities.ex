@@ -1,6 +1,6 @@
 defmodule AmpsUtil do
-  alias Amps.DB
-  alias Amps.VaultDatabase
+  # alias Amps.DB
+  # alias Amps.VaultDatabase
   require Logger
 
   def gettime() do
@@ -468,7 +468,13 @@ defmodule AmpsUtil do
       byte_size(msg["data"])
     else
       if File.exists?(msg["fpath"]) do
-        File.stat!(msg["fpath"]).size
+        case File.stat(msg["fpath"]) do
+          {:ok, st} ->
+            st.size
+
+          {:error, _reason} ->
+            Amps.ArchiveConsumer.size(msg, env)
+        end
       else
         Amps.ArchiveConsumer.size(msg, env)
       end
@@ -587,19 +593,20 @@ defmodule AmpsUtil do
   end
 
   def get_key(id) do
-    with key <- DB.find_by_id("keys", id) do
+    with key <- Amps.DB.find_by_id("keys", id) do
       key["data"]
     end
   end
 
-  def get_key(id, env) do
-    IO.inspect("ID")
-    IO.inspect(id)
-    res = DB.find_by_id(AmpsUtil.index(env, "keys"), id)["data"]
-    IO.puts("Key")
-    IO.inspect(res)
-    res
-  end
+  # utility class should not hide resource/behavior
+  #  def get_key(id, env) do
+  #    IO.inspect("ID")
+  #    IO.inspect(id)
+  #    res = DB.find_by_id(AmpsUtil.index(env, "keys"), id)["data"]
+  #    IO.puts("Key")
+  #    IO.inspect(res)
+  #    res
+  #  end
 
   def match(file, parms) do
     if parms["regex"] do
@@ -680,8 +687,9 @@ defmodule AmpsUtil do
       end
     end)
 
+    # TODO, utility should not hide resource/behavior
     Amps.DB.delete_index("#{env}-*")
-    Amps.VaultDatabase.delete_env(env)
+    # Amps.VaultDatabase.delete_env(env)
 
     File.rm_rf(Path.join(Amps.Defaults.get("python_path"), env))
 
@@ -712,10 +720,12 @@ defmodule AmpsUtil do
   end
 
   def deliver(email) do
-    import Swoosh.Email
+    # delivery of email should be an action and not a utility.  this needs to be fixed
+    # utilty should not hide a resource/behavior
+    #  import Swoosh.Email
 
     if Amps.Defaults.get("email") do
-      provider = DB.find_by_id("providers", Amps.Defaults.get("eprovider"))
+      provider = Amps.DB.find_by_id("providers", Amps.Defaults.get("eprovider"))
       type = provider["etype"]
 
       config =
