@@ -321,53 +321,112 @@ defmodule Amps.ArchivePullConsumer do
       parms = state[:parms]
       name = parms["name"]
 
-      try do
-        archive = Amps.DB.find_one("providers", %{"_id" => Amps.Defaults.get("aprovider")})
+      {msg, sid} =
+        AmpsEvents.start_session(
+          msg,
+          %{
+            "service" => parms["name"]
+          },
+          state.env
+        )
 
-        case archive["atype"] do
-          "s3" ->
-            s3_archive(msg, archive, state.env)
+      AmpsEvents.send_history(
+        AmpsUtil.env_topic("amps.events.action", state.env),
+        "message_events",
+        msg,
+        %{
+          "status" => "archiving",
+          "topic" => parms["topic"],
+          "action" => "Archive"
+        }
+      )
 
-          _ ->
-            nil
-        end
+      status =
+        try do
+          archive = Amps.DB.find_one("providers", %{"_id" => Amps.Defaults.get("aprovider")})
 
-        # Logger.info("Archived Message #{msg["msgid"]}")
+          case archive["atype"] do
+            "s3" ->
+              s3_archive(msg, archive, state.env)
 
-        Jetstream.ack(message)
-        Amps.ArchiveHandler.reset_failure(state.handler)
-      rescue
-        e in NackError ->
-          e
+            _ ->
+              nil
+          end
 
-          failures = Amps.ArchiveHandler.add_failure(state.handler)
+          # Logger.info("Archived Message #{msg["msgid"]}")
 
-          Logger.error(
-            "Archive Failed for message #{msg["msgid"]}\nS3 Issue #{e.message} - Will Retry.\n" <>
-              Exception.format(:error, e, __STACKTRACE__)
-          )
-
-          backoff =
-            if failures > 5 do
-              300_000
-            else
-              failures * 60000
-            end
-
-          Process.sleep(backoff)
-          Jetstream.nack(message)
-
-        e ->
-          Logger.error(
-            "Archive Failed: Error parsing message #{msg["msgid"]}, skipping message.\n" <>
-              Exception.format(:error, e, __STACKTRACE__)
+          AmpsEvents.send_history(
+            AmpsUtil.env_topic("amps.events.action", state.env),
+            "message_events",
+            msg,
+            %{
+              "status" => "archived",
+              "topic" => parms["topic"],
+              "action" => "Archive"
+            }
           )
 
           Jetstream.ack(message)
-      end
+          Amps.ArchiveHandler.reset_failure(state.handler)
+          "archived"
+        rescue
+          e in NackError ->
+            e
+
+            failures = Amps.ArchiveHandler.add_failure(state.handler)
+
+            Logger.error(
+              "Archive Failed for message #{msg["msgid"]}\nS3 Issue #{e.message} - Will Retry.\n" <>
+                Exception.format(:error, e, __STACKTRACE__)
+            )
+
+            backoff =
+              if failures > 5 do
+                300_000
+              else
+                failures * 60000
+              end
+
+            AmpsEvents.send_history(
+              AmpsUtil.env_topic("amps.events.action", state.env),
+              "message_events",
+              msg,
+              %{
+                "status" => "archiving failed - retrying",
+                "topic" => parms["topic"],
+                "action" => "Archive"
+              }
+            )
+
+            Process.sleep(backoff)
+            Jetstream.nack(message)
+            "archiving failed - retrying"
+
+          e ->
+            Logger.error(
+              "Archive Failed: Error parsing message #{msg["msgid"]}, skipping message.\n" <>
+                Exception.format(:error, e, __STACKTRACE__)
+            )
+
+            AmpsEvents.send_history(
+              AmpsUtil.env_topic("amps.events.action", state.env),
+              "message_events",
+              msg,
+              %{
+                "status" => "archiving failed - skipping",
+                "topic" => parms["topic"],
+                "action" => "Archive"
+              }
+            )
+
+            Jetstream.ack(message)
+            "archiving failed - skipping"
+        end
+
+      AmpsEvents.end_session(sid, state.env, status)
     rescue
       e in NackError ->
-        e
+        IO.inspect(e)
 
         failures = Amps.ArchiveHandler.add_failure(state.handler)
 
@@ -387,6 +446,8 @@ defmodule Amps.ArchivePullConsumer do
         Jetstream.nack(message)
 
       e ->
+        IO.inspect(e)
+
         Logger.error(
           "Archive Failed: Invalid Message, skipping message.\n" <>
             Exception.format(:error, e, __STACKTRACE__)
