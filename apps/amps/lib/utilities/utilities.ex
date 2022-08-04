@@ -483,7 +483,7 @@ defmodule AmpsUtil do
 
   def get_local_file(msg, env) do
     msg = Jason.decode!(msg)
-    local_file(msg, List.to_string(env))
+    local_file(msg, env)
   end
 
   def get_output_msg(msg, {ostream, tfile}, parms \\ %{}) do
