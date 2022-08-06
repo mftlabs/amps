@@ -8992,98 +8992,179 @@ Ext.define("Amps.util.Grids", {
                   },
                 };
               } else if (val.type == "svcs") {
-                combo = amfutil.localCombo(
-                  "Services",
-                  null,
-                  null,
-                  "type",
-                  "name",
-                  {
-                    listeners: {
-                      beforerender: function (cmp) {
-                        cmp.setStore(
-                          amfutil.createCollectionStore("services", {
-                            communication: true,
-                          })
-                        );
-                      },
-                      change: function (cmp, val) {
-                        var service = cmp.getSelectedRecord().data;
-
-                        this.up("fieldcontainer").remove(
-                          amfutil.getElementByID("serviceparms")
-                        );
-                        this.up("fieldcontainer").insert({
-                          xtype: "fieldcontainer",
-                          itemId: "serviceparms",
-
-                          items: [
-                            {
-                              xtype: "checkbox",
-                              isFormField: false,
-                              inputValue: true,
-                              fieldLabel: "Wildcard",
-                              uncheckedValue: false,
-                              listeners: {
-                                change: function (scope, val) {
-                                  var c = scope
-                                    .up("fieldcontainer")
-                                    .down("combobox");
-                                  if (val) {
-                                    c.setValue("");
-                                    c.setDisabled(true);
-                                    scope
-                                      .up("form")
-                                      .getForm()
-                                      .findField("topic")
-                                      .updateTopic("*", 3);
-                                  } else {
-                                    c.setDisabled(false);
-                                    scope
-                                      .up("form")
-                                      .getForm()
-                                      .findField("topic")
-                                      .updateTopic("", 3);
-                                  }
-                                },
-                              },
-                            },
-                            Ext.apply(
-                              ampsgrids.grids
-                                .services()
-                                .types[val].combo(service),
-                              {
-                                fieldStyle: null,
-                                labelStyle: null,
-                                listeners: {
-                                  change: function (scope, v) {
-                                    scope
-                                      .up("form")
-                                      .getForm()
-                                      .findField("topic")
-                                      .updateTopic(v, 3);
-                                  },
-                                },
-                              }
-                            ),
-                          ],
-                        });
-                        var name = service.name;
-                        var services = ampsgrids.grids.services();
-
-                        if (services.types[val].format) {
-                          name = services.types[val].format(service.name);
-                        }
-                        scope
+                combo = {
+                  xtype: "container",
+                  items: [
+                    amfutil.check("UFA", "ufa", {
+                      listeners: amfutil.renderListeners(function (scope, val) {
+                        var topic = scope
                           .up("form")
                           .getForm()
-                          .findField("topic")
-                          .updateTopic(name, 2);
+                          .findField("topic");
+                        var ucont = amfutil.getElementByID("users");
+                        var scont = amfutil.getElementByID("services");
+
+                        ucont.setDisabled(!val);
+                        ucont.setHidden(!val);
+
+                        scont.setDisabled(val);
+                        scont.setHidden(val);
+                        if (val) {
+                          topic.updateTopic("ufa", 2);
+                          var c = scope.up("container").down("combobox");
+                          topic.updateTopic("", 3);
+                        } else {
+                          topic.updateTopic("", 2);
+                          topic.updateTopic("", 3);
+                        }
+                      }),
+                    }),
+                    amfutil.renderContainer("users", [
+                      {
+                        xtype: "checkbox",
+                        isFormField: false,
+                        inputValue: true,
+                        fieldLabel: "Wildcard",
+                        uncheckedValue: false,
+                        listeners: {
+                          change: function (scope, val) {
+                            var c = scope.up("fieldcontainer").down("combobox");
+                            if (val) {
+                              c.setValue("");
+                              c.setDisabled(true);
+                              scope
+                                .up("form")
+                                .getForm()
+                                .findField("topic")
+                                .updateTopic("*", 3);
+                            } else {
+                              c.setDisabled(false);
+                              scope
+                                .up("form")
+                                .getForm()
+                                .findField("topic")
+                                .updateTopic("", 3);
+                            }
+                          },
+                        },
                       },
-                    },
-                    isFormField: false,
-                  }
-                );
+                      amfutil.localCombo(
+                        "Users",
+                        null,
+                        amfutil.createCollectionStore("users"),
+                        "username",
+                        "username",
+                        {
+                          listeners: {
+                            change: function (cmp, val) {
+                              scope
+                                .up("form")
+                                .getForm()
+                                .findField("topic")
+                                .updateTopic(val, 3);
+                            },
+                          },
+                          isFormField: false,
+                        }
+                      ),
+                    ]),
+
+                    amfutil.renderContainer("services", [
+                      amfutil.localCombo(
+                        "Services",
+                        null,
+                        null,
+                        "type",
+                        "name",
+                        {
+                          listeners: {
+                            beforerender: function (cmp) {
+                              cmp.setStore(
+                                amfutil.createCollectionStore("services", {
+                                  communication: true,
+                                })
+                              );
+                            },
+                            change: function (cmp, val) {
+                              var service = cmp.getSelectedRecord().data;
+
+                              this.up("fieldcontainer").remove(
+                                amfutil.getElementByID("serviceparms")
+                              );
+                              this.up("fieldcontainer").insert({
+                                xtype: "fieldcontainer",
+                                itemId: "serviceparms",
+
+                                items: [
+                                  {
+                                    xtype: "checkbox",
+                                    isFormField: false,
+                                    inputValue: true,
+                                    fieldLabel: "Wildcard",
+                                    uncheckedValue: false,
+                                    listeners: {
+                                      change: function (scope, val) {
+                                        var c = scope
+                                          .up("fieldcontainer")
+                                          .down("combobox");
+                                        if (val) {
+                                          c.setValue("");
+                                          c.setDisabled(true);
+                                          scope
+                                            .up("form")
+                                            .getForm()
+                                            .findField("topic")
+                                            .updateTopic("*", 3);
+                                        } else {
+                                          c.setDisabled(false);
+                                          scope
+                                            .up("form")
+                                            .getForm()
+                                            .findField("topic")
+                                            .updateTopic("", 3);
+                                        }
+                                      },
+                                    },
+                                  },
+                                  Ext.apply(
+                                    ampsgrids.grids
+                                      .services()
+                                      .types[val].combo(service),
+                                    {
+                                      fieldStyle: null,
+                                      labelStyle: null,
+                                      listeners: {
+                                        change: function (scope, v) {
+                                          scope
+                                            .up("form")
+                                            .getForm()
+                                            .findField("topic")
+                                            .updateTopic(v, 3);
+                                        },
+                                      },
+                                    }
+                                  ),
+                                ],
+                              });
+                              var name = service.name;
+                              var services = ampsgrids.grids.services();
+
+                              if (services.types[val].format) {
+                                name = services.types[val].format(service.name);
+                              }
+                              scope
+                                .up("form")
+                                .getForm()
+                                .findField("topic")
+                                .updateTopic(name, 2);
+                            },
+                          },
+                          isFormField: false,
+                        }
+                      ),
+                    ]),
+                  ],
+                };
               } else if (val.type == "mailbox") {
                 combo = amfutil.combo(
                   "Users",
