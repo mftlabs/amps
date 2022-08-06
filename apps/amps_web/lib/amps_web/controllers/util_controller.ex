@@ -13,8 +13,8 @@ defmodule AmpsWeb.UtilController do
 
   def verify(conn, %{"username" => username}) do
     user = DB.find_one(Util.index(conn.assigns().env, "users"), %{"username" => username})
-    auths = Amps.Onboarding.verify(user)
-    json(conn, auths)
+    # auths = Amps.Onboarding.verify(user)
+    json(conn, :ok)
   end
 
   def glob_match(conn, _params) do
@@ -78,7 +78,7 @@ defmodule AmpsWeb.UtilController do
 
         service ->
           if id do
-            if DB.id_to_string(service["_id"]) == id do
+            if service["_id"] == id do
               false
             else
               true
@@ -698,7 +698,7 @@ defmodule AmpsWeb.UtilController do
 
           step =
             if action["type"] == "router" do
-              rule = RouterAction.evaluate(action, meta, env)
+              rule = Amps.Actions.Router.evaluate(action, meta, env)
               step = Map.merge(step, %{"rule" => rule})
 
               if check_loop_new(step, topics) do

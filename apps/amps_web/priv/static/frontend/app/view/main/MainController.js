@@ -1387,13 +1387,23 @@ Ext.define("Amps.view.main.MainController", {
       return data;
     });
     var route = Ext.util.History.currentToken;
+    var stored = amfutil.getStoredColl(route);
+    console.log(stored);
+
     var tokens = route.split("/");
     console.log(sel);
 
     if (sel.length) {
       amfutil.download("/api/data/export/" + route, "POST", { rows: sel });
     } else {
-      amfutil.download("/api/data/export/" + route);
+      amfutil.download(
+        "/api/data/export/" +
+          route +
+          "?" +
+          new URLSearchParams({
+            filters: stored.filters,
+          })
+      );
     }
   },
 

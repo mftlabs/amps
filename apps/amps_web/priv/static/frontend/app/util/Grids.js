@@ -4069,7 +4069,7 @@ Ext.define("Amps.util.Grids", {
 
     system_logs: () => ({
       title: "System Logs",
-      actionIcons: ["searchpanelbtn", "clearfilter", "refreshbtn"],
+      actionIcons: ["searchpanelbtn", "clearfilter", "refreshbtn", "export"],
       sort: {
         etime: "DESC",
       },
@@ -4122,12 +4122,22 @@ Ext.define("Amps.util.Grids", {
               str.substring(0, str.length - 3) + ":" + milli + str.slice(-3)
             );
           },
-          width: 200,
+          flex: 2,
+        },
+        {
+          text: "Session ID",
+          hidden: true,
+          dataIndex: "sid",
+          flex: 2,
+
+          type: "aggregate",
+          collection: "system_logs",
         },
         {
           text: "Node",
           dataIndex: "node",
-          width: 200,
+          flex: 2,
+
           type: "aggregate",
           collection: "system_logs",
         },

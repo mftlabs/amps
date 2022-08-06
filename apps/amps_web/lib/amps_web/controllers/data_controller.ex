@@ -522,13 +522,53 @@ defmodule AmpsWeb.DataController do
     json(conn, data)
   end
 
-  def export(collection, env) do
-    data = DB.find(collection)
-    IO.inspect(data)
+  def export(collection, env, filter \\ %{}) do
+    data = DB.find(collection, filter)
+    count = Enum.count(data)
     base_coll = Util.base_index(env, collection)
-    IO.inspect(base_coll)
 
-    sheets = get_excel_data(base_coll, data)
+    size = 25000
+    # Float.ceil(count / 20) |> trunc()
+
+    processes = Float.ceil(count / size) |> trunc()
+    IO.inspect(processes)
+
+    sheetlist = List.duplicate(nil, processes)
+
+    handler = self()
+
+    Enum.each(0..(processes - 1), fn idx ->
+      spawn(fn ->
+        start = idx * size
+        ending = start + size - 1
+
+        sheets = get_excel_data(base_coll, Enum.slice(data, start..ending))
+
+        send(handler, {:sheet, idx, sheets})
+      end)
+    end)
+
+    sheets =
+      receive_sheet(sheetlist)
+      |> Enum.reduce([], fn sheets, acc ->
+        Enum.reduce(sheets, acc, fn sheet, acc ->
+          existing =
+            Enum.find_index(acc, fn accsheet ->
+              accsheet.name == sheet.name
+            end)
+
+          if existing do
+            {_, rows} = List.pop_at(sheet.rows, 0)
+            curr = Enum.at(acc, existing)
+            new = Map.put(curr, :rows, curr.rows ++ rows)
+            List.replace_at(acc, existing, new)
+          else
+            acc ++ [sheet]
+          end
+        end)
+      end)
+
+    IO.inspect(Enum.count(sheets))
 
     {:ok, {_name, binary}} =
       %Workbook{sheets: sheets}
@@ -537,10 +577,25 @@ defmodule AmpsWeb.DataController do
     binary
   end
 
+  def receive_sheet(sheetlist) do
+    receive do
+      {:sheet, num, sheets} ->
+        sheetlist = List.replace_at(sheetlist, num, sheets)
+
+        if Enum.all?(sheetlist) do
+          sheetlist
+        else
+          receive_sheet(sheetlist)
+        end
+    end
+  end
+
   def export_collection(conn, %{
         "collection" => collection
       }) do
-    binary = export(collection, conn.assigns().env)
+    filters = conn.query_params["filters"] |> Jason.decode!()
+
+    binary = export(collection, conn.assigns().env, filters)
 
     conn
     |> send_download({:binary, binary}, filename: "#{collection}.xlsx")

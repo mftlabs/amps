@@ -32,6 +32,7 @@ defmodule AmpsWeb.Util do
         "headers" => ["name", "desc", "type"],
         "subgrids" => nil,
         "types" => %{
+          "aws" => ["action", "output"],
           "batch" => [
             "inputtype",
             "input",
@@ -52,7 +53,6 @@ defmodule AmpsWeb.Util do
             "format",
             "headers"
           ],
-          "kafkaput" => ["provider", "topic"],
           "ldap" => [
             "provider",
             "timeout",
@@ -63,7 +63,7 @@ defmodule AmpsWeb.Util do
             "attributes",
             "output"
           ],
-          "mailbox" => ["recipient", "mailbox", "format"],
+          "mailbox" => ["recipient", "mailbox", "overwrite", "format"],
           "pgpdecrypt" => ["key", "passphrase", "verify", "signing_key", "format", "output"],
           "pgpencrypt" => [
             "key",
@@ -116,6 +116,20 @@ defmodule AmpsWeb.Util do
           "zip" => ["format", "output"]
         }
       },
+      "admin" => %{
+        "headers" => [
+          "firstname",
+          "lastname",
+          "role",
+          "username",
+          "phone",
+          "email",
+          "provider",
+          "approved"
+        ],
+        "subgrids" => nil,
+        "types" => nil
+      },
       "endpoints" => %{
         "headers" => ["name", "desc", "method", "path", "timeout", "action"],
         "subgrids" => nil,
@@ -150,6 +164,26 @@ defmodule AmpsWeb.Util do
         "subgrids" => nil,
         "types" => nil
       },
+      "message_events" => %{
+        "headers" => [
+          "msgid",
+          "action",
+          "user",
+          "parent",
+          "fname",
+          "fsize",
+          "etime",
+          "topic",
+          "status"
+        ],
+        "subgrids" => nil,
+        "types" => nil
+      },
+      "packages" => %{
+        "headers" => ["name", "desc"],
+        "subgrids" => nil,
+        "types" => nil
+      },
       "providers" => %{
         "headers" => ["name", "desc", "type"],
         "subgrids" => nil,
@@ -167,21 +201,16 @@ defmodule AmpsWeb.Util do
           ],
           "aws" => ["key", "secret"],
           "generic" => ["values"],
-          "kafka" => [
-            "brokers",
-            "auth",
-            "mechanism",
-            "username",
-            "password",
-            "cacert",
-            "cert",
-            "key"
-          ],
           "ldap" => ["server", "port", "ssl", "username", "password"],
           "s3" => ["provider", "scheme", "host", "port", "region", "key", "secret"],
           "sharepoint" => ["tenant", "client_id", "client_secret"],
           "smtp" => ["etype", "relay", "username", "password", "auth", "tls", "ssl", "port"]
         }
+      },
+      "queues" => %{
+        "headers" => ["name", "type", "description"],
+        "subgrids" => nil,
+        "types" => nil
       },
       "rules" => %{
         "headers" => ["name", "desc", "output", "patterns"],
@@ -206,32 +235,36 @@ defmodule AmpsWeb.Util do
             "tls",
             "cert",
             "key",
-            "router",
-            "communication"
+            "router"
           ],
           "httpd" => [
             "port",
             "idle_timeout",
             "request_timeout",
             "max_keepalive",
+            "overwrite",
             "tls",
             "cert",
             "key",
             "communication"
           ],
-          "kafka" => ["provider", "topics", "format", "communication"],
+          "nats" => ["topic", "format", "communication"],
           "pyservice" => [
             "service",
             "config",
             "receive",
+            "subs_count",
+            "ack_wait",
+            "rmode",
+            "rlimit",
+            "backoff",
             "updated",
             "topic",
             "policy",
             "start_time",
-            "send_output",
-            "output"
+            "output_map"
           ],
-          "sftpd" => ["port", "server_key", "communication"],
+          "sftpd" => ["port", "server_key", "overwrite", "communication"],
           "sqs" => ["queue_name", "owner_id", "provider", "wait_time_seconds", "communication"],
           "subscriber" => [
             "subs_count",
@@ -247,6 +280,16 @@ defmodule AmpsWeb.Util do
           ]
         }
       },
+      "sessions" => %{
+        "headers" => ["msgid", "sid", "service", "start", "end", "stime", "status"],
+        "subgrids" => nil,
+        "types" => nil
+      },
+      "system_logs" => %{
+        "headers" => ["etime", "sid", "node", "level", "message"],
+        "subgrids" => nil,
+        "types" => nil
+      },
       "templates" => %{
         "headers" => ["name", "desc", "data"],
         "subgrids" => nil,
@@ -254,6 +297,11 @@ defmodule AmpsWeb.Util do
       },
       "topics" => %{
         "headers" => ["type", "topic", "desc"],
+        "subgrids" => nil,
+        "types" => nil
+      },
+      "ui_audit" => %{
+        "headers" => ["user", "action", "entity", "etime"],
         "subgrids" => nil,
         "types" => nil
       },
@@ -274,6 +322,11 @@ defmodule AmpsWeb.Util do
           "ufa/max"
         ],
         "subgrids" => %{
+          "logs" => %{
+            "headers" => ["etime", "operation", "rule", "msgid", "fname", "status"],
+            "subgrids" => nil,
+            "types" => nil
+          },
           "mailboxes" => %{
             "headers" => ["name", "desc"],
             "subgrids" => nil,
@@ -303,6 +356,12 @@ defmodule AmpsWeb.Util do
       }
     }
 
+    pheaders = Application.get_env(:amps_web, :headers, %{})
+    IO.inspect(pheaders)
+
+    headers = deep_merge(headers, pheaders)
+    IO.inspect(headers)
+
     if collection do
       if Map.has_key?(headers, collection) do
         if field do
@@ -316,6 +375,23 @@ defmodule AmpsWeb.Util do
     else
       headers
     end
+  end
+
+  def deep_merge(left, right) do
+    Map.merge(left, right, &deep_resolve/3)
+  end
+
+  # Key exists in both maps, and both values are maps as well.
+  # These can be merged recursively.
+  defp deep_resolve(_key, left = %{}, right = %{}) do
+    deep_merge(left, right)
+  end
+
+  # Key exists in both maps, but at least one of the values is
+  # NOT a map. We fall back to standard merge behavior, preferring
+  # the value on the right.
+  defp deep_resolve(_key, _left, right) do
+    right
   end
 
   def order() do

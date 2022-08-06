@@ -139,8 +139,8 @@ Ext.define("Amps.controller.PageController", {
       console.log(mp);
       mp.removeAll(true);
       amfutil.getElementByID("page-panel-id").setActiveItem(0);
-
-      if (pages.indexOf(route) >= 0) {
+      var isPage = pages.indexOf(route) >= 0;
+      if (isPage) {
         var config = ampsgrids.pages[route]();
         amfutil.getElementByID("page-handler").setActiveItem(1);
 
@@ -280,13 +280,22 @@ Ext.define("Amps.controller.PageController", {
         grid.fireEvent("checkfilter", "");
       }
 
+      console.log("inserted");
       var window = amfutil.getElementByID("searchwindow");
 
       window.clearForm();
-      amfutil.getElementByID("searchpanelbtn").setIconCls("x-fa fa-search");
+      var spbutton = amfutil.getElementByID("searchpanelbtn");
+
+      if (spbutton) {
+        spbutton.setIconCls("x-fa fa-search");
+      }
+
       window.hide();
 
-      window.loadForm();
+      if (!isPage) {
+        window.loadForm();
+      }
+
       var count = amfutil.getElementByID("edit_container").items.length;
       console.log(count);
       if (count > 0) {

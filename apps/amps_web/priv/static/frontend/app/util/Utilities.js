@@ -1742,20 +1742,20 @@ Ext.define("Amps.util.Utilities", {
   },
 
   nameValidator(val) {
-    var regex = new RegExp("(\\s|-)");
+    var regex = new RegExp("(\\s|-|\\.)");
     // Check for white space
     if (regex.test(val)) {
       //alert();
-      return "Names cannot contain spaces or hyphens.";
+      return "Names cannot contain spaces, periods, or hyphens.";
     }
   },
 
   nameLowerCaseValidator(val) {
-    var regex = new RegExp("(\\s|-)");
+    var regex = new RegExp("(\\s|-|\\.)");
     // Check for white space
     if (regex.test(val)) {
       //alert();
-      return "Names cannot contain spaces or hyphens.";
+      return "Names cannot contain spaces, periods, or hyphens.";
     }
 
     var lower = new RegExp("^[a-z_]+$");
@@ -1932,6 +1932,12 @@ Ext.define("Amps.util.Utilities", {
         headers: amfutil.uniques(headers),
         types: Object.keys(types).length === 0 ? null : types,
         subgrids: Object.keys(subgrids).length === 0 ? null : subgrids,
+      };
+    } else if (config.columns) {
+      return {
+        headers: config.columns.map((col) => col.dataIndex),
+        types: null,
+        subgrids: null,
       };
     }
   },
