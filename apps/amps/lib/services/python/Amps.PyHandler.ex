@@ -385,6 +385,16 @@ defmodule Amps.PyHandler do
     |> Keyword.put(:env, env)
   end
 
+  def log(level, message, md) do
+    Logger.log(
+      level,
+      message,
+      Enum.map(md, fn {k, v} ->
+        {k, List.to_string(v)}
+      end)
+    )
+  end
+
   defmodule PyLogger do
     require Logger
 
@@ -415,16 +425,6 @@ defmodule Amps.PyHandler do
 
     def handle_info(other, state) do
       {:noreply, state}
-    end
-
-    def log(level, message, md) do
-      Logger.log(
-        level,
-        message,
-        Enum.map(md, fn {k, v} ->
-          {k, List.to_string(v)}
-        end)
-      )
     end
   end
 end
