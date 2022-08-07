@@ -199,11 +199,11 @@ defmodule Amps.PyHandler do
     resp =
       case custom_auth(user, state.env) do
         {:error, msg} ->
-          %{"status" => "failed", "response" => msg}
+          %{"success" => false, "response" => msg}
 
         {:ok, {user, access, renew}} ->
           %{
-            "status" => "success",
+            "success" => true,
             "response" => %{
               "user" => user,
               "access_token" => access,
@@ -220,11 +220,11 @@ defmodule Amps.PyHandler do
     resp =
       case renew(to_string(renewal_token), state.env) do
         {:error, msg} ->
-          %{"status" => "failed", "response" => msg}
+          %{"success" => false, "response" => msg}
 
         {:ok, {user, access, renew}} ->
           %{
-            "status" => "success",
+            "success" => true,
             "response" => %{
               "user" => user,
               "access_token" => access,
@@ -255,7 +255,7 @@ defmodule Amps.PyHandler do
     access_token = to_string(access_token)
     IO.inspect(access_token)
     :ok = delete(access_token, state.env)
-    put_response({%{"status" => "success"}, id}, state)
+    put_response({%{"success" => true}, id}, state)
     {:noreply, state}
   end
 
