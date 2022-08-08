@@ -23,16 +23,21 @@ defmodule Amps.Actions.SftpPut do
 
     case SFTPClient.connect(config) do
       {:ok, conn} ->
-        AmpsEvents.session_debug(__MODULE__, session, %{text: "sftp connected/logged in"})
+        Logger.info("sftp connected/logged in")
+
         try do
           deliver_sftp([msg], parms, conn, env)
           Logger.info("SFTP session ended successfully")
-          AmpsEvents.session_debug(__MODULE__, session, %{text: "session ended normally"})
+          Logger.info("sftp connected/logged in")
+          Logger.info("session ended normally")
+
           SFTPClient.disconnect(conn)
+          {:ok, "Delivered"}
         catch
           error ->
             SFTPClient.disconnect(conn)
             AmpsUtil.retry_delay(parms)
+
             AmpsEvents.session_warning(__MODULE__, session, %{
               text: "sftp failed #{inspect(error)}"
             })
