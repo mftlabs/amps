@@ -821,13 +821,13 @@ defmodule AmpsWeb.UtilController do
   def create_store(conn, %{"collection" => collection}) do
     data = DB.get_rows(collection, conn.query_params)
 
-    rows =
-      Map.get(data, :rows)
-      |> Enum.reject(fn row ->
-        row["systemdefault"] == true
-      end)
+    # rows =
+    #   Map.get(data, :rows)
+    #   |> Enum.reject(fn row ->
+    #     row["systemdefault"] == true
+    #   end)
 
-    data = Map.put(data, :rows, rows)
+    # data = Map.put(data, :rows, rows)
 
     json(
       conn,

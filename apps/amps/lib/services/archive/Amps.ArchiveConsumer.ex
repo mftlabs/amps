@@ -336,7 +336,6 @@ defmodule Amps.ArchivePullConsumer do
         msg,
         %{
           "status" => "archiving",
-          "topic" => parms["topic"],
           "action" => "Archive"
         }
       )
@@ -361,7 +360,6 @@ defmodule Amps.ArchivePullConsumer do
             msg,
             %{
               "status" => "archived",
-              "topic" => parms["topic"],
               "action" => "Archive"
             }
           )
@@ -393,7 +391,6 @@ defmodule Amps.ArchivePullConsumer do
               msg,
               %{
                 "status" => "archiving failed - retrying",
-                "topic" => parms["topic"],
                 "action" => "Archive"
               }
             )
@@ -414,7 +411,6 @@ defmodule Amps.ArchivePullConsumer do
               msg,
               %{
                 "status" => "archiving failed - skipping",
-                "topic" => parms["topic"],
                 "action" => "Archive"
               }
             )
