@@ -233,6 +233,7 @@ defmodule Amps.Actions.S3 do
           "msgid" => msgid,
           "bucket" => parms["bucket"],
           "prefix" => Path.dirname(path),
+          "user" => parms["name"],
           "fpath" => fpath,
           "fsize" => info.size,
           "ftime" => DateTime.to_iso8601(DateTime.utc_now()),

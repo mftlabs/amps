@@ -100,6 +100,13 @@ defmodule Amps.EventPullConsumer do
 
         {:send, events} ->
           Enum.each(events, fn event ->
+            event =
+              if Map.has_key?(event, "user") do
+                event
+              else
+                Map.put(event, "user", parms["name"])
+              end
+
             AmpsEvents.send(
               event,
               actparms,
