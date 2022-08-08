@@ -64,10 +64,10 @@ defmodule Amps.SQS do
         "data" => body
       }
 
-
       event =
         Map.merge(msg, %{
           "service" => parms["name"],
+          "user" => parms["name"],
           "msgid" => AmpsUtil.get_id(),
           "ftime" => DateTime.to_iso8601(DateTime.utc_now())
         })
