@@ -16,7 +16,7 @@ defmodule Amps.HistoryConsumer do
           parms
       end
 
-    IO.puts("starting event listener #{inspect(parms)}")
+    # IO.puts("starting event listener #{inspect(parms)}")
     name = parms[:name]
     GenServer.start_link(__MODULE__, parms)
   end
@@ -28,7 +28,7 @@ defmodule Amps.HistoryConsumer do
 
   def child_spec(opts) do
     name = opts[:name]
-    IO.puts("name #{inspect(name)}")
+    # IO.puts("name #{inspect(name)}")
 
     %{
       id: name,
@@ -50,30 +50,30 @@ defmodule Amps.HistoryConsumer do
 
   # GenServer callbacks
   def handle_info({:initial_connect, opts}, state) do
-    IO.puts("opts #{inspect(opts)}")
-    IO.puts("state #{inspect(state)}")
+    # IO.puts("opts #{inspect(opts)}")
+    # IO.puts("state #{inspect(state)}")
     name = Atom.to_string(state[:name])
     sub = String.to_atom(name <> "_sup")
-    IO.puts("sub: #{inspect(sub)}")
+    # IO.puts("sub: #{inspect(sub)}")
 
     pid = Process.whereis(:gnat)
 
-    IO.puts("pid #{inspect(pid)}")
+    # IO.puts("pid #{inspect(pid)}")
 
     {stream, consumer} = AmpsUtil.get_names(opts, state.env)
-    IO.inspect(stream)
-    IO.inspect(state.env)
+    # IO.inspect(stream)
+    # IO.inspect(state.env)
     listening_topic = AmpsUtil.env_topic("amps.history.#{consumer}", state.env)
 
-    IO.inspect(listening_topic)
+    # IO.inspect(listening_topic)
 
-    AmpsUtil.create_consumer(stream, consumer, AmpsUtil.env_topic(opts["topic"], state.env), %{
-      deliver_policy: :all,
-      deliver_subject: listening_topic,
-      ack_policy: :all
-    })
+    # AmpsUtil.create_consumer(stream, consumer, AmpsUtil.env_topic(opts["topic"], state.env), %{
+    #   deliver_policy: :all,
+    #   deliver_subject: listening_topic,
+    #   ack_policy: :all
+    # })
 
-    Gnat.sub(pid, self(), listening_topic)
+    # Gnat.sub(pid, self(), listening_topic)
     Logger.info("got stream #{stream} #{consumer}")
     opts = Map.put(opts, "id", name)
 
@@ -85,7 +85,8 @@ defmodule Amps.HistoryConsumer do
         stream_name: stream,
         consumer_name: consumer,
         listening_topic: listening_topic,
-        env: state.env
+        env: state.env,
+        handler: state.handler
       }
     )
 
@@ -97,7 +98,7 @@ defmodule Amps.HistoryConsumer do
   end
 
   def handle_info({val, _opts}, state) do
-    IO.puts("got event #{inspect(val)}")
+    # IO.puts("got event #{inspect(val)}")
     {:noreply, state}
   end
 end
@@ -113,14 +114,15 @@ defmodule Amps.HistoryPullConsumer do
         stream_name: stream_name,
         consumer_name: consumer_name,
         listening_topic: listening_topic,
-        env: env
+        env: env,
+        handler: handler
       }) do
     # Process.link(connection_pid)
     group = String.replace(parms["name"], " ", "_")
     Logger.info("History queue_group #{group} #{stream_name} #{consumer_name}")
-    IO.inspect(listening_topic)
+    # IO.inspect(listening_topic)
 
-    {:ok, _sid} = Gnat.sub(connection_pid, self(), listening_topic, queue_group: group)
+    {:ok, sid} = Gnat.sub(connection_pid, self(), listening_topic, queue_group: group)
 
     # :ok =
     #   Gnat.pub(
@@ -137,6 +139,7 @@ defmodule Amps.HistoryPullConsumer do
       listening_topic: listening_topic,
       messages: [],
       env: env,
+      handler: handler,
       index:
         if parms["receipt"] do
           parms["index"]
@@ -148,119 +151,83 @@ defmodule Amps.HistoryPullConsumer do
           parms["doc"]
         else
           nil
-        end
+        end,
+      sid: sid
     }
 
-    schedule_bulk()
+    # schedule_bulk()
     {:ok, state}
   end
 
   def handle_info({:msg, message}, state) do
-    data = Poison.decode!(message.body)
-    msg = data["msg"]
-    # AmpsEvents.send_history(
-    #   AmpsUtil.env_topic("amps.events.action", state.env),
-    #   "message_events",
-    #   msg,
-    #   %{
-    #     "status" => "started",
-    #     "topic" => AmpsUtil.env_topic(parms["topic"], state.env),
-    #     "action" => actparms["name"],
-    #     "subscriber" => name
-    #   }
-    # )
-    parms = state[:parms]
-    name = parms["name"]
+    try do
+      data = Poison.decode!(message.body)
+      parms = state[:parms]
+      name = parms["name"]
 
-    Logger.debug("got history message #{name}: #{message.topic} / #{message.body}")
+      Logger.debug("got history message #{name}: #{message.topic} / #{message.body}")
 
-    message =
-      if state.index do
-        doc =
-          if state.doc do
-            state.doc.(message.topic, data["msg"])
+      message =
+        if state.index do
+          doc =
+            if state.doc do
+              state.doc.(message.topic, data["msg"])
+            else
+              Map.merge(data["msg"], %{
+                "status" => "received"
+              })
+            end
+
+          if is_list(state.index) do
+            actions =
+              Enum.reduce(state.index, [], fn index, acc ->
+                [
+                  {AmpsUtil.index(state.env, index), Amps.DB.bulk_insert(doc)}
+                  | acc
+                ]
+              end)
+
+            {actions, message}
           else
-            Map.merge(data["msg"], %{
-              "status" => "received"
-            })
+            {[
+               {AmpsUtil.index(state.env, state.index), Amps.DB.bulk_insert(doc)}
+             ], message}
           end
-
-        if is_list(state.index) do
-          actions =
-            Enum.reduce(state.index, [], fn index, acc ->
-              IO.inspect(acc)
-
-              [
-                {AmpsUtil.index(state.env, index), Amps.DB.bulk_insert(doc)} | acc
-              ]
-            end)
-
-          {actions, message}
         else
+          msg = data["msg"]
+
+          op =
+            if data["op"] do
+              case data["op"] do
+                "update" ->
+                  Amps.DB.bulk_update(data["clauses"], %{"$set" => msg})
+
+                _ ->
+                  Amps.DB.bulk_insert(msg)
+              end
+            else
+              Amps.DB.bulk_insert(msg)
+            end
+
           {[
-             {AmpsUtil.index(state.env, state.index), Amps.DB.bulk_insert(doc)}
+             {AmpsUtil.index(state.env, msg["index"]), op}
            ], message}
         end
-      else
-        {[
-           {AmpsUtil.index(state.env, data["index"]), Amps.DB.bulk_insert(data)}
-         ], message}
-      end
 
-    state = Map.put(state, :messages, [message | state.messages])
-
-    {:noreply, state}
-  end
-
-  defp handle_index(indexes, index, op) do
-    if Map.has_key?(indexes, index) do
-      Map.put(indexes, index, [op | indexes[index]])
-    else
-      Map.put(indexes, index, [op])
+      Amps.HistoryHandler.put_message(state.handler, message)
+    rescue
+      e ->
+        Logger.error(Exception.format(:error, e, __STACKTRACE__))
+        Logger.warn("Unexpected Message in History")
+        Amps.HistoryHandler.put_message(state.handler, {[], message})
     end
-  end
-
-  def handle_info(:bulk, state) do
-    schedule_bulk()
-
-    state =
-      if Enum.count(state.messages) > 0 do
-        indexes =
-          Enum.reduce(state.messages, %{}, fn {actions, _}, acc ->
-            Enum.reduce(actions, acc, fn {index, op}, acc ->
-              handle_index(acc, index, op)
-            end)
-          end)
-
-        Enum.each(indexes, fn {index, ops} ->
-          Amps.DB.bulk_perform(ops, index)
-        end)
-
-        # case res do
-        #   :ok ->
-        Logger.debug("Bulked #{state.parms["name"]}")
-        {_, msg} = Enum.at(state.messages, 0)
-        Jetstream.ack(msg)
-        Map.put(state, :messages, [])
-
-        # {:error, error} ->
-        #   Logger.error("#{inspect(error)}")
-        #   state
-        # end
-      else
-        state
-      end
 
     {:noreply, state}
-  end
-
-  defp schedule_bulk do
-    Process.send_after(self(), :bulk, AmpsUtil.hinterval())
   end
 
   def handle_info(other, state) do
     require Logger
-    IO.puts("handle info #(inspect(other)) #{inspect(state)}")
+    # IO.puts("handle info #(inspect(other)) #{inspect(state)}")
 
     Logger.error(
       "#{__MODULE__} for #{state.stream_name}.#{state.consumer_name} received unexpected message: #{inspect(other)}"
@@ -270,8 +237,12 @@ defmodule Amps.HistoryPullConsumer do
   end
 
   def handle_call(parms, _from, state) do
-    IO.puts("handler call called #{inspect(parms)}")
+    # IO.puts("handler call called #{inspect(parms)}")
     {:reply, :ok, state}
+  end
+
+  def terminate(reason, state) do
+    Gnat.unsub(:gnat, state.sid)
   end
 
   defp nuid(), do: :crypto.strong_rand_bytes(12) |> Base.encode64()

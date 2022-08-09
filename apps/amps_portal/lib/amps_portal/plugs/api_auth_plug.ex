@@ -31,6 +31,7 @@ defmodule AmpsPortal.APIAuthPlug do
   @impl true
   @spec create(Conn.t(), map(), Config.t()) :: {Conn.t(), map()}
   def create(conn, user, config) do
+    IO.inspect(config)
     store_config = store_config(config)
     access_token = Pow.UUID.generate()
     renewal_token = Pow.UUID.generate()
@@ -91,7 +92,7 @@ defmodule AmpsPortal.APIAuthPlug do
       Pow.Store.Base.get(store_config, PersistentSessionCache.backend_config(store_config), token)
 
     {user, metadata} =
-      AmpsPortal.Users.get_by(%{"_id" => user.id}, config)
+      Amps.Users.get_by(%{"_id" => user.id}, config)
       |> case do
         nil -> nil
         user -> {user, metadata}

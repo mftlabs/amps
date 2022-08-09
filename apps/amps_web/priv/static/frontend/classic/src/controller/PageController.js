@@ -138,16 +138,22 @@ Ext.define("Amps.controller.PageController", {
       var mp = amfutil.getElementByID("main-page");
       console.log(mp);
       mp.removeAll(true);
-      if (pages.indexOf(route) >= 0) {
+      amfutil.getElementByID("page-panel-id").setActiveItem(0);
+      var isPage = pages.indexOf(route) >= 0;
+      if (isPage) {
         var config = ampsgrids.pages[route]();
         amfutil.getElementByID("page-handler").setActiveItem(1);
 
         console.log(config.view);
         mp.insert(0, config.view);
       } else {
-        amfutil.getElementByID("page-handler").setActiveItem(0);
+        var pagehandler = amfutil.getElementByID("page-handler");
+        console.log(pagehandler);
+        pagehandler.setActiveItem(0);
 
-        var grid = this.getView().down("#main-grid");
+        var parent = this.getView().down("#grid-wrapper");
+        parent.removeAll();
+
         var options = ["delete"];
         var config = ampsgrids.grids[route]();
         console.log(config);
@@ -159,54 +165,81 @@ Ext.define("Amps.controller.PageController", {
           // dataIndex: "actions",
           width: "max-content",
           items: config.options
-            ? config.options.map((option) => amfutil.gridactions[option])
-            : [],
+            ? [amfutil.gridactions["copy"]].concat(
+                config.options.map((option) => amfutil.gridactions[option])
+              )
+            : [amfutil.gridactions["copy"]],
         };
 
         console.log(route);
-        grid.setTitle(config.title);
+
         var mask = new Ext.LoadMask({
           msg: "Please wait...",
-          target: grid,
+          target: this.getView(),
         });
         mask.show();
 
-        grid.reconfigure(
-          amfutil.createPageStore(
-            Ext.util.History.getToken(),
-            config.filter ? config.filter : {}
-          ),
-          config.columns.concat(config.options ? [column] : null)
-        );
+        var filter = localStorage.getItem(`${route}_filter`);
 
-        var store = grid.getStore();
-        store.on(
-          "load",
-          function (scope, records, successful, operation, eOpts) {
-            // console.log("wait");
-            // var data;
-            // if (config.process) {
-            //   data = await config.process(records);
-            //   console.log(data);
-            //   scope.loadData(data);
-            // }
-
-            // console.log(data);
-            // console.log("waited");
-            mask.hide();
-          }
-        );
-
-        if (config.sort) {
-          Object.entries(config.sort).forEach((sort) => {
-            store.sort(sort[0], sort[1]);
-          });
+        if (filter) {
+          filter = JSON.parse(filter);
+        } else {
+          filter = config.filter ? config.filter : {};
         }
 
-        // grid.clearListeners();
-        grid.body.clearListeners();
+        var store = Ext.StoreManager.lookup(route);
+
+        store = store
+          ? store
+          : amfutil.createPageStore(Ext.util.History.getToken(), filter);
+
+        if (store.isLoaded) {
+          mask.hide();
+        } else {
+          store.on(
+            "load",
+            function (scope, records, successful, operation, eOpts) {
+              // console.log("wait");
+              // var data;
+              // if (config.process) {
+              //   data = await config.process(records);
+              //   console.log(data);
+              //   scope.loadData(data);
+              // }
+
+              // console.log(data);
+              // console.log("waited");
+              mask.hide();
+            }
+          );
+        }
+
+        var grid = new Amps.view.main.List({
+          title: config.title,
+          stateId: route,
+          store: store,
+          itemId: "main-grid",
+          columns: config.columns.concat(config.options ? [column] : []),
+        });
+
+        console.log(grid);
+
+        console.log(parent);
+        parent.insert(grid);
+
+        console.log("grid inserted");
+
+        var sort = localStorage.getItem(`${route}_sort`);
+        console.log("getting sort");
 
         grid.setListeners({
+          sortchange: function (ct, col, dir) {
+            console.log(col);
+            console.log(dir);
+            var sortval = {};
+            sortval[col["dataIndex"]] = dir;
+            localStorage.setItem(`${route}_sort`, JSON.stringify(sortval));
+          },
           dblclick: {
             element: "body", //bind to the underlying body property on the panel
             fn: function (grid, rowIndex, e, obj) {
@@ -234,13 +267,35 @@ Ext.define("Amps.controller.PageController", {
             amfutil.copyTextdata(e);
           },
         });
+        if (sort) {
+          console.log(sort);
+          amfutil.setGridSort(JSON.parse(sort), route);
+        } else {
+          if (config.sort) {
+            amfutil.setGridSort(config.sort, route);
+          } else {
+            amfutil.setGridSort({ name: "ASC" }, route);
+          }
+        }
+        grid.fireEvent("checkfilter", "");
       }
-      amfutil.getElementByID("page-panel-id").setActiveItem(0);
+
+      console.log("inserted");
       var window = amfutil.getElementByID("searchwindow");
 
       window.clearForm();
-      amfutil.getElementByID("searchpanelbtn").setIconCls("x-fa fa-search");
+      var spbutton = amfutil.getElementByID("searchpanelbtn");
+
+      if (spbutton) {
+        spbutton.setIconCls("x-fa fa-search");
+      }
+
       window.hide();
+
+      if (!isPage) {
+        window.loadForm();
+      }
+
       var count = amfutil.getElementByID("edit_container").items.length;
       console.log(count);
       if (count > 0) {
@@ -1622,12 +1677,57 @@ Ext.define("Amps.controller.PageController", {
     }
   },
 
+  skip: async function (grid, rowIndex, colIndex, e) {
+    var mask = new Ext.LoadMask({
+      msg: "Please wait...",
+      target: grid,
+    });
+    var msgbox = Ext.MessageBox.show({
+      title: "Confirm skipping of message",
+      message: "Are you sure you want to skip this message?",
+      buttons: Ext.MessageBox.YESNO,
+      defaultFocus: "#no",
+      prompt: false,
+      fn: function (btn) {
+        if (btn == "yes") {
+          mask.show();
+          var rec = grid.getStore().getAt(rowIndex);
+          console.log(rowIndex);
+          var id = rec.data._id;
+          console.log(rec);
+          amfutil.ajaxRequest({
+            url: `/api/service/skip/${id}`,
+            method: "POST",
+            timeout: 60000,
+            params: {},
+            success: async function (response) {
+              var data = Ext.decode(response.responseText);
+              mask.hide();
+              Ext.toast({
+                title: "Skipping",
+                html: "<center>Message marked for skip</center>",
+                autoCloseDelay: 5000,
+              });
+              console.log(route);
+              grid.getStore().reload();
+            },
+            failure: function (response) {
+              mask.hide();
+              amfutil.onFailure("Error skipping Message", response);
+              grid.getStore().reload();
+            },
+          });
+        }
+      },
+    });
+  },
+
   clearEnv: async function (grid, rowIndex) {
     var record = grid.getStore().getAt(rowIndex).data;
 
     Ext.MessageBox.show({
       title: "Clear Environment",
-      message: `Are you sure you want to clear this environment? This will delete all OpenSearch indexes prefixed ${
+      message: `Are you sure you want to clear this environment? This will delete all Database collections prefixed ${
         record.name
       }-, all Vault keys prefixed with ${
         record.name

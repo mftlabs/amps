@@ -12,22 +12,18 @@ x-minio-common: &minio-common
     retries: 3
 
 services:
-  web:
+  amps:
     image: mftlabs/ampsv2:latest
     environment:
       # GENERATE A NEW SECRET KEY
       SECRET_KEY_BASE: "xhAYbJzLVVL6h+06ntgkFcV49mUz5ntU8E48vCQC4hL1ywiPAQpenEJIh9CWpStt"
-      AMPS_AUTH_METHOD: "db"
       AMPS_MONGO_ADDR: "mongodb://mongo:27017/amps"
-      AMPS_VAULT_ADDR: "http://vault:8200"
       AMPS_NATS_HOST: "nats"
       AMPS_NATS_PORT: "4222"
       MIX_ENV: prod
       TZ: "America/Chicago"
-      PORT: 4000
     depends_on:
       - mongo
-      - vault
       - nats
     ports:
       - "4080:4080"
@@ -38,17 +34,6 @@ services:
     restart: always
     volumes:
       - ./volumes/db:/data/db
-  vault:
-    image: vault
-    cap_add:
-      - IPC_LOCK
-    entrypoint: vault server -config=/vault/config/vault.json
-    ports:
-      - "8200:8200"
-    volumes:
-      - ./volumes/logs:/vault/logs
-      - ./volumes/file:/vault/file
-      - ./vault/config:/vault/config
   nats:
     image: nats
     command: "--cluster nats://0.0.0.0:6222 --name=nats --cluster_name=amps  --routes=nats://nats1:6222,nats://nats2:6222 -js"
@@ -63,3 +48,45 @@ services:
     image: nats
     command: "--cluster nats://0.0.0.0:6222 --name=nats2 --cluster_name=amps --routes=nats://nats:6222,nats://nats1:6222 -js"
     depends_on: ["nats"]
+
+
+# COMMENT OUT BELOW TO NOT USE ARCHIVING
+  minio1:
+    <<: *minio-common
+    hostname: minio1
+    volumes:
+      - ./volumes/data1-1:/data1
+      - ./volumes/data1-2:/data2
+  minio2:
+    <<: *minio-common
+    hostname: minio2
+    volumes:
+      - ./volumes/data2-1:/data1
+      - ./volumes/data2-2:/data2
+
+  minio3:
+    <<: *minio-common
+    hostname: minio3
+    volumes:
+      - ./volumes/data3-1:/data1
+      - ./volumes/data3-2:/data2
+
+  minio4:
+    <<: *minio-common
+    hostname: minio4
+    volumes:
+      - ./volumes/data4-1:/data1
+      - ./volumes/data4-2:/data2
+  S3:
+    image: nginx:1.19.2-alpine
+    hostname: nginx
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    depends_on:
+      - minio1
+      - minio2
+      - minio3
+      - minio4

@@ -13,8 +13,8 @@ defmodule AmpsWeb.UtilController do
 
   def verify(conn, %{"username" => username}) do
     user = DB.find_one(Util.index(conn.assigns().env, "users"), %{"username" => username})
-    auths = Amps.Onboarding.verify(user)
-    json(conn, auths)
+    # auths = Amps.Onboarding.verify(user)
+    json(conn, :ok)
   end
 
   def glob_match(conn, _params) do
@@ -39,24 +39,28 @@ defmodule AmpsWeb.UtilController do
 
     id = body["id"]
 
-    clauses =
-      if id do
-        %{
-          "port" => port,
-          "bool" => %{
-            "must_not" => %{
-              "match" => %{"_id" => id}
-            }
-          }
-        }
-      else
-        %{
-          "port" => port
-        }
-      end
+    clauses = %{
+      "port" => port
+    }
+
+    envs = DB.find("environments", %{}) |> Enum.map(fn env -> env["name"] end)
+    envs = envs ++ [""]
+
+    service =
+      Enum.reduce_while(envs, nil, fn env, acc ->
+        case DB.find_one(Util.index(env, "services"), clauses) do
+          nil ->
+            {:cont, acc}
+
+          service ->
+            {:halt, service}
+        end
+      end)
+
+    IO.inspect(service)
 
     in_use =
-      case(DB.find_one("*services", clauses)) do
+      case service do
         nil ->
           case :gen_tcp.listen(port, []) do
             {:ok, socket} ->
@@ -72,8 +76,16 @@ defmodule AmpsWeb.UtilController do
               true
           end
 
-        _item ->
-          true
+        service ->
+          if id do
+            if service["_id"] == id do
+              false
+            else
+              true
+            end
+          else
+            true
+          end
       end
 
     json(conn, in_use)
@@ -182,17 +194,16 @@ defmodule AmpsWeb.UtilController do
       Amps.DB.insert("admin", root)
 
       Amps.SvcManager.load_system_parms()
+      Amps.SvcManager.check_util()
+
       send_resp(conn, 200, "Created")
     else
       send_resp(conn, 403, "Application Already Initialized")
     end
   end
 
-  def download(conn, %{"msgid" => msgid}) do
-    case DB.find_one(
-           AmpsWeb.Util.index(conn.assigns().env, "message_events"),
-           %{"msgid" => msgid}
-         ) do
+  def download(conn, %{"id" => id}) do
+    case DB.find_by_id(AmpsWeb.Util.index(conn.assigns().env, "message_events"), id) do
       nil ->
         send_resp(conn, 404, "Not found")
 
@@ -200,23 +211,146 @@ defmodule AmpsWeb.UtilController do
         if msg["data"] do
           send_download(conn, {:binary, msg["data"]},
             disposition: :attachment,
-            filename: msg["fname"]
+            filename: msg["fname"] || "message.dat"
           )
         else
-          if msg["temp"] do
-            send_download(conn, {:file, msg["fpath"]},
-              disposition: :attachment,
-              filename: msg["fname"]
-            )
-          else
-            root = AmpsUtil.get_env(:storage_root)
+          stream = AmpsUtil.stream(msg, conn.assigns().env)
 
-            send_download(conn, {:file, Path.join(root, msg["fpath"])},
-              disposition: :attachment,
-              filename: msg["fname"]
+          conn =
+            conn
+            |> put_resp_header(
+              "content-disposition",
+              "attachment; filename=\"#{msg["fname"] || "download"}\""
             )
-          end
+            |> send_chunked(200)
+
+          Enum.reduce_while(stream, conn, fn chunk, conn ->
+            case Plug.Conn.chunk(conn, chunk) do
+              {:ok, conn} ->
+                {:cont, conn}
+
+              {:error, :closed} ->
+                {:halt, conn}
+            end
+          end)
+
+          # send_download(conn, {:file, msg["fpath"]}, disposition: :attachment)
+
+          # else
+          #   root = AmpsUtil.get_env(:storage_root)
+
+          #   send_download(conn, {:file, Path.join(root, msg["fpath"])},
+          #     disposition: :attachment
+          #   )
+          # end
         end
+    end
+  end
+
+  def stream(conn, %{"id" => id, "token" => token}) do
+    case AmpsWeb.APIAuthPlug.get_credentials(conn, token, otp_app: :amps_web) do
+      nil ->
+        send_resp(conn, 401, "Unauthorized")
+
+      {user, _} ->
+        user = DB.find_by_id("admin", user.id)
+        env = user["config"]["env"]
+
+        case DB.find_by_id(AmpsWeb.Util.index(env, "message_events"), id) do
+          nil ->
+            send_resp(conn, 404, "Not found")
+
+          msg ->
+            fpath = AmpsUtil.local_file(msg, env)
+            offset = get_offset(conn.req_headers)
+            file_size = get_file_size(msg["fpath"])
+            {:ok, {ext, mime}} = FileType.from_path(msg["fpath"])
+
+            conn
+            |> Plug.Conn.put_resp_header("content-type", mime)
+            |> Plug.Conn.put_resp_header(
+              "content-range",
+              "bytes #{offset}-#{file_size - 1}/#{file_size}"
+            )
+            |> Plug.Conn.send_file(206, fpath, offset, file_size - offset)
+        end
+    end
+  end
+
+  def get_offset(headers) do
+    case List.keyfind(headers, "range", 0) do
+      {"range", "bytes=" <> start_pos} ->
+        String.split(start_pos, "-") |> hd |> String.to_integer()
+
+      nil ->
+        0
+    end
+  end
+
+  def get_file_size(path) do
+    {:ok, %{size: size}} = File.stat(path)
+    size
+  end
+
+  def data(conn, %{"id" => id}) do
+    env = conn.assigns().env
+    index = AmpsWeb.Util.index(env, "message_events")
+    msg = DB.find_by_id(index, id)
+    send_file(conn, 200, msg["fpath"])
+  end
+
+  def preview(conn, %{"id" => id}) do
+    env = conn.assigns().env
+    index = AmpsWeb.Util.index(env, "message_events")
+    msg = DB.find_by_id(index, id)
+
+    supported = [
+      %{"mime" => "application/pdf", "type" => "pdf"},
+      %{"mime" => "image/*(.+)", "type" => "image"},
+      %{"mime" => "video/*(.+)", "type" => "video"}
+    ]
+
+    if msg["data"] do
+      json(conn, %{"supported" => true, "type" => "data", "data" => msg["data"]})
+    else
+      if msg["fpath"] do
+        case FileType.from_path(msg["fpath"]) do
+          {:ok, {ext, mime}} ->
+            match =
+              Enum.find(supported, fn sp ->
+                Regex.match?(~r/#{sp["mime"]}/, mime)
+              end)
+
+            if mime == "image/heic" do
+              json(conn, %{"supported" => false})
+            else
+              if File.stat!(msg["fpath"]).size > 10_000_000 do
+                if match["type"] == "video" do
+                  json(conn, %{"supported" => true, "type" => match["type"]})
+                else
+                  json(conn, %{"supported" => false})
+                end
+              else
+                if match do
+                  json(conn, %{"supported" => true, "type" => match["type"]})
+                else
+                  json(conn, %{"supported" => false})
+                end
+              end
+            end
+
+          {:error, _} ->
+            data = AmpsUtil.get_data(msg, conn.assigns().env)
+
+            if String.valid?(data) do
+              json(conn, %{"supported" => true, "type" => "text"})
+            else
+              json(conn, %{"supported" => false})
+            end
+        end
+      else
+        json(conn, %{"supported" => false})
+      end
     end
   end
 
@@ -241,13 +375,15 @@ defmodule AmpsWeb.UtilController do
                 session["sid"] == sid
               end)
 
-            IO.inspect(row["msgid"] == msgid)
-
             case session do
               nil ->
                 session = DB.find_one(Util.index(env, "sessions"), %{"sid" => sid})
 
-                {Map.put(sessions, idx + 1, Map.merge(session, %{"rows" => [row]})), idx + 1}
+                if session do
+                  {Map.put(sessions, idx + 1, Map.merge(session, %{"rows" => [row]})), idx + 1}
+                else
+                  {sessions, idx}
+                end
 
               {idx, session} ->
                 {Map.put(
@@ -562,7 +698,7 @@ defmodule AmpsWeb.UtilController do
 
           step =
             if action["type"] == "router" do
-              rule = RouterAction.evaluate(action, meta, env)
+              rule = Amps.Actions.Router.evaluate(action, meta, env)
               step = Map.merge(step, %{"rule" => rule})
 
               if check_loop_new(step, topics) do
@@ -616,12 +752,23 @@ defmodule AmpsWeb.UtilController do
                   IO.inspect(meta)
 
                   steps =
-                    find_topics(
-                      action["output"],
-                      Map.merge(meta, %{}),
-                      topics,
-                      env
-                    )
+                    if is_list(action["output"]) do
+                      Enum.map(action["output"], fn topic ->
+                        find_topics(
+                          topic,
+                          Map.merge(meta, %{}),
+                          topics,
+                          env
+                        )
+                      end)
+                    else
+                      find_topics(
+                        action["output"],
+                        Map.merge(meta, %{}),
+                        topics,
+                        env
+                      )
+                    end
 
                   step =
                     step
@@ -672,22 +819,42 @@ defmodule AmpsWeb.UtilController do
   end
 
   def create_store(conn, %{"collection" => collection}) do
-    data =
-      DB.get_rows(conn, %{
-        "collection" => collection
-      })
+    data = DB.get_rows(collection, conn.query_params)
 
-    rows =
-      Map.get(data, :rows)
-      |> Enum.reject(fn row ->
-        row["systemdefault"] == true
-      end)
+    # rows =
+    #   Map.get(data, :rows)
+    #   |> Enum.reject(fn row ->
+    #     row["systemdefault"] == true
+    #   end)
 
-    data = Map.put(data, :rows, rows)
+    # data = Map.put(data, :rows, rows)
 
     json(
       conn,
       data
+    )
+  end
+
+  def page_num(conn, %{"collection" => collection, "id" => id}) do
+    clauses = Jason.decode!(conn.query_params["filters"] || "{}")
+    sort = Jason.decode!(conn.query_params["sort"] || "{}")
+
+    case DB.get_page(collection, id, clauses, sort) do
+      {:ok, page} ->
+        json(conn, %{"success" => true, "page" => page})
+
+      {:error, error} ->
+        json(conn, %{"success" => false})
+    end
+  end
+
+  def msg_session(conn, %{"msgid" => msgid, "sid" => sid}) do
+    json(
+      conn,
+      DB.find_one(Util.index(conn.assigns().env, "message_events"), %{
+        "msgid" => msgid,
+        "sid" => sid
+      })
     )
   end
 end

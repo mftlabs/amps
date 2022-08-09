@@ -7,7 +7,7 @@ Ext.define("Amps.view.auth.Auth", {
   controller: "auth",
   scrollable: true,
   constructor(args) {
-    this.callParent(args);
+    this.callParent([args]);
     if (!args["init"]) {
       this.down("#center").insert({
         xtype: "startup",

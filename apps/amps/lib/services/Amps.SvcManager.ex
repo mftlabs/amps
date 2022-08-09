@@ -10,6 +10,7 @@ defmodule Amps.SvcManager do
 
   def init(opts) do
     load_system_parms()
+    check_util()
     Process.send_after(self(), {:initial_connect, opts}, 0)
     {:ok, %{}}
   end
@@ -103,13 +104,13 @@ defmodule Amps.SvcManager do
   def get_spec(name, args) do
     types = service_types()
     IO.inspect(args)
+    default = [:subscriber, :sftpd, :pyservice, :sqs, :nats]
+
+    type = String.to_atom(args["type"])
 
     try do
-      case String.to_atom(args["type"]) do
-        #      :sftpd ->
-        #        {types[:sftpd], name: name, parms: args}
-
-        :httpd ->
+      cond do
+        type == :httpd ->
           IO.inspect(args)
 
           protocol_options = [
@@ -158,34 +159,6 @@ defmodule Amps.SvcManager do
              ]}
           end
 
-        :kafka ->
-          provider = DB.find_one("providers", %{"_id" => args["provider"]})
-          auth_opts = AmpsUtil.get_kafka_auth(args, provider)
-
-          spec = %{
-            id: name,
-            start:
-              {KafkaEx.ConsumerGroup, :start_link,
-               [
-                 types[:kafka],
-                 args["name"],
-                 args["topics"],
-                 [
-                   uris:
-                     Enum.map(
-                       provider["brokers"],
-                       fn %{"host" => host, "port" => port} ->
-                         {host, port}
-                       end
-                     ),
-                   extra_consumer_args: args
-                 ] ++
-                   auth_opts
-               ]}
-          }
-
-          spec
-
         # init_opts = [
         #   group: args["name"],
         #   topics: args["topics"],
@@ -212,7 +185,7 @@ defmodule Amps.SvcManager do
         #   group_consumer: init_opts
         # }
 
-        :gateway ->
+        type == :gateway ->
           IO.inspect(args)
 
           protocol_options = [
@@ -282,8 +255,11 @@ defmodule Amps.SvcManager do
              ]}
           end
 
-        type ->
+        Enum.member?(default, type) ->
           {types[type], name: name, parms: args}
+
+        true ->
+          types[type].get_spec(name, args)
       end
     rescue
       e ->
@@ -335,19 +311,24 @@ defmodule Amps.SvcManager do
         count = opts["subs_count"] || 1
 
         try do
-          Enum.each(1..count, fn x ->
-            name = String.to_atom(svcname <> Integer.to_string(x))
+          if parms["type"] == "subscriber" || parms["type"] == "pyservice" do
+            name = String.to_atom(svcname)
+            Amps.SvcSupervisor.start_child(name, get_spec(name, opts), parms)
+          else
+            Enum.each(1..count, fn x ->
+              name = String.to_atom(svcname <> Integer.to_string(x))
 
-            case get_spec(name, opts) do
-              {:error, error} ->
-                Logger.warn("Service #{name} could not be started. Error: #{inspect(error)}")
+              case get_spec(name, opts) do
+                {:error, error} ->
+                  Logger.warn("Service #{name} could not be started. Error: #{inspect(error)}")
 
-                raise error
+                  raise error
 
-              spec ->
-                Amps.SvcSupervisor.start_child(name, spec, parms)
-            end
-          end)
+                spec ->
+                  Amps.SvcSupervisor.start_child(name, spec, parms)
+              end
+            end)
+          end
 
           {:ok, "Started #{svcname}"}
         rescue
@@ -380,26 +361,38 @@ defmodule Amps.SvcManager do
         count = opts["subs_count"] || 1
         # children = Supervisor.which_children(Amps.SvcSupervisor)
 
-        names =
-          Enum.reduce(1..count, [], fn x, acc ->
-            name = String.to_atom(svcname <> Integer.to_string(x))
-            [name | acc]
-          end)
+        if parms["type"] == "subscriber" || parms["type"] == "pyservice" do
+          name = String.to_atom(svcname)
 
-        case Enum.reduce(names, [], fn name, acc ->
-               case Process.whereis(name) do
-                 nil ->
-                   acc
+          case Process.whereis(name) do
+            nil ->
+              nil
 
-                 pid ->
-                   [pid | acc]
-               end
-             end) do
-          [] ->
-            nil
+            pid ->
+              [pid]
+          end
+        else
+          names =
+            Enum.reduce(1..count, [], fn x, acc ->
+              name = String.to_atom(svcname <> Integer.to_string(x))
+              [name | acc]
+            end)
 
-          list ->
-            list
+          case Enum.reduce(names, [], fn name, acc ->
+                 case Process.whereis(name) do
+                   nil ->
+                     acc
+
+                   pid ->
+                     [pid | acc]
+                 end
+               end) do
+            [] ->
+              nil
+
+            list ->
+              list
+          end
         end
     end
   end
@@ -418,5 +411,27 @@ defmodule Amps.SvcManager do
       res = Amps.Defaults.put(key, val)
       Application.put_env(:amps, String.to_atom(key), val)
     end)
+  end
+
+  def check_util() do
+    utils = DB.find("utilscripts", %{})
+
+    case AmpsUtil.get_mod_path() do
+      nil ->
+        :ok
+
+      modpath ->
+        path = Path.join(modpath, "util")
+
+        Enum.each(utils, fn util ->
+          script_path = Path.join(path, util["name"] <> ".py")
+
+          if File.exists?(script_path) do
+            :ok
+          else
+            File.write(script_path, util["data"])
+          end
+        end)
+    end
   end
 end

@@ -5,10 +5,14 @@ Ext.define("Amps.form.ArrayField", {
   },
   flex: 1,
   xtype: "arrayfield",
-  collapsible: true,
+  scrollable: true,
   fields: [],
   arrayfields: [],
   fieldTitle: "Field",
+  layout: {
+    type: "vbox",
+    align: "stretch",
+  },
 
   constructor: function (args) {
     this.callParent([args]);
@@ -32,43 +36,44 @@ Ext.define("Amps.form.ArrayField", {
     this.initField();
     var scope = this;
 
-    if (args["value"]) {
-      var value = args["value"];
-      value.forEach((val) => {
-        console.log(val);
-        if (args.arrayfields.length == 1) {
-          scope.insert(
-            scope.items.length - 1,
-            Ext.create("Amps.form.ArrayField.Field", {
-              readOnly: args["readOnly"],
-              register: scope.register.bind(scope),
-              deregister: scope.deregister.bind(scope),
-              fields: args.arrayfields.map((field) => {
-                var f = Object.assign({}, field);
-                f.value = val;
-                return f;
-              }),
-              title: args.fieldTitle,
-            })
-          );
-        } else {
-          scope.insert(
-            scope.items.length - 1,
-            Ext.create("Amps.form.ArrayField.Field", {
-              readOnly: args["readOnly"],
-              register: scope.register.bind(scope),
-              deregister: scope.deregister.bind(scope),
-              fields: args.arrayfields.map((field) => {
-                var f = Object.assign({}, field);
-                f.value = val[field.name];
-                return f;
-              }),
-              title: args.fieldTitle,
-            })
-          );
-        }
-      });
-    }
+    // if (args["value"]) {
+    //   scope.removeAll();
+    //   var value = args["value"];
+    //   value.forEach((val) => {
+    //     console.log(val);
+    //     if (args.arrayfields.length == 1) {
+    //       scope.insert(
+    //         scope.items.length - 1,
+    //         Ext.create("Amps.form.ArrayField.Field", {
+    //           readOnly: args["readOnly"],
+    //           register: scope.register.bind(scope),
+    //           deregister: scope.deregister.bind(scope),
+    //           fields: args.arrayfields.map((field) => {
+    //             var f = Object.assign({}, field);
+    //             f.value = val;
+    //             return f;
+    //           }),
+    //           title: args.fieldTitle,
+    //         })
+    //       );
+    //     } else {
+    //       scope.insert(
+    //         scope.items.length - 1,
+    //         Ext.create("Amps.form.ArrayField.Field", {
+    //           readOnly: args["readOnly"],
+    //           register: scope.register.bind(scope),
+    //           deregister: scope.deregister.bind(scope),
+    //           fields: args.arrayfields.map((field) => {
+    //             var f = Object.assign({}, field);
+    //             f.value = val[field.name];
+    //             return f;
+    //           }),
+    //           title: args.fieldTitle,
+    //         })
+    //       );
+    //     }
+    //   });
+    // }
 
     this.setReadOnly(args["readOnly"]);
   },
@@ -76,10 +81,56 @@ Ext.define("Amps.form.ArrayField", {
   getValue: function () {
     var val = [];
     this.fields.forEach((field) => {
+      console.log(field);
       var f = amfutil.getElementByID(field);
       val.push(f.getValue());
     });
+    console.log(val);
+
     return JSON.stringify(val);
+  },
+
+  setValue: function (value) {
+    var scope = this;
+    value = value || [];
+    console.log(value);
+    while (scope.items.items.length > 1) {
+      scope.remove(0);
+    }
+    value.forEach((val) => {
+      console.log(val);
+      if (scope.arrayfields.length == 1) {
+        scope.insert(
+          scope.items.length - 1,
+          Ext.create("Amps.form.ArrayField.Field", {
+            readOnly: scope["readOnly"],
+            register: scope.register.bind(scope),
+            deregister: scope.deregister.bind(scope),
+            fields: scope.arrayfields.map((field) => {
+              var f = Object.assign({}, field);
+              f.value = val;
+              return f;
+            }),
+            title: scope.fieldTitle,
+          })
+        );
+      } else {
+        scope.insert(
+          scope.items.length - 1,
+          Ext.create("Amps.form.ArrayField.Field", {
+            readOnly: scope["readOnly"],
+            register: scope.register.bind(scope),
+            deregister: scope.deregister.bind(scope),
+            fields: scope.arrayfields.map((field) => {
+              var f = Object.assign({}, field);
+              f.value = val[field.name];
+              return f;
+            }),
+            title: scope.fieldTitle,
+          })
+        );
+      }
+    });
   },
 
   register: function (name) {
@@ -101,6 +152,11 @@ Ext.define("Amps.form.ArrayField", {
         b.setHidden(true);
       });
     }
+    this.fields.forEach((field) => {
+      console.log(field);
+      var f = amfutil.getElementByID(field);
+      f.setReadOnly(readOnly);
+    });
   },
 
   loadParms: function (data, readOnly) {
@@ -158,7 +214,9 @@ Ext.define("Amps.form.ArrayField", {
 
 Ext.define("Amps.form.ArrayField.Field", {
   extend: "Ext.form.FieldContainer",
+  xtype: "arraysubfield",
   collapsible: true,
+  isFormField: false,
   layout: {
     type: "vbox",
     align: "stretch",
@@ -177,8 +235,9 @@ Ext.define("Amps.form.ArrayField.Field", {
     this.deregister = function () {
       args.deregister(name);
     };
+    var scope = this;
     this.fields = args["fields"];
-    this.insertFields(args["fields"]);
+    this.insertFields(this.fields);
     // console.log(scope.down("#addMenu"));
     // this.loadParms(args["value"], args["readOnly"]);
     this.setReadOnly(args["readOnly"]);
@@ -187,10 +246,20 @@ Ext.define("Amps.form.ArrayField.Field", {
   getValue: function () {
     var scope = this;
     var data = {};
+    console.log(this.fields);
+    console.log(this);
+
     this.fields.forEach((field) => {
       var cmp = amfutil.getElementByID(scope.name + "-" + field.name);
-      data[cmp.name] = cmp.getValue();
       // console.log(cmp);
+
+      if (cmp) {
+        if (cmp.xtype == "arrayfield") {
+          data[cmp.name] = JSON.parse(cmp.getValue());
+        } else {
+          data[cmp.name] = cmp.getValue();
+        }
+      }
     });
     return data;
   },
@@ -228,20 +297,46 @@ Ext.define("Amps.form.ArrayField.Field", {
 
     for (var i = 0; i < fields.length; i++) {
       var ref = this.name + "-" + fields[i].name;
-      var field = Object.assign({ id: ref, isFormField: false }, fields[i]);
-      items.push(field);
-      if (items.length == 2) {
-        hbox.items = items;
-        vbox.items.push(Ext.create(hbox));
-        items = [];
-      } else if (i == fields.length - 1) {
-        items.push({
-          xtype: "component",
-        });
-        hbox.items = items;
-        vbox.items.push(Ext.create(hbox));
+      var field = Object.assign(fields[i], {
+        itemId: ref,
+        readOnly: this.readOnly,
+        isFormField: false,
+      });
+      console.log(field);
+      if (field.row) {
+        if (items.length == 2) {
+          hbox.items = items;
+          vbox.items.push(Ext.create(hbox));
+          hbox.items = [field];
+          vbox.items.push(Ext.create(hbox));
+          items = [];
+        } else {
+          items.push({
+            xtype: "component",
+          });
+          hbox.items = items;
+          vbox.items.push(Ext.create(hbox));
+          hbox.items = [field];
+          vbox.items.push(Ext.create(hbox));
 
-        items = [];
+          items = [];
+        }
+      } else {
+        items.push(field);
+
+        if (items.length == 2) {
+          hbox.items = items;
+          vbox.items.push(Ext.create(hbox));
+          items = [];
+        } else if (i == fields.length - 1) {
+          items.push({
+            xtype: "component",
+          });
+          hbox.items = items;
+          vbox.items.push(Ext.create(hbox));
+
+          items = [];
+        }
       }
     }
     console.log(vbox);
@@ -257,6 +352,14 @@ Ext.define("Amps.form.ArrayField.Field", {
         b.setHidden(true);
       });
     }
+    var scope = this;
+    this.fields.forEach((field) => {
+      var cmp = amfutil.getElementByID(scope.name + "-" + field.name);
+      // console.log(cmp);
+      if (cmp) {
+        cmp.setReadOnly(readOnly);
+      }
+    });
   },
 
   loadParms: function (data, readOnly) {

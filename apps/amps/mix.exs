@@ -23,7 +23,7 @@ defmodule Amps.MixProject do
   def application do
     [
       mod: {Amps.Application, []},
-      extra_applications: [:logger, :runtime_tools, :datapio_cluster]
+      extra_applications: [:logger, :runtime_tools]
     ]
   end
 
@@ -36,12 +36,13 @@ defmodule Amps.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
+      {:amps_mongodb, [git: "https://github.com/mftlabs/amps-mongodb", branch: "main"]},
+#      {:amps_kafka, [git: "https://github.com/mftlabs/amps_kafka", branch: "main"]},
       {:phoenix_pubsub, "~> 2.0"},
       {:swoosh, "~> 1.3"},
       {:plug_cowboy, "~> 2.0"},
       {:uuid, "~> 2.0", hex: :uuid_erl},
       {:poison, "~> 3.1"},
-      {:mongodb_driver, "~> 0.7"},
       {:export, "~> 0.0.7"},
       {:erlport,
        [
@@ -53,28 +54,30 @@ defmodule Amps.MixProject do
       {:poolboy, "~> 1.5"},
       {:glob, "~> 1.0"},
       {:sftp_client, "~> 1.4"},
-      {:snap, git: "https://github.com/aram0112/snap"},
-      {:jetstream, path: "./jetstream"},
+      {:jetstream, git: "https://github.com/aram0112/jetstream"},
       {:pythra, git: "https://github.com/aram0112/pythra.git"},
-      {:gnat, "~> 1.4"},
+      {:gnat, "~> 1.5.2"},
       {:httpoison, "~> 1.8"},
       {:zstream, "~> 0.6.0"},
       {:ex_aws, "~> 2.0"},
       {:ex_aws_s3, "~> 2.0"},
+      {:ex_aws_sqs, "~> 3.3"},
       {:quantum, "~> 3.0"},
       {:argon2_elixir, "~> 2.0"},
+      {:master_proxy,
+       git: "https://github.com/jesseshieh/master_proxy.git", branch: "increase-flexibility"},
+      {:site_encrypt, git: "https://github.com/sasa1977/site_encrypt.git", branch: "master"},
       {:tesla, git: "https://github.com/teamon/tesla", override: true},
       {
         :datapio_cluster,
         github: "datapio/opencore", ref: "main", sparse: "apps/datapio_cluster"
       },
       {:mnesiac, git: "https://github.com/aram0112/mnesiac"},
-      {:kafka_ex, git: "https://github.com/aram0112/kafka_ex"},
       {:cors_plug, "~> 2.0"},
-      {:gen_smtp, "~> 1.0"}
-      # {:ex_json_schema, "~> 0.9.1"},
-      # {:xml_builder, "~> 2.1"},
-      # {:jsonpatch, "~> 0.12.0"}
+      {:gen_smtp, "~> 1.0"},
+      {:absinthe, "~> 1.7.0"},
+      {:ldap_ex, "~> 0.2.2"},
+      {:timex, "~> 3.7.8"}
     ]
   end
 

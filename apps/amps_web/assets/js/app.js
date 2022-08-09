@@ -27,6 +27,9 @@ import { LiveSocket } from "phoenix_live_view";
 import topbar from "../vendor/topbar";
 import * as monaco from "monaco-editor";
 import Cropper from "cropperjs";
+const pdfjsLib = require("pdfjs-dist/build/pdf");
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = "/assets/js/pdf.worker.js";
 
 let csrfToken = document
   .querySelector("meta[name='csrf-token']")
@@ -68,8 +71,8 @@ monaco.editor.setTheme("vs-dark");
 // >> liveSocket.disableLatencySim()
 window.liveSocket = liveSocket;
 // window.userSocket = userSocket;
-
 window.pSocket = Socket;
 window.monaco = monaco;
 window.cropper = Cropper;
+window.pdfjsLib = pdfjsLib;
 require("./client");

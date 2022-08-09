@@ -58,7 +58,7 @@ defmodule AmpsWeb.MixProject do
       {:ex_aws_s3, "~> 2.3.1"},
       {:glob, "~> 1.0"},
       {:httpoison, "~> 1.8"},
-      {:postgrex, "~> 0.15.10"},
+      #      {:postgrex, "~> 0.15.10"},
       {:pow, "~> 1.0.25"},
       {:pow_assent, "~> 0.4.12"},
       {:redirect, "~> 0.3.0"},
@@ -66,9 +66,8 @@ defmodule AmpsWeb.MixProject do
       {:temp, "~> 0.4"},
       {:timex, "~> 3.0"},
       {:tesla, git: "https://github.com/teamon/tesla", override: true},
-      {:gnat, "~> 1.2"},
+      {:gnat, "~> 1.5.2"},
       {:x509, "~> 0.8.0"},
-      {:master_proxy, "~> 0.1"},
       {:elixlsx, "~> 0.5.1"},
       {:xlsxir, "~> 1.6.4"},
       {:earmark, "~> 1.4"},
@@ -79,7 +78,10 @@ defmodule AmpsWeb.MixProject do
          git: "https://github.com/erlport/erlport.git",
          branch: "master"
        ]},
-      {:swoosh, "~> 1.3"}
+      {:swoosh, "~> 1.3"},
+      {:file_type, "~> 0.1.0"},
+      {:amps_mongodb, [git: "https://github.com/mftlabs/amps-mongodb", branch: "main"]},
+      {:unplug, "~> 1.0.0"}
 
       # {:uuid, "~> 1.1"}
     ]

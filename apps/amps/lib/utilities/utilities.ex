@@ -1,6 +1,6 @@
 defmodule AmpsUtil do
-  alias Amps.DB
-  alias Amps.VaultDatabase
+  # alias Amps.DB
+  # alias Amps.VaultDatabase
   require Logger
 
   def gettime() do
@@ -340,6 +340,44 @@ defmodule AmpsUtil do
         fname = String.replace(fname, pat, ms)
         check(tail, msg, fname)
 
+      "fnoext" ->
+        rep = msg["fname"]
+
+        if rep == nil do
+          raise "file name cannot be formatted, missing message metadata [fname]"
+        end
+
+        fname = String.replace(fname, pat, Path.rootname(rep))
+        check(tail, msg, fname)
+
+      "ext" ->
+        rep = msg["fname"]
+
+        if rep == nil do
+          raise "file name cannot be formatted, missing message metadata [fname]"
+        end
+
+        fname = String.replace(fname, pat, Path.extname(rep))
+        check(tail, msg, fname)
+
+      "DATETIME" ->
+        rep = format("{YYYY}{MM}{DD}{HH}{mm}{SS}{MS}", msg)
+
+        fname = String.replace(fname, pat, rep)
+        check(tail, msg, fname)
+
+      "DATE" ->
+        rep = format("{YYYY}{MM}{DD}", msg)
+
+        fname = String.replace(fname, pat, rep)
+        check(tail, msg, fname)
+
+      "TIME" ->
+        rep = format("{HH}{mm}{SS}{MS}", msg)
+
+        fname = String.replace(fname, pat, rep)
+        check(tail, msg, fname)
+
       _ ->
         rep = msg[name]
 
@@ -430,7 +468,13 @@ defmodule AmpsUtil do
       byte_size(msg["data"])
     else
       if File.exists?(msg["fpath"]) do
-        File.state!(msg["fpath"]).size
+        case File.stat(msg["fpath"]) do
+          {:ok, st} ->
+            st.size
+
+          {:error, _reason} ->
+            Amps.ArchiveConsumer.size(msg, env)
+        end
       else
         Amps.ArchiveConsumer.size(msg, env)
       end
@@ -439,7 +483,7 @@ defmodule AmpsUtil do
 
   def get_local_file(msg, env) do
     msg = Jason.decode!(msg)
-    local_file(msg, List.to_string(env))
+    local_file(msg, env)
   end
 
   def get_output_msg(msg, {ostream, tfile}, parms \\ %{}) do
@@ -513,7 +557,7 @@ defmodule AmpsUtil do
         cons =
           Map.merge(
             %Jetstream.API.Consumer{
-              name: name,
+              durable_name: name,
               stream_name: stream,
               filter_subject: filter
             },
@@ -549,71 +593,20 @@ defmodule AmpsUtil do
   end
 
   def get_key(id) do
-    with key <- DB.find_by_id("keys", id) do
+    with key <- Amps.DB.find_by_id("keys", id) do
       key["data"]
     end
   end
 
-  def get_key(id, env) do
-    IO.inspect("ID")
-    IO.inspect(id)
-    res = DB.find_by_id(AmpsUtil.index(env, "keys"), id)["data"]
-    IO.puts("Key")
-    IO.inspect(res)
-    res
-  end
-
-  def get_kafka_auth(args, provider, env \\ "") do
-    {cacertfile, certfile, keyfile} =
-      if String.contains?(provider["auth"], "SSL") do
-        cacertfile = Path.join(AmpsUtil.tempdir(env <> "-" <> args["name"]), "cacert")
-        File.write(cacertfile, AmpsUtil.get_key(provider["cacert"], env))
-        certfile = Path.join(AmpsUtil.tempdir(env <> "-" <> args["name"]), "cert")
-        File.write(certfile, AmpsUtil.get_key(provider["cert"], env))
-        keyfile = Path.join(AmpsUtil.tempdir(env <> "-" <> args["name"]), "key")
-        File.write(keyfile, AmpsUtil.get_key(provider["key"], env))
-        {cacertfile, certfile, keyfile}
-      else
-        {nil, nil, nil}
-      end
-
-    case provider["auth"] do
-      "SASL_PLAINTEXT" ->
-        [
-          auth:
-            {:sasl, String.to_existing_atom(provider["mechanism"]),
-             username: provider["username"], password: provider["password"]}
-        ]
-
-      "SASL_SSL" ->
-        [
-          use_ssl: true,
-          ssl_options: [
-            cacertfile: cacertfile,
-            certfile: certfile,
-            keyfile: keyfile
-          ],
-          auth:
-            {:sasl, String.to_existing_atom(provider["mechanism"]),
-             username: provider["username"], password: provider["password"]}
-        ]
-
-      "SSL" ->
-        [
-          [
-            use_ssl: true,
-            ssl_options: [
-              cacertfile: cacertfile,
-              certfile: certfile,
-              keyfile: keyfile
-            ]
-          ]
-        ]
-
-      "NONE" ->
-        []
-    end
-  end
+  # utility class should not hide resource/behavior
+  #  def get_key(id, env) do
+  #    IO.inspect("ID")
+  #    IO.inspect(id)
+  #    res = DB.find_by_id(AmpsUtil.index(env, "keys"), id)["data"]
+  #    IO.puts("Key")
+  #    IO.inspect(res)
+  #    res
+  #  end
 
   def match(file, parms) do
     if parms["regex"] do
@@ -645,23 +638,6 @@ defmodule AmpsUtil do
         IO.puts("bad regex, failing")
         false
     end
-  end
-
-  def produce(msg) do
-    KafkaEx.create_worker(:pr,
-      uris: [{"localhost", 9092}],
-      auth: {:sasl, :plain, username: "user", password: "bitnami"}
-    )
-
-    KafkaEx.produce(
-      %KafkaEx.Protocol.Produce.Request{
-        topic: "amps.events",
-        partition: 0,
-        required_acks: 1,
-        messages: [%KafkaEx.Protocol.Produce.Message{value: msg}]
-      },
-      worker_name: :pr
-    )
   end
 
   def env_topic(topic, env) do
@@ -711,8 +687,9 @@ defmodule AmpsUtil do
       end
     end)
 
+    # TODO, utility should not hide resource/behavior
     Amps.DB.delete_index("#{env}-*")
-    Amps.VaultDatabase.delete_env(env)
+    # Amps.VaultDatabase.delete_env(env)
 
     File.rm_rf(Path.join(Amps.Defaults.get("python_path"), env))
 
@@ -727,36 +704,28 @@ defmodule AmpsUtil do
 
   def convert_output(parms, env) do
     if parms["output"] do
-      Map.put(parms, "output", AmpsUtil.env_topic(parms["output"], env))
+      output =
+        if is_list(parms["output"]) do
+          Enum.map(parms["output"], fn topic ->
+            AmpsUtil.env_topic(topic, env)
+          end)
+        else
+          AmpsUtil.env_topic(parms["output"], env)
+        end
+
+      Map.put(parms, "output", output)
     else
       parms
     end
   end
 
-  def test do
-    parms = %{
-      "name" => "DonationForm",
-      "service" => "webapp",
-      "config" => %{
-        "port" => 8484
-      },
-      "receive" => true,
-      "topic" => "amps.actions.runscript.test",
-      "policy" => "all",
-      "send_output" => true,
-      "output" => "amps.mailbox.gw01.Outbox"
-    }
-
-    AmpsWeb.Util.create_config_consumer(parms, "gwdemo")
-
-    {:ok, pid} = Amps.PyProcess.start_link(parms: parms, env: "gwdemo", name: :gwdemo)
-  end
-
   def deliver(email) do
-    import Swoosh.Email
+    # delivery of email should be an action and not a utility.  this needs to be fixed
+    # utilty should not hide a resource/behavior
+    #  import Swoosh.Email
 
     if Amps.Defaults.get("email") do
-      provider = DB.find_by_id("providers", Amps.Defaults.get("eprovider"))
+      provider = Amps.DB.find_by_id("providers", Amps.Defaults.get("eprovider"))
       type = provider["etype"]
 
       config =
@@ -796,12 +765,20 @@ defmodule AmpsUtil do
   end
 
   def get_mod_path(env \\ "", paths \\ [""]) do
-    case env do
-      "" ->
-        Path.join([Amps.Defaults.get("python_path")] ++ paths)
+    pypath = Amps.Defaults.get("python_path")
 
-      env ->
-        Path.join([Amps.Defaults.get("python_path"), "env", env] ++ paths)
+    case pypath do
+      nil ->
+        nil
+
+      pypath ->
+        case env do
+          "" ->
+            Path.join([pypath] ++ paths)
+
+          env ->
+            Path.join([pypath, "env", env] ++ paths)
+        end
     end
   end
 
@@ -860,5 +837,19 @@ defmodule AmpsUtil do
       _ ->
         v
     end
+  end
+
+  def test do
+    AmpsUtil.create_consumer(
+      "TEST-SERVICES",
+      "util_test",
+      "amps.test.svcs.cheese.touch",
+      %{
+        deliver_policy: :all,
+        deliver_subject: "amps.test.consumer.util_test",
+        ack_policy: :explicit,
+        max_ack_pending: 3
+      }
+    )
   end
 end

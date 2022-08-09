@@ -53,6 +53,13 @@ defmodule AmpsWeb.Application do
       # {AmpsWeb.Worker, arg}
     ]
 
+    children =
+      if Application.get_env(:amps, :use_ssl) and Application.get_env(:amps, :gen_certs) do
+        children ++ [{AmpsWeb.SSL, AmpsWeb.Proxy}]
+      else
+        children ++ [AmpsWeb.Proxy]
+      end
+
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: AmpsWeb.Supervisor]

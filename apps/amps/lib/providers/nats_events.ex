@@ -2,19 +2,48 @@ defmodule AmpsEvents do
   require Logger
   alias Amps.DB
 
-  def send(msg, parms, state) do
+  def send(msg, parms, state, env \\ "") do
     Logger.debug("Sending to #{parms["output"]}")
     # Logger.debug(msg)
     # Logger.debug(parms)
     # Logger.debug(state)
 
-    topic = parms["output"]
+    output = parms["output"]
 
+    if is_list(output) do
+      Enum.each(output, fn topic ->
+        do_send(msg, parms, state, topic, env)
+      end)
+    else
+      do_send(msg, parms, state, output, env)
+    end
+  end
+
+  def do_send(msg, parms, state, topic, env) do
     msg = Map.merge(msg, %{"etime" => AmpsUtil.gettime(), "topic" => topic})
 
     if not AmpsUtil.blank?(topic) do
-      data = %{msg: msg, state: state}
+      data =
+        if state["return"] do
+          contextid = AmpsUtil.get_id()
 
+          subs =
+            DB.find(AmpsUtil.index(env, "services"), %{
+              "type" => "subscriber",
+              "active" => true,
+              "topic" => topic
+            })
+
+          Enum.each(subs, fn sub ->
+            Amps.AsyncResponder.register_message(state["return"], contextid <> sub["name"])
+          end)
+
+          %{msg: msg, state: Map.merge(state, %{"contextid" => contextid})}
+        else
+          %{msg: msg, state: state}
+        end
+
+      topic = AmpsUtil.env_topic(topic, env)
       Gnat.pub(:gnat, topic, Poison.encode!(data))
       # send_history("amps.events.messages", "messages", msg)
     else
@@ -30,7 +59,23 @@ defmodule AmpsEvents do
     app = Map.merge(app, %{"index" => index, "etime" => AmpsUtil.gettime()})
     data = Map.merge(msg, app)
     Logger.debug("post event #{topic}   #{inspect(data)}")
-    Gnat.pub(:gnat, topic, Poison.encode!(data))
+    Gnat.pub(:gnat, topic, Poison.encode!(%{"msg" => data}))
+  end
+
+  def send_history_update(topic, index, msg, clauses, env \\ "") do
+    Logger.debug("post update event #{topic} msg: #{inspect(msg)} clauses: #{inspect(clauses)}")
+
+    topic = AmpsUtil.env_topic(topic, env)
+
+    Gnat.pub(
+      :gnat,
+      topic,
+      Poison.encode!(%{
+        "msg" => Map.merge(msg, %{"index" => index}),
+        "op" => "update",
+        "clauses" => clauses
+      })
+    )
   end
 
   defp send_event(topic, data) do
@@ -44,11 +89,30 @@ defmodule AmpsEvents do
 
   def start_session(msg, session, env) do
     sid = AmpsUtil.get_id()
+    # Process.register(self, String.to_atom(sid))
     Logger.metadata(sid: sid)
+    time = AmpsUtil.gettime()
 
-    DB.insert(
-      AmpsUtil.index(env, "sessions"),
-      Map.merge(session, %{"sid" => sid, "start" => AmpsUtil.gettime()})
+    session =
+      if Map.has_key?(session, "status") do
+        session
+      else
+        Map.put(session, "status", "started")
+      end
+
+    session =
+      Map.merge(session, %{
+        "sid" => sid,
+        "msgid" => msg["msgid"],
+        "start" => time,
+        "stime" => time,
+        "index" => "sessions"
+      })
+
+    Gnat.pub(
+      :gnat,
+      AmpsUtil.env_topic("amps.events.sessions", env),
+      Poison.encode!(%{"msg" => session})
     )
 
     msg =
@@ -59,10 +123,41 @@ defmodule AmpsEvents do
     {msg, sid}
   end
 
-  def end_session(sid, env) do
-    DB.find_one_and_update(AmpsUtil.index(env, "sessions"), %{"sid" => sid}, %{
-      "end" => AmpsUtil.gettime()
-    })
+  def update_session(sid, env, status) do
+    clauses = %{"sid" => sid}
+
+    msg = %{
+      "status" => status,
+      "stime" => AmpsUtil.gettime()
+    }
+
+    send_history_update(
+      "amps.events.sessions",
+      "sessions",
+      msg,
+      clauses,
+      env
+    )
+  end
+
+  def end_session(sid, env, status \\ "completed") do
+    time = AmpsUtil.gettime()
+
+    clauses = %{"sid" => sid}
+
+    msg = %{
+      "end" => time,
+      "stime" => time,
+      "status" => status
+    }
+
+    send_history_update(
+      "amps.events.sessions",
+      "sessions",
+      msg,
+      clauses,
+      env
+    )
 
     Logger.metadata(sid: nil)
   end

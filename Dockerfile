@@ -40,7 +40,7 @@ RUN mix release
 
 FROM elixir:1.12.1
 RUN apt-get update
-RUN apt-get install python3 python3-pip -y
+RUN apt-get install python3 python3-pip certbot -y
 
 RUN mkdir /.local
 RUN mkdir /.cache
@@ -59,6 +59,8 @@ RUN chgrp -R 0 /.cache && \
 RUN chgrp -R 0 /.config && \
     chmod -R g=u /.config
 WORKDIR /amps
+
+ENV PYTHONUSERBASE=/.local
 
 ENV ERLPORT_PYTHON=/usr/bin/python3
 

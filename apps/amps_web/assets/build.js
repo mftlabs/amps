@@ -21,6 +21,8 @@ const workerEntryPoints = [
   "vs/language/json/json.worker.js",
 ];
 
+const pdfEntryPoints = ["./node_modules/pdfjs-dist/build/pdf.worker.js"];
+
 esbuild.build({
   entryPoints: workerEntryPoints.map(
     (entry) => `./node_modules/monaco-editor/esm/${entry}`
@@ -28,6 +30,14 @@ esbuild.build({
   bundle: true,
   format: "iife",
   outbase: "./node_modules/monaco-editor/esm",
+  outdir: "../priv/static/assets/js",
+});
+
+esbuild.build({
+  entryPoints: pdfEntryPoints,
+  bundle: true,
+  format: "iife",
+  outbase: "./node_modules/pdfjs-dist/build",
   outdir: "../priv/static/assets/js",
 });
 

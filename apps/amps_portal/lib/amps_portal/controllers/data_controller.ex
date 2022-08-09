@@ -48,8 +48,7 @@ defmodule AmpsPortal.DataController do
                 "mailbox" => mailbox["name"]
               })
 
-            conn = Map.put(conn, :query_params, qp)
-            data = DB.get_rows(conn, %{"collection" => Util.conn_index(conn, "mailbox")})
+            data = DB.get_rows(Util.conn_index(conn, "mailbox"), qp)
 
             json(
               conn,
@@ -70,8 +69,7 @@ defmodule AmpsPortal.DataController do
       user ->
         qp = conn.query_params()
         qp = Util.create_filter(qp, %{"recipient" => user.username})
-        conn = Map.put(conn, :query_params, qp)
-        data = DB.get_rows(conn, %{"collection" => Util.conn_index(conn, "mailbox")})
+        data = DB.get_rows(Util.conn_index(conn, "mailbox"), qp)
 
         json(
           conn,
@@ -202,8 +200,7 @@ defmodule AmpsPortal.DataController do
         qp = conn.query_params()
         IO.inspect(qp)
         qp = Util.create_filter(qp, %{"user" => user.username})
-        conn = Map.put(conn, :query_params, qp)
-        data = DB.get_rows(conn, %{"collection" => Util.conn_index(conn, "ufa_logs")})
+        data = DB.get_rows(Util.conn_index(conn, "ufa_logs"), qp)
 
         json(
           conn,

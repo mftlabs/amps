@@ -10,6 +10,13 @@ defmodule AmpsPortal.Endpoint do
     signing_salt: "7j3uMen9"
   ]
 
+  plug(Unplug,
+    if: {AmpsWeb.UnplugPredicates.ForceSSL, []},
+    do:
+      {Plug.SSL,
+       [rewrite_on: [:x_forwarded_host, :x_forwarded_port, :x_forwarded_proto], host: nil]}
+  )
+
   socket("/live", Phoenix.LiveView.Socket, websocket: [connect_info: [session: @session_options]])
 
   # Serve at "/" the static files from "priv/static" directory.

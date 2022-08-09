@@ -7,7 +7,7 @@ Ext.define("Amps.form.update", {
     align: "stretch",
   },
   defaults: {
-    labelWidth: 175,
+    labelWidth: 100,
   },
   entity: null,
   resizable: true,
@@ -417,7 +417,7 @@ Ext.define("Amps.util.UpdateRecordController", {
 
     el = Ext.apply(el, { region: "center" });
     amfutil.getElementByID("edit_container").add(el);
-    amfutil.getElementByID("detailsbackbtn").setText(config.object + "s");
+    amfutil.getElementByID("detailsbackbtn").setText(config.title);
   },
 
   createForm: function (record, config, scope, close, subgrid) {
@@ -1614,7 +1614,7 @@ Ext.define("Amps.util.UpdateRecordController", {
                   Authorization: localStorage.getItem("access_token"),
                 },
                 url: "/api/" + route + "/" + record._id,
-                method: "POST",
+                method: "PUT",
                 timeout: 60000,
                 params: {},
                 jsonData: user,

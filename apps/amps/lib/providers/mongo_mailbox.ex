@@ -1,5 +1,6 @@
 defmodule AmpsMailbox do
   alias Amps.DB
+  require Logger
 
   @doc """
   """
@@ -16,7 +17,23 @@ defmodule AmpsMailbox do
     end
   end
 
+  def delete_by_name(user, mailbox, fname, env \\ "") do
+    result =
+      DB.delete_one(AmpsUtil.index(env, "mailbox"), %{
+        "recipient" => user,
+        "mailbox" => mailbox,
+        "fname" => fname
+      })
+
+    :ok
+  end
+
   def delete_message(user, mailbox, msgid, env \\ "") do
+    IO.inspect(user)
+    IO.inspect(mailbox)
+    IO.inspect(msgid)
+    IO.inspect(env)
+
     result =
       DB.delete_one(AmpsUtil.index(env, "mailbox"), %{
         "recipient" => user,
@@ -25,7 +42,17 @@ defmodule AmpsMailbox do
       })
 
     IO.inspect(result)
+
     :ok
+  end
+
+  def get_message_by_name(user, mailbox, fname, env \\ "") do
+    # Mongo.find_one(:mongo, "mailbox", %{"$and" => [%{mailbox: mailbox}, %{msgid: msgid}]})
+    DB.find_one(AmpsUtil.index(env, "mailbox"), %{
+      "recipient" => user,
+      "mailbox" => mailbox,
+      "fname" => fname
+    })
   end
 
   def get_message(user, mailbox, msgid, env \\ "") do
@@ -109,6 +136,34 @@ defmodule AmpsMailbox do
     end
   end
 
+  def is_mailbox(user, mailbox, env \\ "") do
+    if mailbox == "default" do
+      "default"
+    else
+      user =
+        DB.find_one(AmpsUtil.index(env, "users"), %{
+          "username" => user
+        })
+
+      case user do
+        nil ->
+          nil
+
+        user ->
+          exists =
+            Enum.find(user["mailboxes"], fn mbox ->
+              mbox["name"] == mailbox
+            end)
+
+          if exists do
+            exists["name"]
+          else
+            nil
+          end
+      end
+    end
+  end
+
   def stat_fname(user, mailbox, fname, env \\ "") do
     # Mongo.find_one(:mongo, "mailbox", %{"$and" => [%{mailbox: mailbox}, %{fname: fname}]})
     DB.find_one(AmpsUtil.index(env, "mailbox"), %{
@@ -118,11 +173,31 @@ defmodule AmpsMailbox do
     })
   end
 
+  def overwrite(user, mailbox, msg, overwrite, env \\ "") do
+    fname = msg["fname"]
+
+    case stat_fname(user, mailbox, fname, env) do
+      nil ->
+        {msg, fn -> nil end}
+
+      to_delete ->
+        if overwrite do
+          {msg,
+           fn ->
+             Logger.info("Overwriting #{to_delete["msgid"]} in Mailbox #{mailbox}")
+             delete_message(user, mailbox, to_delete["msgid"], env)
+           end}
+        else
+          {Map.put(msg, "fname", fname <> "(" <> msg["msgid"] <> ")"), fn -> nil end}
+        end
+    end
+  end
+
   def list_messages(user, mailbox, limit \\ 100, env \\ "") do
     # Mongo.find(:mongo, "mailbox", %{mailbox: mailbox}, limit: limit, sort: %{time: 1})
     # |> Enum.to_list()
     DB.find(AmpsUtil.index(env, "mailbox"), %{"recipient" => user, "mailbox" => mailbox}, %{
-      size: limit,
+      limit: limit,
       sort: %{"mtime" => -1}
     })
   end

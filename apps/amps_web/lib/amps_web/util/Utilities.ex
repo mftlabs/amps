@@ -1,13 +1,13 @@
 defmodule AmpsWeb.Util do
   require Logger
-  #import Argon2
-  #alias Amps.DB
-  #alias AmpsWeb.Encryption
+  import Argon2
+  alias Amps.DB
+  # alias AmpsWeb.Encryption
   alias Amps.SvcManager
   alias AmpsWeb.Util
-  alias AmpsWeb.ServiceController
-  alias Elixlsx.Workbook
-  alias Elixlsx.Sheet
+  # alias AmpsWeb.ServiceController
+  # alias Elixlsx.Workbook
+  # alias Elixlsx.Sheet
   @numbers '0123456789'
   @letters 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMOPQRSTUVWXYZ'
   @symbols '$@!@#$%&*'
@@ -32,6 +32,7 @@ defmodule AmpsWeb.Util do
         "headers" => ["name", "desc", "type"],
         "subgrids" => nil,
         "types" => %{
+          "aws" => ["action", "output"],
           "batch" => [
             "inputtype",
             "input",
@@ -52,8 +53,17 @@ defmodule AmpsWeb.Util do
             "format",
             "headers"
           ],
-          "kafkaput" => ["provider", "topic"],
-          "mailbox" => ["recipient", "mailbox", "format"],
+          "ldap" => [
+            "provider",
+            "timeout",
+            "base",
+            "scope",
+            "sizeLimit",
+            "filter",
+            "attributes",
+            "output"
+          ],
+          "mailbox" => ["recipient", "mailbox", "overwrite", "format"],
           "pgpdecrypt" => ["key", "passphrase", "verify", "signing_key", "format", "output"],
           "pgpencrypt" => [
             "key",
@@ -78,7 +88,9 @@ defmodule AmpsWeb.Util do
           "s3" => [
             "provider",
             "operation",
+            "count",
             "bucket",
+            "path",
             "prefix",
             "pattern",
             "regex",
@@ -104,13 +116,27 @@ defmodule AmpsWeb.Util do
           "zip" => ["format", "output"]
         }
       },
+      "admin" => %{
+        "headers" => [
+          "firstname",
+          "lastname",
+          "role",
+          "username",
+          "phone",
+          "email",
+          "provider",
+          "approved"
+        ],
+        "subgrids" => nil,
+        "types" => nil
+      },
       "endpoints" => %{
-        "headers" => ["name", "desc", "method", "path", "action"],
+        "headers" => ["name", "desc", "method", "path", "timeout", "action"],
         "subgrids" => nil,
         "types" => nil
       },
       "environments" => %{
-        "headers" => ["name", "desc", "active", "archive"],
+        "headers" => ["name", "desc", "host", "active", "archive"],
         "subgrids" => nil,
         "types" => nil
       },
@@ -124,8 +150,37 @@ defmodule AmpsWeb.Util do
         "subgrids" => nil,
         "types" => nil
       },
+      "jobs" => %{
+        "headers" => ["name", "active", "topic", "meta", "type"],
+        "subgrids" => nil,
+        "types" => %{
+          "daily" => ["time", "daily", "weekdays"],
+          "days" => ["time", "days"],
+          "timer" => ["value", "unit"]
+        }
+      },
       "keys" => %{
         "headers" => ["name", "user", "usage", "type", "data"],
+        "subgrids" => nil,
+        "types" => nil
+      },
+      "message_events" => %{
+        "headers" => [
+          "msgid",
+          "action",
+          "user",
+          "parent",
+          "fname",
+          "fsize",
+          "etime",
+          "topic",
+          "status"
+        ],
+        "subgrids" => nil,
+        "types" => nil
+      },
+      "packages" => %{
+        "headers" => ["name", "desc"],
         "subgrids" => nil,
         "types" => nil
       },
@@ -144,35 +199,23 @@ defmodule AmpsWeb.Util do
             "secret",
             "bucket"
           ],
+          "aws" => ["key", "secret"],
           "generic" => ["values"],
-          "kafka" => [
-            "brokers",
-            "auth",
-            "mechanism",
-            "username",
-            "password",
-            "cacert",
-            "cert",
-            "key"
-          ],
+          "ldap" => ["server", "port", "ssl", "username", "password"],
           "s3" => ["provider", "scheme", "host", "port", "region", "key", "secret"],
           "sharepoint" => ["tenant", "client_id", "client_secret"],
           "smtp" => ["etype", "relay", "username", "password", "auth", "tls", "ssl", "port"]
         }
       },
+      "queues" => %{
+        "headers" => ["name", "type", "description"],
+        "subgrids" => nil,
+        "types" => nil
+      },
       "rules" => %{
         "headers" => ["name", "desc", "output", "patterns"],
         "subgrids" => nil,
         "types" => nil
-      },
-      "scheduler" => %{
-        "headers" => ["name", "active", "topic", "meta", "type"],
-        "subgrids" => nil,
-        "types" => %{
-          "daily" => ["time", "daily", "weekdays"],
-          "days" => ["time", "days"],
-          "timer" => ["value", "unit"]
-        }
       },
       "scripts" => %{
         "headers" => ["name", "data"],
@@ -192,34 +235,60 @@ defmodule AmpsWeb.Util do
             "tls",
             "cert",
             "key",
-            "router",
-            "communication"
+            "router"
           ],
           "httpd" => [
             "port",
             "idle_timeout",
             "request_timeout",
             "max_keepalive",
+            "overwrite",
             "tls",
             "cert",
             "key",
             "communication"
           ],
-          "kafka" => ["provider", "topics", "format", "communication"],
+          "nats" => ["topic", "format", "communication"],
           "pyservice" => [
             "service",
             "config",
             "receive",
+            "subs_count",
+            "ack_wait",
+            "rmode",
+            "rlimit",
+            "backoff",
             "updated",
             "topic",
             "policy",
             "start_time",
-            "send_output",
-            "output"
+            "output_map"
           ],
-          "sftpd" => ["port", "server_key", "communication"],
-          "subscriber" => ["subs_count", "handler", "updated", "topic", "policy", "start_time"]
+          "sftpd" => ["port", "server_key", "overwrite", "communication"],
+          "sqs" => ["queue_name", "owner_id", "provider", "wait_time_seconds", "communication"],
+          "subscriber" => [
+            "subs_count",
+            "ack_wait",
+            "rmode",
+            "rlimit",
+            "backoff",
+            "handler",
+            "updated",
+            "topic",
+            "policy",
+            "start_time"
+          ]
         }
+      },
+      "sessions" => %{
+        "headers" => ["msgid", "sid", "service", "start", "end", "stime", "status"],
+        "subgrids" => nil,
+        "types" => nil
+      },
+      "system_logs" => %{
+        "headers" => ["etime", "sid", "node", "level", "message"],
+        "subgrids" => nil,
+        "types" => nil
       },
       "templates" => %{
         "headers" => ["name", "desc", "data"],
@@ -228,6 +297,11 @@ defmodule AmpsWeb.Util do
       },
       "topics" => %{
         "headers" => ["type", "topic", "desc"],
+        "subgrids" => nil,
+        "types" => nil
+      },
+      "ui_audit" => %{
+        "headers" => ["user", "action", "entity", "etime"],
         "subgrids" => nil,
         "types" => nil
       },
@@ -248,6 +322,11 @@ defmodule AmpsWeb.Util do
           "ufa/max"
         ],
         "subgrids" => %{
+          "logs" => %{
+            "headers" => ["etime", "operation", "rule", "msgid", "fname", "status"],
+            "subgrids" => nil,
+            "types" => nil
+          },
           "mailboxes" => %{
             "headers" => ["name", "desc"],
             "subgrids" => nil,
@@ -277,6 +356,12 @@ defmodule AmpsWeb.Util do
       }
     }
 
+    pheaders = Application.get_env(:amps_web, :headers, %{})
+    IO.inspect(pheaders)
+
+    headers = deep_merge(headers, pheaders)
+    IO.inspect(headers)
+
     if collection do
       if Map.has_key?(headers, collection) do
         if field do
@@ -290,6 +375,23 @@ defmodule AmpsWeb.Util do
     else
       headers
     end
+  end
+
+  def deep_merge(left, right) do
+    Map.merge(left, right, &deep_resolve/3)
+  end
+
+  # Key exists in both maps, and both values are maps as well.
+  # These can be merged recursively.
+  defp deep_resolve(_key, left = %{}, right = %{}) do
+    deep_merge(left, right)
+  end
+
+  # Key exists in both maps, but at least one of the values is
+  # NOT a map. We fall back to standard merge behavior, preferring
+  # the value on the right.
+  defp deep_resolve(_key, _left, right) do
+    right
   end
 
   def order() do
@@ -310,7 +412,7 @@ defmodule AmpsWeb.Util do
     ]
   end
 
-  def before_create(collection, body, env \\ "") do
+  def before_create(collection, body, %{env: env, current_user: adminuser}) do
     case String.replace(collection, env <> "-", "") do
       "users" ->
         Map.put(body, "password", nil)
@@ -321,6 +423,38 @@ defmodule AmpsWeb.Util do
              (body["type"] == "pyservice" && body["receive"]) do
           create_config_consumer(body, env)
           body
+        end
+
+        body
+
+      "actions" ->
+        if body["type"] == "mailbox" do
+          index = index(env, "users")
+          user = DB.find_one(index, %{"username" => body["recipient"]})
+
+          exists =
+            Enum.find(user["mailboxes"], fn mbox ->
+              mbox["name"] == body["mailbox"]
+            end)
+
+          name = adminuser.firstname <> " " <> adminuser.lastname
+          time = AmpsUtil.gettime()
+
+          if !exists do
+            DB.add_to_field(
+              index,
+              %{
+                "name" => body["mailbox"],
+                "desc" => body["mailbox"],
+                "created" => time,
+                "createdBy" => name,
+                "modifiedBy" => name,
+                "modified" => time
+              },
+              user["_id"],
+              "mailboxes"
+            )
+          end
         end
 
         body
@@ -420,7 +554,7 @@ defmodule AmpsWeb.Util do
     # AmpsEvents.send()
   end
 
-  def before_update(collection, id, body, env, old) do
+  def before_update(collection, _id, body, env, old) do
     case base_index(env, collection) do
       "actions" ->
         case old["type"] do
@@ -444,6 +578,8 @@ defmodule AmpsWeb.Util do
 
         if config["name"] == "SYSTEM" do
           Amps.SvcManager.load_system_parms()
+          Amps.SvcManager.check_util()
+
           archive = Amps.Defaults.get("archive")
           IO.inspect(old["archive"])
           IO.inspect(archive)
@@ -469,6 +605,7 @@ defmodule AmpsWeb.Util do
             Util.delete_config_consumer(old, env)
 
             Util.create_config_consumer(body, env)
+            DB.find_one_and_update(collection, %{"_id" => id}, %{"updated" => false})
           end
         end
 
@@ -476,13 +613,13 @@ defmodule AmpsWeb.Util do
 
         if Map.has_key?(service, "type") do
           if Map.has_key?(types, String.to_atom(service["type"])) do
-            Gnat.pub(
-              :gnat,
-              AmpsUtil.env_topic(
-                "amps.events.svcs.handler.#{service["name"]}.restart",
-                env
-              ),
-              ""
+            AmpsEvents.send(
+              %{},
+              %{
+                "output" => "amps.events.svcs.handler.#{service["name"]}.restart"
+              },
+              %{},
+              env
             )
           end
         end
@@ -521,6 +658,19 @@ defmodule AmpsWeb.Util do
           Util.create_batch_consumer(body)
         end
 
+        subs = DB.find(Util.index(env, "services"), %{"type" => "subscriber", "handler" => id})
+
+        Enum.each(subs, fn sub ->
+          AmpsEvents.send(
+            %{},
+            %{
+              "output" => "amps.events.svcs.handler.#{sub["name"]}.restart"
+            },
+            %{},
+            env
+          )
+        end)
+
       "jobs" ->
         case env do
           "" ->
@@ -530,12 +680,26 @@ defmodule AmpsWeb.Util do
             Amps.EnvScheduler.update(body["name"], env)
         end
 
+      "endpoints" ->
+        gateways = DB.find(Util.index(env, "services"), %{"type" => "gateway", "router" => id})
+
+        Enum.each(gateways, fn gw ->
+          AmpsEvents.send(
+            %{},
+            %{
+              "output" => "amps.events.svcs.handler.#{gw["name"]}.restart"
+            },
+            %{},
+            env
+          )
+        end)
+
       _ ->
         nil
     end
   end
 
-  def before_field_create(collection, id, field, body, env) do
+  def before_field_create(collection, _id, field, body, env) do
     case collection do
       "users" ->
         case field do
@@ -651,14 +815,14 @@ defmodule AmpsWeb.Util do
     Base.decode64(sysconfig["logo"])
   end
 
-  def create_config_consumer(body, env \\ nil) do
+  def create_config_consumer(body, env \\ nil, opts \\ %{}) do
     {stream, consumer} =
       AmpsUtil.get_names(
         body,
         env
       )
 
-    opts =
+    policy =
       if body["policy"] == "by_start_time" do
         %{
           deliver_policy: String.to_atom(body["policy"]),
@@ -670,11 +834,21 @@ defmodule AmpsWeb.Util do
         }
       end
 
+    opts = Map.merge(policy, opts)
+
+    ack_wait = body["ack_wait"] || 30
+
     AmpsUtil.create_consumer(
       stream,
       consumer,
       AmpsUtil.env_topic(body["topic"], env),
-      opts
+      Map.merge(
+        %{
+          ack_wait: ack_wait * 1_000_000_000,
+          max_ack_pending: body["subs_count"]
+        },
+        opts
+      )
     )
   end
 
@@ -758,13 +932,10 @@ defmodule AmpsWeb.Util do
       AmpsEvents.send(
         msg,
         %{
-          "output" =>
-            AmpsUtil.env_topic(
-              "amps.objects.#{base_index(env, index)}.#{action}",
-              env
-            )
+          "output" => "amps.objects.#{base_index(env, index)}.#{action}"
         },
-        %{}
+        %{},
+        env
       )
 
       AmpsEvents.end_session(sid, env)
@@ -799,13 +970,10 @@ defmodule AmpsWeb.Util do
       AmpsEvents.send(
         msg,
         %{
-          "output" =>
-            AmpsUtil.env_topic(
-              "amps.objects.#{base_index(env, index)}.delete",
-              env
-            )
+          "output" => "amps.objects.#{base_index(env, index)}.delete"
         },
-        %{}
+        %{},
+        env
       )
 
       AmpsEvents.end_session(sid, env)
@@ -839,16 +1007,18 @@ defmodule AmpsWeb.Util do
       AmpsEvents.send(
         msg,
         %{
-          "output" =>
-            AmpsUtil.env_topic(
-              "amps.objects.#{base_index(env, index)}.#{field}.#{action}",
-              env
-            )
+          "output" => "amps.objects.#{base_index(env, index)}.#{field}.#{action}"
         },
-        %{}
+        %{},
+        env
       )
 
       AmpsEvents.end_session(sid, env)
     end)
+  end
+
+  def force_ssl(val) do
+    result = DB.find_one_and_update("config", %{"name" => "SYSTEM"}, %{"force_ssl" => val})
+    Amps.SvcManager.load_system_parms()
   end
 end

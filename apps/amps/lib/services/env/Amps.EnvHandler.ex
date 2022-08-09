@@ -25,13 +25,10 @@ defmodule Amps.EnvHandler do
   end
 
   def start_monitor(pid) do
-    IO.inspect("Calling Start")
     GenServer.call(__MODULE__, {:monitor, pid})
   end
 
   def get_data(body) do
-    IO.inspect(body)
-
     try do
       Poison.decode!(body)
     rescue
@@ -142,15 +139,13 @@ defmodule Amps.EnvHandler do
   end
 
   def handle_info({:DOWN, ref, :process, pid, reason}, state) do
-    IO.inspect(Process.info(pid))
-
     Logger.info("Process ended: #{reason}")
     {:noreply, state}
   end
 
   def handle_info(other, state) do
     require Logger
-    IO.puts("handle info #(inspect(other)) #{inspect(state)}")
+    Logger.info("handle info #(inspect(other)) #{inspect(state)}")
 
     Logger.error(
       "#{__MODULE__} for #{state.stream_name}.#{state.consumer_name} received unexpected message: #{inspect(other)}"
@@ -160,7 +155,6 @@ defmodule Amps.EnvHandler do
   end
 
   def handle_call({:monitor, pid}, _from, state) do
-    IO.inspect(Process.info(pid))
     Logger.info("Monitoring #{inspect(pid)}")
     Process.monitor(pid)
     {:reply, :ok, state}

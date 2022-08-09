@@ -43,9 +43,9 @@ defmodule Amps.SftpServer do
   end
 
   defp authenticate(handler, env) do
-    IO.inspect("authenticate")
+    # IO.inspect("authenticate")
 
-    fn username, password, peer_address, state ->
+    fn username, password, _peer_address, state ->
       accepted =
         case handler do
           {module, fun} ->
@@ -62,7 +62,7 @@ defmodule Amps.SftpServer do
   defp init_daemon(options, env) do
     Logger.info("Starting SFTP daemon on #{options["port"]}")
 
-    IO.inspect(options)
+    # IO.inspect(options)
 
     daemon_opts = [
       shell: &dummy_shell/2,
@@ -106,36 +106,44 @@ defmodule Amps.SftpServer do
         {:ok, pid, ref, options}
 
       any ->
-        IO.puts("process monitor not started #{inspect(any)}")
+        # IO.puts("process monitor not started #{inspect(any)}")
         any
     end
   end
 
   def init(args) do
     Process.flag(:trap_exit, true)
+    Process.register(self(), args[:name])
+
     options = args[:parms]
     env = args[:env] || ""
     :ok = :ssh.start()
-    key = AmpsUtil.get_key(options["server_key"], env)
+#    key = AmpsUtil.get_key(options["server_key"], env)
+    server_key = options["server_key"]
+    case Amps.DB.find_by_id(AmpsUtil.index(env, "keys"), server_key)["data"] do
+      {nil} ->
+        reason = "cannot start sftp server: server_key npot found for env #{env}"
+        Logger.warning("cannot start sftp server #{reason}")
+        {:error, reason}
 
-    options = Map.put(options, "server_key", key)
+      {:error, reason} ->
+          Logger.warning("cannot start sftp server #{inspect(reason)}")
+          {:error, reason}
 
-    case options do
-      nil ->
-        {:ok, %{options: options, daemons: [], env: env}}
-
-      opts ->
+      key ->
+        opts = Map.put(options, "server_key", key)
         case init_daemon(opts, env) do
           {:ok, pid, ref, options} ->
             {:ok,
              %{
-               options: options,
-               daemons: [%{pid: pid, ref: ref, options: options}],
+                options: options,
+                daemons: [%{pid: pid, ref: ref, options: options}],
                env: env
-             }}
+              }}
 
-          any ->
-            any
+          other ->
+            Logger.warning("cannot start sftp server #{inspect(other)}")
+            {:error, other}
         end
     end
   end
@@ -206,7 +214,7 @@ defmodule Amps.SftpServer do
     end
   end
 
-  def terminate(reason, state) do
+  def terminate(_reason, state) do
     state.daemons
     |> Enum.each(fn d ->
       :ssh.stop_daemon(d.pid)
@@ -319,6 +327,8 @@ defmodule Amps.SftpChannel do
 end
 
 defmodule Amps.SftpHandler do
+  require Logger
+
   def close(io_device, state) do
     # does this get closed on download?  If so we need to check
     # if upload or download
@@ -327,7 +337,7 @@ defmodule Amps.SftpHandler do
     # download
     # upload
     if download != nil do
-      IO.puts("close download")
+      # IO.puts("close download")
       result = :file.close(io_device)
       # using temp file
       if download != "" do
@@ -336,49 +346,59 @@ defmodule Amps.SftpHandler do
 
       {result, nstate}
     else
-      IO.puts("close upload")
+      # IO.puts("close upload")
       # check result
-      _result = :file.close(io_device)
-      user = to_string(state[:user])
       opt = state[:options]
+
+      user = to_string(state[:user])
+      mailbox = state[:mailbox]
+      fname = state[:fname]
+
+      {msg, delete} =
+        AmpsMailbox.overwrite(
+          user,
+          mailbox,
+          %{"msgid" => state[:msgid], "fname" => fname},
+          opt["overwrite"],
+          state[:env]
+        )
+
+      _result = :file.close(io_device)
       env = state[:env]
       service = opt["name"]
 
-      msg = %{
-        "mailbox" => state[:mailbox],
-        "service" => service,
-        # "action" => "SFTP PUT",
-        "msgid" => state[:msgid],
-        "fsize" => state[:fsize],
-        "fpath" => state[:fpath],
-        "fname" => state[:fname],
-        "dirname" => state[:dirname],
-        "temp" => true,
-        "ftime" => DateTime.to_iso8601(DateTime.utc_now()),
-        "user" => user
-      }
+      msg =
+        Map.merge(msg, %{
+          "mailbox" => mailbox,
+          "service" => service,
+          # "action" => "SFTP PUT",
+          "fsize" => state[:fsize],
+          "fpath" => state[:fpath],
+          "dirname" => state[:dirname],
+          "temp" => true,
+          "ftime" => DateTime.to_iso8601(DateTime.utc_now()),
+          "user" => user
+        })
 
       {msg, sid} = AmpsEvents.start_session(msg, %{"service" => service}, state[:env])
 
-      IO.inspect(state)
+      # IO.inspect(state)
 
       user = state[:user]
 
-      topic =
-        if env == "" do
-          "amps.svcs.#{service}.#{user}"
-        else
-          "amps.#{env}.svcs.#{service}.#{user}"
-        end
+      topic = "amps.svcs.#{service}.#{user}"
 
-      mailboxtopic = AmpsUtil.env_topic("amps.mailbox.#{user}.#{msg["mailbox"]}", state[:env])
+      IO.inspect(msg)
 
-      IO.inspect(state)
+      #mailboxtopic = "amps.mailbox.#{user}.#{msg["mailbox"]}"
+
+      # IO.inspect(state)
       # state = List.keydelete(state, :options, 0)
 
-      AmpsEvents.send(msg, %{"output" => topic}, %{})
-      AmpsEvents.send(msg, %{"output" => mailboxtopic}, %{})
+      AmpsEvents.send(msg, %{"output" => topic}, %{}, env)
+      #AmpsEvents.send(msg, %{"output" => mailboxtopic}, %{}, env)
 
+      delete.()
       # AmpsEvents.send_history(
       #   "amps.events.messages",
       #   "message_events",
@@ -392,20 +412,20 @@ defmodule Amps.SftpHandler do
   end
 
   def delete(path, state) do
-    mailbox = to_string(state[:user])
-    msgid = state[:current]["msgid"]
-    fname = Path.basename(path)
+    IO.inspect("DELETING")
+    user = to_string(state[:user])
 
-    if fname == state[:current]["fname"] do
-      {AmpsMailbox.delete_message(mailbox, msgid), state}
+    case Path.split(path) do
+      ["/", mailbox, fname] ->
+        {AmpsMailbox.delete_by_name(user, mailbox, fname, state[:env]), state}
+
+      ["/", fname] ->
+        {AmpsMailbox.delete_by_name(user, "default", fname, state[:env]), state}
     end
-
-    nstate = List.keystore(state, :current, 0, {:current, %{}})
-    {:ok, nstate}
   end
 
   def del_dir(path, state) do
-    IO.inspect("Directory to delete: #{path}")
+    # IO.inspect("Directory to delete: #{path}")
 
     case Path.split(path) do
       ["/", mailbox] ->
@@ -433,16 +453,27 @@ defmodule Amps.SftpHandler do
 
   def is_dir(abs_path, state) do
     IO.inspect(abs_path)
-    IO.puts("is_dir: #{inspect(state)}")
 
     case Path.split(abs_path) do
       ["/"] ->
         {true, state}
 
       ["/", mailbox] ->
-        {true, state}
+        exists = AmpsMailbox.is_mailbox(to_string(state[:user]), mailbox, state[:env])
 
-      ["/", mailbox, fname] ->
+        exists =
+          if exists do
+            true
+          else
+            false
+          end
+
+        {exists, state}
+
+      ["/", _mailbox, _fname] ->
+        {false, state}
+
+      _ ->
         {false, state}
     end
   end
@@ -456,12 +487,14 @@ defmodule Amps.SftpHandler do
         ["/"] ->
           mailboxes = AmpsMailbox.get_mailboxes(to_string(state[:user]), state[:env])
 
-          IO.inspect(mailboxes)
+          # IO.inspect(mailboxes)
 
           vals =
             Enum.map(mailboxes, fn mailbox ->
               mailbox["name"]
             end)
+
+          vals = vals ++ ["default"]
 
           newstate = List.keystore(state, :flist, 0, {:flist, mailboxes})
 
@@ -478,7 +511,7 @@ defmodule Amps.SftpHandler do
               state[:env]
             )
 
-          IO.inspect(flist)
+          # IO.inspect(flist)
           # hlist = Enum.into(flist, %{})
           newstate = List.keystore(state, :flist, 0, {:flist, flist})
 
@@ -502,7 +535,7 @@ defmodule Amps.SftpHandler do
   #  end
 
   def make_dir(dir, state) do
-    IO.inspect("make_dir")
+    # IO.inspect("make_dir")
 
     case Path.split(dir) do
       ["/", mailbox] ->
@@ -524,58 +557,81 @@ defmodule Amps.SftpHandler do
   end
 
   def make_symlink(_path2, _path, state) do
-    IO.puts("make symlink called, not supported")
+    # IO.puts("make symlink called, not supported")
     {{:error, "not supported"}, state}
   end
 
   def open(path, flags, state) do
     IO.puts("open called #{path}")
+    path = to_string(path)
 
     case Enum.find(flags, :nak, fn x -> x == :write end) do
       :write ->
         # put
-
         fname = Path.basename(path)
         msgid = AmpsUtil.get_id()
         fpath = Amps.Defaults.get("storage_temp") <> "/" <> msgid
-        IO.inspect(fpath)
+        # IO.inspect(fpath)
         dirname = Path.dirname(path)
-        ["/", mailbox, fname] = Path.split(path)
 
-        case :file.open(fpath, flags) do
-          {:ok, pid} ->
-            newstate =
-              List.keystore(state, :fname, 0, {:fname, fname})
-              |> List.keystore(:msgid, 0, {:msgid, msgid})
-              |> List.keystore(:fpath, 0, {:fpath, fpath})
-              |> List.keystore(:dirname, 0, {:dirname, dirname})
-              |> List.keystore(:fsize, 0, {:fsize, 0})
-              |> List.keystore(:flist, 0, {:flist, nil})
-              |> List.keystore(:mailbox, 0, {:mailbox, mailbox})
+        res =
+          case String.split(path, "/") do
+            ["", mailbox, fname] ->
+              case AmpsMailbox.is_mailbox(to_string(state[:user]), mailbox, state[:env]) do
+                nil ->
+                  {:error, :eaccess}
 
-            {{:ok, pid}, newstate}
+                mailbox ->
+                  {"/", mailbox, fname}
+              end
 
-          other ->
-            {other, state}
+            ["", fname] ->
+              {"/", "default", fname}
+
+            _ ->
+              {:error, :eaccess}
+          end
+
+        case res do
+          {_root, mailbox, _name} ->
+            case :file.open(fpath, flags) do
+              {:ok, pid} ->
+                newstate =
+                  List.keystore(state, :fname, 0, {:fname, fname})
+                  |> List.keystore(:msgid, 0, {:msgid, msgid})
+                  |> List.keystore(:fpath, 0, {:fpath, fpath})
+                  |> List.keystore(:dirname, 0, {:dirname, dirname})
+                  |> List.keystore(:fsize, 0, {:fsize, 0})
+                  |> List.keystore(:flist, 0, {:flist, nil})
+                  |> List.keystore(:mailbox, 0, {:mailbox, mailbox})
+
+                {{:ok, pid}, newstate}
+
+              other ->
+                {other, state}
+            end
+
+          error ->
+            {error, state}
         end
 
       _ ->
         # get
-        IO.puts("starting get")
+        # IO.puts("starting get")
         user = to_string(state[:user])
         ["/", mailbox, bname] = Path.split(path)
-        IO.inspect(user)
-        IO.inspect(mailbox)
-        IO.inspect(bname)
+        # IO.inspect(user)
+        # IO.inspect(mailbox)
+        # IO.inspect(bname)
         msg = state[:current]
-        IO.inspect(msg)
+        # IO.inspect(msg)
 
         if msg["fname"] == bname do
           get_file(msg, flags, state)
         else
           case AmpsMailbox.stat_fname(user, mailbox, bname, state[:env]) do
             nil ->
-              IO.puts("not found")
+              # IO.puts("not found")
               {{:error, :enoent}, state}
 
             msg ->
@@ -588,7 +644,7 @@ defmodule Amps.SftpHandler do
   def get_file(msg, flags, state) do
     # path = AmpsUtil.get_path(msg)
     path = msg["fpath"]
-    IO.inspect(path)
+    # IO.inspect(path)
 
     case File.stat(path) do
       {:ok, _result} ->
@@ -611,57 +667,103 @@ defmodule Amps.SftpHandler do
     {:file.read(io_device, len), state}
   end
 
-  def read_link(path, state) do
+  def read_link(_path, state) do
     # never a link
-    IO.puts("read_link")
-    IO.inspect(path)
+    # IO.puts("read_link")
+    # IO.inspect(path)
 
     {{:error, :einval}, state}
   end
 
   def read_link_info(path, state) do
-    case Path.split(path) do
-      ["/"] ->
+    IO.inspect("READING LINK INFO")
+    user = to_string(state[:user])
+
+    path = to_string(path)
+
+    case String.split(path, "/") do
+      ["", ""] ->
         ftime = DateTime.utc_now()
         finfo = get_dir_info(ftime)
         {{:ok, finfo}, state}
 
-      ["/", mailbox] ->
+      ["", mailbox] ->
+        IO.inspect(mailbox)
+        exists = AmpsMailbox.is_mailbox(user, mailbox, state[:env])
         ftime = DateTime.utc_now()
-        finfo = get_dir_info(ftime)
-        {{:ok, finfo}, state}
 
-      ["/", mailbox, fname] ->
+        if exists do
+          finfo = get_dir_info(ftime)
+          {{:ok, finfo}, state}
+        else
+          {{:error, :exist}, state}
+        end
+
+      ["", mailbox, ""] ->
+        IO.inspect(mailbox)
+        exists = AmpsMailbox.is_mailbox(user, mailbox, state[:env])
+        ftime = DateTime.utc_now()
+
+        if exists do
+          finfo = get_dir_info(ftime)
+          {{:ok, finfo}, state}
+        else
+          {{:error, :exist}, state}
+        end
+
+      ["", mailbox, fname] ->
         # IO.puts("read_link_info")
-        user = to_string(state[:user])
+
         # IO.puts("read_link_info #{user} #{mailbox} #{fname}")
         #    msg = Enum.find(flist, nil, fn x -> x["fname"] == fname end)
-        case AmpsMailbox.get_message(user, mailbox, fname, state[:env]) do
+        case AmpsMailbox.get_message_by_name(user, mailbox, fname, state[:env]) do
           nil ->
             ftime = DateTime.utc_now()
             finfo = get_file_info(0, ftime)
+            IO.inspect(finfo)
             {{:ok, finfo}, state}
 
           msg ->
-            IO.puts("found")
-            fsize = msg["fsize"] || 99
-            ft = msg["ftime"] || DateTime.to_iso8601(DateTime.utc_now())
-            IO.inspect(ft)
+            IO.inspect(msg)
+
+            fsize =
+              case msg["fsize"] do
+                nil ->
+                  0
+
+                size when is_binary(size) ->
+                  String.to_integer(size)
+
+                size when is_integer(size) ->
+                  size
+              end
+
+            # # IO.inspect(fsize)
+
+            ft = msg["mtime"] || DateTime.to_iso8601(DateTime.utc_now())
+            # IO.inspect(ft)
             {:ok, ftime, _off} = DateTime.from_iso8601(ft)
             finfo = get_file_info(fsize, ftime)
-            nstate = List.keystore(state, :current, 0, {:current, msg})
-            {{:ok, finfo}, nstate}
+            IO.inspect(finfo)
+            {{:ok, finfo}, state}
         end
+
+      _rest ->
+        {{:error, :eaccess}, state}
     end
   end
 
   def read_file_info(path, state) do
-    IO.puts("called file info #{path}")
+    # IO.puts("called file info #{path}")
     read_link_info(path, state)
   end
 
   def get_file_info(fsize, ftime) do
     # IO.puts("get_file_info")
+
+    ftime = ftime |> Timex.Timezone.convert(Application.get_env(:amps, :timezone))
+    IO.inspect(ftime)
+    IO.inspect(fsize)
 
     {:file_info, fsize, :regular, :read_write,
      {{ftime.year, ftime.month, ftime.day}, {ftime.hour, ftime.minute, ftime.second}},
@@ -671,6 +773,7 @@ defmodule Amps.SftpHandler do
   end
 
   def get_dir_info(ftime) do
+    # ftime = Timex.Timezone.cno
     {:file_info, 0, :directory, :read_write,
      {{ftime.year, ftime.month, ftime.day}, {ftime.hour, ftime.minute, ftime.second}},
      {{ftime.year, ftime.month, ftime.day}, {ftime.hour, ftime.minute, ftime.second}},
@@ -679,7 +782,7 @@ defmodule Amps.SftpHandler do
   end
 
   def rename(_path, _path2, state) do
-    IO.puts("rename called, not supported")
+    # IO.puts("rename called, not supported")
     {:ok, state}
   end
 
@@ -690,7 +793,7 @@ defmodule Amps.SftpHandler do
   end
 
   def write_file_info(_path, _info, state) do
-    IO.puts("write_file_info not supported")
+    # IO.puts("write_file_info not supported")
     {:ok, state}
   end
 end
@@ -703,7 +806,7 @@ defmodule AmpsKeyCallback do
 
     if algorithm == al do
       val = Enum.into(opts, %{})
-      [name, key] = val[:key_cb_private]
+      [_name, key] = val[:key_cb_private]
       # IO.puts("sftp svc: #{name}")
       # cfg = AmpsDatabase.get_config(name)
       # key = AmpsUtil.get_key(cfg["server_key"])

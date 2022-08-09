@@ -11,14 +11,46 @@ Ext.define("Amps.view.main.DetailsScreen", {
       text: "Back",
       itemId: "detailsbackbtn",
       iconCls: "fa fa-arrow-circle-left",
-      handler: function (btn) {
+      handler: async function (btn) {
+        var vp = this.up("viewport");
+        vp.setLoading(true);
         const route = Ext.util.History.getToken();
         var tokens = route.split("/");
+
+        console.log(tokens);
 
         if (tokens.length > 3) {
           amfutil.redirect(tokens[0] + "/" + tokens[1]);
         } else if (tokens.length >= 2) {
+          var coll = tokens[0];
+          var id = tokens[1];
+          console.log(coll);
+          console.log(id);
+          var stored = amfutil.getStoredColl(coll);
+          console.log(stored);
+          var resp = await amfutil.ajaxRequest({
+            url: `api/${coll}/page/${id}`,
+            params: stored,
+            method: "GET",
+          });
+
+          var data = Ext.decode(resp.responseText);
+
+          console.log(
+            amfutil.getElementByID("main-grid").getStore() || "false"
+          );
+
+          //
+          if (data["success"]) {
+            if (amfutil.getElementByID("main-grid").getStore().isEmptyStore) {
+              amfutil
+                .createPageStore(coll, JSON.parse(stored.filters))
+                .loadPage(data["page"]);
+            }
+          }
+
           amfutil.redirect(tokens[0]);
+
           // amfutil.hideAllButtons();
           // amfutil.showItemButtons(tokens[0]);
         } else {
@@ -33,6 +65,7 @@ Ext.define("Amps.view.main.DetailsScreen", {
           // amfutil.showActionIcons(route);
         }
         console.log("REDIRECTED");
+        vp.setLoading(false);
 
         // amfutil.getElementByID("actionbar").show();
       },

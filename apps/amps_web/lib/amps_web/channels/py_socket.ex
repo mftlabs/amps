@@ -25,19 +25,27 @@ defmodule AmpsWeb.PySocket do
 
     #   {user, metadata} ->
     #     fingerprint = Keyword.fetch!(metadata, :fingerprint)
+    #     user = DB.find_by_id("admin", user.id)
 
     #     state =
     #       state
     #       |> Map.put(:session_fingerprint, fingerprint)
     #       |> Map.put(:user_id, user.id)
+    #       |> Map.put(:env, user["config"]["env"])
 
     {:ok, state}
     # end
   end
 
   def init(state) do
-    session = Python.start()
-    Python.call(session, :server, :start_server, [self()])
+    {:ok, session} =
+      :pythra.start_link([
+        # String.to_charlist(AmpsUtil.get_mod_path(state.env)),
+        String.to_charlist(Path.join(AmpsUtil.get_mod_path(), "util")),
+        String.to_charlist(Path.join([:code.priv_dir(:amps_web), "python"]))
+      ])
+
+    :pythra.pythra_call(session, :server, :start_server, [self()])
 
     state = Map.put(state, :pyserver, session)
 
@@ -45,7 +53,7 @@ defmodule AmpsWeb.PySocket do
   end
 
   def handle_in({text, _opts}, state) do
-    Python.cast(state.pyserver, text)
+    :pythra.cast(state.pyserver, text)
     {:ok, state}
   end
 
@@ -59,7 +67,7 @@ defmodule AmpsWeb.PySocket do
 
   def terminate(_reason, state) do
     if Map.has_key?(state, :pyserver) do
-      Python.stop(state.pyserver)
+      :pythra.stop(state.pyserver)
     end
 
     :ok

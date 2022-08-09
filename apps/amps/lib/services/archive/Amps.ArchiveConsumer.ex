@@ -69,7 +69,8 @@ defmodule Amps.ArchiveConsumer do
   defp get_stream(msg, provider, env, chunk_size) do
     case provider["atype"] do
       "s3" ->
-        req = S3Action.req(provider, env)
+        handler = AmpsUtil.get_env_parm(:actions, :s3)
+        req = handler.req(provider, env)
 
         ExAws.S3.download_file(
           provider["bucket"],
@@ -112,7 +113,7 @@ defmodule Amps.ArchiveConsumer do
   def get_message(msg, provider, env) do
     case provider["atype"] do
       "s3" ->
-        req = S3Action.req(provider, env)
+        req = AmpsUtil.get_env(:actions)[:s3].req(provider, env)
         IO.puts("DATA")
 
         resp =
@@ -129,7 +130,7 @@ defmodule Amps.ArchiveConsumer do
   def get_size(msg, provider, env) do
     case provider["atype"] do
       "s3" ->
-        req = S3Action.req(provider, env)
+        req = AmpsUtil.get_env(:actions)[:s3].req(provider, env)
 
         resp =
           ExAws.S3.head_object(
@@ -169,25 +170,10 @@ defmodule Amps.ArchiveConsumer do
     pid = Process.whereis(:gnat)
 
     IO.puts("pid #{inspect(pid)}")
-
     {stream, consumer} = AmpsUtil.get_names(opts, state.env)
-    IO.inspect(stream)
-    IO.inspect(state.env)
-
-    listening_topic = AmpsUtil.env_topic("amps.archive.#{consumer}", state.env)
-
-    IO.inspect(listening_topic)
-
-    AmpsUtil.create_consumer(stream, consumer, AmpsUtil.env_topic(opts["topic"], state.env), %{
-      deliver_policy: :all,
-      deliver_subject: listening_topic,
-      ack_policy: :explicit
-    })
-
-    Gnat.sub(pid, self(), listening_topic)
-
     Logger.info("got stream #{stream} #{consumer}")
     opts = Map.put(opts, "id", name)
+    listening_topic = AmpsUtil.env_topic("amps.archive.#{consumer}", state.env)
 
     GenServer.start_link(
       Amps.ArchivePullConsumer,
@@ -260,15 +246,7 @@ defmodule Amps.ArchivePullConsumer do
     group = String.replace(parms["name"], " ", "_")
     Logger.info("History queue_group #{group} #{stream_name} #{consumer_name}")
 
-    {:ok, _sid} = Gnat.sub(connection_pid, self(), listening_topic, queue_group: group)
-
-    # :ok =
-    #   Gnat.pub(
-    #     connection_pid,
-    #     "$JS.API.CONSUMER.MSG.NEXT.#{stream_name}.#{consumer_name}",
-    #     "1",
-    #     reply_to: listening_topic
-    #   )
+    {:ok, sid} = Gnat.sub(connection_pid, self(), listening_topic, queue_group: group)
 
     state = %{
       parms: parms,
@@ -288,14 +266,17 @@ defmodule Amps.ArchivePullConsumer do
           parms["doc"]
         else
           nil
-        end
+        end,
+      sid: sid
     }
 
     {:ok, state}
   end
 
   def s3_archive(msg, provider, env) do
-    req = S3Action.req(provider, env)
+    handler = AmpsUtil.get_env_parm(:actions, :s3)
+
+    req = handler.req(provider, env)
 
     apath = Amps.ArchiveConsumer.apath(msg, env)
 
@@ -323,7 +304,7 @@ defmodule Amps.ArchivePullConsumer do
         Logger.info("No Data to Archive")
 
       {:ok, resp} ->
-        Logger.info("Uploaded")
+        # Logger.info("Uploaded")
         {:ok, resp}
 
       {:error, error} ->
@@ -336,57 +317,101 @@ defmodule Amps.ArchivePullConsumer do
     try do
       data = Poison.decode!(message.body)
       msg = data["msg"]
-      Logger.info("Archiving Message #{msg["msgid"]}")
+      # Logger.info("Archiving Message #{msg["msgid"]}")
       parms = state[:parms]
       name = parms["name"]
 
-      try do
-        archive = Amps.DB.find_one("providers", %{"_id" => Amps.Defaults.get("aprovider")})
+      AmpsEvents.send_history(
+        AmpsUtil.env_topic("amps.events.action", state.env),
+        "message_events",
+        msg,
+        %{
+          "status" => "archiving",
+          "action" => "Archive"
+        }
+      )
 
-        case archive["atype"] do
-          "s3" ->
-            s3_archive(msg, archive, state.env)
+      status =
+        try do
+          archive = Amps.DB.find_one("providers", %{"_id" => Amps.Defaults.get("aprovider")})
 
-          _ ->
-            nil
-        end
+          case archive["atype"] do
+            "s3" ->
+              s3_archive(msg, archive, state.env)
 
-        Logger.info("Archived Message #{msg["msgid"]}")
+            _ ->
+              nil
+          end
 
-        Jetstream.ack(message)
-        Amps.ArchiveHandler.reset_failure(state.handler)
-      rescue
-        e in NackError ->
-          e
+          # Logger.info("Archived Message #{msg["msgid"]}")
 
-          failures = Amps.ArchiveHandler.add_failure(state.handler)
-
-          Logger.error(
-            "Archive Failed for message #{msg["msgid"]}\nS3 Issue #{e.message} - Will Retry.\n" <>
-              Exception.format(:error, e, __STACKTRACE__)
-          )
-
-          backoff =
-            if failures > 5 do
-              300_000
-            else
-              failures * 60000
-            end
-
-          Process.sleep(backoff)
-          Jetstream.nack(message)
-
-        e ->
-          Logger.error(
-            "Archive Failed: Error parsing message #{msg["msgid"]}, skipping message.\n" <>
-              Exception.format(:error, e, __STACKTRACE__)
+          AmpsEvents.send_history(
+            AmpsUtil.env_topic("amps.events.action", state.env),
+            "message_events",
+            msg,
+            %{
+              "status" => "archived",
+              "action" => "Archive"
+            }
           )
 
           Jetstream.ack(message)
-      end
+          Amps.ArchiveHandler.reset_failure(state.handler)
+          "archived"
+        rescue
+          e in NackError ->
+            e
+
+            failures = Amps.ArchiveHandler.add_failure(state.handler)
+
+            Logger.error(
+              "Archive Failed for message #{msg["msgid"]}\nS3 Issue #{e.message} - Will Retry.\n" <>
+                Exception.format(:error, e, __STACKTRACE__)
+            )
+
+            backoff =
+              if failures > 5 do
+                300_000
+              else
+                failures * 60000
+              end
+
+            AmpsEvents.send_history(
+              AmpsUtil.env_topic("amps.events.action", state.env),
+              "message_events",
+              msg,
+              %{
+                "status" => "archiving failed - retrying",
+                "action" => "Archive"
+              }
+            )
+
+            Process.sleep(backoff)
+            Jetstream.nack(message)
+            "archiving failed - retrying"
+
+          e ->
+            Logger.error(
+              "Archive Failed: Error parsing message #{msg["msgid"]}, skipping message.\n" <>
+                Exception.format(:error, e, __STACKTRACE__)
+            )
+
+            AmpsEvents.send_history(
+              AmpsUtil.env_topic("amps.events.action", state.env),
+              "message_events",
+              msg,
+              %{
+                "status" => "archiving failed - skipping",
+                "action" => "Archive"
+              }
+            )
+
+            Jetstream.ack(message)
+            "archiving failed - skipping"
+        end
     rescue
       e in NackError ->
-        e
+        IO.inspect(e)
 
         failures = Amps.ArchiveHandler.add_failure(state.handler)
 
@@ -406,6 +431,8 @@ defmodule Amps.ArchivePullConsumer do
         Jetstream.nack(message)
 
       e ->
+        IO.inspect(e)
+
         Logger.error(
           "Archive Failed: Invalid Message, skipping message.\n" <>
             Exception.format(:error, e, __STACKTRACE__)
@@ -434,4 +461,9 @@ defmodule Amps.ArchivePullConsumer do
   end
 
   defp nuid(), do: :crypto.strong_rand_bytes(12) |> Base.encode64()
+
+  def terminate(reason, state) do
+    Logger.warn("#{inspect(reason)} in terminate")
+    Gnat.unsub(:gnat, state.sid)
+  end
 end

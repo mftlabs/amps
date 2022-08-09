@@ -47,7 +47,7 @@ Ext.define("Amps.Utilities", {
     delete: {
       name: "delete",
       iconCls: "x-fa fa-trash actionicon",
-      tooltip: "Delete File Mapping",
+      tooltip: "Delete Item",
       handler: "deleteItem",
     },
     link: {

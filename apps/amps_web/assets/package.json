@@ -15,6 +15,7 @@
     "monaco-editor": "^0.31.0",
     "monaco-languageclient": "^0.18.0",
     "normalize-url": "^2.0.1",
+    "pdfjs-dist": "^2.14.305",
     "phoenix": "^1.6.6",
     "phoenix_live_view": "^0.17.7",
     "punycode": "^2.1.1",
@@ -23,6 +24,7 @@
     "ws": "^5.0.0"
   },
   "devDependencies": {
-    "esbuild-plugin-alias": "^0.2.1"
+    "esbuild-plugin-alias": "^0.2.1",
+    "video.js": "^7.19.2"
   }
 }

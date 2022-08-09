@@ -1,7 +1,7 @@
 defmodule Amps.Startup do
   use Task
   require Vault
-  #import Argon2
+  # import Argon2
   require Logger
 
   def start_link(_arg) do
@@ -10,7 +10,15 @@ defmodule Amps.Startup do
 
   def startup() do
     nats()
+
+    tzdata()
+
     # python()
+  end
+
+  def tzdata() do
+      %Timex.TimezoneInfo{full_name: fullname} = Timex.Timezone.local()
+      Application.put_env(:amps, :timezone, fullname)
   end
 
   def nats() do

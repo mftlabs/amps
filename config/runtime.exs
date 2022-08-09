@@ -19,6 +19,13 @@ if config_env() == :prod do
       You can generate one by calling: mix phx.gen.secret
       """
 
+  force_ssl =
+    if String.to_atom(String.downcase(System.get_env("AMPS_USE_SSL", "FALSE"))) do
+      [rewrite_on: [:x_forwarded_proto], host: nil]
+    else
+      nil
+    end
+
   config :amps_portal, AmpsPortal.Endpoint,
     http: [
       # Enable IPv6 and bind on all interfaces.
@@ -26,11 +33,9 @@ if config_env() == :prod do
       ip: {0, 0, 0, 0, 0, 0, 0, 0},
       port: String.to_integer(System.get_env("PORT") || "4001")
     ],
-    url: [
-      host: System.get_env("AMPS_HOST", "localhost"),
-      port: String.to_integer(System.get_env("AMPS_PORT", "4080"))
-    ],
     secret_key_base: secret_key_base
+
+  # force_ssl: force_ssl
 
   # ## Using releases
   #
@@ -78,48 +83,94 @@ if config_env() == :prod do
       You can generate one by calling: mix phx.gen.secret
       """
 
-  if String.upcase(System.get_env("AMPS_USE_SSL", "FALSE")) == "TRUE" do
-    config :master_proxy,
-      # any Cowboy options are allowed
-      http: [:inet6, port: String.to_integer(System.get_env("AMPS_PORT", "4080"))],
-      log_requests: false,
-      https: [
-        :inet6,
-        port: String.to_integer(System.get_env("AMPS_SSL_PORT", "4443")),
-        cipher_suite: :strong,
-        keyfile: System.get_env("AMPS_SSL_KEY"),
-        certfile: System.get_env("AMPS_SSL_CERT")
-      ],
-      backends: [
+  backends =
+    if String.to_atom(String.downcase(System.get_env("AMPS_GEN_CERTS", "FALSE"))) do
+      [
+        %{
+          path: ~r{^/.well-known/acme-challenge/.*$},
+          plug: SiteEncrypt.AcmeChallenge,
+          opts: AmpsWeb.Proxy,
+          host: ~r/(.*?)/
+        },
         %{
           host: ~r/^#{System.get_env("AMPS_ADMIN_HOST", "admin.localhost")}$/,
           phoenix_endpoint: AmpsWeb.Endpoint
         },
         %{
-          host: ~r/#{System.get_env("AMPS_HOST", "localhost")}$/,
+          host: ~r/(.*?)/,
           phoenix_endpoint: AmpsPortal.Endpoint
         }
       ]
+    else
+      [
+        %{
+          host: ~r/^#{System.get_env("AMPS_ADMIN_HOST", "admin.localhost")}$/,
+          phoenix_endpoint: AmpsWeb.Endpoint
+        },
+        %{
+          host: ~r/(.*?)/,
+          phoenix_endpoint: AmpsPortal.Endpoint
+        }
+      ]
+    end
+
+  mp_config = [
+    protocol_options: [
+      request_timeout: 10000
+    ],
+    http: [
+      net: :inet6,
+      port: String.to_integer(System.get_env("AMPS_PORT", "4080"))
+    ],
+    log_requests: false,
+    # https: [:inet6, port: 4443],
+    backends: backends
+  ]
+
+  if String.to_atom(String.downcase(System.get_env("AMPS_USE_SSL", "FALSE"))) do
+    config :amps_portal, AmpsPortal.Endpoint,
+      url: [
+        host: System.get_env("AMPS_HOST", "localhost"),
+        port: String.to_integer(System.get_env("AMPS_SSL_PORT", "45443"))
+      ]
+
+    config :amps_web, AmpsWeb.Endpoint,
+      url: [
+        host: System.get_env("AMPS_ADMIN_HOST", "admin.localhost"),
+        port: String.to_integer(System.get_env("AMPS_SSL_PORT", "45443"))
+      ]
+
+    IO.inspect("USING SSL PORT")
+    IO.inspect(System.get_env("AMPS_SSL_PORT"))
+
+    config :master_proxy,
+           mp_config ++
+             [
+               https: [
+                 port: String.to_integer(System.get_env("AMPS_SSL_PORT", "45443"))
+               ]
+             ]
   else
-    config :master_proxy,
-      # any Cowboy options are allowed
-      http: [:inet6, port: String.to_integer(System.get_env("AMPS_PORT", "4080"))],
-      log_requests: false,
-      # https: [:inet6, port: 4443],
-      backends: [
-        %{
-          host: ~r/^#{System.get_env("AMPS_ADMIN_HOST", "admin.localhost")}$/,
-          phoenix_endpoint: AmpsWeb.Endpoint
-        },
-        %{
-          host: ~r/#{System.get_env("AMPS_HOST", "localhost")}$/,
-          phoenix_endpoint: AmpsPortal.Endpoint
-        }
+    IO.inspect("USING NORMAL PORT")
+
+    config :amps_web, AmpsWeb.Endpoint,
+      url: [
+        host: System.get_env("AMPS_ADMIN_HOST", "admin.localhost"),
+        port: String.to_integer(System.get_env("AMPS_PORT", "4080"))
       ]
+
+    config :amps_portal, AmpsPortal.Endpoint,
+      url: [
+        host: System.get_env("AMPS_HOST", "localhost"),
+        port: String.to_integer(System.get_env("AMPS_PORT", "4080"))
+      ]
+
+    config :master_proxy, mp_config
   end
 
   config :amps_web, AmpsWeb.Endpoint,
     use_ssl: String.to_atom(String.downcase(System.get_env("AMPS_USE_SSL", "FALSE"))),
+    # force_ssl: force_ssl,
     http: [
       # Enable IPv6 and bind on all interfaces.
       # Set it to  {0, 0, 0, 0, 0, 0, 0, 1} for local network only access.
@@ -127,10 +178,6 @@ if config_env() == :prod do
       # for details about using IPv6 vs IPv4 and loopback vs public addresses.
       ip: {0, 0, 0, 0, 0, 0, 0, 0},
       port: String.to_integer(System.get_env("AMPS_PORT") || "4000")
-    ],
-    url: [
-      host: System.get_env("AMPS_ADMIN_HOST", "admin.localhost"),
-      port: System.get_env("AMPS_PORT")
     ],
     authmethod: System.get_env("AMPS_AUTH_METHOD") || "db",
     vault_addr: System.get_env("AMPS_VAULT_ADDR", "http://localhost:8200"),
@@ -148,7 +195,14 @@ if config_env() == :prod do
     ]
 
   config :amps,
-    db: System.get_env("AMPS_DB_PROVIDER", "mongo")
+    db: System.get_env("AMPS_DB_PROVIDER", "mongo"),
+    adminhost: System.get_env("AMPS_ADMIN_HOST", "admin.localhost"),
+    userhost: System.get_env("AMPS_HOST", "localhost"),
+    use_ssl: String.to_atom(String.downcase(System.get_env("AMPS_USE_SSL", "FALSE"))),
+    force_ssl: String.to_atom(String.downcase(System.get_env("AMPS_FORCE_SSL", "FALSE"))),
+    gen_certs: String.to_atom(String.downcase(System.get_env("AMPS_GEN_CERTS", "FALSE"))),
+    dns_emails: System.get_env("AMPS_DNS_EMAILS", ""),
+    extra_domains: System.get_env("AMPS_EXTRA_DOMAINS", "")
 
   # config :ex_aws, :s3,
   #   access_key_id: "minioadmin",

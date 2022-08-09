@@ -83,7 +83,7 @@ defmodule Amps.EnvSvcManager do
         nil ->
           res = load_service(name, state)
           IO.inspect(res)
-          res
+          #res
 
           DB.find_one_and_update(
             AmpsUtil.index(state, "services"),
@@ -109,16 +109,12 @@ defmodule Amps.EnvSvcManager do
   def get_spec(name, args, env) do
     types = service_types()
     IO.inspect(args)
+    default = [:subscriber, :sftpd, :pyservice, :sqs, :nats]
     type = String.to_atom(args["type"])
 
     try do
-      case type do
-        #      :sftpd ->
-        #        {types[:sftpd], name: name, parms: args}
-
-        :httpd ->
-          IO.inspect(args)
-
+      cond do
+        type == :httpd ->
           protocol_options = [
             idle_timeout: args["idle_timeout"],
             request_timeout: args["request_timeout"],
@@ -128,8 +124,10 @@ defmodule Amps.EnvSvcManager do
           if args["tls"] do
             {cert, key} =
               try do
-                cert = AmpsUtil.get_key(args["cert"], env)
-                key = AmpsUtil.get_key(args["key"], env)
+#                cert = AmpsUtil.get_key(args["cert"], env)
+                cert = Amps.DB.find_by_id(AmpsUtil.index(env, "keys"), args["cert"])["data"]
+#                key = AmpsUtil.get_key(args["key"], env)
+                key = Amps.DB.find_by_id(AmpsUtil.index(env, "keys"), args["key"])["data"]
 
                 cert = X509.Certificate.from_pem!(cert) |> X509.Certificate.to_der()
 
@@ -139,7 +137,7 @@ defmodule Amps.EnvSvcManager do
                 {cert, {keytype, key}}
               rescue
                 e ->
-                  raise "Error parsing key and/or certificate"
+                  raise "Error parsing key and/or certificate #{inspect(e)}"
               end
 
             {Plug.Cowboy,
@@ -165,9 +163,7 @@ defmodule Amps.EnvSvcManager do
              ]}
           end
 
-        :gateway ->
-          IO.inspect(args)
-
+        type == :gateway ->
           protocol_options = [
             idle_timeout: args["idle_timeout"],
             request_timeout: args["request_timeout"],
@@ -197,8 +193,10 @@ defmodule Amps.EnvSvcManager do
           if args["tls"] do
             {cert, key} =
               try do
-                cert = AmpsUtil.get_key(args["cert"], env)
-                key = AmpsUtil.get_key(args["key"], env)
+#                cert = AmpsUtil.get_key(args["cert"], env)
+#                key = AmpsUtil.get_key(args["key"], env)
+                cert = Amps.DB.find_by_id(AmpsUtil.index(env, "keys"), args["cert"])["data"]
+                key = Amps.DB.find_by_id(AmpsUtil.index(env, "keys"), args["key"])["data"]
 
                 cert = X509.Certificate.from_pem!(cert) |> X509.Certificate.to_der()
 
@@ -208,7 +206,7 @@ defmodule Amps.EnvSvcManager do
                 {cert, {keytype, key}}
               rescue
                 e ->
-                  raise "Error parsing key and/or certificate"
+                  raise "Error parsing key and/or certificate #{inspect(e)}"
               end
 
             {Plug.Cowboy,
@@ -234,68 +232,11 @@ defmodule Amps.EnvSvcManager do
              ]}
           end
 
-        :kafka ->
-          provider =
-            DB.find_one(AmpsUtil.index(env, "providers"), %{
-              "_id" => args["provider"]
-            })
-
-          auth_opts = AmpsUtil.get_kafka_auth(args, provider)
-
-          spec = %{
-            id: name,
-            start:
-              {KafkaEx.ConsumerGroup, :start_link,
-               [
-                 types[:kafka],
-                 args["name"],
-                 args["topics"],
-                 [
-                   uris:
-                     Enum.map(
-                       provider["brokers"],
-                       fn %{"host" => host, "port" => port} ->
-                         {host, port}
-                       end
-                     ),
-                   extra_consumer_args: [args, env]
-                 ] ++
-                   auth_opts
-               ]}
-          }
-
-          spec
-
-        # init_opts = [
-        #   group: args["name"],
-        #   topics: args["topics"],
-        #   # assignment_received_handler: assignment_received_handler(),
-        #   # assignments_revoked_handler: assignments_revoked_handler(),
-        #   handler: types[:kafka],
-        #   handler_init_args: args
-        #   # config: consumer_config()
-        # ]
-
-        # config = AmpsUtil.get_kafka_auth(args, provider)
-
-        # {
-        #   Elsa.Supervisor,
-        #   config: config,
-        #   endpoints:
-        #     Enum.map(
-        #       provider["brokers"],
-        #       fn %{"host" => host, "port" => port} ->
-        #         {host, port}
-        #       end
-        #     ),
-        #   connection: String.to_atom("elsa_" <> args["name"]),
-        #   group_consumer: init_opts
-        # }
-        :sftpd ->
-          {types[:sftpd], name: name, parms: args, env: env}
-
-        type ->
+        Enum.member?(default, type) ->
           {types[type], name: name, parms: args, env: env}
+
+        true ->
+          types[type].get_spec(name, args, env)
       end
     rescue
       e ->
@@ -347,19 +288,24 @@ defmodule Amps.EnvSvcManager do
         count = opts["subs_count"] || 1
 
         try do
-          Enum.each(1..count, fn x ->
-            name = String.to_atom(env <> "-" <> svcname <> Integer.to_string(x))
+          if parms["type"] == "subscriber" || parms["type"] == "pyservice" do
+            name = String.to_atom(env <> "-" <> svcname)
+            start_child(name, get_spec(name, opts, env), parms, env)
+          else
+            Enum.each(1..count, fn x ->
+              name = String.to_atom(env <> "-" <> svcname <> Integer.to_string(x))
 
-            case get_spec(name, opts, env) do
-              {:error, error} ->
-                Logger.warn("Service #{name} could not be started. Error: #{inspect(error)}")
+              case get_spec(name, opts, env) do
+                {:error, error} ->
+                  Logger.warn("Service #{name} could not be started. Error: #{inspect(error)}")
 
-                raise error
+                  raise error
 
-              spec ->
-                start_child(name, spec, parms, env)
-            end
-          end)
+                spec ->
+                  start_child(name, spec, parms, env)
+              end
+            end)
+          end
 
           {:ok, "Started #{svcname}"}
         rescue
@@ -403,7 +349,7 @@ defmodule Amps.EnvSvcManager do
 
         # This match pattern worked for kafka errors in my local testing, but I worry it is too specific.
 
-        {:shutdown, {:failed_to_start_child, module, {{:badmatch, {:error, {e, stacktrace}}}, _}}} =
+        {:shutdown, {:failed_to_start_child, _module, {{:badmatch, {:error, {e, _stacktrace}}}, _}}} =
           error
 
         error =
@@ -436,26 +382,38 @@ defmodule Amps.EnvSvcManager do
         count = opts["subs_count"] || 1
         # children = Supervisor.which_children(Amps.SvcSupervisor)
 
-        names =
-          Enum.reduce(1..count, [], fn x, acc ->
-            name = String.to_atom(env <> "-" <> svcname <> Integer.to_string(x))
-            [name | acc]
-          end)
+        if parms["type"] == "subscriber" || parms["type"] == "pyservice" do
+          name = String.to_atom(env <> "-" <> svcname)
 
-        case Enum.reduce(names, [], fn name, acc ->
-               case Process.whereis(name) do
-                 nil ->
-                   acc
+          case Process.whereis(name) do
+            nil ->
+              nil
 
-                 pid ->
-                   [pid | acc]
-               end
-             end) do
-          [] ->
-            nil
+            pid ->
+              [pid]
+          end
+        else
+          names =
+            Enum.reduce(1..count, [], fn x, acc ->
+              name = String.to_atom(env <> "-" <> svcname <> Integer.to_string(x))
+              [name | acc]
+            end)
 
-          list ->
-            list
+          case Enum.reduce(names, [], fn name, acc ->
+                 case Process.whereis(name) do
+                   nil ->
+                     acc
+
+                   pid ->
+                     [pid | acc]
+                 end
+               end) do
+            [] ->
+              nil
+
+            list ->
+              list
+          end
         end
     end
   end

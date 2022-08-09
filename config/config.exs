@@ -9,6 +9,13 @@
 # move said applications out of the umbrella.
 import Config
 
+force_ssl =
+  if String.to_atom(String.downcase(System.get_env("AMPS_USE_SSL", "FALSE"))) do
+    [rewrite_on: [:x_forwarded_host, :x_forwarded_port, :x_forwarded_proto], host: nil]
+  else
+    nil
+  end
+
 config :amps_portal,
   generators: [context_app: false]
 
@@ -18,7 +25,8 @@ config :phoenix, :filter_parameters, ["password", "token", "logo"]
 
 # Configures the endpoint
 config :amps_portal, AmpsPortal.Endpoint,
-  url: [host: "localhost"],
+  url: [host: System.get_env("AMPS_HOST", "localhost")],
+  # force_ssl: force_ssl,
   render_errors: [
     view: AmpsPortal.ErrorView,
     accepts: ~w(html json),
@@ -50,27 +58,68 @@ config :esbuild,
 # For production it's recommended to configure a different adapter
 # at the `config/runtime.exs`.
 
-config :master_proxy,
-  # any Cowboy options are allowed
+backends =
+  if String.to_atom(String.downcase(System.get_env("AMPS_GEN_CERTS", "FALSE"))) do
+    [
+      %{
+        path: ~r{^/.well-known/acme-challenge/.*$},
+        plug: SiteEncrypt.AcmeChallenge,
+        opts: AmpsWeb.Proxy,
+        host: ~r/(.*?)/
+      },
+      %{
+        host: ~r/^#{System.get_env("AMPS_ADMIN_HOST", "admin.localhost")}$/,
+        phoenix_endpoint: AmpsWeb.Endpoint
+      },
+      %{
+        host: ~r/(.*?)/,
+        phoenix_endpoint: AmpsPortal.Endpoint
+      }
+    ]
+  else
+    [
+      %{
+        host: ~r/^#{System.get_env("AMPS_ADMIN_HOST", "admin.localhost")}$/,
+        phoenix_endpoint: AmpsWeb.Endpoint
+      },
+      %{
+        host: ~r/(.*?)/,
+        phoenix_endpoint: AmpsPortal.Endpoint
+      }
+    ]
+  end
+
+mp_config = [
   protocol_options: [
     request_timeout: 10000
   ],
-  http: [:inet6, port: System.get_env("AMPS_PORT", "4080")],
+  http: [
+    net: :inet6,
+    port: String.to_integer(System.get_env("AMPS_PORT", "4080"))
+  ],
   log_requests: false,
   # https: [:inet6, port: 4443],
-  backends: [
-    %{
-      host: ~r/^#{System.get_env("AMPS_ADMIN_HOST", "admin.localhost")}$/,
-      phoenix_endpoint: AmpsWeb.Endpoint
-    },
-    %{
-      host: ~r/#{System.get_env("AMPS_HOST", "localhost")}$/,
-      phoenix_endpoint: AmpsPortal.Endpoint
-    }
-  ]
+  backends: backends
+]
+
+if String.to_atom(String.downcase(System.get_env("AMPS_USE_SSL", "FALSE"))) do
+  config :master_proxy,
+         mp_config ++ [https: [port: String.to_integer(System.get_env("AMPS_SSL_PORT", "4443"))]]
+else
+  config :master_proxy, mp_config
+end
+
+# any Cowboy options are allowed
 
 config :amps,
-  db: System.get_env("AMPS_DB_PROVIDER", "mongo")
+  db: System.get_env("AMPS_DB_PROVIDER", "mongo"),
+  adminhost: System.get_env("AMPS_ADMIN_HOST", "admin.localhost"),
+  userhost: System.get_env("AMPS_HOST", "localhost"),
+  use_ssl: String.to_atom(String.downcase(System.get_env("AMPS_USE_SSL", "FALSE"))),
+  force_ssl: String.to_atom(String.downcase(System.get_env("AMPS_FORCE_SSL", "FALSE"))),
+  gen_certs: String.to_atom(String.downcase(System.get_env("AMPS_GEN_CERTS", "FALSE"))),
+  dns_emails: System.get_env("AMPS_DNS_EMAILS", ""),
+  extra_domains: System.get_env("AMPS_EXTRA_DOMAINS", "")
 
 config :amps, :gnat,
   host: String.to_charlist(System.get_env("AMPS_NATS_HOST", "localhost")),
@@ -110,7 +159,7 @@ config :amps_web, AmpsWeb.Endpoint,
     port: System.get_env("AMPS_HOST_PORT", "4000"),
     protocol_options: [idle_timeout: 5_000_000]
   ],
-  use_ssl: String.to_atom(String.downcase(System.get_env("AMPS_USE_SSL", "FALSE"))),
+  # force_ssl: force_ssl,
   # https: [
   #   port: 443,
   #   # cipher_suite: :strong,
@@ -141,7 +190,7 @@ config :amps_web, AmpsWeb.Endpoint,
 # config :mnesia, dir: to_charlist(System.get_env("MNESIA_DIR", "/Users/abhayram/mnesia"))
 
 config :mnesiac,
-  stores: [Amps.Defaults],
+  stores: [Amps.Defaults, Amps.Responders, Amps.Handlers],
   schema_type: :disc_copies
 
 # defaults to :ram_copies
@@ -174,16 +223,16 @@ config :amps_web, :pow_assent,
   ]
 
 config :amps_portal, :pow,
-  user: AmpsPortal.Users.User,
-  users_context: AmpsPortal.Users,
+  user: Amps.Users.User,
+  users_context: Amps.Users,
   extensions: [PowResetPassword],
   controller_callbacks: Pow.Extension.Phoenix.ControllerCallbacks,
   mailer_backend: AmpsWeb.PowMailer,
   cache_store_backend: Pow.Store.Backend.MnesiaCache
 
 config :amps_portal, :pow_assent,
-  user: AmpsPortal.Users.User,
-  users_context: AmpsPortal.Users,
+  user: Amps.Users.User,
+  users_context: Amps.Users,
   providers: [
     google: [
       client_id: "63199210559-hmhqeu7hmlkv3epournsu7j8sn9likqv.apps.googleusercontent.com",
@@ -219,10 +268,6 @@ config :ex_aws, :hackney_opts, recv_timeout: 240_000
 #   host: System.get_env("AMPS_S3_HOST") || "localhost",
 #   port: System.get_env("AMPS_S3_PORT") || "9000"
 
-config :kafka_ex,
-  kafka_version: "kayrock",
-  disable_default_worker: true
-
 config :amps,
   sched_interval: 10000,
   retry_delay: 60000,
@@ -236,45 +281,37 @@ config :amps, :streams,
   "amps.events": "EVENTS",
   "amps.svcs": "SERVICES",
   "amps.actions": "ACTIONS",
-  "amps.delivery": "DELIVERY",
   "amps.mailbox": "MAILBOX",
   "amps.data": "DATA",
   "amps.objects": "OBJECTS"
 
 config :amps, :services,
-  subscriber: Amps.EventConsumer,
+  subscriber: Amps.EventHandler,
   history: Amps.HistoryConsumer,
   sftpd: Amps.SftpServer,
   httpd: Amps.MailboxApi,
   gateway: Amps.Gateway,
-  kafka: Amps.GenConsumer,
-  pyservice: Amps.PyProcess
+  pyservice: Amps.PyHandler,
+  sqs: Amps.SQS,
+  nats: Amps.NATS
 
 config :amps, :actions,
-  strrepl: StringReplaceAction,
-  mailbox: MailboxAction,
-  sftpput: SftpAction,
-  router: RouterAction,
-  unzip: UnzipAction,
-  zip: ZipAction,
-  http: HttpAction,
-  kafkaput: KafkaPut,
-  runscript: RunScriptAction,
-  s3: S3Action,
-  sharepoint: SharePoint,
-  pgpencrypt: PGPEncrypt,
-  pgpdecrypt: PGPDecrypt,
-  batch: BatchAction
+  strrepl: Amps.Actions.StringReplace,
+  mailbox: Amps.Actions.Mailbox,
+  sftpput: Amps.Actions.SftpPut,
+  router: Amps.Actions.Router,
+  unzip: Amps.Actions.Unzip,
+  zip: Amps.Actions.Zip,
+  http: Amps.Actions.Http,
+  runscript: Amps.Actions.RunScript,
+  s3: Amps.Actions.S3,
+  sharepoint: Amps.Actions.SharePoint,
+  pgpencrypt: Amps.Actions.PGPEncrypt,
+  pgpdecrypt: Amps.Actions.PGPDecrypt,
+  batch: Amps.Actions.Batch,
+  ldap: Amps.Actions.LDAP,
+  aws: Amps.Actions.AWS
 
-# config :amps, :httpapi,
-#  options: [
-#    port: 8090,
-#    protocol_options: [
-#      idle_timeout: 120_000,
-#      request_timeout: 120_000,
-#      max_keepalive: 5_000_000
-#    ]
-#  ]
 config :amps, Amps.Scheduler,
   jobs: [
     heartbeat: [
@@ -292,28 +329,28 @@ config :amps, :pyworker,
     {:max_overflow, 2}
   ]
 
-if String.upcase(System.get_env("AMPS_CLUSTER", "FALSE")) == "TRUE" do
-  config :libcluster,
-    topologies: [
-      amps: [
-        # The selected clustering strategy. Required.
-        strategy: Cluster.Strategy.LocalEpmd,
-        # Configuration for the provided strategy. Optional.
-        # The function to use for connecting nodes. The node
-        # name will be appended to the argument list. Optional
-        connect: {:net_kernel, :connect_node, []},
-        # The function to use for disconnecting nodes. The node
-        # name will be appended to the argument list. Optional
-        disconnect: {:erlang, :disconnect_node, []},
-        # The function to use for listing nodes.
-        # This function must return a list of node names. Optional
-        list_nodes: {:erlang, :nodes, [:connected]}
-      ]
-    ]
-else
-  config :libcluster,
-    topologies: []
-end
+# if String.upcase(System.get_env("AMPS_CLUSTER", "FALSE")) == "TRUE" do
+#   config :libcluster,
+#     topologies: [
+#       amps: [
+#         # The selected clustering strategy. Required.
+#         strategy: Cluster.Strategy.LocalEpmd,
+#         # Configuration for the provided strategy. Optional.
+#         # The function to use for connecting nodes. The node
+#         # name will be appended to the argument list. Optional
+#         connect: {:net_kernel, :connect_node, []},
+#         # The function to use for disconnecting nodes. The node
+#         # name will be appended to the argument list. Optional
+#         disconnect: {:erlang, :disconnect_node, []},
+#         # The function to use for listing nodes.
+#         # This function must return a list of node names. Optional
+#         list_nodes: {:erlang, :nodes, [:connected]}
+#       ]
+#     ]
+# else
+#   config :libcluster,
+#     topologies: []
+# end
 
 # Configure esbuild (the version is required)
 # config :esbuild,
@@ -332,3 +369,4 @@ config :phoenix, :json_library, Jason
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"
+import_config "plugins.exs"

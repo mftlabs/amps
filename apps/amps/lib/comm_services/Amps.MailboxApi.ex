@@ -48,30 +48,123 @@ defmodule Amps.MailboxApi do
     # IO.inspect(opts)
     case myauth(conn, user, mailbox) do
       {:ok, _} ->
-        limit = conn.query_params()["limit"]
+        limit = conn.query_params["limit"]
 
         limit =
           if limit do
             try do
               String.to_integer(limit)
-            rescue _ ->
-              {:error, "Invalid parameter: \"limit\" must be textual representation of an integer."}
+            rescue
+              _ ->
+                {:error,
+                 "Invalid parameter: \"limit\" must be textual representation of an integer."}
             end
           else
             100
           end
+
         case limit do
           {:error, e} ->
             send_resp(conn, 400, e)
+
           limit ->
             result = AmpsMailbox.list_messages(user, mailbox, limit, conn.private.env)
             count = Enum.count(result)
             # list successful (200 ok)
             send_resp(conn, 200, Poison.encode!(%{count: count, messages: result}))
         end
+
       {:error, reason} ->
         # auth failure (401 unauthorized)
         send_resp(conn, 401, Poison.encode!(%{error: reason}))
+    end
+  end
+
+  post "/mailbox/:user/" do
+    IO.inspect(conn)
+
+    IO.puts("opts: #{inspect(opts)}")
+    msgid = AmpsUtil.get_id()
+    stime = AmpsUtil.gettime()
+    temp_file = AmpsUtil.tempdir() <> "/" <> msgid
+    IO.puts("temp: #{temp_file}")
+
+    IO.inspect(conn)
+    IO.inspect(conn.body_params())
+    mailbox = "default"
+
+    case myauth(conn, user, mailbox) do
+      {:ok, user} ->
+        msg = get_metadata(conn, user, msgid, stime, temp_file)
+        handle_write(conn, temp_file, msg, user, mailbox)
+
+      {:error, reason} ->
+        # auth failure (401 unauthorized)
+        send_resp(conn, 401, Poison.encode!(%{error: reason}))
+    end
+  end
+
+  def handle_write(conn, temp_file, msg, user, mailbox) do
+    msgid = msg["msgid"]
+
+    case write_file(conn, temp_file) do
+      {:error, reason} ->
+        # cannot write temp file (500 internal service error)
+        send_resp(
+          conn,
+          500,
+          Poison.encode!(%{msgid: msgid, status: reason})
+        )
+
+      {:ok, _conn} ->
+        # temp file written okay
+        {msg, sid} =
+          AmpsEvents.start_session(
+            msg,
+            %{"service" => conn.private.opts["name"]},
+            conn.private.env
+          )
+
+        {msg, delete} =
+          AmpsMailbox.overwrite(
+            user,
+            mailbox,
+            msg,
+            conn.private.opts["overwrite"],
+            conn.private.env
+          )
+
+        msg = Map.put(msg, "header", "")
+
+        #            :file.delete(temp_file)
+        #            Amps.MqService.send("registerq", msg)
+        msg = Map.put(msg, "mailbox", mailbox)
+
+        topic = "amps.svcs.#{conn.private.opts["name"]}.#{user}"
+
+        mailboxtopic = "amps.mailbox.#{user}.#{mailbox}"
+
+        svced = AmpsEvents.send(msg, %{"output" => topic}, %{}, conn.private.env)
+        mailboxed = AmpsEvents.send(msg, %{"output" => mailboxtopic}, %{}, conn.private.env)
+
+        case {svced, mailboxed} do
+          {:ok, :ok} ->
+            delete.()
+
+            # AmpsQueue.commitTx()
+            # register normal completion (201 created)
+            AmpsEvents.end_session(sid, conn.private.env)
+
+            send_resp(
+              conn,
+              201,
+              Poison.encode!(%{msgid: msgid, status: "accepted"})
+            )
+
+            #              :error ->
+            # register reports failure (400 bad request)
+            #                send_resp(conn, 400, Poison.encode!(%{msgid: msgid, status: "rejected"}))
+        end
     end
   end
 
@@ -90,58 +183,7 @@ defmodule Amps.MailboxApi do
     case myauth(conn, user, mailbox) do
       {:ok, user} ->
         msg = get_metadata(conn, user, msgid, stime, temp_file)
-
-        case write_file(conn, temp_file) do
-          {:error, reason} ->
-            # cannot write temp file (500 internal service error)
-            send_resp(
-              conn,
-              500,
-              Poison.encode!(%{msgid: msgid, status: reason})
-            )
-
-          {:ok, _conn} ->
-            # temp file written okay
-            {msg, sid} =
-              AmpsEvents.start_session(
-                msg,
-                %{"service" => conn.private.opts["name"]},
-                conn.private.env
-              )
-
-            msg = Map.put(msg, "header", "")
-            #            :file.delete(temp_file)
-            #            Amps.MqService.send("registerq", msg)
-            msg = Map.put(msg, "mailbox", mailbox)
-
-            topic =
-              AmpsUtil.env_topic(
-                "amps.svcs.#{conn.private.opts["name"]}.#{user}",
-                conn.private.env
-              )
-
-            mailboxtopic = AmpsUtil.env_topic("amps.mailbox.#{user}.#{mailbox}", conn.private.env)
-
-            svced = AmpsEvents.send(msg, %{"output" => topic}, %{})
-            mailboxed = AmpsEvents.send(msg, %{"output" => mailboxtopic}, %{})
-
-            case {svced, mailboxed} do
-              {:ok, :ok} ->
-                # AmpsQueue.commitTx()
-                # register normal completion (201 created)
-                AmpsEvents.end_session(sid, conn.private.env)
-
-                send_resp(
-                  conn,
-                  201,
-                  Poison.encode!(%{msgid: msgid, status: "accepted"})
-                )
-
-                #              :error ->
-                # register reports failure (400 bad request)
-                #                send_resp(conn, 400, Poison.encode!(%{msgid: msgid, status: "rejected"}))
-            end
-        end
+        handle_write(conn, temp_file, msg, user, mailbox)
 
       {:error, reason} ->
         # auth failure (401 unauthorized)
@@ -227,21 +269,21 @@ defmodule Amps.MailboxApi do
         "fpath" => temp,
         "temp" => "true",
         "stime" => stime,
-        "fsize" => elem(size, 1),
+        "fsize" => elem(size, 1) |> String.to_integer(),
         "ftime" => AmpsUtil.gettime(),
         "service" => conn.private.opts["name"]
       })
 
     if nmsg["fname"] == "" || nmsg["fname"] == nil do
       fname =
-        if conn.body_params() != %Plug.Conn.Unfetched{aspect: :body_params} do
-          if conn.body_params()["upload"] do
-            if Map.has_key?(conn.body_params()["upload"], :filename) do
-              conn.body_params()["upload"].filename
+        if conn.body_params != %Plug.Conn.Unfetched{aspect: :body_params} do
+          if conn.body_params["upload"] do
+            if Map.has_key?(conn.body_params["upload"], :filename) do
+              conn.body_params["upload"].filename
             end
           end
         else
-          "message.dat"
+          msgid
         end
 
       if fname do
@@ -296,24 +338,20 @@ defmodule Amps.MailboxApi do
   defp myauth(conn, username, mailbox \\ nil) do
     case Plug.BasicAuth.parse_basic_auth(conn) do
       {id, secret} ->
-        case AmpsPortal.Util.verify_token(id, secret, conn.private.env) do
+        case verify_token(id, secret, conn.private.env) do
           nil ->
             {:error, "Access Denied"}
 
           user ->
             if username == user["username"] do
               if mailbox do
-                mailbox =
-                  Enum.find(user["mailboxes"], nil, fn mb ->
-                    IO.inspect(mailbox)
-                    mb["name"] == mailbox
-                  end)
+                mailbox = AmpsMailbox.is_mailbox(username, mailbox, conn.private.env)
 
                 case mailbox do
                   nil ->
                     {:error, "Mailbox does not exist"}
 
-                  mailbox ->
+                  _ ->
                     {:ok, user["username"]}
                 end
               else
@@ -328,4 +366,31 @@ defmodule Amps.MailboxApi do
         {:error, "Authorization denied - invalid HTTP auth header"}
     end
   end
+
+  defp verify_token(tokenid, token, env) do
+    {:ok, parms} = Phoenix.Token.verify(AmpsPortal.Endpoint, "auth", token, max_age: :infinity)
+    %{"uid" => username} = Jason.decode!(parms)
+
+    case Amps.DB.find_one(AmpsUtil.index(env, "tokens"), %{"username" => username}) do
+      nil ->
+        nil
+
+      secrets ->
+        if secrets[tokenid] == token do
+          case Amps.DB.find_one(AmpsUtil.index(env, "users"), %{"username" => username}) do
+            nil ->
+              nil
+
+            user ->
+              user
+          end
+        else
+          nil
+        end
+    end
+  end
+end
+
+defmodule AmpsMailboxException do
+  defexception [:message]
 end

@@ -13,14 +13,11 @@ defmodule Amps.EnvScheduler do
         if String.ends_with?(str, "_name") do
           mod = namespace(val, config[:env])
 
-          IO.inspect(mod)
           [{key, mod} | acc]
         else
           [{key, val} | acc]
         end
       end)
-
-    IO.inspect(config)
 
     sched = DB.find(AmpsUtil.index(config[:env], "jobs"))
 
@@ -32,7 +29,6 @@ defmodule Amps.EnvScheduler do
       end)
 
     config = Keyword.put(config, :jobs, jobs)
-    IO.inspect(config)
     config
   end
 
@@ -91,7 +87,8 @@ defmodule Amps.EnvScheduler do
         AmpsEvents.send(
           msg,
           %{"output" => AmpsUtil.env_topic(job["topic"], env)},
-          %{}
+          %{},
+          env
         )
 
         AmpsEvents.end_session(sid, env)
@@ -144,8 +141,6 @@ defmodule Amps.EnvScheduler do
             pieces |> List.replace_at(3, Enum.join(job["days"], ","))
           end
       end
-
-    IO.inspect(pieces)
 
     Enum.join(pieces, " ")
   end

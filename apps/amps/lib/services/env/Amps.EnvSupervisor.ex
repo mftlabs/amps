@@ -14,7 +14,6 @@ defmodule Amps.EnvSupervisor do
     # {Plug.Cowboy, scheme: :http, plug: MyApp, options: [port: 4040]}
     history = history_children(env)
     archive = archive_children(env)
-    IO.inspect(history)
 
     children = [
       Supervisor.child_spec({Amps.EnvSvcSupervisor, [env]}, restart: :transient),
@@ -36,8 +35,6 @@ defmodule Amps.EnvSupervisor do
     }
 
     spvsr = Supervisor.child_spec(spvsr, restart: :transient)
-
-    IO.inspect(spvsr)
 
     case DynamicSupervisor.start_child(
            __MODULE__,

@@ -263,6 +263,11 @@ label.x-form-required-field > span:after {
   /* box-shadow: #fff 0 -1px 7px 1px, inset red 0 -1px 9px, #F00 0 2px 5px; */
 }
 
+.widget {
+  background: #404040;
+  color: white;
+}
+
 .widgetbutton {
   background: #404040;
   color: white;

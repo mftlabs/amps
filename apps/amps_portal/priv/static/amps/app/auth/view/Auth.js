@@ -151,7 +151,7 @@ Ext.define("Amps.Authorized.Viewport", {
           items: [
             {
               xtype: "component",
-              html: `© 2021 Agile Data Inc, All rights are reserved.`,
+              html: `© 2022 MFT Labs, All rights reserved.`,
             },
           ],
         },

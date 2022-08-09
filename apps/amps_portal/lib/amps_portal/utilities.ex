@@ -1,13 +1,14 @@
 defmodule AmpsPortal.Util do
   alias Amps.DB
 
+  @spec agent_rule_creation(nil | maybe_improper_list | map, nil | maybe_improper_list | map, any) ::
+          any
   def agent_rule_creation(user, rule, env) do
     index = index(env, "users")
 
     DB.find_one_and_update(index, %{"_id" => user["_id"]}, %{
-      "ufa" => %{
-        "stime" => DateTime.utc_now() |> DateTime.truncate(:millisecond) |> DateTime.to_iso8601()
-      }
+      "ufa.stime" =>
+        DateTime.utc_now() |> DateTime.truncate(:millisecond) |> DateTime.to_iso8601()
     })
 
     if rule["type"] == "download" do
@@ -23,9 +24,8 @@ defmodule AmpsPortal.Util do
     index = index(env, "users")
 
     DB.find_one_and_update(index, %{"_id" => id}, %{
-      "ufa" => %{
-        "stime" => DateTime.utc_now() |> DateTime.truncate(:millisecond) |> DateTime.to_iso8601()
-      }
+      "ufa.stime" =>
+        DateTime.utc_now() |> DateTime.truncate(:millisecond) |> DateTime.to_iso8601()
     })
 
     if rule["type"] == "download" do
@@ -44,9 +44,8 @@ defmodule AmpsPortal.Util do
 
   def agent_rule_deletion(user, rule, env \\ "") do
     DB.find_one_and_update(index(env, "users"), %{"_id" => user["_id"]}, %{
-      "ufa" => %{
-        "stime" => DateTime.utc_now() |> DateTime.truncate(:millisecond) |> DateTime.to_iso8601()
-      }
+      "ufa.stime" =>
+        DateTime.utc_now() |> DateTime.truncate(:millisecond) |> DateTime.to_iso8601()
     })
 
     if rule["type"] == "download" do

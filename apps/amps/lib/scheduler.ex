@@ -59,7 +59,8 @@ defmodule Amps.Scheduler do
         AmpsEvents.send(
           msg,
           %{"output" => job["topic"]},
-          %{}
+          %{},
+          ""
         )
 
         AmpsEvents.end_session(sid, "")

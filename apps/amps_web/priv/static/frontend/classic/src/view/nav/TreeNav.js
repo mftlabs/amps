@@ -18,6 +18,14 @@ Ext.define("Amps.view.nav.TreeNav", {
           cls: "messages",
         },
         {
+          iconCls: "x-fa fa-list-ul",
+          leaf: true,
+          rowCls: "sessions",
+          text: "Sessions",
+          tooltip: "Sessions",
+          cls: "sessions",
+        },
+        {
           iconCls: "x-fa fa-television",
           leaf: true,
           rowCls: "monitoring",
@@ -166,9 +174,9 @@ Ext.define("Amps.view.nav.TreeNav", {
             {
               iconCls: "x-fa fa-magic",
               leaf: true,
-              rowCls: "demos",
-              text: "Demos",
-              tooltip: "Demos",
+              rowCls: "packages",
+              text: "Packages",
+              tooltip: "Package",
             },
           ],
         },

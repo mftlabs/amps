@@ -1,6 +1,6 @@
 defmodule AmpsPortal.UFAController do
   use AmpsPortal, :controller
-  #import Argon2
+  import Argon2
   import Jetstream
   alias Amps.DB
   require Logger
@@ -130,9 +130,9 @@ defmodule AmpsPortal.UFAController do
             }
           )
 
-        topic = ("amps.svcs.ufa." <> username) |> AmpsUtil.env_topic(conn.assigns().env)
+        topic = "amps.svcs.ufa." <> username
 
-        AmpsEvents.send(msg, %{"output" => topic}, %{})
+        AmpsEvents.send(msg, %{"output" => topic}, %{}, conn.assigns().env)
 
         # AmpsEvents.send_history(
         #   "amps.events.messages",
@@ -528,7 +528,7 @@ defmodule AmpsPortal.UFAController do
             user ->
               if user["username"] == username do
                 userstruct =
-                  AmpsPortal.Users.get_by(%{"username" => user["username"]},
+                  Amps.Users.get_by(%{"username" => user["username"]},
                     env: conn.assigns().env
                   )
 

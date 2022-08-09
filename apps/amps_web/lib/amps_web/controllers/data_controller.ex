@@ -3,7 +3,7 @@ defmodule AmpsWeb.DataController do
   require Logger
   import Argon2
   alias Amps.DB
-  #alias AmpsWeb.Encryption
+  alias AmpsWeb.Encryption
   alias Amps.SvcManager
   alias Amps.VaultDatabase
   alias AmpsWeb.Util
@@ -42,7 +42,7 @@ defmodule AmpsWeb.DataController do
     cwd = Path.join(Amps.Defaults.get("storage_temp"), id)
     res = :zip.unzip(File.read!(file.path), cwd: cwd)
     path = cwd
-    demo = Jason.decode!(File.read!(Path.join(path, "demo.json")))
+    demo = Jason.decode!(File.read!(Path.join(path, "pkg.json")))
 
     case DB.find_one("demos", Map.take(demo, ["name", "description"])) do
       nil ->
@@ -195,6 +195,26 @@ defmodule AmpsWeb.DataController do
     json(conn, %{success: %{password: password}})
   end
 
+  def ssl(conn, _params) do
+    gen_certs = Application.get_env(:amps, :gen_certs)
+    use_ssl = Application.get_env(:amps, :use_ssl)
+
+    json(conn, gen_certs and use_ssl)
+  end
+
+  def ssl_certify(conn, _params) do
+    res = SiteEncrypt.force_certify(AmpsWeb.Proxy)
+    IO.inspect(res)
+
+    case res do
+      :ok ->
+        json(conn, "Successfully Initiated Certification")
+
+      :error ->
+        json(conn, "Error Initiating Certification")
+    end
+  end
+
   @spec upload(Plug.Conn.t(), map) :: Plug.Conn.t()
   def upload(conn, %{"topic" => topic, "file" => file, "meta" => meta}) do
     user = Pow.Plug.current_user(conn)
@@ -223,10 +243,62 @@ defmodule AmpsWeb.DataController do
 
     {msg, sid} = AmpsEvents.start_session(msg, %{"service" => "Topic Upload"}, conn.assigns().env)
 
-    AmpsEvents.send(msg, %{"output" => AmpsUtil.env_topic(topic, conn.assigns().env)}, %{})
+    AmpsEvents.send(
+      msg,
+      %{"output" => topic},
+      %{},
+      conn.assigns().env
+    )
+
     AmpsEvents.end_session(sid, conn.assigns().env)
     json(conn, :ok)
   end
+
+  # def download_manager(conn, %{"id" => id, "os" => os}) do
+  #   mgr = Amps.DB.find_by_id(Util.index(conn.assigns().env, "system_managers"), id)
+
+  #   # _host = Application.fetch_env!(:amps_portal, AmpsWeb.Endpoint)[:url]
+
+  #   mandir = Application.app_dir(:amps_web, "priv/manager")
+
+  #   {:ok, manfolder} = Temp.mkdir()
+
+  #   fname = "system_manager"
+
+  #   File.cp_r(
+  #     Path.join([mandir, os]),
+  #     Path.join(manfolder, fname)
+  #   )
+
+  #   File.copy(
+  #     Path.join([mandir, "start.sh"]),
+  #     Path.join(manfolder, "start.sh")
+  #   )
+
+  #   conf =
+  #     File.read!(Path.join(mandir, "conf"))
+  #     |> String.replace("{NODE}", "#{node()}")
+  #     |> String.replace("{HOST}", mgr["host"])
+  #     |> String.replace("{COOKIE}", "#{Node.get_cookie()}")
+  #     |> String.replace("{NODE_ID}", id)
+  #     |> String.replace("{NODE_ENV}", conn.assigns().env)
+
+  #   # IO.inspect(script)
+
+  #   File.write(Path.join(manfolder, "conf"), conf)
+
+  #   zipname = mgr["name"] <> "_sysmgr.zip"
+
+  #   files = File.ls!(manfolder) |> Enum.map(&String.to_charlist/1)
+
+  #   {:ok, zippath} = Temp.mkdir()
+  #   zippath = Path.join(zippath, zipname)
+  #   {:ok, zip} = :zip.create(zippath, files, cwd: manfolder)
+
+  #   IO.inspect(zip)
+
+  #   send_download(conn, {:file, zip}, disposition: :attachment)
+  # end
 
   # def export(conn, %{"collection" => collection}) do
   #   headers = ["Name", "Type", "Description"]
@@ -450,13 +522,53 @@ defmodule AmpsWeb.DataController do
     json(conn, data)
   end
 
-  def export(collection, env) do
-    data = DB.find(collection)
-    IO.inspect(data)
+  def export(collection, env, filter \\ %{}) do
+    data = DB.find(collection, filter)
+    count = Enum.count(data)
     base_coll = Util.base_index(env, collection)
-    IO.inspect(base_coll)
 
-    sheets = get_excel_data(base_coll, data)
+    size = 25000
+    # Float.ceil(count / 20) |> trunc()
+
+    processes = Float.ceil(count / size) |> trunc()
+    IO.inspect(processes)
+
+    sheetlist = List.duplicate(nil, processes)
+
+    handler = self()
+
+    Enum.each(0..(processes - 1), fn idx ->
+      spawn(fn ->
+        start = idx * size
+        ending = start + size - 1
+
+        sheets = get_excel_data(base_coll, Enum.slice(data, start..ending))
+
+        send(handler, {:sheet, idx, sheets})
+      end)
+    end)
+
+    sheets =
+      receive_sheet(sheetlist)
+      |> Enum.reduce([], fn sheets, acc ->
+        Enum.reduce(sheets, acc, fn sheet, acc ->
+          existing =
+            Enum.find_index(acc, fn accsheet ->
+              accsheet.name == sheet.name
+            end)
+
+          if existing do
+            {_, rows} = List.pop_at(sheet.rows, 0)
+            curr = Enum.at(acc, existing)
+            new = Map.put(curr, :rows, curr.rows ++ rows)
+            List.replace_at(acc, existing, new)
+          else
+            acc ++ [sheet]
+          end
+        end)
+      end)
+
+    IO.inspect(Enum.count(sheets))
 
     {:ok, {_name, binary}} =
       %Workbook{sheets: sheets}
@@ -465,10 +577,25 @@ defmodule AmpsWeb.DataController do
     binary
   end
 
+  def receive_sheet(sheetlist) do
+    receive do
+      {:sheet, num, sheets} ->
+        sheetlist = List.replace_at(sheetlist, num, sheets)
+
+        if Enum.all?(sheetlist) do
+          sheetlist
+        else
+          receive_sheet(sheetlist)
+        end
+    end
+  end
+
   def export_collection(conn, %{
         "collection" => collection
       }) do
-    binary = export(collection, conn.assigns().env)
+    filters = conn.query_params["filters"] |> Jason.decode!()
+
+    binary = export(collection, conn.assigns().env, filters)
 
     conn
     |> send_download({:binary, binary}, filename: "#{collection}.xlsx")
@@ -548,7 +675,13 @@ defmodule AmpsWeb.DataController do
 
     {msg, sid} = AmpsEvents.start_session(meta, %{"service" => "Topic Event"}, conn.assigns().env)
 
-    AmpsEvents.send(msg, %{"output" => AmpsUtil.env_topic(topic, conn.assigns().env)}, %{})
+    AmpsEvents.send(
+      msg,
+      %{"output" => topic},
+      %{},
+      conn.assigns().env
+    )
+
     AmpsEvents.end_session(sid, conn.assigns().env)
     json(conn, :ok)
   end
@@ -566,7 +699,7 @@ defmodule AmpsWeb.DataController do
 
     {msg, sid} = AmpsEvents.start_session(msg, %{"service" => "Reprocess"}, conn.assigns().env)
 
-    AmpsEvents.send(msg, %{"output" => topic}, %{})
+    AmpsEvents.send(msg, %{"output" => topic}, %{}, conn.assigns().env)
     AmpsEvents.end_session(sid, conn.assigns().env)
 
     json(conn, :ok)
@@ -578,6 +711,13 @@ defmodule AmpsWeb.DataController do
   end
 
   def export_env(conn, %{"env" => env}) do
+    env =
+      if env == "default" do
+        ""
+      else
+        env
+      end
+
     id = AmpsUtil.get_id()
     dir = AmpsUtil.tempdir(id)
 
@@ -634,12 +774,17 @@ defmodule AmpsWeb.DataController do
     imports = Enum.reverse(imports)
     demo = demo |> Map.put("imports", imports) |> Map.put("scripts", "scripts")
     IO.inspect(demo)
-    File.write(Path.join(dir, "demo.json"), Jason.encode!(demo) |> Jason.Formatter.pretty_print())
+    File.write(Path.join(dir, "pkg.json"), Jason.encode!(demo) |> Jason.Formatter.pretty_print())
     IO.inspect(demo)
     readme = "# #{demo["name"]}\n## #{demo["desc"]}"
     IO.inspect(readme)
     File.write!(Path.join(dir, "README.md"), readme)
     File.cp_r!(AmpsUtil.get_mod_path(env), Path.join(dir, "scripts"))
+
+    if env == "" do
+      File.rm_rf(Path.join([dir, "scripts", "env"]))
+      File.rm_rf(Path.join([dir, "scripts", "util"]))
+    end
 
     files = File.ls!(dir) |> Enum.map(&String.to_charlist/1)
 
@@ -659,7 +804,7 @@ defmodule AmpsWeb.DataController do
     msg = obj |> Map.drop(["status", "action", "topic", "_id", "index", "etime"])
     {msg, sid} = AmpsEvents.start_session(msg, %{"service" => "Reroute"}, conn.assigns().env)
 
-    AmpsEvents.send(Map.merge(msg, meta), %{"output" => topic}, %{})
+    AmpsEvents.send(Map.merge(msg, meta), %{"output" => topic}, %{}, conn.assigns().env)
     AmpsEvents.end_session(sid, conn.assigns().env)
 
     json(conn, :ok)
@@ -679,7 +824,7 @@ defmodule AmpsWeb.DataController do
 
       msg = obj |> Map.drop(["status", "action", "topic", "_id", "index", "etime"])
 
-      AmpsEvents.send(Map.merge(msg, meta), %{"output" => topic}, %{})
+      AmpsEvents.send(Map.merge(msg, meta), %{"output" => topic}, %{}, conn.assigns().env)
     end)
 
     json(conn, :ok)
@@ -698,10 +843,8 @@ defmodule AmpsWeb.DataController do
   end
 
   def index(conn, %{"collection" => collection}) do
-    data =
-      DB.get_rows(conn, %{
-        "collection" => collection
-      })
+    params = conn.query_params()
+    data = DB.get_rows(collection, params)
 
     rows =
       Map.get(data, :rows)
@@ -718,7 +861,7 @@ defmodule AmpsWeb.DataController do
   end
 
   def create(conn, %{"collection" => collection}) do
-    body = Util.before_create(collection, conn.body_params(), conn.assigns().env)
+    body = Util.before_create(collection, conn.body_params(), conn.assigns)
 
     {:ok, res} = DB.insert(collection, body)
 
@@ -1059,6 +1202,23 @@ defmodule AmpsWeb.DataController do
     Util.ui_delete_event(collection, obj, conn.assigns().env)
 
     json(conn, result)
+  end
+
+  def get_plugins(conn, %{"object" => collection}) do
+    plugins = AmpsUtil.get_env(:plugins, [])
+
+    resp =
+      Enum.reduce(plugins, [], fn plugin, acc ->
+        case plugin.ui(collection) do
+          nil ->
+            acc
+
+          ui ->
+            acc ++ [ui]
+        end
+      end)
+
+    json(conn, resp)
   end
 end
 

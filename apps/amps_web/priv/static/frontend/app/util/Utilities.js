@@ -95,6 +95,7 @@ const filterTypes = {
         valueField: "field",
         queryMode: "local",
         filterPickList: true,
+        value: field.value,
       },
       opts
     );
@@ -104,6 +105,7 @@ const filterTypes = {
       xtype: "combobox",
       fieldLabel: field.text,
       name: field.dataIndex,
+      value: field.value,
       emptyText: "Filter by " + field.text,
       listeners: {
         beforerender: async function (scope) {
@@ -120,13 +122,14 @@ const filterTypes = {
     xtype: "textfield",
     fieldLabel: field.text,
     name: field.dataIndex,
+    value: field.value ? field.value["$regex"] : "",
     emptyText: "Filter by " + field.text,
   }),
   checkbox: (field) => ({
     xtype: "checkbox",
     name: field.dataIndex,
     fieldLabel: field.text,
-
+    value: field.value,
     uncheckedValue: false,
     inputValue: true,
     allowBlank: false,
@@ -139,6 +142,8 @@ const filterTypes = {
         fieldLabel: field.text,
         name: field.dataIndex,
         displayField: "label",
+        value: field.value,
+
         valueField: "field",
         store: field.options,
         emptyText: "Filter by " + field.text,
@@ -147,19 +152,53 @@ const filterTypes = {
     );
   },
 
-  date: (field) =>
-    new Ext.form.FieldSet({
+  date: (field) => {
+    return {
       title: field.text,
+      xtype: "fieldset",
+      listeners: {
+        afterrender: function (scope) {
+          var val = null;
+          console.log(field.value);
+          if (field.value) {
+            if (field.value["$lt"]) {
+              var lt = field.value["$lt"]["$date"];
+              var to_date = new Date(lt);
+              scope.down("#toDate").setValue(to_date);
+              scope.down("#toTime").setValue(to_date);
+              val = {};
+              val["$lt"] = lt;
+            }
+            if (field.value["$gt"]) {
+              var gt = field.value["$gt"]["$date"];
+              var from_date = new Date(gt);
+              scope.down("#fromDate").setValue(from_date);
+              scope.down("#fromTime").setValue(from_date);
+              val = {};
+              val["$lt"] = lt;
+              if (!val) {
+                val = {};
+              }
+              val["$gt"] = gt;
+            }
+          }
+
+          if (val) {
+            scope.down("#datefiltervalue").setValue(JSON.stringify(val));
+          }
+        },
+      },
       items: [
         {
           xtype: "fieldcontainer",
           layout: "hbox",
+
           items: [
             {
               xtype: "datefield",
               anchor: "100%",
               fieldLabel: "From",
-              name: "from_date",
+              name: `${field.dataIndex}_from_date`,
               itemId: "fromDate",
               emptyText: "Select Date",
               format: "d-M-Y",
@@ -216,9 +255,10 @@ const filterTypes = {
             },
             {
               xtype: "timefield",
-              name: "fromtime",
+              name: `${field.dataIndex}_from_time`,
               fieldLabel: "",
               increment: 15,
+
               itemId: "fromTime",
               emptyText: "Select Time",
               padding: { left: 4, top: 0, bottom: 0 },
@@ -256,6 +296,7 @@ const filterTypes = {
                       curr["$gt"] = date;
                     }
                     console.log(curr);
+                    console.log(hidden);
                     hidden.setValue(JSON.stringify(curr));
                   }
                 },
@@ -271,10 +312,11 @@ const filterTypes = {
               xtype: "datefield",
               anchor: "100%",
               fieldLabel: "To",
-              name: "to_date",
+              name: `${field.dataIndex}_to_date`,
               format: "d-M-Y",
               emptyText: "Select Date",
-              itemId: "maToDate",
+
+              itemId: "toDate",
               padding: { left: 0, top: 0, bottom: 6 },
               listeners: {
                 specialkey: function (field, e) {
@@ -327,10 +369,11 @@ const filterTypes = {
             },
             {
               xtype: "timefield",
-              name: "totime",
+              name: `${field.dataIndex}_to_time`,
               fieldLabel: "",
               increment: 15,
               itemId: "toTime",
+
               emptyText: "Select Time",
               format: "H:i:s",
               padding: { left: 4, top: 0, bottom: 0 },
@@ -367,6 +410,7 @@ const filterTypes = {
                       curr["$lt"] = date;
                     }
                     console.log(curr);
+                    console.log(hidden);
                     hidden.setValue(JSON.stringify(curr));
                   }
                 },
@@ -378,9 +422,16 @@ const filterTypes = {
           xtype: "hidden",
           itemId: "datefiltervalue",
           name: field.dataIndex,
+          listeners: {
+            change: function (scope, val) {
+              console.log(val);
+            },
+          },
         },
       ],
-    }),
+    };
+  },
+
   fileSize: (field) => {
     function setHiddenValue() {
       var curr = {};
@@ -586,6 +637,7 @@ Ext.define("Amps.util.Utilities", {
   renewPromise: null,
   socketPromise: null,
 
+  plugins: {},
   channel: null,
   socket: null,
   stores: [],
@@ -593,7 +645,7 @@ Ext.define("Amps.util.Utilities", {
   gridactions: {
     loadDemo: {
       name: "loadMe",
-      tooltip: "Load Demo",
+      tooltip: "Load Package",
       iconCls: "x-fa fa-upload actionicon",
       itemId: "loaddemo",
       handler: "loadDemo",
@@ -700,6 +752,152 @@ Ext.define("Amps.util.Utilities", {
         }
       },
     },
+    skip: {
+      name: "skip",
+      iconCls: "x-fa fa-times-circle actionicon",
+      itemId: "skip",
+      tooltip: "Click here to skip message",
+      handler: "skip",
+      isActionDisabled: function (v, r, c, i, record) {
+        if (record.data.status == "received") {
+          return true;
+        } else {
+          return false;
+        }
+      },
+    },
+    terminate: {
+      name: "terminate",
+      iconCls: "x-fa fa-times actionicon",
+      itemId: "terminate",
+      tooltip: "Click here to terminate message processing",
+      handler: async function (grid, rowIndex, colIndex, e) {
+        var mask = new Ext.LoadMask({
+          msg: "Please wait...",
+          target: grid,
+        });
+
+        var termWindow = new Ext.window.Window({
+          title: "Confirm Session Termination",
+          modal: true,
+          width: 300,
+          height: 200,
+          scrollable: true,
+          resizable: false,
+          layout: "fit",
+          padding: 10,
+          items: [
+            {
+              xtype: "form",
+              defaults: {
+                padding: 5,
+                labelWidth: 140,
+              },
+              // layout: {
+              //   type: "vbox",
+              //   align: "stretch",
+              // },
+              scrollable: true,
+              items: [
+                amfutil.check("Redeliver Message", "redeliver", {
+                  value: true,
+                }),
+              ],
+
+              buttons: [
+                {
+                  text: "Terminate",
+                  formBind: true,
+                  handler: function (scope) {
+                    mask.show();
+                    var rec = grid.getStore().getAt(rowIndex);
+                    var values = this.up("form").getValues();
+                    var redeliver = values.redeliver;
+                    console.log(rowIndex);
+                    var id = rec.data._id;
+                    console.log(rec);
+                    amfutil.ajaxRequest({
+                      url: `/api/service/terminate/${id}`,
+                      method: "POST",
+                      timeout: 60000,
+                      jsonData: { redeliver: redeliver },
+                      success: async function (response) {
+                        var data = Ext.decode(response.responseText);
+                        mask.hide();
+                        Ext.toast({
+                          title: "Session Terminating",
+                          html: "<center>Requested Session Termination</center>",
+                          autoCloseDelay: 5000,
+                        });
+                        grid.getStore().reload();
+                        termWindow.close();
+                      },
+                      failure: function (response) {
+                        mask.hide();
+                        amfutil.onFailure(
+                          "Error terminating Message",
+                          response
+                        );
+                        grid.getStore().reload();
+                      },
+                    });
+                    // msgbox.anchorTo(Ext.getBody(), "br");
+                  },
+                },
+                {
+                  text: "Cancel",
+                  cls: "button_class",
+                  itemId: "cancel",
+                  listeners: {
+                    click: function (btn) {
+                      termWindow.close();
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        });
+        termWindow.show();
+      },
+
+      isActionDisabled: function (v, r, c, i, record) {
+        if (record.data.end) {
+          return true;
+        } else {
+          return false;
+        }
+      },
+    },
+    copy: {
+      name: "copy",
+      iconCls: "x-fa fa-copy actionicon",
+      itemId: "copy",
+      tooltip: "Click here to download row data",
+      handler: function (grid, rowIndex, colIndex, e) {
+        var route = Ext.util.History.getToken();
+        Ext.getBody().mask();
+        var rec = grid.getStore().getAt(rowIndex);
+
+        var data = rec.data;
+
+        delete data.id;
+        var file = new Blob([JSON.stringify(data, null, 2)], {
+          type: "text/plain",
+        });
+        var a = document.createElement("a"),
+          url = URL.createObjectURL(file);
+        a.href = url;
+        a.download = `${route}_${data._id}.json`;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function () {
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+        }, 0);
+        Ext.getBody().unmask();
+      },
+    },
     reset: {
       name: "link",
       iconCls: "x-fa fa-key actionicon",
@@ -769,7 +967,7 @@ Ext.define("Amps.util.Utilities", {
       name: "exportenv",
       iconCls: "x-fa fa-download actionicon",
       itemId: "exportenv",
-      tooltip: "Export Environment as Demo",
+      tooltip: "Export Environment as Package",
       handler: "exportEnv",
     },
     getsecret: {
@@ -809,6 +1007,7 @@ Ext.define("Amps.util.Utilities", {
     "refreshbtn",
     "reprocess",
     "reroute",
+    "skip",
     "export",
   ],
 
@@ -1144,6 +1343,31 @@ Ext.define("Amps.util.Utilities", {
     );
   },
 
+  tagfield: function (label, name, store, val = null, disp = null, opts = {}) {
+    return Object.assign(
+      {
+        xtype: "tagfield",
+        minChars: 1,
+        triggerAction: "all",
+        typeAhead: true,
+        queryMode: "local",
+        blankText: "Select One",
+
+        name: name,
+        fieldLabel: label,
+        displayField: disp,
+        valueField: val,
+        store: {
+          type: "chained",
+          source: store,
+        },
+        allowBlank: false,
+        forceSelection: true,
+      },
+      opts
+    );
+  },
+
   combo: function (label, name, store, val = null, disp = null, opts = {}) {
     return Object.assign(
       {
@@ -1194,7 +1418,7 @@ Ext.define("Amps.util.Utilities", {
     );
   },
 
-  typeFields: function (config) {
+  typeFields: function (config, collection) {
     return [
       {
         itemId: "types",
@@ -1268,6 +1492,26 @@ Ext.define("Amps.util.Utilities", {
         ],
       },
     ];
+  },
+
+  getPlugins: async function (collection) {
+    var resp = await amfutil.ajaxRequest({
+      url: `api/ui/plugins/${collection}`,
+      method: "GET",
+    });
+
+    console.log(resp);
+
+    var plugins = Ext.decode(resp.responseText);
+
+    var actions = {};
+
+    plugins.forEach((plugin) => {
+      actions = Object.assign(actions, eval(plugin));
+    });
+    return function () {
+      return actions;
+    };
   },
 
   channelHandlers: async function (channel) {
@@ -1498,20 +1742,20 @@ Ext.define("Amps.util.Utilities", {
   },
 
   nameValidator(val) {
-    var regex = new RegExp("(\\s|-)");
+    var regex = new RegExp("(\\s|-|\\.)");
     // Check for white space
     if (regex.test(val)) {
       //alert();
-      return "Names cannot contain spaces or hyphens.";
+      return "Names cannot contain spaces, periods, or hyphens.";
     }
   },
 
   nameLowerCaseValidator(val) {
-    var regex = new RegExp("(\\s|-)");
+    var regex = new RegExp("(\\s|-|\\.)");
     // Check for white space
     if (regex.test(val)) {
       //alert();
-      return "Names cannot contain spaces or hyphens.";
+      return "Names cannot contain spaces, periods, or hyphens.";
     }
 
     var lower = new RegExp("^[a-z_]+$");
@@ -1688,6 +1932,12 @@ Ext.define("Amps.util.Utilities", {
         headers: amfutil.uniques(headers),
         types: Object.keys(types).length === 0 ? null : types,
         subgrids: Object.keys(subgrids).length === 0 ? null : subgrids,
+      };
+    } else if (config.columns) {
+      return {
+        headers: config.columns.map((col) => col.dataIndex),
+        types: null,
+        subgrids: null,
       };
     }
   },
@@ -2301,6 +2551,49 @@ Ext.define("Amps.util.Utilities", {
     );
   },
 
+  dynamicRefresh: function (field, opts = {}) {
+    return Object.assign(
+      {
+        xtype: "fieldcontainer",
+        dynamic: true,
+        layout: {
+          type: "hbox",
+          align: "stretch",
+        },
+        tooltip: field.tooltip ? field.tooltip : null,
+        flex: 1,
+        items: [
+          Ext.apply(field, {
+            flex: 1,
+            tooltip: field.tooltip ? null : field.tooltip,
+          }),
+          {
+            xtype: "container",
+            layout: "center",
+            margin: { left: 5 },
+            cls: "button",
+            items: [
+              {
+                xtype: "button",
+                iconCls: "x-fa fa-refresh",
+                cls: "button_light",
+                focusable: false,
+                style: {
+                  "font-size": "1rem",
+                },
+                handler: async function (btn) {
+                  var cb = btn.up("fieldcontainer").down("combobox");
+                  cb.getStore().source.reload();
+                },
+              },
+            ],
+          },
+        ],
+      },
+      opts
+    );
+  },
+
   dynamicRemove: function (field) {
     var r = field.items[0];
     r.tooltip = field.tooltip;
@@ -2322,6 +2615,7 @@ Ext.define("Amps.util.Utilities", {
             fieldLabel: "File Name Format",
             allowBlank: false,
             tooltip: "Specifies how to build the filename for the message.",
+            value: "{fname}",
           },
           opts
         ),
@@ -2384,10 +2678,10 @@ Ext.define("Amps.util.Utilities", {
   dateRenderer: function (val) {
     var date = new Date(val);
     var ms = date.getMilliseconds();
-    var result = date.toLocaleString();
+    var result = date.toLocaleString("en-US", { hourCycle: "h23" });
     var end = result.slice(-3);
     // const result = new Date(str).getTime();
-    return result.slice(0, -3) + ":" + ms + end;
+    return result + ":" + ms;
   },
 
   createHistoryStore: function (msgid, opts = {}) {
@@ -2409,6 +2703,7 @@ Ext.define("Amps.util.Utilities", {
               type: "json",
               rootProperty: "rows",
               totalProperty: "count",
+              idProperty: "_id",
             },
             listeners: {
               load: function (data) {
@@ -2428,7 +2723,7 @@ Ext.define("Amps.util.Utilities", {
       "Ext.data.Store",
       Object.assign(
         {
-          storeId: "page",
+          storeId: collection,
           remoteSort: true,
           proxy: {
             type: "rest",
@@ -2445,6 +2740,7 @@ Ext.define("Amps.util.Utilities", {
               type: "json",
               rootProperty: "rows",
               totalProperty: "count",
+              idProperty: "_id",
             },
             listeners: {
               load: function (data) {
@@ -2499,6 +2795,23 @@ Ext.define("Amps.util.Utilities", {
       proxy: {
         type: "ajax",
         url: "/api/scripts",
+        headers: {
+          Authorization: localStorage.getItem("access_token"),
+        },
+        reader: {
+          type: "json",
+        },
+      },
+      autoLoad: true,
+    };
+  },
+
+  utilScriptStore: function () {
+    return {
+      storeId: "utilscript",
+      proxy: {
+        type: "ajax",
+        url: "/api/utilscripts",
         headers: {
           Authorization: localStorage.getItem("access_token"),
         },
@@ -2566,6 +2879,7 @@ Ext.define("Amps.util.Utilities", {
                 type: "json",
                 rootProperty: "rows",
                 totalProperty: "count",
+                idProperty: "_id",
               },
               listeners: {
                 load: function (data) {
@@ -3046,43 +3360,40 @@ Ext.define("Amps.util.Utilities", {
     return obj;
   },
 
-  setGridStore: function (filters, config) {
+  setGridStore: function (filters, collection) {
     // console.log(filters);
     var route = Ext.util.History.currentToken;
     var grid = amfutil.getElementByID("main-grid");
-    grid.setStore(
-      Ext.create("Ext.data.Store", {
-        start: 0,
-        limit: 25,
-        remoteSort: true,
-        proxy: {
-          type: "rest",
-          headers: {
-            Authorization: localStorage.getItem("access_token"),
-          },
-          extraParams: {
-            params: JSON.stringify({ filters: filters ? filters : {} }),
-          },
-          url: `/api/store/${route}`,
-          listeners: {
-            exception: amfutil.refresh_on_failure,
-          },
-          reader: {
-            type: "json",
-            rootProperty: "rows",
-            totalProperty: "count",
-          },
-        },
-        autoLoad: true,
-      })
-    );
-    console.log(config);
 
-    if (config && config.sort) {
-      var store = grid.getStore();
+    var store = grid.getStore();
+    store.getProxy().setExtraParams({
+      params: JSON.stringify({ filters: filters ? filters : {} }),
+    });
 
-      amfutil.setStoreSort(store, config.sort);
-    }
+    store.load();
+
+    localStorage.setItem(`${collection}_filter`, JSON.stringify(filters));
+  },
+
+  setGridSort: function (sort, collection) {
+    var grid = amfutil.getElementByID("main-grid");
+
+    var store = grid.getStore();
+    Object.entries(sort).forEach(([k, v]) => {
+      store.sort(k, v);
+    });
+    localStorage.setItem(`${collection}_sort`, JSON.stringify(sort));
+  },
+  getStoredColl(collection) {
+    return {
+      filters: localStorage.getItem(`${collection}_filter`) || "{}",
+      sort: localStorage.getItem(`${collection}_sort`) || "{}",
+    };
+  },
+
+  putStoredColl(collection, data) {
+    localStorage.setItem(`${collection}_filter`, data.filters);
+    localStorage.setItem(`${collection}_sort`, data.sort);
   },
 
   setStoreSort(store, sort) {
@@ -3154,12 +3465,22 @@ Ext.define("Amps.util.Utilities", {
 
   clearFilter: function () {
     var form = amfutil.getElementByID("searchform");
-    form.reset();
+    if (form) {
+      form.reset();
+    }
     var window = amfutil.getElementByID("searchwindow");
+    window.show();
     window.clearForm();
 
     console.log(form);
-    amfutil.setGridStore({}, ampsgrids.grids[Ext.util.History.getToken()]());
+    var coll = Ext.util.History.getToken();
+    amfutil.setGridStore({}, coll);
+    var config = ampsgrids.grids[coll]();
+    if (config.sort) {
+      amfutil.setGridSort(config.sort, coll);
+    }
+
+    amfutil.getElementByID("main-grid").fireEvent("clear", "");
 
     amfutil.getElementByID("searchwindow").close();
     amfutil.getElementByID("searchpanelbtn").setIconCls("x-fa fa-search");
@@ -3368,9 +3689,14 @@ Ext.define("Amps.util.Utilities", {
     var route = Ext.util.History.currentToken;
     var page = ampsgrids.grids[route]();
     console.log(ampsgrids.grids[route]());
+    var filters = JSON.parse(localStorage.getItem(`${route}_filter`, "{}"));
+    console.log(filters);
     var items =
       page.columns &&
       page.columns.map((field) => {
+        if (filters) {
+          field.value = filters[field.dataIndex];
+        }
         if (field.type) {
           if (field.searchOpts) {
             return filterTypes[field.type](field, field.searchOpts);
@@ -3381,6 +3707,7 @@ Ext.define("Amps.util.Utilities", {
           return;
         }
       });
+    console.log(items);
 
     return new Ext.form.Panel({
       defaults: {
@@ -3408,7 +3735,8 @@ Ext.define("Amps.util.Utilities", {
             console.log(values);
             var filters = amfutil.getFilters(form, fields);
             console.log(filters);
-            amfutil.setGridStore(filters, page);
+            amfutil.setGridStore(filters, route);
+            amfutil.getElementByID("main-grid").fireEvent("checkfilter", "");
 
             amfutil.getElementByID("searchwindow").close();
             amfutil
@@ -3416,11 +3744,73 @@ Ext.define("Amps.util.Utilities", {
               .setIconCls("x-fa fa-search");
           },
         },
+
         {
           xtype: "button",
           text: "Clear Filter",
           handler: function (btn) {
             amfutil.clearFilter();
+          },
+        },
+        {
+          xtype: "button",
+          text: "Export Filter",
+          handler: function (btn) {
+            var stored = amfutil.getStoredColl(Ext.util.History.getToken());
+            var encoded = btoa(JSON.stringify(stored));
+            navigator.clipboard.writeText(encoded).then(function () {
+              Ext.toast("Filter copied to clipboard");
+            });
+            console.log(encoded);
+          },
+        },
+
+        {
+          xtype: "button",
+          text: "Load Filter",
+          handler: function (btn) {
+            var searchwin = btn.up("window");
+            var win = new Ext.window.Window({
+              title: "Load Filter",
+              modal: true,
+              layout: "fit",
+              padding: 20,
+              items: [
+                {
+                  xtype: "form",
+                  defaults: {
+                    padding: 10,
+                  },
+                  items: [amfutil.text("Filter", "filter")],
+                  buttons: [
+                    {
+                      text: "Load",
+                      formBind: true,
+                      handler: function () {
+                        try {
+                          var form = this.up("form");
+                          var values = form.getValues();
+                          var filter = values.filter;
+                          var decoded = atob(filter);
+                          var obj = JSON.parse(decoded);
+                          var route = Ext.util.History.getToken();
+                          console.log(obj);
+                          amfutil.setGridStore(JSON.parse(obj.filters), route);
+                          amfutil.setGridSort(JSON.parse(obj.sort), route);
+                          searchwin.loadForm();
+                          searchwin.close();
+                          win.close();
+                        } catch (error) {
+                          console.log(error);
+                          Ext.toast("Could not load filter");
+                        }
+                      },
+                    },
+                  ],
+                },
+              ],
+            });
+            win.show();
           },
         },
       ],
@@ -3433,8 +3823,9 @@ Ext.define("Amps.util.Utilities", {
     console.log(fields);
     console.log(values);
     var filters = {};
+    console.log(form);
+
     fields.forEach((field) => {
-      console.log(field);
       if (values[field.dataIndex] && values[field.dataIndex] != "") {
         if (field.type == "date") {
           var data = JSON.parse(values[field.dataIndex]);
@@ -3552,6 +3943,7 @@ Ext.define("Amps.util.Utilities", {
           "field",
           "label",
           {
+            value: "new",
             listeners: amfutil.renderListeners(
               function (scope, val) {
                 var conts = ["by_start_time"];

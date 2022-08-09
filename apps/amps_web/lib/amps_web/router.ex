@@ -7,6 +7,7 @@ defmodule AmpsWeb.Router do
 
   pipeline :browser do
     plug(:accepts, ["html"])
+
     plug(:fetch_session)
     plug(:fetch_live_flash)
     plug(:protect_from_forgery)
@@ -42,10 +43,15 @@ defmodule AmpsWeb.Router do
     post("/user/reset-password", UserController, :send_password_email)
     post("/user/reg", UserController, :register)
     get("/duplicate_username/:username", UtilController, :duplicate_username)
+    get("/message_events/stream/:id", UtilController, :stream)
   end
 
   scope "/api", AmpsWeb do
     pipe_through([:api, :api_protected])
+
+    get("/system/ssl", DataController, :ssl)
+
+    get("/system/ssl/certify", DataController, :ssl_certify)
 
     get("/auth/:username", UtilController, :verify)
 
@@ -75,21 +81,36 @@ defmodule AmpsWeb.Router do
       :sample_field_template_download
     )
 
+    get("/ui/plugins/:object", DataController, :get_plugins)
+
     get("/users/reset/:id", DataController, :reset_password)
     post("/users/approve/:id", DataController, :approve_user)
 
     get("/admin/reset/:id", DataController, :reset_admin_password)
     post("/admin/changepassword/:id", DataController, :change_admin_password)
-
+    get("/message_events/session/:msgid", UtilController, :msg_session)
     get("/message_events/history/:msgid", UtilController, :history)
-    get("/message_events/download/:msgid", UtilController, :download)
+    get("/message_events/download/:id", UtilController, :download)
+
+    get("/message_events/preview/:id", UtilController, :preview)
+    get("/message_events/data/:id", UtilController, :data)
+
     post("/workflow", UtilController, :workflow)
     get("/loop/:sub", UtilController, :loop)
 
     post("/port/:port", UtilController, :in_use)
     post("/env/:name", EnvironmentController, :handle_env)
     get("/env/:name", EnvironmentController, :ping_env)
+
+    post("/service/terminate", ServiceController, :terminate)
+
+    post("/service/terminate/:id", ServiceController, :terminate)
+    post("/service/skip", ServiceController, :skip)
+
+    post("/service/skip/:id", ServiceController, :skip)
+
     post("/service/:name", ServiceController, :handle_service)
+
     get("/service/:name", ServiceController, :ping_service)
     post("/msg/reprocess/:msgid", DataController, :reprocess)
     post("/msg/reroute/:id", DataController, :reroute)
@@ -111,14 +132,20 @@ defmodule AmpsWeb.Router do
 
     get("/deps", ScriptController, :get_deps)
     post("/deps", ScriptController, :install_dep)
+    put("/deps/:name", ScriptController, :update_dep)
     delete("/deps/:name", ScriptController, :uninstall_dep)
 
     post("/scripts/duplicate/", ScriptController, :duplicate)
     resources("/scripts/", ScriptController, except: [:new, :edit])
 
+    post("/utilscripts/duplicate/", UtilScriptController, :duplicate)
+    resources("/utilscripts/", UtilScriptController, except: [:new, :edit])
+
     get("/pyservices", ScriptController, :get_services)
 
     resources("/:collection/", DataController, except: [:new, :edit])
+    get("/:collection/page/:id", UtilController, :page_num)
+
     post("/:collection/create/:id", DataController, :create_with_id)
     post("/:collection/:id", DataController, :update_with_id)
     post("/:collection/:id/:field/create/:fieldid", DataController, :add_to_field_with_id)
