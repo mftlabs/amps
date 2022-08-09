@@ -321,15 +321,6 @@ defmodule Amps.ArchivePullConsumer do
       parms = state[:parms]
       name = parms["name"]
 
-      {msg, sid} =
-        AmpsEvents.start_session(
-          msg,
-          %{
-            "service" => parms["name"]
-          },
-          state.env
-        )
-
       AmpsEvents.send_history(
         AmpsUtil.env_topic("amps.events.action", state.env),
         "message_events",
@@ -418,8 +409,6 @@ defmodule Amps.ArchivePullConsumer do
             Jetstream.ack(message)
             "archiving failed - skipping"
         end
-
-      AmpsEvents.end_session(sid, state.env, status)
     rescue
       e in NackError ->
         IO.inspect(e)
