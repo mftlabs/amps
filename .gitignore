@@ -24,7 +24,7 @@ erl_crash.dump
 
 /docker/volumes
 /docker/amps_ufa.tar.gz
-/docker_dev
+/docker_dev/volumes
 /Mnesia*
 __pycache__/
 __pycache__/**
