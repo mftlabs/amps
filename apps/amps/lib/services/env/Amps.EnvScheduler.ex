@@ -82,7 +82,7 @@ defmodule Amps.EnvScheduler do
               "msgid" => AmpsUtil.get_id(),
               "service" => "Job: " <> job["name"],
               "user" => "amps",
-              "action" => "Job: " <> job["name"] <> "Execution"
+              "action" => "Job: " <> job["name"]
             },
             job["meta"]
           )
@@ -91,7 +91,7 @@ defmodule Amps.EnvScheduler do
 
         AmpsEvents.send(
           msg,
-          %{"output" => AmpsUtil.env_topic(job["topic"], env)},
+          %{"output" => job["topic"]},
           %{},
           env
         )

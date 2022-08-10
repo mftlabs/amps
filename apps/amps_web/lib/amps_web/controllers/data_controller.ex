@@ -37,45 +37,71 @@ defmodule AmpsWeb.DataController do
 
   def upload_package(conn, %{"file" => file}) do
     folder = String.trim(file.filename, ".zip")
-    IO.inspect(File.ls())
     id = AmpsUtil.get_id()
     cwd = Path.join(Amps.Defaults.get("storage_temp"), id)
     res = :zip.unzip(File.read!(file.path), cwd: cwd)
     path = cwd
-    demo = Jason.decode!(File.read!(Path.join(path, "pkg.json")))
 
-    case DB.find_one("packages", Map.take(demo, ["name", "description"])) do
-      nil ->
-        imports =
-          Enum.reduce(demo["imports"], [], fn imp, acc ->
-            acc ++ [Map.put(imp, "rows", import_excel_data(Path.join(path, imp["file"])))]
-          end)
+    path =
+      if File.exists?(Path.join(path, "pkg.json")) do
+        path
+      else
+        files = File.ls!(path)
 
-        {:ok, readme, []} = Earmark.as_html(File.read!(Path.join(path, "README.md")))
-        scripts = Path.wildcard(Path.join([path, demo["scripts"], "*.py"]))
+        Enum.reduce_while(files, "", fn file, acc ->
+          np = Path.join(path, file)
+          dir = File.dir?(np)
 
-        scripts =
-          Enum.reduce(scripts, [], fn script, acc ->
-            [
-              %{
-                name: Path.rootname(Path.basename(script)),
-                data: File.read!(script)
-              }
-              | acc
-            ]
-          end)
+          if dir do
+            if File.exists?(Path.join(np, "pkg.json")) do
+              {:halt, np}
+            else
+              {:cont, nil}
+            end
+          else
+            {:cont, nil}
+          end
+        end)
+      end
 
-        demo =
-          demo
-          |> Map.put("imports", imports)
-          |> Map.put("readme", readme)
-          |> Map.put("scripts", scripts)
+    if path do
+      demo = Jason.decode!(File.read!(Path.join(path, "pkg.json")))
 
-        {:ok, id} = Amps.DB.insert("packages", demo)
-        json(conn, id)
+      case DB.find_one("packages", Map.take(demo, ["name", "description"])) do
+        nil ->
+          imports =
+            Enum.reduce(demo["imports"], [], fn imp, acc ->
+              acc ++ [Map.put(imp, "rows", import_excel_data(Path.join(path, imp["file"])))]
+            end)
 
-      duplicate ->
-        send_resp(conn, 400, "Package with name #{duplicate["name"]} already exists")
+          {:ok, readme, []} = Earmark.as_html(File.read!(Path.join(path, "README.md")))
+          scripts = Path.wildcard(Path.join([path, demo["scripts"], "*.py"]))
+
+          scripts =
+            Enum.reduce(scripts, [], fn script, acc ->
+              [
+                %{
+                  name: Path.rootname(Path.basename(script)),
+                  data: File.read!(script)
+                }
+                | acc
+              ]
+            end)
+
+          demo =
+            demo
+            |> Map.put("imports", imports)
+            |> Map.put("readme", readme)
+            |> Map.put("scripts", scripts)
+
+          {:ok, id} = Amps.DB.insert("packages", demo)
+          json(conn, id)
+
+        duplicate ->
+          send_resp(conn, 400, "Package with name #{duplicate["name"]} already exists")
+      end
+    else
+      send_resp(conn, 400, "Invalid Package File")
     end
   end
 

@@ -663,7 +663,15 @@ defmodule AmpsUtil do
       index
     else
       if Enum.member?(
-           ["config", "packages", "admin", "environments", "system_logs", "ui_audit", "providers"],
+           [
+             "config",
+             "packages",
+             "admin",
+             "environments",
+             "system_logs",
+             "ui_audit",
+             "providers"
+           ],
            index
          ) do
         index
@@ -691,7 +699,7 @@ defmodule AmpsUtil do
     Amps.DB.delete_index("#{env}-*")
     # Amps.VaultDatabase.delete_env(env)
 
-    File.rm_rf(Path.join(Amps.Defaults.get("python_path"), env))
+    File.rm_rf(AmpsUtil.get_mod_path(env))
 
     Amps.EnvSupervisor.stop_child(env)
 

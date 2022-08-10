@@ -54,7 +54,7 @@ defmodule Amps.Scheduler do
               "msgid" => AmpsUtil.get_id(),
               "user" => "amps",
               "service" => "Job: " <> job["name"],
-              "action" => "Job: " <> job["name"] <> "Execution"
+              "action" => "Job: " <> job["name"]
             },
             job["meta"]
           )

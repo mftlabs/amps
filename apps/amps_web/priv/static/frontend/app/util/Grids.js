@@ -2397,6 +2397,7 @@ Ext.define("Amps.container.Imports", {
                     win.setStyle({
                       display: "block",
                     });
+                    win.center();
                     // mask.hide();
 
                     // win.setStyle({
@@ -3950,10 +3951,9 @@ Ext.define("Amps.util.Grids", {
               cond: function () {
                 var page =
                   Ext.util.History.getToken().split("/")[0] == "environments";
-                var visible = widget
-                  .up("grid")
-                  .getStore()
-                  .findRecord("_id", data["_id"]);
+                var store = widget.up("grid").getStore();
+                var visible =
+                  store.findRecord("_id", data["_id"]) || store.count() != 1;
 
                 if (!visible) {
                   widget.destroy();
@@ -8527,6 +8527,7 @@ Ext.define("Amps.util.Grids", {
                       var conts = ["get", "put", "delete"];
                       conts.forEach((cont) => {
                         var component = scope.up("form").down("#" + cont);
+
                         component.setHidden(cont != val);
                         component.setDisabled(cont != val);
                       });
@@ -8537,8 +8538,7 @@ Ext.define("Amps.util.Grids", {
                 {
                   xtype: "fieldset",
                   itemId: "get",
-                  hidden: true,
-                  disabled: true,
+
                   title: "GET",
                   layout: {
                     type: "vbox",
@@ -8567,18 +8567,18 @@ Ext.define("Amps.util.Grids", {
                           console.log(val);
                           if (val) {
                             conts.forEach((cont) => {
-                              var cmp = amfutil.getElementByID(cont);
+                              var cmp = scope.up().down(`#${cont}`);
                               cmp.setHidden(false);
                               cmp.setDisabled(false);
                             });
                             conts.forEach((cont) => {
-                              var cmp = amfutil.getElementByID(cont);
+                              var cmp = scope.up().down(`#${cont}`);
                               cmp.setHidden(val != cont);
                               cmp.setDisabled(val != cont);
                             });
                           } else {
                             conts.forEach((cont) => {
-                              var cmp = amfutil.getElementByID(cont);
+                              var cmp = scope.up().down(`#${cont}`);
                               cmp.setHidden(true);
                               cmp.setDisabled(true);
                             });
@@ -8682,8 +8682,7 @@ Ext.define("Amps.util.Grids", {
                     type: "vbox",
                     align: "stretch",
                   },
-                  hidden: true,
-                  disabled: true,
+
                   items: [
                     {
                       xtype: "textfield",
@@ -8706,7 +8705,6 @@ Ext.define("Amps.util.Grids", {
                   xtype: "fieldset",
                   itemId: "delete",
                   maxWidth: 600,
-
                   title: "DELETE",
                   layout: {
                     type: "vbox",
@@ -8738,8 +8736,6 @@ Ext.define("Amps.util.Grids", {
                         "The file path pattern to match when deciding whether to delete.",
                     },
                   ],
-                  hidden: true,
-                  disabled: true,
                 },
               ],
             },
@@ -9460,7 +9456,6 @@ Ext.define("Amps.util.Grids", {
           tooltip: "A description of the topic.",
 
           // maskRe: /[^\^ ~`!@#$%^&*()+=[\]{}\\|?/:;,<>"']/,
-          allowBlank: false,
           // listeners: {
           //   afterrender: function (cmp) {
           //     cmp.inputEl.set({
