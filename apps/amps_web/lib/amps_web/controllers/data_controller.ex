@@ -35,7 +35,7 @@ defmodule AmpsWeb.DataController do
 
   plug(AmpsWeb.AuditPlug)
 
-  def upload_demo(conn, %{"file" => file}) do
+  def upload_package(conn, %{"file" => file}) do
     folder = String.trim(file.filename, ".zip")
     IO.inspect(File.ls())
     id = AmpsUtil.get_id()
@@ -44,7 +44,7 @@ defmodule AmpsWeb.DataController do
     path = cwd
     demo = Jason.decode!(File.read!(Path.join(path, "pkg.json")))
 
-    case DB.find_one("demos", Map.take(demo, ["name", "description"])) do
+    case DB.find_one("packages", Map.take(demo, ["name", "description"])) do
       nil ->
         imports =
           Enum.reduce(demo["imports"], [], fn imp, acc ->
@@ -71,11 +71,11 @@ defmodule AmpsWeb.DataController do
           |> Map.put("readme", readme)
           |> Map.put("scripts", scripts)
 
-        {:ok, id} = Amps.DB.insert("demos", demo)
+        {:ok, id} = Amps.DB.insert("packages", demo)
         json(conn, id)
 
       duplicate ->
-        send_resp(conn, 400, "Demo with name #{duplicate["name"]} already exists")
+        send_resp(conn, 400, "Package with name #{duplicate["name"]} already exists")
     end
   end
 
@@ -871,7 +871,7 @@ defmodule AmpsWeb.DataController do
   end
 
   def create_with_id(conn, %{"collection" => collection, "id" => id}) do
-    body = Util.before_create(collection, conn.body_params(), conn.assigns().env)
+    body = Util.before_create(collection, conn.body_params(), conn.assigns)
     {:ok, res} = DB.insert_with_id(collection, body, id)
 
     Util.after_create(collection, body, conn.assigns().env)

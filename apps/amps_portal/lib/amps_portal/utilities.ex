@@ -127,7 +127,15 @@ defmodule AmpsPortal.Util do
       index
     else
       if Enum.member?(
-           ["config", "demos", "admin", "environments", "system_logs", "ui_audit", "providers"],
+           [
+             "config",
+             "packages",
+             "admin",
+             "environments",
+             "system_logs",
+             "ui_audit",
+             "providers"
+           ],
            index
          ) do
         index

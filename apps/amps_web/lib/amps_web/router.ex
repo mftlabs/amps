@@ -126,7 +126,7 @@ defmodule AmpsWeb.Router do
     get("/store/:collection", UtilController, :create_store)
     get("/:collection/aggregate/:field", UtilController, :aggregate_field)
 
-    post("/demos", DataController, :upload_demo)
+    post("/packages", DataController, :upload_package)
     post("/environments/clear/:name", DataController, :clear_env)
     post("/environments/export/:env", DataController, :export_env)
 

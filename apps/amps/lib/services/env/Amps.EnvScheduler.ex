@@ -78,7 +78,12 @@ defmodule Amps.EnvScheduler do
       task: fn ->
         msg =
           Map.merge(
-            %{"msgid" => AmpsUtil.get_id(), "action" => "Job: " <> job["name"] <> "Execution"},
+            %{
+              "msgid" => AmpsUtil.get_id(),
+              "service" => "Job: " <> job["name"],
+              "user" => "amps",
+              "action" => "Job: " <> job["name"] <> "Execution"
+            },
             job["meta"]
           )
 

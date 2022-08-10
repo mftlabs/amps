@@ -342,6 +342,23 @@ defmodule :"Amps.Gateway<%= if env do%>.<%= env %><% end %>.<%= name %>" do
     end
   end
 
+  defp myauth(conn) do
+    case Plug.BasicAuth.parse_basic_auth(conn) do
+      {id, secret} ->
+        case AmpsPortal.Util.verify_token(id, secret, conn.private.env) do
+          nil ->
+            {:error, "Access Denied"}
+
+          user ->
+            {:ok, user["username"]}
+        end
+
+      :error ->
+        {:error, "Authorization denied - invalid HTTP auth header"}
+    end
+  end
+
+
   <%= for %{"method" => method, "path" => path, "action" => action, "timeout" => timeout} <- router do %>
   <%= method %> "<%= path %>" do
     case myauth(conn) do

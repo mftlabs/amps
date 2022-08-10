@@ -151,7 +151,7 @@ Ext.define("Amps.view.main.MainController", {
               var file = filefield.extractFileInput().files[0];
 
               var req = await amfuploads.handleUpload(
-                encodeURI("api/demos"),
+                encodeURI("api/packages"),
                 file,
                 false,
                 false

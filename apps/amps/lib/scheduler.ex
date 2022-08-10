@@ -50,7 +50,12 @@ defmodule Amps.Scheduler do
       task: fn ->
         msg =
           Map.merge(
-            %{"msgid" => AmpsUtil.get_id(), "action" => "Job: " <> job["name"] <> "Execution"},
+            %{
+              "msgid" => AmpsUtil.get_id(),
+              "user" => "amps",
+              "service" => "Job: " <> job["name"],
+              "action" => "Job: " <> job["name"] <> "Execution"
+            },
             job["meta"]
           )
 
@@ -59,8 +64,7 @@ defmodule Amps.Scheduler do
         AmpsEvents.send(
           msg,
           %{"output" => job["topic"]},
-          %{},
-          ""
+          %{}
         )
 
         AmpsEvents.end_session(sid, "")

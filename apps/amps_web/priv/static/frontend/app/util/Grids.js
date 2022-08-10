@@ -2110,7 +2110,9 @@ Ext.define("Amps.container.Imports", {
 
       cleanupWindows: function () {
         this.conts.forEach((cont) => {
-          cont.win.destroy();
+          if (cont.win) {
+            cont.win.destroy();
+          }
         });
       },
 
@@ -2383,16 +2385,18 @@ Ext.define("Amps.container.Imports", {
                     //   msg: "Loading Entry...",
                     //   target: win,
                     // });
+                    win.setStyle({
+                      display: "none",
+                    });
                     win.show();
 
                     // mask.show();
-                    // win.setStyle({
-                    //   display: "none",
-                    // });
 
                     await win.duplicateCheck();
                     win.hide();
-
+                    win.setStyle({
+                      display: "block",
+                    });
                     // mask.hide();
 
                     // win.setStyle({
@@ -3203,9 +3207,18 @@ Ext.define("Amps.container.Imports", {
                                   },
                                 });
 
+                                win.setStyle({
+                                  display: "none",
+                                });
                                 win.show();
+
+                                // mask.show();
+
                                 await win.duplicateCheck();
                                 win.hide();
+                                win.setStyle({
+                                  display: "block",
+                                });
 
                                 this.removeAll();
                                 this.insert(cont);
@@ -8551,16 +8564,25 @@ Ext.define("Amps.util.Grids", {
                           val
                         ) {
                           var conts = ["many", "one"];
-                          conts.forEach((cont) => {
-                            var cmp = amfutil.getElementByID(cont);
-                            cmp.setHidden(false);
-                            cmp.setDisabled(false);
-                          });
-                          conts.forEach((cont) => {
-                            var cmp = amfutil.getElementByID(cont);
-                            cmp.setHidden(val != cont);
-                            cmp.setDisabled(val != cont);
-                          });
+                          console.log(val);
+                          if (val) {
+                            conts.forEach((cont) => {
+                              var cmp = amfutil.getElementByID(cont);
+                              cmp.setHidden(false);
+                              cmp.setDisabled(false);
+                            });
+                            conts.forEach((cont) => {
+                              var cmp = amfutil.getElementByID(cont);
+                              cmp.setHidden(val != cont);
+                              cmp.setDisabled(val != cont);
+                            });
+                          } else {
+                            conts.forEach((cont) => {
+                              var cmp = amfutil.getElementByID(cont);
+                              cmp.setHidden(true);
+                              cmp.setDisabled(true);
+                            });
+                          }
                         }),
                       }
                     ),
@@ -9504,9 +9526,9 @@ Ext.define("Amps.util.Grids", {
           },
         },
 
-        import: {
-          skip: ["loop"],
-        },
+        // import: {
+        //   skip: ["loop"],
+        // },
 
         update: {
           process: function (form, values) {
@@ -9921,8 +9943,6 @@ Ext.define("Amps.util.Grids", {
                 amfutil.loadKey("Server Key", "server_key", {
                   tooltip: "The EC Private Key to use for the SFTP Server.",
                 }),
-
-                amfutil.check("Overwrite Duplicate Files", "overwrite"),
 
                 {
                   xtype: "checkbox",

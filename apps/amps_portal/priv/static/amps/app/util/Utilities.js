@@ -2028,7 +2028,14 @@ Ext.define("Amps.Utilities", {
     };
   },
 
-  renderFileSize: function fileSize(size) {
+  renderFileSize: function fileSize(size, m, r) {
+    if (size == null) {
+      if (r.data.data) {
+        size = new Blob([r.data.data]).size;
+      } else {
+        return "Not Applicable";
+      }
+    }
     var i = size == 0 ? 0 : Math.floor(Math.log(size) / Math.log(1000));
     return (
       (size / Math.pow(1000, i)).toFixed(2) * 1 +

@@ -402,8 +402,8 @@ defmodule AmpsWeb.Util do
       "topics",
       "users",
       "rules",
-      "users/rules",
       "users/mailboxes",
+      "users/rules",
       "actions",
       "endpoints",
       "services",
@@ -790,7 +790,7 @@ defmodule AmpsWeb.Util do
       if Enum.member?(
            [
              "config",
-             "demos",
+             "packages",
              "admin",
              "environments",
              "system_logs",
