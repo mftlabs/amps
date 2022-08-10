@@ -1203,23 +1203,6 @@ defmodule AmpsWeb.DataController do
 
     json(conn, result)
   end
-
-  def get_plugins(conn, %{"object" => collection}) do
-    plugins = AmpsUtil.get_env(:plugins, [])
-
-    resp =
-      Enum.reduce(plugins, [], fn plugin, acc ->
-        case plugin.ui(collection) do
-          nil ->
-            acc
-
-          ui ->
-            acc ++ [ui]
-        end
-      end)
-
-    json(conn, resp)
-  end
 end
 
 defmodule AmpsWeb.Encryption do

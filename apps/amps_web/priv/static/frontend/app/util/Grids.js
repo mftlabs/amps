@@ -1106,6 +1106,11 @@ Ext.define("Amps.consumers.tab", {
               flex: 1,
             },
             {
+              text: "Ack Pending",
+              dataIndex: "num_pending",
+              flex: 1,
+            },
+            {
               text: "Pending",
               dataIndex: "num_pending",
               flex: 1,
@@ -1113,6 +1118,11 @@ Ext.define("Amps.consumers.tab", {
             {
               text: "Redelivered",
               dataIndex: "num_redelivered",
+              flex: 1,
+            },
+            {
+              text: "Waiting",
+              dataIndex: "num_waiting",
               flex: 1,
             },
             {
