@@ -9708,7 +9708,7 @@ Ext.define("Amps.util.Grids", {
 
             nats: {
               field: "nats",
-              label: "NATS",
+              label: "Internal NATS Subscriber",
               iconCls: "kafka-icon",
               combo: function (service) {
                 var reg = /[.>* -]/;
