@@ -81,8 +81,10 @@ defmodule Amps.Actions.S3 do
               parms = format(msg, parms)
               {event, path} = get_message(req, parms, parms["path"])
 
-              ExAws.S3.delete_object(parms["bucket"], path)
-              |> ExAws.request(req)
+              if parms["ackmode"] == "delete" do
+                ExAws.S3.delete_object(parms["bucket"], path)
+                |> ExAws.request(req)
+              end
 
               {:send, [event]}
           end
