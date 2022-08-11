@@ -866,42 +866,6 @@ defmodule AmpsWeb.Util do
     AmpsUtil.delete_consumer(stream, consumer)
   end
 
-  def test() do
-    service = %{
-      "router" => [
-        %{
-          "method" => "POST",
-          "path" => "place/it",
-          "script" => %{
-            "module" => "sqlpost",
-            "parms" => %{},
-            "provider" => "cw-DAYABhcJry1M9LMrG",
-            "script_type" => "python",
-            "use_provider" => true
-          }
-        },
-        %{
-          "method" => "GET",
-          "path" => "place/it/:table/:id",
-          "script" => %{
-            "module" => "sqlget",
-            "parms" => %{},
-            "provider" => "cw-DAYABhcJry1M9LMrG",
-            "script_type" => "python",
-            "use_provider" => true
-          }
-        }
-      ],
-      "name" => "httpapi"
-    }
-
-    Plug.Cowboy.http(Amps.Gateway, [env: "giftshop", opts: service],
-      ref: "test",
-      port: 4444,
-      otp_app: :amps
-    )
-  end
-
   def ui_event(index, id, action, env, fun \\ nil) do
     Task.start_link(fn ->
       msg = %{

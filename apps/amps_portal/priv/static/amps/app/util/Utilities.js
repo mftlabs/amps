@@ -1227,6 +1227,33 @@ Ext.define("Amps.Utilities", {
     );
   },
 
+  mailboxStore: function () {
+    return Ext.create("Ext.data.Store", {
+      remoteSort: true,
+      storeId: "mailboxes",
+      proxy: {
+        type: "rest",
+        url: `/api/mailboxes/`,
+        headers: {
+          Authorization: localStorage.getItem("access_token"),
+        },
+        limitParam: "",
+        reader: {
+          type: "json",
+          rootProperty: "rows",
+          totalProperty: "count",
+        },
+        listeners: {
+          load: function (data) {
+            console.log(data);
+          },
+          exception: amfutil.refresh_on_failure,
+        },
+      },
+      autoLoad: true,
+    });
+  },
+
   createCollectionStore: function (collection, filters = {}, opts = {}) {
     var check = amfutil.stores.find(
       (store) =>

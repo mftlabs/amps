@@ -551,6 +551,7 @@ defmodule AmpsWeb.DataController do
   def export(collection, env, filter \\ %{}) do
     data = DB.find(collection, filter)
     count = Enum.count(data)
+
     base_coll = Util.base_index(env, collection)
 
     size = 25000
@@ -600,7 +601,11 @@ defmodule AmpsWeb.DataController do
       %Workbook{sheets: sheets}
       |> Elixlsx.write_to_memory(base_coll)
 
-    binary
+    if count > 0 do
+      binary
+    else
+      {:empty, binary}
+    end
   end
 
   def receive_sheet(sheetlist) do
@@ -621,7 +626,14 @@ defmodule AmpsWeb.DataController do
       }) do
     filters = conn.query_params["filters"] |> Jason.decode!()
 
-    binary = export(collection, conn.assigns().env, filters)
+    binary =
+      case export(collection, conn.assigns().env, filters) do
+        {:empty, binary} ->
+          binary
+
+        binary ->
+          binary
+      end
 
     conn
     |> send_download({:binary, binary}, filename: "#{collection}.xlsx")
@@ -630,7 +642,9 @@ defmodule AmpsWeb.DataController do
   def export_sub(collection, id, field, env) do
     data = DB.find_one(collection, %{"_id" => id})
     base_coll = Util.base_index(env, collection)
-    sheets = get_excel_data(base_coll, data[field], field)
+    field_data = data[field]
+    count = Enum.count(field_data)
+    sheets = get_excel_data(base_coll, field_data, field)
 
     {:ok, {_name, binary}} =
       %Workbook{sheets: sheets}
@@ -643,7 +657,11 @@ defmodule AmpsWeb.DataController do
         "#{data["name"]}_#{field}.xlsx"
       end
 
-    {binary, filename}
+    if count > 0 do
+      {binary, filename}
+    else
+      {:empty, {binary, filename}}
+    end
   end
 
   def export_sub_collection(conn, %{
@@ -652,7 +670,15 @@ defmodule AmpsWeb.DataController do
         "field" => field
       }) do
     _body = conn.body_params()
-    {binary, filename} = export_sub(collection, id, field, conn.assigns().env)
+
+    {binary, filename} =
+      case export_sub(collection, id, field, conn.assigns().env) do
+        {:empty, res} ->
+          res
+
+        res ->
+          res
+      end
 
     conn
     |> send_download({:binary, binary}, filename: filename)
@@ -756,19 +782,24 @@ defmodule AmpsWeb.DataController do
 
         case Enum.count(pieces) do
           1 ->
-            binary = export(Util.index(env, index), env)
-            filename = "#{index}.xlsx"
-            File.write(Path.join(dir, filename), binary)
+            case export(Util.index(env, index), env) do
+              {:empty, _} ->
+                imports
 
-            [
-              %{
-                "type" => "collection",
-                "collection" => index,
-                "idtype" => "provided",
-                "file" => filename
-              }
-              | imports
-            ]
+              binary ->
+                filename = "#{index}.xlsx"
+                File.write(Path.join(dir, filename), binary)
+
+                [
+                  %{
+                    "type" => "collection",
+                    "collection" => index,
+                    "idtype" => "provided",
+                    "file" => filename
+                  }
+                  | imports
+                ]
+            end
 
           2 ->
             envindex = Util.index(env, index)
@@ -777,20 +808,26 @@ defmodule AmpsWeb.DataController do
               Enum.reduce(DB.find(envindex), [], fn obj, subimports ->
                 entity = obj["_id"]
                 field = Enum.at(pieces, 1)
-                {binary, filename} = export_sub(envindex, entity, field, env)
-                File.write(Path.join(dir, filename), binary)
 
-                [
-                  %{
-                    "type" => "field",
-                    "collection" => index,
-                    "entity" => entity,
-                    "field" => field,
-                    "idtype" => "provided",
-                    "file" => filename
-                  }
-                  | subimports
-                ]
+                case export_sub(envindex, entity, field, env) do
+                  {:empty, _} ->
+                    subimports
+
+                  {binary, filename} ->
+                    File.write(Path.join(dir, filename), binary)
+
+                    [
+                      %{
+                        "type" => "field",
+                        "collection" => index,
+                        "entity" => entity,
+                        "field" => field,
+                        "idtype" => "provided",
+                        "file" => filename
+                      }
+                      | subimports
+                    ]
+                end
               end)
 
             subimports ++ imports

@@ -59,10 +59,6 @@ Ext.define("Amps.view.main.MainController", {
     var tokens = route.split("/");
     console.log(route);
     switch (route) {
-      case "accounts":
-        console.log("Render accounts form");
-        this.addAccounts(btn);
-        break;
       case "admin":
         this.addUser(btn);
         break;

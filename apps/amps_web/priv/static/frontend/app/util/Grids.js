@@ -2385,9 +2385,9 @@ Ext.define("Amps.container.Imports", {
                     //   msg: "Loading Entry...",
                     //   target: win,
                     // });
-                    win.setStyle({
-                      display: "none",
-                    });
+                    // win.setStyle({
+                    //   display: "none",
+                    // });
                     win.show();
 
                     // mask.show();
@@ -8538,7 +8538,8 @@ Ext.define("Amps.util.Grids", {
                 {
                   xtype: "fieldset",
                   itemId: "get",
-
+                  hidden: true,
+                  disabled: true,
                   title: "GET",
                   layout: {
                     type: "vbox",
@@ -8676,7 +8677,8 @@ Ext.define("Amps.util.Grids", {
                   xtype: "fieldset",
                   itemId: "put",
                   maxWidth: 600,
-
+                  hidden: true,
+                  disabled: true,
                   title: "PUT",
                   layout: {
                     type: "vbox",
@@ -8704,6 +8706,8 @@ Ext.define("Amps.util.Grids", {
                 {
                   xtype: "fieldset",
                   itemId: "delete",
+                  hidden: true,
+                  disabled: true,
                   maxWidth: 600,
                   title: "DELETE",
                   layout: {

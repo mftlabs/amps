@@ -637,6 +637,28 @@ defmodule AmpsWeb.UtilController do
     end
   end
 
+  def check_loop_new(step, steps) do
+    Logger.info("CHECKING LOOP")
+    IO.inspect(step)
+    IO.inspect(steps)
+
+    Enum.reduce(steps, false, fn item, loop ->
+      if item["sub"]["name"] == step["sub"]["name"] do
+        if item["action"]["type"] == "router" do
+          if item["rule"]["name"] == step["rule"]["name"] do
+            true
+          else
+            loop
+          end
+        else
+          true
+        end
+      else
+        loop
+      end
+    end)
+  end
+
   def workflow(conn, %{"topic" => topic, "meta" => meta}) do
     steps = find_topics(topic, meta, [], conn.assigns().env)
 
@@ -658,28 +680,6 @@ defmodule AmpsWeb.UtilController do
       end
 
     json(conn, res)
-  end
-
-  def check_loop_new(step, steps) do
-    Logger.info("CHECKING LOOP")
-    IO.inspect(step)
-    IO.inspect(steps)
-
-    Enum.reduce(steps, false, fn item, loop ->
-      if item["sub"]["name"] == step["sub"]["name"] do
-        if item["action"]["type"] == "router" do
-          if item["rule"]["name"] == step["rule"]["name"] do
-            true
-          else
-            loop
-          end
-        else
-          true
-        end
-      else
-        loop
-      end
-    end)
   end
 
   defp find_topics(topic, meta, topics, env) do

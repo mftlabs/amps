@@ -223,31 +223,34 @@ Ext.define("Amps.Pages", {
               // },
               amfutil.consumerConfig(function (topichandler) {
                 return [
-                  amfutil.combo("Mailbox", "mailbox", null, "name", "name", {
-                    listeners: {
-                      beforerender: async function (scope) {
-                        var user = await amftil.userInfo();
-                        this.setStore(
-                          amfutil.createFieldStore(
-                            "users",
-                            user["_id"],
-                            "mailboxes"
-                          )
-                        );
-                      },
-                      change: async function (scope, val) {
-                        var form = scope.up("form");
-                        var user = await amftil.userInfo();
+                  amfutil.combo(
+                    "Mailbox",
+                    "mailbox",
+                    amfutil.mailboxStore(),
+                    "name",
+                    "name",
+                    {
+                      listeners: {
+                        beforerender: async function (scope) {
+                          console.log("BEFORE");
+                          console.log(scope.getStore());
+                        },
+                        change: async function (scope, val) {
+                          var form = scope.up("form");
+                          var user = await amfutil.userInfo();
 
-                        if (val) {
-                          var topic = scope.up("fieldcontainer").down("#topic");
-                          topic.setValue(
-                            `amps.mailbox.${user["username"]}.${val}`
-                          );
-                        }
+                          if (val) {
+                            var topic = scope
+                              .up("fieldcontainer")
+                              .down("#topic");
+                            topic.setValue(
+                              `amps.mailbox.${user["username"]}.${val}`
+                            );
+                          }
+                        },
                       },
-                    },
-                  }),
+                    }
+                  ),
                   amfutil.text("Mailbox Topic", "topic", {
                     readOnly: true,
                     itemId: "topic",
