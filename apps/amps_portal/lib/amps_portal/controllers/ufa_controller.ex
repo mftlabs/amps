@@ -5,7 +5,7 @@ defmodule AmpsPortal.UFAController do
   alias Amps.DB
   require Logger
   alias AmpsPortal.Util
-  alias Pow.{Config, Plug, Store.CredentialsCache}
+  alias Pow.{Config, Store.CredentialsCache}
   alias PowPersistentSession.Store.PersistentSessionCache
 
   def get_sched(conn, %{"username" => username}) do
@@ -186,13 +186,41 @@ defmodule AmpsPortal.UFAController do
             IO.inspect(msg)
 
             if msg["data"] do
-              send_download(conn, {:binary, msg["data"]}, filename: msg["fname"])
+              send_download(conn, {:binary, msg["data"]},
+                disposition: :attachment,
+                filename: msg["fname"]
+              )
             else
-              if msg["fpath"] do
-                send_download(conn, {:file, msg["fpath"]}, filename: msg["fname"])
-              else
-                send_download(conn, {:binary, ""}, filename: msg["fname"] || msg["msgid"])
-              end
+              # if msg["temp"] do
+              stream = AmpsUtil.stream(msg, conn.assigns().env)
+
+              conn =
+                conn
+                |> put_resp_header(
+                  "content-disposition",
+                  "attachment; filename=\"#{msg["fname"] || msg["msgid"]}\""
+                )
+                |> send_chunked(200)
+
+              Enum.reduce_while(stream, conn, fn chunk, conn ->
+                case Plug.Conn.chunk(conn, chunk) do
+                  {:ok, conn} ->
+                    {:cont, conn}
+
+                  {:error, :closed} ->
+                    {:halt, conn}
+                end
+              end)
+
+              # send_download(conn, {:file, msg["fpath"]}, disposition: :attachment)
+
+              # else
+              #   root = AmpsUtil.get_env(:storage_root)
+
+              #   send_download(conn, {:file, Path.join(root, msg["fpath"])},
+              #     disposition: :attachment
+              #   )
+              # end
             end
 
           {:none, nil} ->
@@ -279,8 +307,7 @@ defmodule AmpsPortal.UFAController do
   def subscribe(consumer, parms) do
     group = String.replace(parms["name"], " ", "_")
 
-    {:ok, sid} =
-      Gnat.sub(consumer.connection_pid, self(), consumer.listening_topic, queue_group: group)
+    {:ok, sid} = Gnat.sub(consumer.connection_pid, self(), consumer.listening_topic)
 
     :ok =
       Gnat.pub(
@@ -395,7 +422,7 @@ defmodule AmpsPortal.UFAController do
   end
 
   defp sign_token(conn, token, config) do
-    Plug.sign_token(conn, signing_salt(), token, config)
+    Pow.Plug.sign_token(conn, signing_salt(), token, config)
   end
 
   defp signing_salt(), do: Atom.to_string(AmpsPortal.APIAuthPlug)

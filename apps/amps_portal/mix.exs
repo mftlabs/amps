@@ -51,7 +51,7 @@ defmodule AmpsPortal.MixProject do
       {:jason, "~> 1.2"},
       {:plug_cowboy, "~> 2.5"},
       {:cors_plug, "~> 2.0"},
-      {:argon2_elixir, "~> 2.0"},
+      {:argon2_elixir, "~> 3.0"},
       {:swoosh, "~> 1.3"},
       {:amps_mongodb, [git: "https://github.com/mftlabs/amps-mongodb", branch: "main"]}
     ]

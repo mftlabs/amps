@@ -11,10 +11,10 @@ defmodule Amps.Actions.Mailbox do
         parms["mailbox"]
       end
 
-    case AmpsAuth.mailbox_info(recipient, mailbox, env) do
+    case AmpsMailbox.is_mailbox(recipient, mailbox, env) do
       nil ->
         Logger.warning("mailbox #{mailbox} not found for #{recipient}")
-        raise "recipient does not have a registered mailbox #{recipient}"
+        raise "recipient does not have a registered mailbox #{mailbox}"
 
       _found ->
         newmsg =
