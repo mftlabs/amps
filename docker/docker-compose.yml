@@ -27,6 +27,9 @@ services:
       - nats
     ports:
       - "4080:4080"
+      - "15022:15022"
+      - "1234:1234"
+      - "15443:15443"
   mongo:
     image: mongo
     ports:
@@ -79,7 +82,7 @@ services:
       - ./volumes/data4-2:/data2
   S3:
     image: nginx:1.19.2-alpine
-    hostname: nginx
+    hostname: s3
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     ports:
