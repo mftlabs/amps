@@ -1,6 +1,8 @@
 defmodule Amps.Actions.StringReplace do
   require Logger
 
+  # String Replace Action
+
   def run(msg, parms, {state, env}) do
     Logger.info("input #{inspect(msg)}")
     {:ok, newmsg} = replace(msg, parms, env)
