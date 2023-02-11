@@ -64,8 +64,7 @@ defmodule Amps.MixProject do
       {:ex_aws_sqs, "~> 3.3"},
       {:quantum, "~> 3.0"},
       {:argon2_elixir, "~> 3.0"},
-      {:master_proxy,
-       git: "https://github.com/jesseshieh/master_proxy.git", branch: "increase-flexibility"},
+      {:master_proxy, git: "https://github.com/mftlabs/master_proxy.git"},
       {:site_encrypt, git: "https://github.com/sasa1977/site_encrypt.git", branch: "master"},
       {:tesla, git: "https://github.com/teamon/tesla", override: true},
       {
