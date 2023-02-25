@@ -36,19 +36,19 @@ config :amps_portal, AmpsPortal.Endpoint,
   live_view: [signing_salt: "IzQCGrqZ"]
 
 # Configure esbuild (the version is required)
-config :esbuild,
-  version: "0.14.23",
-  amps_portal: [
-    args: ~w(js/app.js --bundle --target=es2016 --outdir=../priv/static/assets),
-    cd: Path.expand("../apps/amps_portal/assets", __DIR__),
-    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
-  ],
-  amps_web: [
-    args:
-      ~w(js/app.js --bundle --target=es2016 --loader:.svg=file --loader:.ttf=file --outdir=../priv/static/assets),
-    cd: Path.expand("../apps/amps_web/assets", __DIR__),
-    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
-  ]
+# config :esbuild,
+#   version: "0.14.23",
+#   amps_portal: [
+#     args: ~w(js/app.js --bundle --target=es2016 --outdir=../priv/static/assets),
+#     cd: Path.expand("../apps/amps_portal/assets", __DIR__),
+#     env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
+#   ],
+#   amps_web: [
+#     args:
+#       ~w(js/app.jsx --bundle --target=es2016 --loader:.svg=file --loader:.ttf=file --outdir=../priv/static/assets),
+#     cd: Path.expand("../apps/amps_web/assets", __DIR__),
+#     env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
+#   ]
 
 # Configures the mailer
 #
@@ -58,56 +58,56 @@ config :esbuild,
 # For production it's recommended to configure a different adapter
 # at the `config/runtime.exs`.
 
-backends =
-  if String.to_atom(String.downcase(System.get_env("AMPS_GEN_CERTS", "FALSE"))) do
-    [
-      %{
-        path: ~r{^/.well-known/acme-challenge/.*$},
-        plug: SiteEncrypt.AcmeChallenge,
-        opts: AmpsWeb.Proxy,
-        host: ~r/(.*?)/
-      },
-      %{
-        host: ~r/^#{System.get_env("AMPS_ADMIN_HOST", "admin.localhost")}$/,
-        phoenix_endpoint: AmpsWeb.Endpoint
-      },
-      %{
-        host: ~r/(.*?)/,
-        phoenix_endpoint: AmpsPortal.Endpoint
-      }
-    ]
-  else
-    [
-      %{
-        host: ~r/^#{System.get_env("AMPS_ADMIN_HOST", "admin.localhost")}$/,
-        phoenix_endpoint: AmpsWeb.Endpoint
-      },
-      %{
-        host: ~r/(.*?)/,
-        phoenix_endpoint: AmpsPortal.Endpoint
-      }
-    ]
-  end
+# backends =
+#   if String.to_atom(String.downcase(System.get_env("AMPS_GEN_CERTS", "FALSE"))) do
+#     [
+#       %{
+#         path: ~r{^/.well-known/acme-challenge/.*$},
+#         plug: SiteEncrypt.AcmeChallenge,
+#         opts: AmpsWeb.Proxy,
+#         host: ~r/(.*?)/
+#       },
+#       %{
+#         host: ~r/^#{System.get_env("AMPS_ADMIN_HOST", "admin.localhost")}$/,
+#         phoenix_endpoint: AmpsWeb.Endpoint
+#       },
+#       %{
+#         host: ~r/(.*?)/,
+#         phoenix_endpoint: AmpsPortal.Endpoint
+#       }
+#     ]
+#   else
+#     [
+#       %{
+#         host: ~r/^#{System.get_env("AMPS_ADMIN_HOST", "admin.localhost")}$/,
+#         phoenix_endpoint: AmpsWeb.Endpoint
+#       },
+#       %{
+#         host: ~r/(.*?)/,
+#         phoenix_endpoint: AmpsPortal.Endpoint
+#       }
+#     ]
+#   end
 
-mp_config = [
-  protocol_options: [
-    request_timeout: 10000
-  ],
-  http: [
-    net: :inet6,
-    port: String.to_integer(System.get_env("AMPS_PORT", "4080"))
-  ],
-  log_requests: false,
-  # https: [:inet6, port: 4443],
-  backends: backends
-]
+# mp_config = [
+#   protocol_options: [
+#     request_timeout: 10000
+#   ],
+#   http: [
+#     net: :inet6,
+#     port: String.to_integer(System.get_env("AMPS_PORT", "4080"))
+#   ],
+#   log_requests: false,
+#   # https: [:inet6, port: 4443],
+#   backends: backends
+# ]
 
-if String.to_atom(String.downcase(System.get_env("AMPS_USE_SSL", "FALSE"))) do
-  config :master_proxy,
-         mp_config ++ [https: [port: String.to_integer(System.get_env("AMPS_SSL_PORT", "4443"))]]
-else
-  config :master_proxy, mp_config
-end
+# if String.to_atom(String.downcase(System.get_env("AMPS_USE_SSL", "FALSE"))) do
+#   config :master_proxy,
+#          mp_config ++ [https: [port: String.to_integer(System.get_env("AMPS_SSL_PORT", "4443"))]]
+# else
+#   config :master_proxy, mp_config
+# end
 
 # any Cowboy options are allowed
 
@@ -147,18 +147,18 @@ config :amps_web,
 
 # Configures the endpoint
 config :amps_web, AmpsWeb.Endpoint,
-  render_errors: [
-    view: AmpsWeb.ErrorView,
-    accepts: ~w(html json),
-    layout: false
-  ],
-  pubsub_server: Amps.PubSub,
-  live_view: [signing_salt: "kl+/cr/G"],
-  url: [host: System.get_env("AMPS_ADMIN_HOST", "admin.localhost")],
-  http: [
-    port: System.get_env("AMPS_HOST_PORT", "4000"),
-    protocol_options: [idle_timeout: 5_000_000]
-  ],
+  # render_errors: [
+  #   view: AmpsWeb.ErrorView,
+  #   accepts: ~w(html json),
+  #   layout: false
+  # ],
+  # pubsub_server: Amps.PubSub,
+  # live_view: [signing_salt: "kl+/cr/G"],
+  # url: [host: System.get_env("AMPS_ADMIN_HOST", "admin.localhost")],
+  # http: [
+  #   port: System.get_env("AMPS_HOST_PORT", "4000"),
+  #   protocol_options: [idle_timeout: 5_000_000]
+  # ],
   # force_ssl: force_ssl,
   # https: [
   #   port: 443,
@@ -211,35 +211,35 @@ config :amps_web, :pow,
   mailer_backend: AmpsWeb.PowMailer,
   cache_store_backend: Pow.Store.Backend.MnesiaCache
 
-config :amps_web, :pow_assent,
-  user: AmpsWeb.Users.User,
-  users_context: AmpsWeb.Users,
-  providers: [
-    google: [
-      client_id: "63199210559-hmhqeu7hmlkv3epournsu7j8sn9likqv.apps.googleusercontent.com",
-      client_secret: "bdvfUN3jk1wkrH7TXmY1yx3c",
-      strategy: Assent.Strategy.Google
-    ]
-  ]
+# config :amps_web, :pow_assent,
+#   user: AmpsWeb.Users.User,
+#   users_context: AmpsWeb.Users,
+#   providers: [
+#     google: [
+#       client_id: "63199210559-hmhqeu7hmlkv3epournsu7j8sn9likqv.apps.googleusercontent.com",
+#       client_secret: "bdvfUN3jk1wkrH7TXmY1yx3c",
+#       strategy: Assent.Strategy.Google
+#     ]
+#   ]
 
-config :amps_portal, :pow,
-  user: Amps.Users.User,
-  users_context: Amps.Users,
-  extensions: [PowResetPassword],
-  controller_callbacks: Pow.Extension.Phoenix.ControllerCallbacks,
-  mailer_backend: AmpsWeb.PowMailer,
-  cache_store_backend: Pow.Store.Backend.MnesiaCache
+# config :amps_portal, :pow,
+#   user: Amps.Users.User,
+#   users_context: Amps.Users,
+#   extensions: [PowResetPassword],
+#   controller_callbacks: Pow.Extension.Phoenix.ControllerCallbacks,
+#   mailer_backend: AmpsWeb.PowMailer,
+#   cache_store_backend: Pow.Store.Backend.MnesiaCache
 
-config :amps_portal, :pow_assent,
-  user: Amps.Users.User,
-  users_context: Amps.Users,
-  providers: [
-    google: [
-      client_id: "63199210559-hmhqeu7hmlkv3epournsu7j8sn9likqv.apps.googleusercontent.com",
-      client_secret: "bdvfUN3jk1wkrH7TXmY1yx3c",
-      strategy: Assent.Strategy.Google
-    ]
-  ]
+# config :amps_portal, :pow_assent,
+#   user: Amps.Users.User,
+#   users_context: Amps.Users,
+#   providers: [
+#     google: [
+#       client_id: "63199210559-hmhqeu7hmlkv3epournsu7j8sn9likqv.apps.googleusercontent.com",
+#       client_secret: "bdvfUN3jk1wkrH7TXmY1yx3c",
+#       strategy: Assent.Strategy.Google
+#   ]
+# ]
 
 config :ex_aws,
   dl_max_conncurrency: 8,
@@ -313,11 +313,16 @@ config :amps, :actions,
   aws: Amps.Actions.AWS
 
 config :amps, Amps.Scheduler,
+  debug_logging: false,
   jobs: [
     heartbeat: [
       schedule: "* * * * *",
       task: {Amps.Heartbeat, :send, []},
       run_strategy: Quantum.RunStrategy.Local
+    ],
+    services: [
+      schedule: {:extended, "*/5"},
+      task: {Amps.Heartbeat, :services, []}
     ]
   ]
 

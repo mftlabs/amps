@@ -8,7 +8,7 @@ defmodule Amps.Application do
   @impl true
   def start(_type, _args) do
     gnatconf = Application.fetch_env!(:amps, :gnat)
-    Application.put_env(:amps, :initialized, false)
+    Application.put_env(:amps_logger, :initialized, false)
 
     gnat_supervisor_settings = %{
       # (required) the registered named you want to give the Gnat connection
@@ -38,9 +38,6 @@ defmodule Amps.Application do
           [name: Amps.MnesiacSupervisor]
         ]
       },
-      {Pow.Store.Backend.MnesiaCache, extra_db_nodes: {Node, :list, []}},
-      # Recover from netsplit
-      Pow.Store.Backend.MnesiaCache.Unsplit,
       Amps.DB.get_db(),
       #      AmpsWeb.Vault,
       Amps.SvcHandler,
@@ -186,7 +183,7 @@ defmodule Amps.Application do
         name: Amps.Supervisor
       )
 
-    Application.put_env(:amps, :initialized, true)
+    Application.put_env(:amps_logger, :initialized, true)
     res
   end
 end

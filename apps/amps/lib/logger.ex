@@ -85,7 +85,7 @@ defmodule Amps.Logger do
     schedule_bulk()
 
     state =
-      if Application.fetch_env!(:amps, :initialized) do
+      if Application.fetch_env!(:amps_logger, :initialized) do
         if Enum.count(state.messages) > 0 do
           state.messages
           |> Amps.DB.bulk_perform("system_logs")

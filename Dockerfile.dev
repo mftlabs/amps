@@ -1,0 +1,20 @@
+FROM elixir:1.12.1
+WORKDIR /build
+
+RUN apt-get update
+
+RUN apt-get install build-essential git -y
+
+RUN mix local.hex --force && \
+    mix local.rebar --force
+
+RUN apt-get install python3 python3-pip certbot -y
+
+COPY . .
+
+RUN mix deps.get && \
+    mix deps.compile
+
+
+
+CMD ["mix", "run", "--no-halt"]

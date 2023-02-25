@@ -1,0 +1,215 @@
+version: "3.9"
+
+x-minio-common: &minio-common
+  image: minio/minio:latest
+  command: server --console-address ":9001" http://minio{1...4}/data{1...2}
+  expose:
+    - "9000"
+    - "9001"
+  depends_on:
+    - nats
+  environment:
+    MINIO_ROOT_USER: minioadmin
+    MINIO_ROOT_PASSWORD: minioadmin
+
+  healthcheck:
+    test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+    interval: 30s
+    timeout: 20s
+    retries: 3
+
+services:
+  mongo:
+    image: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./volumes/db:/data/db
+  # zookeeper:
+  #   image: 'bitnami/zookeeper:latest'
+  #   ports:
+  #     - '2181:2181'
+  #   environment:
+  #     - ALLOW_ANONYMOUS_LOGIN=yes
+  # kafka:
+  #   image: 'bitnami/kafka:latest'
+  #   ports:
+  #     - '9092:9092'
+  #   volumes: 
+  #     - ./kafka/secrets:/bitnami/kafka/config/certs
+  #   environment:
+  #     - KAFKA_BROKER_ID=1
+  #     - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+  #     - ALLOW_PLAINTEXT_LISTENER=yes
+  #     - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=INTERNAL:PLAINTEXT,CLIENT:PLAINTEXT
+  #     - KAFKA_CFG_LISTENERS=INTERNAL://:9093,CLIENT://:9092
+  #     - KAFKA_CFG_ADVERTISED_LISTENERS=INTERNAL://kafka:9093,CLIENT://127.0.0.1:9092
+  #     - KAFKA_INTER_BROKER_LISTENER_NAME=INTERNAL
+  #     # - KAFKA_CLIENT_USER=user
+  #     # - KAFKA_CLIENT_PASSWORD=password
+  #     # - KAFKA_CERTIFICATE_PASSWORD=test12
+  #     # - KAFKA_CFG_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM=""
+  #     # - KAFKA_TLS_CLIENT_AUTH=required
+  #     # - KAFKA_OPTS=-Djavax.net.debug=all
+  #   depends_on:
+  #     - zookeeper
+
+  # minio1:
+  #   <<: *minio-common
+  #   hostname: minio1
+  #   volumes:
+  #     - ./volumes/data1-1:/data1
+  #     - ./volumes/data1-2:/data2
+
+  # minio2:
+  #   <<: *minio-common
+  #   hostname: minio2
+  #   volumes:
+  #     - ./volumes/data2-1:/data1
+  #     - ./volumes/data2-2:/data2
+
+  # minio3:
+  #   <<: *minio-common
+  #   hostname: minio3
+  #   volumes:
+  #     - ./volumes/data3-1:/data1
+  #     - ./volumes/data3-2:/data2
+
+  # minio4:
+  #   <<: *minio-common
+  #   hostname: minio4
+  #   volumes:
+  #     - ./volumes/data4-1:/data1
+  #     - ./volumes/data4-2:/data2
+  # nginx:
+  #   image: nginx:1.19.2-alpine
+  #   hostname: nginx
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
+  #   ports:
+  #     - "9000:9000"
+  #     - "9001:9001"
+  #   depends_on:
+  #     - minio1
+  #     - minio2
+  #     - minio3
+  #     - minio4
+  nats:
+    image: nats:latest
+    command: "--cluster nats://0.0.0.0:6222 -m 8222 --name=nats --cluster_name=amps  --routes=nats://nats1:6222,nats://nats2:6222 -js -D"
+
+    ports:
+      - "8222:8222"
+      - "4222:4222"
+  nats1:
+    image: nats:latest
+    command: "--cluster nats://0.0.0.0:6222 -m 8222 --name=nats1 --cluster_name=amps  --routes=nats://nats:6222,nats://nats2:6222 -js -D"
+    depends_on: ["nats"]
+  nats2:
+    image: nats:latest
+    command: "--cluster nats://0.0.0.0:6222 -m 8222 --name=nats2 --cluster_name=amps --routes=nats://nats:6222,nats://nats1:6222 -js -D"
+    depends_on: ["nats"]
+
+  one:
+    depends_on:
+      - nats
+      - mongo
+    build:
+      # context: backend
+      dockerfile: ./Dockerfile.dev
+    environment:
+      # GENERATE A NEW SECRET KEY
+      SECRET_KEY_BASE: "xhAYbJzLVVL6h+06ntgkFcV49mUz5ntU8E48vCQC4hL1ywiPAQpenEJIh9CWpStt"
+      AMPS_MONGO_ADDR: "mongodb://mongo:27017/amps"
+      AMPS_NATS_HOST: "nats"
+      AMPS_NATS_PORT: "4222"
+      TZ: "America/Chicago"
+    volumes:
+      - ./volumes/amps/tmp:/amps/data/tmp
+      - ./volumes/amps/modules:/amps/data/modules
+      # - ./build:/.
+    entrypoint: "iex -S mix run --no-halt --name amps@one"
+
+  two:
+    depends_on:
+      - nats
+      - mongo
+    build:
+      # context: backend
+      dockerfile: ./Dockerfile.dev
+    environment:
+      # GENERATE A NEW SECRET KEY
+      SECRET_KEY_BASE: "xhAYbJzLVVL6h+06ntgkFcV49mUz5ntU8E48vCQC4hL1ywiPAQpenEJIh9CWpStt"
+      AMPS_MONGO_ADDR: "mongodb://mongo:27017/amps"
+      AMPS_NATS_HOST: "nats"
+      AMPS_NATS_PORT: "4222"
+      TZ: "America/Chicago"
+    volumes:
+      - ./volumes/amps/tmp:/amps/data/tmp
+      - ./volumes/amps/modules:/amps/data/modules
+      # - ./build:/.
+    entrypoint: "iex -S mix run --no-halt --name amps@two"
+
+  # opensearch-node1:
+  #   image: opensearchproject/opensearch:latest
+  #   container_name: opensearch-node1
+  #   environment:
+  #     - cluster.name=opensearch-cluster
+  #     - node.name=opensearch-node1
+  #     - discovery.seed_hosts=opensearch-node1,opensearch-node2
+  #     - cluster.initial_master_nodes=opensearch-node1,opensearch-node2
+  #     - bootstrap.memory_lock=true # along with the memlock settings below, disables swapping
+  #     - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
+  #   ulimits:
+  #     memlock:
+  #       soft: -1
+  #       hard: -1
+  #     nofile:
+  #       soft: 65536 # maximum number of open files for the OpenSearch user, set to at least 65536 on modern systems
+  #       hard: 65536
+  #   volumes:
+  #     - ./volumes/opensearch-data1:/usr/share/opensearch/data
+  #   ports:
+  #     - 9200:9200
+  #     - 9600:9600 # required for Performance Analyzer
+  #   networks:
+  #     - opensearch-net
+  # opensearch-node2:
+  #   image: opensearchproject/opensearch:latest
+  #   container_name: opensearch-node2
+  #   environment:
+  #     - cluster.name=opensearch-cluster
+  #     - node.name=opensearch-node2
+  #     - discovery.seed_hosts=opensearch-node1,opensearch-node2
+  #     - cluster.initial_master_nodes=opensearch-node1,opensearch-node2
+  #     - bootstrap.memory_lock=true
+  #     - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+  #   ulimits:
+  #     memlock:
+  #       soft: -1
+  #       hard: -1
+  #     nofile:
+  #       soft: 65536
+  #       hard: 65536
+  #   volumes:
+  #     - ./volumes/opensearch-data2:/usr/share/opensearch/data
+  #   networks:
+  #     - opensearch-net
+  # opensearch-dashboards:
+  #   image: opensearchproject/opensearch-dashboards:latest
+  #   container_name: opensearch-dashboards
+  #   ports:
+  #     - 5601:5601
+  #   expose:
+  #     - "5601"
+  #   environment:
+  #     OPENSEARCH_HOSTS: '["https://opensearch-node1:9200","https://opensearch-node2:9200"]'
+  #   networks:
+  #     - opensearch-net
+
+# volumes:
+#   opensearch-data1:
+#   opensearch-data2:
+
+# networks:
+#   opensearch-net:

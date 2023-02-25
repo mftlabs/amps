@@ -54,26 +54,32 @@ defmodule Amps.EnvSvcHandler do
     {Enum.at(topic, 0), Enum.at(topic, 1), Enum.at(topic, 2, nil)}
   end
 
-  def handle_service({name, action, msgid}, env) do
+  def handle_service({name, action, parm}, env) do
     IO.inspect(action)
 
     resp =
       case action do
         "skip" ->
-          Logger.info("Skipping #{msgid} for #{name}")
-          Amps.EventHandler.skip(:"#{env}-#{name}", msgid)
+          Logger.info("Skipping #{parm} for #{name}")
+          Amps.EventHandler.skip(:"#{env}-#{name}", parm)
 
         "start" ->
-          Logger.info("Starting #{name}")
-          start_service(name, env)
+          if parm == nil || String.to_atom(parm) == node() do
+            Logger.info("Starting #{name}")
+            start_service(name, env)
+          end
 
         "stop" ->
-          Logger.info("Stopping #{name}")
-          stop_service(name, env)
+          if parm == nil || String.to_atom(parm) == node() do
+            Logger.info("Stopping #{name}")
+            stop_service(name, env)
+          end
 
         "restart" ->
-          Logger.info("Restarting #{name}")
-          restart_service(name, env)
+          if parm == nil || String.to_atom(parm) == node() do
+            Logger.info("Restarting #{name}")
+            restart_service(name, env)
+          end
 
         _ ->
           Logger.error("Unsupported action #{action}")

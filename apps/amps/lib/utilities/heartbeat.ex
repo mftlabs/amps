@@ -32,4 +32,20 @@ defmodule Amps.Heartbeat do
     # send(state)
     {:noreply, state}
   end
+
+  def services() do
+    Enum.each(Amps.DB.find("services"), fn svc ->
+      name = svc["name"]
+      active = Amps.SvcManager.service_active?(name) !== nil
+
+      Gnat.pub(
+        :gnat,
+        "amps.events.svcs.heartbeat.#{name}",
+        Jason.encode!(%{
+          "active" => to_string(active),
+          "node" => Atom.to_string(node())
+        })
+      )
+    end)
+  end
 end

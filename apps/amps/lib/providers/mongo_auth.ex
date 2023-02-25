@@ -7,7 +7,7 @@ defmodule AmpsAuth do
   end
 
   def check_cred(user, pass, env \\ "") do
-    # IO.puts("checking password #{user} #{pass}")
+    IO.puts("checking password #{user} #{pass}")
 
     case DB.find_one(AmpsUtil.index(env, "users"), %{username: to_string(user)}) do
       nil ->
@@ -15,7 +15,7 @@ defmodule AmpsAuth do
         false
 
       parms ->
-        # IO.puts("found #{inspect(parms)}")
+        IO.puts("found #{inspect(parms)}")
 
         # IO.inspect(pass)
 

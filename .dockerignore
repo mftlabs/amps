@@ -20,3 +20,5 @@ vault
 volumes
 
 Mnesia*
+
+tmp

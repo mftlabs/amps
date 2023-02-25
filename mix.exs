@@ -12,9 +12,9 @@ defmodule Amps.Umbrella.MixProject do
       releases: [
         amps: [
           applications: [
-            amps: :permanent,
-            amps_web: :permanent,
-            amps_portal: :permanent
+            amps: :permanent
+            # amps_web: :permanent,
+            # amps_portal: :permanent
           ]
         ]
       ]

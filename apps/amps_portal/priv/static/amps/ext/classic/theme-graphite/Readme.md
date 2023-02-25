@@ -1,2 +1,0 @@
-# Graphite - Read Me
-

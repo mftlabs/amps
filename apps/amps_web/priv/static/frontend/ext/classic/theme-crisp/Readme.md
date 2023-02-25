@@ -1,4 +1,0 @@
-# theme-crisp 
-
-Minimalistic Theme.
-
