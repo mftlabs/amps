@@ -316,7 +316,7 @@ config :amps, Amps.Scheduler,
   debug_logging: false,
   jobs: [
     heartbeat: [
-      schedule: "* * * * *",
+      schedule: {:extended, "*/30"},
       task: {Amps.Heartbeat, :send, []},
       run_strategy: Quantum.RunStrategy.Local
     ],
@@ -356,6 +356,7 @@ config :amps, :pyworker,
 #   config :libcluster,
 #     topologies: []
 # end
+
 
 # Configure esbuild (the version is required)
 # config :esbuild,

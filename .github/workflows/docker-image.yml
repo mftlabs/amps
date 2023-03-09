@@ -2,9 +2,9 @@ name: Docker Image CI
 
 on:
   push:
-    branches: [ main, development ]
+    branches: [ standalone ]
   pull_request:
-    branches: [ main, development ]
+    branches: [ standalone ]
 
 jobs:
 
@@ -29,7 +29,7 @@ jobs:
           context: ./
           file: ./Dockerfile
           push: true
-          tags: ${{ vars.DOCKER_HUB_USERNAME }}/ampsv2:${{ github.sha }},${{ vars.DOCKER_HUB_USERNAME }}/ampsv2:latest
+          tags: ${{ vars.DOCKER_HUB_USERNAME }}/amps_backend:${{ github.sha }},${{ vars.DOCKER_HUB_USERNAME }}/amps_backend:latest
     - name: Image digest
       run: echo ${{ steps.docker_build.outputs.digest }}
           

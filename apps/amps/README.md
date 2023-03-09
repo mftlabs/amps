@@ -1,3 +1,0 @@
-# Amps
-
-**TODO: Add description**
