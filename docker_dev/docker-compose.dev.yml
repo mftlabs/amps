@@ -142,7 +142,7 @@ services:
   #     RELEASE_NODE_IP: "amps.one"
   #     COOKIE: foobar
 
-  #   # volumes:
+  #   volumes:
     #   - ./volumes/amps/tmp:/amps/data/tmp
     #   - ./volumes/amps/modules:/amps/data/modules
 

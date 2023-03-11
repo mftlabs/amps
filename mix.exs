@@ -61,6 +61,7 @@ defmodule Amps.MixProject do
       {:zstream, "~> 0.6.0"},
       {:ex_aws, "~> 2.0"},
       {:ex_aws_s3, "~> 2.0"},
+      {:sweet_xml, "~> 0.7.0"},
       {:ex_aws_sqs, "~> 3.3"},
       {:quantum, "~> 3.0"},
       {:argon2_elixir, "~> 3.0"},
