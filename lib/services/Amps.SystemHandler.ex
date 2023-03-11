@@ -52,7 +52,13 @@ defmodule Amps.SystemHandler do
   end
 
   def handle_action({action, node}) do
-    node = String.replace(node, "_", ".")
+    node =
+      if node do
+        String.replace(node, "_", ".")
+      else
+        nil
+      end
+
     Logger.info("Received action #{action} on node #{node || "all"}")
 
     resp =
@@ -62,9 +68,7 @@ defmodule Amps.SystemHandler do
           Amps.SvcManager.check_util()
 
         "parms" ->
-          if String.to_atom(node) == node() do
-            AmpsUtil.load_system_parms(node)
-          end
+          AmpsUtil.load_system_parms()
 
         _ ->
           Logger.error("Unsupported action #{action} on node #{node}")

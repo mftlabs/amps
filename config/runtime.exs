@@ -187,7 +187,14 @@ if config_env() == :prod do
     gen_certs: String.to_atom(String.downcase(System.get_env("AMPS_GEN_CERTS", "FALSE"))),
     dns_emails: System.get_env("AMPS_DNS_EMAILS", ""),
     extra_domains: System.get_env("AMPS_EXTRA_DOMAINS", ""),
-    secret_key_base: secret_key_base
+    secret_key_base: secret_key_base,
+    vault_addr: System.get_env("AMPS_VAULT_ADDR", "http://localhost:8200"),
+    mongo_addr: System.get_env("AMPS_MONGO_ADDR", "mongodb://localhost:27017/amps"),
+    nats_addr: System.get_env("AMPS_NATS_ADDR", "http://localhost:8222"),
+    minio_addr:
+      System.get_env("AMPS_S3_SCHEME", "http://") <>
+        System.get_env("AMPS_S3_HOST", "localhost") <>
+        ":" <> System.get_env("AMPS_S3_PORT", "9001")
 
   # config :ex_aws, :s3,
   #   access_key_id: "minioadmin",
