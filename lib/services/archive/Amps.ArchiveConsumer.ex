@@ -317,7 +317,7 @@ defmodule Amps.ArchivePullConsumer do
     try do
       data = Poison.decode!(message.body)
       msg = data["msg"]
-      # Logger.info("Archiving Message #{msg["msgid"]}")
+      Logger.info("Archiving Message #{msg["msgid"]}")
       parms = state[:parms]
       name = parms["name"]
 
@@ -343,7 +343,7 @@ defmodule Amps.ArchivePullConsumer do
               nil
           end
 
-          # Logger.info("Archived Message #{msg["msgid"]}")
+          Logger.info("Archived Message #{msg["msgid"]}")
 
           AmpsEvents.send_history(
             AmpsUtil.env_topic("amps.events.action", state.env),
