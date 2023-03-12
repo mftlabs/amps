@@ -83,8 +83,12 @@ defmodule Amps.ArchiveManager do
     connection_pid = Process.whereis(:gnat)
 
     {:ok, _sid} = Gnat.sub(connection_pid, self(), "amps.events.archive.handler.>")
+    archive = Amps.Defaults.get("archive")
 
-    load_archivers()
+    if archive do
+      load_archivers()
+    end
+
     {:noreply, state}
   end
 
@@ -293,21 +297,17 @@ defmodule Amps.ArchiveManager do
   def load_archivers() do
     Logger.info("Loading Archivers")
 
-    archive = Amps.Defaults.get("archive")
+    Amps.ArchiveSupervisor.start_child(:archive, get_archive_spec(""))
 
-    if archive do
-      Amps.ArchiveSupervisor.start_child(:archive, get_archive_spec(""))
+    case Amps.DB.find("environments", %{active: true, archive: true}) do
+      [] ->
+        :ok
 
-      case Amps.DB.find("environments", %{active: true, archive: true}) do
-        [] ->
-          :ok
-
-        envs ->
-          Enum.each(envs, fn env ->
-            Logger.info("loading env archive #{env["name"]}")
-            load_archive(env["name"])
-          end)
-      end
+      envs ->
+        Enum.each(envs, fn env ->
+          Logger.info("loading env archive #{env["name"]}")
+          load_archive(env["name"])
+        end)
     end
 
     Logger.info("Done loading archivers")
