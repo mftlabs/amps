@@ -6,7 +6,7 @@ defmodule Amps.Archive do
   end
 
   def preload() do
-    archive = System.get_env("AMPS_DEFAULT_ARCHIVE", "false") |> Atom.to_string()
+    archive = System.get_env("AMPS_DEFAULT_ARCHIVE", "false") |> String.to_atom()
     release_name = System.get_env("AMPS_RELEASE_NAME", "amps")
 
     config =
