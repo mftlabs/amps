@@ -37,7 +37,6 @@ defmodule Amps.Application do
         []
       ]),
       Amps.DB.get_db(),
-      {Highlander, {Amps.Archive, []}},
       #      AmpsWeb.Vault,
       Amps.SvcHandler,
       Amps.SystemHandler,
@@ -177,7 +176,8 @@ defmodule Amps.Application do
         :worker,
         Application.get_env(:amps, :pyworker)[:config]
       ),
-      Supervisor.child_spec({Task, fn -> synchronize() end}, id: :synch)
+      Supervisor.child_spec({Task, fn -> synchronize() end}, id: :synch),
+      {Highlander, {Amps.Archive, []}}
     ]
 
     res =

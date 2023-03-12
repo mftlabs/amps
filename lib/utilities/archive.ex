@@ -1,7 +1,7 @@
 defmodule Amps.Archive do
   use Task
 
-  def start_link(arg) do
+  def start_link(_) do
     Task.start_link(__MODULE__, :preload, [])
   end
 
@@ -9,7 +9,7 @@ defmodule Amps.Archive do
     archive = System.get_env("AMPS_DEFAULT_ARCHIVE", "false") |> String.to_atom()
     release_name = System.get_env("AMPS_RELEASE_NAME", "amps")
 
-    config =
+    if !Amps.DB.find_by_id("config", "system") do
       if archive do
         secret = System.get_env("AMPS_ARCHIVE_SECRET")
 
@@ -28,14 +28,15 @@ defmodule Amps.Archive do
         }
 
         Amps.DB.insert_with_id("providers", archive, "archive")
-        %{"archive" => true, "aprovider" => "archive"}
+        config = %{"archive" => true, "aprovider" => "archive"}
+        Amps.DB.insert_with_id("config", config, "system")
+        Gnat.pub(:gnat, "amps.events.archive.handler.start", "")
       else
-        %{"archive" => false}
+        config = %{"archive" => false}
+        Amps.DB.insert_with_id("config", config, "system")
       end
-
-    if !Amps.DB.find_by_id("config", "system") do
+    else
       IO.inspect("Config Already Exists")
-      Amps.DB.insert_with_id("config", config, "system")
     end
   end
 end
