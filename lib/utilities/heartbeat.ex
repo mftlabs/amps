@@ -41,7 +41,7 @@ defmodule Amps.Heartbeat do
   end
 
   def services() do
-    Enum.each(Amps.DB.find("services"), fn environ ->
+    Enum.each(Amps.DB.find("environments"), fn environ ->
       env = environ["name"]
 
       Enum.each(Amps.DB.find("#{env}-services"), fn svc ->
@@ -72,5 +72,60 @@ defmodule Amps.Heartbeat do
         })
       )
     end)
+  end
+
+  @spec consumers :: :ok
+  def consumers() do
+    streams = [
+      "SERVICES",
+      "ACTIONS",
+      "DATA",
+      "EVENTS",
+      "OBJECTS",
+      "MAILBOX"
+    ]
+
+    environments = Amps.DB.find("environments") ++ [%{"name" => ""}]
+
+    Enum.each(environments, fn environ ->
+      env = environ["name"]
+
+      Enum.each(streams, fn stream ->
+        check_stream(stream, env)
+      end)
+    end)
+  end
+
+  def check_stream(base, env) do
+    stream =
+      if env == "" do
+        base
+      else
+        String.upcase(env) <> "-" <> base
+      end
+
+    {:ok, %{consumers: consumers}} = Jetstream.API.Consumer.list(:gnat, stream)
+
+    consumers =
+      Enum.reduce(consumers, [], fn consumer, acc ->
+        {:ok, info} = Jetstream.API.Consumer.info(:gnat, stream, consumer)
+
+        info =
+          Map.merge(info, info.config)
+          |> Map.merge(info.delivered)
+          |> Map.drop([:config, :delivered])
+
+        [info | acc]
+      end)
+
+    topic = AmpsUtil.env_topic("amps.events.streams.heartbeat.#{base}", env)
+
+    Gnat.pub(
+      :gnat,
+      topic,
+      Jason.encode!(%{
+        consumers: consumers
+      })
+    )
   end
 end

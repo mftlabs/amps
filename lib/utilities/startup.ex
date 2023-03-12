@@ -17,7 +17,15 @@ defmodule Amps.Startup do
   end
 
   def tzdata() do
-    %Timex.TimezoneInfo{full_name: fullname} = Timex.Timezone.local()
+    fullname =
+      case Timex.Timezone.local() do
+        %Timex.TimezoneInfo{full_name: fullname} ->
+          fullname
+
+        {:error, {:could_not_resolve_timezone, fullname, _, _}} ->
+          fullname
+      end
+
     Application.put_env(:amps, :timezone, fullname)
   end
 

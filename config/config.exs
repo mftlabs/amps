@@ -330,6 +330,10 @@ config :amps, Amps.Scheduler,
     services: [
       schedule: {:extended, "*/5"},
       task: {Amps.Heartbeat, :services, []}
+    ],
+    consumers: [
+      schedule: {:extended, "*/5"},
+      task: {Amps.Heartbeat, :consumers, []}
     ]
   ]
 
