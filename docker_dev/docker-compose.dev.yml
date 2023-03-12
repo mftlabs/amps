@@ -143,8 +143,8 @@ services:
   #     COOKIE: foobar
 
   #   volumes:
-    #   - ./volumes/amps/tmp:/amps/data/tmp
-    #   - ./volumes/amps/modules:/amps/data/modules
+  #     - ./volumes/amps/tmp:/amps/data/tmp
+  #     - ./volumes/amps/modules:/amps/data/modules
 
   # two:
   #   depends_on:
@@ -153,20 +153,20 @@ services:
   #   image: local/amps:latest
   #   hostname: "amps.two"
 
-    # build:
-    #   # context: backend
-    #   dockerfile: ./Dockerfile.dev
-    # environment:
-    #   # GENERATE A NEW SECRET KEY
-    #   SECRET_KEY_BASE: "xhAYbJzLVVL6h+06ntgkFcV49mUz5ntU8E48vCQC4hL1ywiPAQpenEJIh9CWpStt"
-    #   AMPS_MONGO_ADDR: "mongodb://mongo:27017/amps"
-    #   AMPS_NATS_HOST: "nats"
-    #   AMPS_NATS_PORT: "4222"
-    #   TZ: "America/Chicago"
-    #   RELEASE_NODE_IP: "amps.two"
-    # volumes:
-    #   - ./volumes/amps/tmp:/amps/data/tmp
-    #   - ./volumes/amps/modules:/amps/data/modules
+  #   build:
+  #     # context: backend
+  #     dockerfile: ./Dockerfile.dev
+  #   environment:
+  #     # GENERATE A NEW SECRET KEY
+  #     SECRET_KEY_BASE: "xhAYbJzLVVL6h+06ntgkFcV49mUz5ntU8E48vCQC4hL1ywiPAQpenEJIh9CWpStt"
+  #     AMPS_MONGO_ADDR: "mongodb://mongo:27017/amps"
+  #     AMPS_NATS_HOST: "nats"
+  #     AMPS_NATS_PORT: "4222"
+  #     TZ: "America/Chicago"
+  #     RELEASE_NODE_IP: "amps.two"
+  #   volumes:
+  #     - ./volumes/amps/tmp:/amps/data/tmp
+  #     - ./volumes/amps/modules:/amps/data/modules
 
   # opensearch-node1:
   #   image: opensearchproject/opensearch:latest

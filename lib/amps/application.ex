@@ -26,7 +26,6 @@ defmodule Amps.Application do
     children = [
       # Start the PubSub system
       {Phoenix.PubSub, name: Amps.PubSub},
-
       {
         Mnesiac.Supervisor,
         [
@@ -177,7 +176,8 @@ defmodule Amps.Application do
         :worker,
         Application.get_env(:amps, :pyworker)[:config]
       ),
-      Supervisor.child_spec({Task, fn -> synchronize() end}, id: :synch)
+      Supervisor.child_spec({Task, fn -> synchronize() end}, id: :synch),
+      {Highlander, {Amps.Archive, []}}
     ]
 
     res =
