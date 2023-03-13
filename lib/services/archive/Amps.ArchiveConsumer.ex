@@ -290,8 +290,22 @@ defmodule Amps.ArchivePullConsumer do
         |> ExAws.request(req)
       else
         if msg["fpath"] do
-          msg["fpath"]
-          |> S3.Upload.stream_file()
+          stream =
+            if msg["node"] do
+              node = msg["node"] |> String.to_atom()
+
+              if node == node() do
+                msg["fpath"]
+                |> S3.Upload.stream_file()
+              else
+                :erpc.call(node, Amps.Files, :stream, [msg, env])
+              end
+            else
+              msg["fpath"]
+              |> S3.Upload.stream_file()
+            end
+
+          stream
           |> S3.upload(provider["bucket"], apath)
           |> ExAws.request(req)
         else
