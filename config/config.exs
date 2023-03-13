@@ -329,12 +329,12 @@ config :amps, Amps.Scheduler,
     ],
     services: [
       schedule: {:extended, "*/5"},
-      task: {Amps.Heartbeat, :services, []}
+      task: {Amps.Heartbeat, :services, []},
       run_strategy: Quantum.RunStrategy.Local
     ],
     consumers: [
       schedule: {:extended, "*/5"},
-      task: {Amps.Heartbeat, :consumers, []}
+      task: {Amps.Heartbeat, :consumers, []},
       run_strategy: Quantum.RunStrategy.Local
     ]
   ]

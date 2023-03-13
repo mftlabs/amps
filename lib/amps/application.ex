@@ -168,6 +168,7 @@ defmodule Amps.Application do
       },
       Amps.ArchiveSupervisor,
       Amps.ArchiveManager,
+      Amps.Files,
 
       # add this to db config...
 
