@@ -298,7 +298,7 @@ defmodule Amps.ArchivePullConsumer do
                 msg["fpath"]
                 |> S3.Upload.stream_file()
               else
-                :erpc.call(node, File, :stream!, msg["fpath"])
+                :erpc.call(node, File, :stream!, [msg["fpath"]])
               end
             else
               msg["fpath"]
