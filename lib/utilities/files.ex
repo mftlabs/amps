@@ -14,7 +14,7 @@ defmodule Amps.Files do
   def handle_call({:open_file, path, modes}, _from, state) do
     case File.open(path, modes) do
       {:ok, file} ->
-        IO.inspect(file)
+        :ok = File.mkdir_p(Path.dirname(path))
         {:reply, {:ok, file}, update_in(state, [:files], fn files -> [file | files] end)}
 
       {:error, error} ->
