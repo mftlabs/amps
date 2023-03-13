@@ -29,7 +29,6 @@ defmodule Amps.Actions.SharePoint do
         else
           events = scan_folder(parms, folder, token, url, "", rooturl, [])
 
-
           events =
             if parms["ackmode"] == "delete" do
               Enum.map(events, fn {event, obj} ->
@@ -290,39 +289,42 @@ defmodule Amps.Actions.SharePoint do
         10_485_760
       end
 
-    AmpsUtil.stream(msg, env, chunk_size)
-    |> Enum.reduce({0, size}, fn chunk, {start, remaining} ->
-      {finish, length, done} =
-        if remaining > chunk_size do
-          {start + chunk_size - 1, chunk_size, false}
+    fun = fn stream ->
+      Enum.reduce(stream, {0, size}, fn chunk, {start, remaining} ->
+        {finish, length, done} =
+          if remaining > chunk_size do
+            {start + chunk_size - 1, chunk_size, false}
+          else
+            {size - 1, remaining, true}
+          end
+
+        # IO.puts(start)
+
+        {_status, res} =
+          HTTPoison.put(
+            body["uploadUrl"],
+            chunk,
+            [
+              {"Authorization", "Bearer " <> token},
+              {"Content-Length", length},
+              {"Content-Range", "bytes #{start}-#{finish}/#{size}"}
+            ],
+            timeout: 60000,
+            recv_timeout: 60000
+          )
+
+        _body = Jason.decode!(res.body)
+        # IO.inspect(body["nextExpectedRanges"])
+
+        if not done do
+          {finish + 1, remaining - (finish - start)}
         else
-          {size - 1, remaining, true}
+          {:ok, res}
         end
+      end)
+    end
 
-      # IO.puts(start)
-
-      {_status, res} =
-        HTTPoison.put(
-          body["uploadUrl"],
-          chunk,
-          [
-            {"Authorization", "Bearer " <> token},
-            {"Content-Length", length},
-            {"Content-Range", "bytes #{start}-#{finish}/#{size}"}
-          ],
-          timeout: 60000,
-          recv_timeout: 60000
-        )
-
-      _body = Jason.decode!(res.body)
-      # IO.inspect(body["nextExpectedRanges"])
-
-      if not done do
-        {finish + 1, remaining - (finish - start)}
-      else
-        {:ok, res}
-      end
-    end)
+    AmpsUtil.stream(msg, env, chunk_size, fun)
   end
 
   def small_upload(siteid, token, msg, parms, body) do

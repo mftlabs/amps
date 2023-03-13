@@ -106,12 +106,16 @@ defmodule Amps.Actions.S3 do
               )
               |> ExAws.request(req)
             else
-              AmpsUtil.stream(msg, env)
-              |> S3.upload(
-                parms["bucket"],
-                Path.join(parms["prefix"], msg["fname"])
-              )
-              |> ExAws.request(req)
+              fun = fn stream ->
+                ExAws.S3.upload(
+                  stream,
+                  parms["bucket"],
+                  Path.join(parms["prefix"], msg["fname"])
+                )
+                |> ExAws.request(req)
+              end
+
+              AmpsUtil.stream(msg, env, nil, fun)
             end
 
           case resp do

@@ -9,7 +9,6 @@ defmodule Amps.Actions.Zip do
   end
 
   def zip(msg, parms, {state, env}) do
-    is = AmpsUtil.stream(msg, env)
     opts = []
 
     if not AmpsUtil.blank?(parms["password"]) do
@@ -23,13 +22,17 @@ defmodule Amps.Actions.Zip do
 
     tfile = AmpsUtil.tempdir() <> "/" <> msgid <> ".out"
 
-    Zstream.zip([
-      Zstream.entry(msg["fname"] || msgid, is, opts)
-    ])
-    |> Stream.into(File.stream!(tfile))
-    |> Stream.run()
+    fun = fn stream ->
+      Zstream.zip([
+        Zstream.entry(msg["fname"] || msgid, stream, opts)
+      ])
+      |> Stream.into(File.stream!(tfile))
+      |> Stream.run()
 
-    {:ok, info} = File.stat(tfile)
+      File.stat(tfile)
+    end
+
+    {:ok, info} = AmpsUtil.stream(msg, env, nil, fun)
 
     msg =
       msg
