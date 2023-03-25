@@ -63,6 +63,10 @@ defmodule Amps.EnvHandler do
           Logger.info("Restarting #{name}")
           restart_env(name)
 
+        "clear" ->
+          Logger.info("Clearing #{name}")
+          AmpsUtil.clear_env(name)
+
         "destroy" ->
           AmpsUtil.delete_env(name)
 
@@ -130,7 +134,7 @@ defmodule Amps.EnvHandler do
   end
 
   def handle_info({:msg, message}, state) do
-    Logger.info("Service Event Received on Topic #{message.topic}")
+    Logger.info("Environment Event Received on Topic #{message.topic}")
 
     {name, action} = parse_topic(message.topic)
     handle_service({name, action})

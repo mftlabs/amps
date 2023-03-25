@@ -64,10 +64,12 @@ defmodule Amps.EnvScheduler do
   end
 
   defp get_job_config(job, env) do
+    IO.inspect(~e[#{get_schedule(job)}]e)
+
     _pieces = %Quantum.Job{
       name: String.to_atom(job["name"]),
       overlap: true,
-      run_strategy: %Quantum.RunStrategy.Random{nodes: :cluster},
+      run_strategy: %Quantum.RunStrategy.Local{},
       schedule: ~e[#{get_schedule(job)}]e,
       state:
         if job["active"] do
@@ -76,6 +78,8 @@ defmodule Amps.EnvScheduler do
           :inactive
         end,
       task: fn ->
+        IO.inspect("DO JOB")
+
         msg =
           Map.merge(
             %{
@@ -133,6 +137,7 @@ defmodule Amps.EnvScheduler do
 
           pieces =
             pieces
+            |> List.replace_at(0, "0")
             |> List.replace_at(1, min)
             |> List.replace_at(2, hour)
 
@@ -147,6 +152,8 @@ defmodule Amps.EnvScheduler do
           end
       end
 
+    IO.inspect("ENVSCHED")
+    IO.inspect(pieces)
     Enum.join(pieces, " ")
   end
 end

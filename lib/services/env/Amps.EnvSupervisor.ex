@@ -25,7 +25,7 @@ defmodule Amps.EnvSupervisor do
         start: {Supervisor, :start_link, [history, [strategy: :one_for_one]]}
       },
       Supervisor.child_spec(
-        {Amps.EnvScheduler, [env: env, id: :"#{env}-sched", name: :"#{env}-sched"]},
+        {Highlander, {Amps.EnvScheduler, [env: env, id: :"#{env}-sched", name: :"#{env}-sched"]}},
         id: :"#{env}-sched"
       )
     ]

@@ -47,7 +47,7 @@ defmodule Amps.Application do
       Amps.EnvHandler,
       Amps.EnvSupervisor,
       Amps.EnvManager,
-      Amps.Scheduler,
+      {Highlander, {Amps.Scheduler, []}},
       %{
         id: "event_handler",
         start:

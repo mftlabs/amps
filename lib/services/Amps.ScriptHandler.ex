@@ -30,7 +30,7 @@ defmodule Amps.ScriptHandler do
 
     state = %{
       listening_topic: listening_topic,
-      eng: args[:env]
+      env: args[:env]
     }
 
     {:ok, state}
@@ -63,6 +63,7 @@ defmodule Amps.ScriptHandler do
     {Enum.at(topic, 0), Enum.at(topic, 1), Enum.at(topic, 2)}
   end
 
+  @spec handle_action({any, any, any}, any) :: :ok | {:error, atom}
   def handle_action({action, name, node}, env) do
     Logger.info("Received script action #{action} on node #{node || "all"}")
 

@@ -9,10 +9,33 @@ defmodule Amps.PyService do
   def run(msg, parms, env \\ nil) do
     parms =
       if parms["use_provider"] do
+        provider = DB.find_one(AmpsUtil.index(env, "providers"), %{"_id" => parms["provider"]})
+
+        provider =
+          if provider["type"] == "generic" do
+            values =
+              Enum.reduce(provider["values"], %{}, fn {key, val}, acc ->
+                val =
+                  case val do
+                    %{"key" => key} ->
+                      AmpsUtil.get_key(key)
+
+                    _ ->
+                      val
+                  end
+
+                Map.put(acc, key, val)
+              end)
+
+            Map.put(provider, "values", values)
+          else
+            provider
+          end
+
         Map.put(
           parms,
           "provider",
-          DB.find_one(AmpsUtil.index(env, "providers"), %{"_id" => parms["provider"]})
+          provider
         )
       else
         parms

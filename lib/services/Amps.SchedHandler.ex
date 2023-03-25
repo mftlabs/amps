@@ -51,19 +51,35 @@ defmodule Amps.SchedHandler do
     {Enum.at(topic, 0), Enum.at(topic, 1), Enum.at(topic, 2)}
   end
 
-  def handle_action({action, name, node}) do
-    Logger.info("Received script action #{action} on node #{node || "all"}")
-
+  def handle_action({action, name, env}) do
     resp =
       case action do
         "load" ->
-          Amps.Scheduler.load(name)
+          case env do
+            "default" ->
+              Amps.Scheduler.load(name)
+
+            env ->
+              Amps.EnvScheduler.load(name, env)
+          end
 
         "update" ->
-          Amps.Scheduler.update(name)
+          case env do
+            "default" ->
+              Amps.Scheduler.update(name)
+
+            env ->
+              Amps.EnvScheduler.update(name, env)
+          end
 
         "delete" ->
-          Amps.Scheduler.delete_job(name)
+          case env do
+            "default" ->
+              Amps.Scheduler.delete_job(name)
+
+            env ->
+              Amps.EnvScheduler.delete(name, env)
+          end
 
         # "updateutil" ->
         #   AmpsUtil.update_util(name)
@@ -76,7 +92,7 @@ defmodule Amps.SchedHandler do
   end
 
   def handle_info({:msg, message}, state) do
-    Logger.info("Script Event Received on Topic #{message.topic}")
+    Logger.info("Sched Event Received on Topic #{message.topic}")
 
     {action, name, node} = parse_topic(message.topic)
     handle_action({action, name, node})

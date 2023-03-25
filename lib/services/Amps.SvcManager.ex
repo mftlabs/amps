@@ -42,7 +42,8 @@ defmodule Amps.SvcManager do
       "service_logs",
       %{
         "name" => name,
-        "status" => "stopping"
+        "status" => "stopping",
+        "node" => Atom.to_string(node())
       }
     )
 
@@ -66,7 +67,8 @@ defmodule Amps.SvcManager do
             "service_logs",
             %{
               "name" => name,
-              "status" => "stopped"
+              "status" => "stopped",
+              "node" => Atom.to_string(node())
             }
           )
 
@@ -297,7 +299,8 @@ defmodule Amps.SvcManager do
       "service_logs",
       %{
         "name" => svcname,
-        "status" => "starting"
+        "status" => "starting",
+        "node" => Atom.to_string(node())
       }
     )
 
@@ -341,7 +344,8 @@ defmodule Amps.SvcManager do
               %{
                 "name" => svcname,
                 "status" => "failed",
-                "reason" => error
+                "reason" => error,
+                "node" => Atom.to_string(node())
               }
             )
 

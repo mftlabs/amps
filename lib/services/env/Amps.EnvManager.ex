@@ -83,7 +83,7 @@ defmodule Amps.EnvManager do
       case env_active?(name) do
         nil ->
           load_env(name)
-          #res
+          # res
 
           Amps.DB.find_one_and_update("environments", %{"name" => name}, %{
             "active" => true
@@ -96,11 +96,9 @@ defmodule Amps.EnvManager do
     {:reply, res, state}
   end
 
-
   def handle_call({:stop_env, _name}, _from, state) do
     # implement the stop
     {:reply, true, state}
-
   end
 
   def service_types do
@@ -162,64 +160,65 @@ defmodule Amps.EnvManager do
                protocol_options: protocol_options
              ]}
           end
-        end
-#        :kafka ->
-#          provider = Amps.DB.find_one("providers", %{"_id" => args["provider"]})
-#          auth_opts = AmpsUtil.get_kafka_auth(args, provider)
-#
-#          spec = %{
-#            id: name,
-#            start:
-#              {KafkaEx.ConsumerGroup, :start_link,
-#               [
-#                 types[:kafka],
-#                 args["name"],
-#                 args["topics"],
-#                 [
-#                   uris:
-#                     Enum.map(
-#                       provider["brokers"],
-#                       fn %{"host" => host, "port" => port} ->
-#                         {host, port}
-#                       end
-#                     ),
-#                   extra_consumer_args: args
-#                 ] ++
-#                   auth_opts
-#               ]}
-#          }
-#
-#          spec
+      end
 
-        # init_opts = [
-        #   group: args["name"],
-        #   topics: args["topics"],
-        #   # assignment_received_handler: assignment_received_handler(),
-        #   # assignments_revoked_handler: assignments_revoked_handler(),
-        #   handler: types[:kafka],
-        #   handler_init_args: args
-        #   # config: consumer_config()
-        # ]
+      #        :kafka ->
+      #          provider = Amps.DB.find_one("providers", %{"_id" => args["provider"]})
+      #          auth_opts = AmpsUtil.get_kafka_auth(args, provider)
+      #
+      #          spec = %{
+      #            id: name,
+      #            start:
+      #              {KafkaEx.ConsumerGroup, :start_link,
+      #               [
+      #                 types[:kafka],
+      #                 args["name"],
+      #                 args["topics"],
+      #                 [
+      #                   uris:
+      #                     Enum.map(
+      #                       provider["brokers"],
+      #                       fn %{"host" => host, "port" => port} ->
+      #                         {host, port}
+      #                       end
+      #                     ),
+      #                   extra_consumer_args: args
+      #                 ] ++
+      #                   auth_opts
+      #               ]}
+      #          }
+      #
+      #          spec
 
-        # config = AmpsUtil.get_kafka_auth(args, provider)
+      # init_opts = [
+      #   group: args["name"],
+      #   topics: args["topics"],
+      #   # assignment_received_handler: assignment_received_handler(),
+      #   # assignments_revoked_handler: assignments_revoked_handler(),
+      #   handler: types[:kafka],
+      #   handler_init_args: args
+      #   # config: consumer_config()
+      # ]
 
-        # {
-        #   Elsa.Supervisor,
-        #   config: config,
-        #   endpoints:
-        #     Enum.map(
-        #       provider["brokers"],
-        #       fn %{"host" => host, "port" => port} ->
-        #         {host, port}
-        #       end
-        #     ),
-        #   connection: String.to_atom("elsa_" <> args["name"]),
-        #   group_consumer: init_opts
-        # }
+      # config = AmpsUtil.get_kafka_auth(args, provider)
 
-#        type ->
-#          {types[type], name: name, parms: args}
-#      end
+      # {
+      #   Elsa.Supervisor,
+      #   config: config,
+      #   endpoints:
+      #     Enum.map(
+      #       provider["brokers"],
+      #       fn %{"host" => host, "port" => port} ->
+      #         {host, port}
+      #       end
+      #     ),
+      #   connection: String.to_atom("elsa_" <> args["name"]),
+      #   group_consumer: init_opts
+      # }
+
+      #        type ->
+      #          {types[type], name: name, parms: args}
+      #      end
     rescue
       e ->
         Logger.error(Exception.format(:error, e, __STACKTRACE__))
@@ -301,8 +300,8 @@ defmodule Amps.EnvManager do
 
       # IO.inspect(res)
 
-      {:error, _error} ->
-        # IO.inspect(error)
+      {:error, error} ->
+        IO.inspect(error)
         Logger.info("Error Creating Stream " <> name)
         subjects = subjects <> ".>"
 

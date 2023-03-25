@@ -40,7 +40,8 @@ defmodule Amps.EnvSvcManager do
       "service_logs",
       %{
         "name" => name,
-        "status" => "stopping"
+        "status" => "stopping",
+        "node" => Atom.to_string(node())
       }
     )
 
@@ -67,6 +68,7 @@ defmodule Amps.EnvSvcManager do
             "service_logs",
             %{
               "name" => name,
+              "node" => Atom.to_string(node()),
               "status" => "stopped"
             }
           )
@@ -274,6 +276,7 @@ defmodule Amps.EnvSvcManager do
       "service_logs",
       %{
         "name" => svcname,
+        "node" => Atom.to_string(node()),
         "status" => "starting"
       }
     )
@@ -318,7 +321,8 @@ defmodule Amps.EnvSvcManager do
               %{
                 "name" => svcname,
                 "status" => "failed",
-                "reason" => error
+                "reason" => error,
+                "node" => Atom.to_string(node())
               }
             )
 
@@ -338,7 +342,8 @@ defmodule Amps.EnvSvcManager do
           "service_logs",
           %{
             "name" => config["name"],
-            "status" => "started"
+            "status" => "started",
+            "node" => Atom.to_string(node())
           }
         )
 
@@ -365,7 +370,8 @@ defmodule Amps.EnvSvcManager do
           %{
             "name" => config["name"],
             "status" => "failed",
-            "reason" => error
+            "reason" => error,
+            "node" => Atom.to_string(node())
           }
         )
     end
