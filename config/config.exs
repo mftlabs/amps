@@ -319,7 +319,7 @@ config :amps, :actions,
   ldap: Amps.Actions.LDAP,
   aws: Amps.Actions.AWS
 
-config :amps, Amps.Scheduler,
+config :amps, Amps.SystemScheduler,
   debug_logging: false,
   jobs: [
     heartbeat: [
@@ -331,7 +331,12 @@ config :amps, Amps.Scheduler,
       schedule: {:extended, "*/5"},
       task: {Amps.Heartbeat, :services, []},
       run_strategy: Quantum.RunStrategy.Local
-    ],
+    ]
+  ]
+
+config :amps, Amps.Scheduler,
+  debug_logging: false,
+  jobs: [
     consumers: [
       schedule: {:extended, "*/5"},
       task: {Amps.Heartbeat, :consumers, []},
