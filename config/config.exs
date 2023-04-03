@@ -210,6 +210,9 @@ end
 config :logger,
   utc_log: true
 
+config :amps_logger,
+  initialized: false
+
 config :amps_web, :pow,
   user: AmpsWeb.Users.User,
   users_context: AmpsWeb.Users,

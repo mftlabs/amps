@@ -116,7 +116,7 @@ defmodule AmpsMailbox do
         {:error, "Mailbox not found"}
 
       mailbox ->
-        DB.delete_from_field(index, mailbox, user["_id"], "mailboxes", mailbox["_id"])
+        DB.delete_from_field(index, user["_id"], "mailboxes", mailbox["_id"])
         {:ok, "Deleted"}
     end
   end
