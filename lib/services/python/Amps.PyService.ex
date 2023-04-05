@@ -29,7 +29,11 @@ defmodule Amps.PyService do
 
             Map.put(provider, "values", values)
           else
-            provider
+            if provider["type"] == "json" do
+              Map.put(provider, "data", Jason.decode!(provider["data"]))
+            else
+              provider
+            end
           end
 
         Map.put(
