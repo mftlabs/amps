@@ -23,11 +23,16 @@ RUN mix release
 
 FROM elixir:1.12.1
 ARG BUILD_REL=amps
-
-RUN add-apt-repository ppa:deadsnakes/ppa
 RUN apt-get update
+RUN apt install build-essential zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev libsqlite3-dev wget libbz2-dev -y
+RUN wget https://www.python.org/ftp/python/3.9.7/Python-3.9.7.tgz
+RUN tar -xvf Python-3.9.7.tgz
+RUN cd Python-3.9.7/ && ./configure --enable-optimizations 
+RUN cd Python-3.9.7/ && make
+RUN cd Python-3.9.7/ && make altinstall
 
-RUN apt-get install python3.9 python3-pip certbot -y
+
+RUN apt-get install certbot -y
 
 RUN mkdir /.local
 RUN mkdir /.cache
