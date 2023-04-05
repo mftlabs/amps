@@ -25,7 +25,7 @@ FROM elixir:1.12.1
 ARG BUILD_REL=amps
 
 RUN apt-get update
-RUN apt-get install python3 python3-pip certbot -y
+RUN apt-get install python3.9 python3-pip certbot -y
 
 RUN mkdir /.local
 RUN mkdir /.cache
