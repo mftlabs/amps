@@ -24,7 +24,9 @@ RUN mix release
 FROM elixir:1.12.1
 ARG BUILD_REL=amps
 
+RUN add-apt-repository ppa:deadsnakes/ppa
 RUN apt-get update
+
 RUN apt-get install python3.9 python3-pip certbot -y
 
 RUN mkdir /.local
