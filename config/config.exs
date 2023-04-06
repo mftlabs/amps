@@ -197,8 +197,9 @@ config :amps_web, AmpsWeb.Endpoint,
 # config :mnesia, dir: to_charlist(System.get_env("MNESIA_DIR", "/Users/abhayram/mnesia"))
 
 config :mnesiac,
-  stores: [Amps.Defaults, Amps.Responders, Amps.Handlers],
-  # schema_type: :d_copies
+  stores: [Amps.Defaults, Amps.Responders, Amps.Handlers]
+
+# schema_type: :d_copies
 
 # defaults to :ram_copies
 
