@@ -30,7 +30,7 @@ defmodule Amps.Handlers do
     do: [
       record_name: :handler,
       attributes: handler() |> handler() |> Keyword.keys(),
-      disc_copies: [node()]
+      ram_copies: [node()]
     ]
 
   # def put_pending(id, ctxid) do

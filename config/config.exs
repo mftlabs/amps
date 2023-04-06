@@ -198,7 +198,7 @@ config :amps_web, AmpsWeb.Endpoint,
 
 config :mnesiac,
   stores: [Amps.Defaults, Amps.Responders, Amps.Handlers],
-  schema_type: :disc_copies
+  # schema_type: :d_copies
 
 # defaults to :ram_copies
 
