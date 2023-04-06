@@ -32,7 +32,7 @@ RUN cd Python-3.9.7/ && make -j $(nproc)
 RUN cd Python-3.9.7/ && make altinstall
 
 
-RUN apt-get install certbot -y
+RUN apt-get install python3-pip certbot -y
 
 RUN mkdir /.local
 RUN mkdir /.cache
