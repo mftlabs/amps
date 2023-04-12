@@ -54,7 +54,9 @@ WORKDIR /amps
 
 ENV PYTHONUSERBASE=/.local
 
-ENV ERLPORT_PYTHON=/usr/bin/python3
+RUN /usr/local/bin/python3.9 -m pip install --upgrade pip
+
+ENV ERLPORT_PYTHON=/usr/local/bin/python3.9
 
 
 
