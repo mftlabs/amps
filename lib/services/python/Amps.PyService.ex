@@ -6,7 +6,7 @@ defmodule Amps.PyService do
     GenServer.start_link(__MODULE__, default)
   end
 
-  def run(msg, parms, env \\ nil) do
+  def run(msg, parms, env \\ "") do
     parms =
       if parms["use_provider"] do
         provider = DB.find_one(AmpsUtil.index(env, "providers"), %{"_id" => parms["provider"]})
@@ -53,6 +53,8 @@ defmodule Amps.PyService do
     # {:ok, pid} = :python.start([{:python_path, to_charlist(path)}])
     IO.inspect(parms)
     check_script(parms["module"], env)
+
+    parms = Map.put(parms, "env", env)
 
     module = String.to_atom(parms["module"])
     xparm = %{:msg => msg, :parms => parms, :sysparms => %{"tempdir" => tmp}}
@@ -120,6 +122,53 @@ defmodule Amps.PyService do
       )
     end)
     |> Task.await(60000)
+  end
+
+  def to_map(key_value_list) do
+    key_value_map = key_value_list
+      |> Enum.reduce(%{}, fn {key, value}, acc ->
+        converted_key = maybe_convert_charlist_to_string(key)
+        converted_value = case value do
+          {'Map', inner_key_value_list} ->
+            to_map(inner_key_value_list)
+          _ ->
+            maybe_convert_charlist_to_string(value)
+        end
+        Map.put(acc, converted_key, converted_value)
+      end)
+    key_value_map
+  end
+
+  defp maybe_convert_charlist_to_string(value) do
+    if is_list(value) && Enum.all?(value, &is_integer/1) do
+      List.to_string(value)
+    else
+      value
+    end
+  end
+
+  def find(collection, clauses \\ {'Map', []}) do
+    clauses =
+      case clauses do
+        {'Map', list} ->
+          to_map(list)
+      end
+      IO.inspect(clauses)
+
+    res = Amps.DB.find(collection, clauses)
+    IO.inspect(res)
+    res
+  end
+
+  def find_one(collection, clauses \\ {'Map', []}) do
+    clauses =
+      case clauses do
+        {'Map', list} ->
+          to_map(list)
+      end
+      IO.inspect(clauses)
+
+    Amps.DB.find_one(collection, clauses)
   end
 
   # Callbacks
