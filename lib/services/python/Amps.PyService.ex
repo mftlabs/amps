@@ -125,17 +125,23 @@ defmodule Amps.PyService do
   end
 
   def to_map(key_value_list) do
-    key_value_map = key_value_list
+    key_value_map =
+      key_value_list
       |> Enum.reduce(%{}, fn {key, value}, acc ->
         converted_key = maybe_convert_charlist_to_string(key)
-        converted_value = case value do
-          {'Map', inner_key_value_list} ->
-            to_map(inner_key_value_list)
-          _ ->
-            maybe_convert_charlist_to_string(value)
-        end
+
+        converted_value =
+          case value do
+            {'Map', inner_key_value_list} ->
+              to_map(inner_key_value_list)
+
+            _ ->
+              maybe_convert_charlist_to_string(value)
+          end
+
         Map.put(acc, converted_key, converted_value)
       end)
+
     key_value_map
   end
 
@@ -147,28 +153,87 @@ defmodule Amps.PyService do
     end
   end
 
+  def obj_check(collection) do
+    {env, key} = AmpsUtil.env_base(collection)
+
+    if DB.find_one("objects", %{"key" => key}) do
+      {env, key}
+    else
+      nil
+    end
+  end
+
   def find(collection, clauses \\ {'Map', []}) do
-    clauses =
-      case clauses do
-        {'Map', list} ->
-          to_map(list)
-      end
+    if obj_check(collection) do
+      clauses =
+        case clauses do
+          {'Map', list} ->
+            to_map(list)
+        end
+
       IO.inspect(clauses)
 
-    res = Amps.DB.find(collection, clauses)
-    IO.inspect(res)
-    res
+      Amps.DB.find(collection, clauses)
+    else
+      nil
+    end
   end
 
   def find_one(collection, clauses \\ {'Map', []}) do
-    clauses =
-      case clauses do
-        {'Map', list} ->
-          to_map(list)
-      end
+    if obj_check(collection) do
+      clauses =
+        case clauses do
+          {'Map', list} ->
+            to_map(list)
+        end
+
       IO.inspect(clauses)
 
-    Amps.DB.find_one(collection, clauses)
+      Amps.DB.find_one(collection, clauses)
+    else
+      nil
+    end
+  end
+
+  def create(collection, body) do
+    case obj_check(collection) do
+      {env, key} ->
+        IO.inspect(body)
+        {'Map', list} = body
+        body = to_map(list)
+        IO.inspect(body)
+        {:ok, id} = Amps.DB.insert(collection, body)
+        AmpsUtil.ui_event(collection, id, "create", env)
+        id
+
+      nil ->
+        false
+    end
+  end
+
+  def update(collection, body, id) do
+    case obj_check(collection) do
+      {env, _} ->
+        {'Map', list} = body
+        body = to_map(list)
+        Amps.DB.update(collection, body, id)
+        AmpsUtil.ui_event(collection, id, "update", env)
+
+      nil ->
+        false
+    end
+  end
+
+  def delete(collection, id) do
+    case obj_check(collection) do
+      {env, _} ->
+        object = Amps.DB.find_by_id(collection, id)
+        Amps.DB.delete_by_id(collection, id)
+        AmpsUtil.ui_delete_event(collection, object, env)
+
+      nil ->
+        false
+    end
   end
 
   # Callbacks
