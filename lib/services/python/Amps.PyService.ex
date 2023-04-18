@@ -146,8 +146,18 @@ defmodule Amps.PyService do
   end
 
   defp maybe_convert_charlist_to_string(value) do
-    if is_list(value) && Enum.all?(value, &is_integer/1) do
-      List.to_string(value)
+    if is_list(value) do
+      case value do
+        [head | tail] when is_integer(head) ->
+          value
+          |> List.to_string()
+          |> String.replace("\u{0}", "")
+          |> String.replace("\u{a}", "")
+          |> String.replace("\u{d}", "")
+
+        _ ->
+          Enum.map(value, &maybe_convert_charlist_to_string/1)
+      end
     else
       value
     end
