@@ -33,7 +33,11 @@ defmodule Amps.Application do
         ]
       },
       {Amps.SSL,
-       [:svc_host, {Plug.Cowboy, scheme: :http, plug: Amps.SSLEndpoint, options: [port: 80]}]},
+       [
+         :svc_host,
+         {Amps.CowboySupervisor,
+          [http: [port: 80], https: [port: 443], ref: :svc_host, plug: Amps.SSLRouter, opts: []]}
+       ]},
       Supervisor.Spec.worker(Gnat.ConnectionSupervisor, [
         gnat_supervisor_settings,
         []
