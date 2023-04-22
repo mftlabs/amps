@@ -32,6 +32,8 @@ defmodule Amps.Application do
           [name: Amps.MnesiacSupervisor]
         ]
       },
+      {Amps.SSL,
+       [:svc_host, {Plug.Cowboy, scheme: :http, plug: Amps.SSLEndpoint, options: [port: 80]}]},
       Supervisor.Spec.worker(Gnat.ConnectionSupervisor, [
         gnat_supervisor_settings,
         []

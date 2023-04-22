@@ -122,34 +122,72 @@ defmodule Amps.SvcManager do
           ]
 
           if args["tls"] do
-            {cert, key} =
-              try do
-                cert = AmpsUtil.get_key(args["cert"])
-                key = AmpsUtil.get_key(args["key"])
+            if args["auto_ssl"] do
+              keys = SiteEncrypt.https_keys(:svc_host)
 
-                cert = X509.Certificate.from_pem!(cert) |> X509.Certificate.to_der()
+              {Plug.Cowboy,
+               scheme: :https,
+               plug: {types[:httpd], [opts: args]},
+               options: [
+                 ref: name,
+                 port: args["port"],
+                 cipher_suite: :strong,
+                 certfile: Keyword.get(keys, :certfile),
+                 keyfile: Keyword.get(keys, :keyfile),
+                 otp_app: :amps,
+                 protocol_options: protocol_options
+               ]}
 
-                key = X509.PrivateKey.from_pem!(key)
-                keytype = Kernel.elem(key, 0)
-                key = X509.PrivateKey.to_der(key)
-                {cert, {keytype, key}}
-              rescue
-                e ->
-                  raise "Error parsing key and/or certificate"
-              end
+              #   IO.inspect("auto_ssl")
 
-            {Plug.Cowboy,
-             scheme: :https,
-             plug: {types[:httpd], [opts: args]},
-             options: [
-               ref: name,
-               port: args["port"],
-               cipher_suite: :strong,
-               cert: cert,
-               key: key,
-               otp_app: :amps,
-               protocol_options: protocol_options
-             ]}
+              #   {Amps.SSL,
+              #    [
+              #      name,
+              #      {Amps.CowboySupervisor,
+              #       [
+              #         http: [
+              #           port: args["port"],
+              #           protocol_options: protocol_options
+              #         ],
+              #         https: [
+              #           port: args["ssl_port"],
+              #           protocol_options: protocol_options
+              #         ],
+              #         plug: Amps.MailboxApi,
+              #         opts: args,
+              #         ref: name
+              #       ]}
+              #    ]}
+            else
+              {cert, key} =
+                try do
+                  cert = AmpsUtil.get_key(args["cert"])
+                  key = AmpsUtil.get_key(args["key"])
+
+                  cert = X509.Certificate.from_pem!(cert) |> X509.Certificate.to_der()
+
+                  key = X509.PrivateKey.from_pem!(key)
+                  keytype = Kernel.elem(key, 0)
+                  key = X509.PrivateKey.to_der(key)
+                  {cert, {keytype, key}}
+                rescue
+                  e ->
+                    raise "Error parsing key and/or certificate"
+                end
+
+              {Plug.Cowboy,
+               scheme: :https,
+               plug: {types[:httpd], [opts: args]},
+               options: [
+                 ref: name,
+                 port: args["port"],
+                 cipher_suite: :strong,
+                 cert: cert,
+                 key: key,
+                 otp_app: :amps,
+                 protocol_options: protocol_options
+               ]}
+            end
           else
             {Plug.Cowboy,
              scheme: :http,
@@ -218,34 +256,51 @@ defmodule Amps.SvcManager do
           [{plug, _}] = Code.compile_string(string, "Amps.Gateway.eex")
 
           if args["tls"] do
-            {cert, key} =
-              try do
-                cert = AmpsUtil.get_key(args["cert"])
-                key = AmpsUtil.get_key(args["key"])
+            if args["auto_ssl"] do
+              keys = SiteEncrypt.https_keys(:svc_host)
 
-                cert = X509.Certificate.from_pem!(cert) |> X509.Certificate.to_der()
+              {Plug.Cowboy,
+               scheme: :https,
+               plug: {plug, [opts: args]},
+               options: [
+                 ref: name,
+                 port: args["port"],
+                 cipher_suite: :strong,
+                 certfile: Keyword.get(keys, :certfile),
+                 keyfile: Keyword.get(keys, :keyfile),
+                 otp_app: :amps,
+                 protocol_options: protocol_options
+               ]}
+            else
+              {cert, key} =
+                try do
+                  cert = AmpsUtil.get_key(args["cert"])
+                  key = AmpsUtil.get_key(args["key"])
 
-                key = X509.PrivateKey.from_pem!(key)
-                keytype = Kernel.elem(key, 0)
-                key = X509.PrivateKey.to_der(key)
-                {cert, {keytype, key}}
-              rescue
-                e ->
-                  raise "Error parsing key and/or certificate"
-              end
+                  cert = X509.Certificate.from_pem!(cert) |> X509.Certificate.to_der()
 
-            {Plug.Cowboy,
-             scheme: :https,
-             plug: {plug, [opts: args]},
-             options: [
-               ref: name,
-               port: args["port"],
-               cipher_suite: :strong,
-               cert: cert,
-               key: key,
-               otp_app: :amps,
-               protocol_options: protocol_options
-             ]}
+                  key = X509.PrivateKey.from_pem!(key)
+                  keytype = Kernel.elem(key, 0)
+                  key = X509.PrivateKey.to_der(key)
+                  {cert, {keytype, key}}
+                rescue
+                  e ->
+                    raise "Error parsing key and/or certificate"
+                end
+
+              {Plug.Cowboy,
+               scheme: :https,
+               plug: {plug, [opts: args]},
+               options: [
+                 ref: name,
+                 port: args["port"],
+                 cipher_suite: :strong,
+                 cert: cert,
+                 key: key,
+                 otp_app: :amps,
+                 protocol_options: protocol_options
+               ]}
+            end
           else
             {Plug.Cowboy,
              scheme: :http,

@@ -79,6 +79,7 @@ defmodule Amps.MixProject do
       {:timex, "~> 3.7.8"},
       {:amps_core,
        [git: "https://github.com/mftlabs/amps-core", branch: "separation_test", override: true]},
+      {:site_encrypt, "~> 0.5.0"},
       {:highlander, "~> 0.2.1"}
     ]
   end

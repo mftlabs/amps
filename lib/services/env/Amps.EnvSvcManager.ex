@@ -124,36 +124,72 @@ defmodule Amps.EnvSvcManager do
           ]
 
           if args["tls"] do
-            {cert, key} =
-              try do
-                #                cert = AmpsUtil.get_key(args["cert"], env)
-                cert = Amps.DB.find_by_id(AmpsUtil.index(env, "keys"), args["cert"])["data"]
-                #                key = AmpsUtil.get_key(args["key"], env)
-                key = Amps.DB.find_by_id(AmpsUtil.index(env, "keys"), args["key"])["data"]
+            if args["auto_ssl"] do
+              keys = SiteEncrypt.https_keys(:svc_host)
 
-                cert = X509.Certificate.from_pem!(cert) |> X509.Certificate.to_der()
+              {Plug.Cowboy,
+               scheme: :https,
+               plug: {types[:httpd], [opts: args, env: env]},
+               options: [
+                 ref: name,
+                 port: args["port"],
+                 cipher_suite: :strong,
+                 certfile: Keyword.get(keys, :certfile),
+                 keyfile: Keyword.get(keys, :keyfile),
+                 otp_app: :amps,
+                 protocol_options: protocol_options
+               ]}
 
-                key = X509.PrivateKey.from_pem!(key)
-                keytype = Kernel.elem(key, 0)
-                key = X509.PrivateKey.to_der(key)
-                {cert, {keytype, key}}
-              rescue
-                e ->
-                  raise "Error parsing key and/or certificate #{inspect(e)}"
-              end
+              #   IO.inspect("auto_ssl")
 
-            {Plug.Cowboy,
-             scheme: :https,
-             plug: {types[:httpd], [env: env, opts: args]},
-             options: [
-               ref: name,
-               port: args["port"],
-               cipher_suite: :strong,
-               cert: cert,
-               key: key,
-               otp_app: :amps,
-               protocol_options: protocol_options
-             ]}
+              #   {Amps.SSL,
+              #    [
+              #      name,
+              #      {Amps.CowboySupervisor,
+              #       [
+              #         http: [
+              #           port: args["port"],
+              #           protocol_options: protocol_options
+              #         ],
+              #         https: [
+              #           port: args["ssl_port"],
+              #           protocol_options: protocol_options
+              #         ],
+              #         plug: Amps.MailboxApi,
+              #         opts: args,
+              #         ref: name
+              #       ]}
+              #    ]}
+            else
+              {cert, key} =
+                try do
+                  cert = AmpsUtil.get_key(args["cert"])
+                  key = AmpsUtil.get_key(args["key"])
+
+                  cert = X509.Certificate.from_pem!(cert) |> X509.Certificate.to_der()
+
+                  key = X509.PrivateKey.from_pem!(key)
+                  keytype = Kernel.elem(key, 0)
+                  key = X509.PrivateKey.to_der(key)
+                  {cert, {keytype, key}}
+                rescue
+                  e ->
+                    raise "Error parsing key and/or certificate"
+                end
+
+              {Plug.Cowboy,
+               scheme: :https,
+               plug: {types[:httpd], [opts: args, env: env]},
+               options: [
+                 ref: name,
+                 port: args["port"],
+                 cipher_suite: :strong,
+                 cert: cert,
+                 key: key,
+                 otp_app: :amps,
+                 protocol_options: protocol_options
+               ]}
+            end
           else
             {Plug.Cowboy,
              scheme: :http,
@@ -193,36 +229,51 @@ defmodule Amps.EnvSvcManager do
             |> Code.compile_string("Amps.Gateway.eex")
 
           if args["tls"] do
-            {cert, key} =
-              try do
-                #                cert = AmpsUtil.get_key(args["cert"], env)
-                #                key = AmpsUtil.get_key(args["key"], env)
-                cert = Amps.DB.find_by_id(AmpsUtil.index(env, "keys"), args["cert"])["data"]
-                key = Amps.DB.find_by_id(AmpsUtil.index(env, "keys"), args["key"])["data"]
+            if args["auto_ssl"] do
+              keys = SiteEncrypt.https_keys(:svc_host)
 
-                cert = X509.Certificate.from_pem!(cert) |> X509.Certificate.to_der()
+              {Plug.Cowboy,
+               scheme: :https,
+               plug: {plug, [opts: args, env: env]},
+               options: [
+                 ref: name,
+                 port: args["port"],
+                 cipher_suite: :strong,
+                 certfile: Keyword.get(keys, :certfile),
+                 keyfile: Keyword.get(keys, :keyfile),
+                 otp_app: :amps,
+                 protocol_options: protocol_options
+               ]}
+            else
+              {cert, key} =
+                try do
+                  cert = AmpsUtil.get_key(args["cert"])
+                  key = AmpsUtil.get_key(args["key"])
 
-                key = X509.PrivateKey.from_pem!(key)
-                keytype = Kernel.elem(key, 0)
-                key = X509.PrivateKey.to_der(key)
-                {cert, {keytype, key}}
-              rescue
-                e ->
-                  raise "Error parsing key and/or certificate #{inspect(e)}"
-              end
+                  cert = X509.Certificate.from_pem!(cert) |> X509.Certificate.to_der()
 
-            {Plug.Cowboy,
-             scheme: :https,
-             plug: {plug, [env: env, opts: args]},
-             options: [
-               ref: name,
-               port: args["port"],
-               cipher_suite: :strong,
-               cert: cert,
-               key: key,
-               otp_app: :amps,
-               protocol_options: protocol_options
-             ]}
+                  key = X509.PrivateKey.from_pem!(key)
+                  keytype = Kernel.elem(key, 0)
+                  key = X509.PrivateKey.to_der(key)
+                  {cert, {keytype, key}}
+                rescue
+                  e ->
+                    raise "Error parsing key and/or certificate"
+                end
+
+              {Plug.Cowboy,
+               scheme: :https,
+               plug: {plug, [opts: args, env: env]},
+               options: [
+                 ref: name,
+                 port: args["port"],
+                 cipher_suite: :strong,
+                 cert: cert,
+                 key: key,
+                 otp_app: :amps,
+                 protocol_options: protocol_options
+               ]}
+            end
           else
             {Plug.Cowboy,
              scheme: :http,

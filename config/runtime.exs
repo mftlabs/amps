@@ -182,6 +182,7 @@ if config_env() == :prod do
     db: System.get_env("AMPS_DB_PROVIDER", "mongo"),
     adminhost: System.get_env("AMPS_ADMIN_HOST", "admin.localhost"),
     userhost: System.get_env("AMPS_HOST", "localhost"),
+    svchost: System.get_env("AMPS_SVC_HOST", "svc.localhost"),
     use_ssl: String.to_atom(String.downcase(System.get_env("AMPS_USE_SSL", "FALSE"))),
     force_ssl: String.to_atom(String.downcase(System.get_env("AMPS_FORCE_SSL", "FALSE"))),
     gen_certs: String.to_atom(String.downcase(System.get_env("AMPS_GEN_CERTS", "FALSE"))),
