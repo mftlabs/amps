@@ -5,6 +5,6 @@ defmodule Amps.SSLRouter do
   plug(:dispatch)
 
   match _ do
-    send_resp(conn, 404, "")
+    send_resp(conn, 200, "")
   end
 end
