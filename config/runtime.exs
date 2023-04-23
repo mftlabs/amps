@@ -184,6 +184,8 @@ if config_env() == :prod do
     userhost: System.get_env("AMPS_HOST", "localhost"),
     svchost: System.get_env("AMPS_SVC_HOST", "svc.localhost"),
     use_ssl: String.to_atom(String.downcase(System.get_env("AMPS_USE_SSL", "FALSE"))),
+    amps_ssl_key: System.get_env("AMPS_SSL_KEY"),
+    amps_ssl_cert: System.get_env("AMPS_SSL_CERT"),
     force_ssl: String.to_atom(String.downcase(System.get_env("AMPS_FORCE_SSL", "FALSE"))),
     gen_certs: String.to_atom(String.downcase(System.get_env("AMPS_GEN_CERTS", "FALSE"))),
     dns_emails: System.get_env("AMPS_DNS_EMAILS", ""),

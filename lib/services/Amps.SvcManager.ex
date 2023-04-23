@@ -123,8 +123,6 @@ defmodule Amps.SvcManager do
 
           if args["tls"] do
             if args["auto_ssl"] do
-              keys = SiteEncrypt.https_keys(:svc_host)
-
               {Plug.Cowboy,
                scheme: :https,
                plug: {types[:httpd], [opts: args]},
@@ -132,8 +130,8 @@ defmodule Amps.SvcManager do
                  ref: name,
                  port: args["port"],
                  cipher_suite: :strong,
-                 certfile: Keyword.get(keys, :certfile),
-                 keyfile: Keyword.get(keys, :keyfile),
+                 certfile: Application.get_env(:amps, :amps_ssl_cert),
+                 keyfile: Application.get_env(:amps, :amps_ssl_key),
                  otp_app: :amps,
                  protocol_options: protocol_options
                ]}
@@ -257,8 +255,6 @@ defmodule Amps.SvcManager do
 
           if args["tls"] do
             if args["auto_ssl"] do
-              keys = SiteEncrypt.https_keys(:svc_host)
-
               {Plug.Cowboy,
                scheme: :https,
                plug: {plug, [opts: args]},
@@ -266,8 +262,8 @@ defmodule Amps.SvcManager do
                  ref: name,
                  port: args["port"],
                  cipher_suite: :strong,
-                 certfile: Keyword.get(keys, :certfile),
-                 keyfile: Keyword.get(keys, :keyfile),
+                 certfile: Application.get_env(:amps, :amps_ssl_cert),
+                 keyfile: Application.get_env(:amps, :amps_ssl_key),
                  otp_app: :amps,
                  protocol_options: protocol_options
                ]}

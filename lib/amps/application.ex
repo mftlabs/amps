@@ -32,12 +32,12 @@ defmodule Amps.Application do
           [name: Amps.MnesiacSupervisor]
         ]
       },
-      {Amps.SSL,
-       [
-         :svc_host,
-         {Amps.CowboySupervisor,
-          [http: [port: 80], https: [port: 443], ref: :svc_host, plug: Amps.SSLRouter, opts: []]}
-       ]},
+      # {Amps.SSL,
+      #  [
+      #    :svc_host,
+      #    {Amps.CowboySupervisor,
+      #     [http: [port: 80], https: [port: 443], ref: :svc_host, plug: Amps.SSLRouter, opts: []]}
+      #  ]},
       Supervisor.Spec.worker(Gnat.ConnectionSupervisor, [
         gnat_supervisor_settings,
         []
