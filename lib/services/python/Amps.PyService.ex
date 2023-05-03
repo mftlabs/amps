@@ -157,7 +157,16 @@ defmodule Amps.PyService do
 
         _ ->
           Enum.map(value, &maybe_convert_charlist_to_string/1)
+          |> maybe_convert_nested_maps
       end
+    else
+      maybe_convert_nested_maps(value)
+    end
+  end
+
+  defp maybe_convert_nested_maps(value) do
+    if is_map(value) do
+      to_map(Map.to_list(value))
     else
       value
     end
@@ -165,9 +174,10 @@ defmodule Amps.PyService do
 
   def obj_check(collection) do
     {env, key} = AmpsUtil.env_base(collection)
+    obj = DB.find_one("objects", %{"key" => key})
 
-    if DB.find_one("objects", %{"key" => key}) do
-      {env, key}
+    if obj do
+      {obj, {env, key}}
     else
       nil
     end
@@ -180,8 +190,6 @@ defmodule Amps.PyService do
           {'Map', list} ->
             to_map(list)
         end
-
-      IO.inspect(clauses)
 
       Amps.DB.find(collection, clauses)
     else
@@ -197,21 +205,47 @@ defmodule Amps.PyService do
             to_map(list)
         end
 
-      IO.inspect(clauses)
-
       Amps.DB.find_one(collection, clauses)
     else
       nil
     end
   end
 
+  def sanitize(body, obj) do
+    fields = obj["fields"]
+
+    Enum.reduce(body, %{}, fn {key, value}, acc ->
+      field = Enum.find(fields, &(&1["name"] == key))
+
+      case field do
+        nil ->
+          acc
+
+        %{"type" => "arrayfield", "name" => name, "arrayfields" => arrayfields} ->
+          sanitized_array =
+            Enum.map(value, fn item ->
+              sanitize(item, %{"fields" => arrayfields})
+            end)
+
+          Map.put(acc, name, sanitized_array)
+
+        _ ->
+          if value != nil do
+            Map.put(acc, key, value)
+          else
+            acc
+          end
+      end
+    end)
+  end
+
   def create(collection, body) do
     case obj_check(collection) do
-      {env, key} ->
-        IO.inspect(body)
+      {obj, {env, _}} ->
         {'Map', list} = body
-        body = to_map(list)
-        IO.inspect(body)
+
+        body = to_map(list) |> sanitize(obj)
+
         {:ok, id} = Amps.DB.insert(collection, body)
         AmpsUtil.ui_event(collection, id, "create", env)
         id
@@ -223,9 +257,10 @@ defmodule Amps.PyService do
 
   def update(collection, body, id) do
     case obj_check(collection) do
-      {env, _} ->
+      {obj, {env, _}} ->
         {'Map', list} = body
-        body = to_map(list)
+        body = to_map(list) |> sanitize(obj)
+
         Amps.DB.update(collection, body, id)
         AmpsUtil.ui_event(collection, id, "update", env)
 
@@ -236,7 +271,7 @@ defmodule Amps.PyService do
 
   def delete(collection, id) do
     case obj_check(collection) do
-      {env, _} ->
+      {_, {env, _}} ->
         object = Amps.DB.find_by_id(collection, id)
         Amps.DB.delete_by_id(collection, id)
         AmpsUtil.ui_delete_event(collection, object, env)
