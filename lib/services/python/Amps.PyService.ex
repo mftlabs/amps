@@ -183,15 +183,29 @@ defmodule Amps.PyService do
     end
   end
 
-  def find(collection, clauses \\ {'Map', []}) do
+  def find(collection, clauses \\ {'Map', []}, opts \\ {'Map', []}) do
     if obj_check(collection) do
       clauses =
         case clauses do
           {'Map', list} ->
             to_map(list)
+
+          _ ->
+            %{}
         end
 
-      Amps.DB.find(collection, clauses)
+      opts =
+        case opts do
+          {'Map', list} ->
+            to_map(list)
+
+          _ ->
+            %{}
+        end
+
+      opts = Map.merge(opts, %{"filters" => clauses})
+
+      Amps.DB.get_rows(collection, opts)
     else
       nil
     end
