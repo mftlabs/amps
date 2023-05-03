@@ -211,15 +211,27 @@ defmodule Amps.PyService do
     end
   end
 
-  def find_one(collection, clauses \\ {'Map', []}) do
+  def find_one(collection, clauses \\ {'Map', []}, opts \\ {'Map', []}) do
     if obj_check(collection) do
       clauses =
         case clauses do
           {'Map', list} ->
             to_map(list)
+
+          _ ->
+            %{}
         end
 
-      Amps.DB.find_one(collection, clauses)
+      opts =
+        case opts do
+          {'Map', list} ->
+            to_map(list)
+
+          _ ->
+            %{}
+        end
+
+      Amps.DB.find_one(collection, clauses, opts)
     else
       nil
     end

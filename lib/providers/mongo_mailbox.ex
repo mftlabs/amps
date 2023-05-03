@@ -185,6 +185,7 @@ defmodule AmpsMailbox do
           {msg,
            fn ->
              Logger.info("Overwriting #{to_delete["msgid"]} in Mailbox #{mailbox}")
+
              delete_message(user, mailbox, to_delete["msgid"], env)
            end}
         else
@@ -196,9 +197,13 @@ defmodule AmpsMailbox do
   def list_messages(user, mailbox, limit \\ 100, env \\ "") do
     # Mongo.find(:mongo, "mailbox", %{mailbox: mailbox}, limit: limit, sort: %{time: 1})
     # |> Enum.to_list()
-    DB.find(AmpsUtil.index(env, "mailbox"), %{"recipient" => user, "mailbox" => mailbox}, %{
-      limit: limit,
-      sort: %{"mtime" => -1}
-    })
+    DB.find(
+      AmpsUtil.index(env, "mailbox"),
+      %{"recipient" => user, "mailbox" => mailbox},
+      %{
+        "limit" => limit,
+        "sort" => %{"mtime" => -1}
+      }
+    )
   end
 end
