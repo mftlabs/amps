@@ -32,6 +32,9 @@ defmodule Amps.Application do
           [name: Amps.MnesiacSupervisor]
         ]
       },
+      {Pow.Store.Backend.MnesiaCache, extra_db_nodes: {Node, :list, []}},
+      # Recover from netsplit
+      Pow.Store.Backend.MnesiaCache.Unsplit,
       # {Amps.SSL,
       #  [
       #    :svc_host,

@@ -234,13 +234,13 @@ config :amps_web, :pow,
 #     ]
 #   ]
 
-# config :amps_portal, :pow,
-#   user: Amps.Users.User,
-#   users_context: Amps.Users,
-#   extensions: [PowResetPassword],
-#   controller_callbacks: Pow.Extension.Phoenix.ControllerCallbacks,
-#   mailer_backend: AmpsWeb.PowMailer,
-#   cache_store_backend: Pow.Store.Backend.MnesiaCache
+config :amps_portal, :pow,
+  user: Amps.Users.User,
+  users_context: Amps.Users,
+  extensions: [PowResetPassword],
+  controller_callbacks: Pow.Extension.Phoenix.ControllerCallbacks,
+  # mailer_backend: AmpsWeb.PowMailer,
+  cache_store_backend: Pow.Store.Backend.MnesiaCache
 
 # config :amps_portal, :pow_assent,
 #   user: Amps.Users.User,

@@ -1,6 +1,7 @@
 defmodule Amps.PyService do
   use GenServer
   alias Amps.DB
+  require Logger
 
   def start_link(default) when is_list(default) do
     GenServer.start_link(__MODULE__, default)
@@ -71,11 +72,12 @@ defmodule Amps.PyService do
         ])
 
       result = :pythra.method(pid, action, :__run__, [])
-      IO.inspect(result)
+
       :pythra.stop(pid)
       handle_run_result(result, pid)
     rescue
       e ->
+        Logger.error(Exception.format(:error, e, __STACKTRACE__))
         {:error, e}
     end
   end
@@ -184,7 +186,7 @@ defmodule Amps.PyService do
   end
 
   def find(collection, clauses \\ {'Map', []}, opts \\ {'Map', []}) do
-    if obj_check(collection) do
+    if obj_check(collection) || AmpsUtil.base_index(collection) == "users" do
       clauses =
         case clauses do
           {'Map', list} ->
@@ -212,7 +214,7 @@ defmodule Amps.PyService do
   end
 
   def find_one(collection, clauses \\ {'Map', []}, opts \\ {'Map', []}) do
-    if obj_check(collection) do
+    if obj_check(collection) || AmpsUtil.base_index(collection) == "users" do
       clauses =
         case clauses do
           {'Map', list} ->
@@ -275,9 +277,10 @@ defmodule Amps.PyService do
         {:ok, id} = Amps.DB.insert(collection, body)
         AmpsUtil.ui_event(collection, id, "create", env)
         id
+        %{"success" => true, id => id}
 
       nil ->
-        false
+        %{"success" => false, "error" => "Invalid object key"}
     end
   end
 
@@ -289,21 +292,126 @@ defmodule Amps.PyService do
 
         Amps.DB.update(collection, body, id)
         AmpsUtil.ui_event(collection, id, "update", env)
+        %{"success" => true, "new" => Amps.DB.find_by_id(collection, id)}
 
       nil ->
-        false
+        %{"success" => false, "error" => "Invalid object key"}
     end
   end
 
-  def delete(collection, id) do
+  def delete(collection, clauses) do
     case obj_check(collection) do
       {_, {env, _}} ->
-        object = Amps.DB.find_by_id(collection, id)
-        Amps.DB.delete_by_id(collection, id)
+        clauses =
+          case clauses do
+            {'Map', list} ->
+              to_map(list)
+
+            _ ->
+              %{}
+          end
+
+        object = Amps.DB.find_one(collection, clauses)
+        result = Amps.DB.delete(collection, clauses)
         AmpsUtil.ui_delete_event(collection, object, env)
+        %{"success" => true, "id" => object["_id"]}
 
       nil ->
-        false
+        %{"success" => false, "error" => "Invalid object key"}
+    end
+  end
+
+  defmodule Users do
+    alias Amps.PyService
+
+    def create(body, env) do
+      env = List.to_string(env)
+
+      case body do
+        {'Map', list} ->
+          body = PyService.to_map(list)
+          res = Amps.Users.User.create(body, env)
+
+          case res do
+            %{"success" => true, "user" => user, "id" => id} ->
+              %{"success" => true, "id" => id}
+
+            _ ->
+              res
+          end
+
+        _ ->
+          %{"success" => false, "error" => "Malformed Body"}
+      end
+    end
+
+    def update(id, body, env) do
+      env = List.to_string(env)
+      id = List.to_string(id)
+
+      case body do
+        {'Map', list} ->
+          body = PyService.to_map(list)
+          res = Amps.Users.User.update(id, body, env)
+
+          case res do
+            %{"success" => true, "user" => user, "id" => id} ->
+              %{"success" => true, "id" => id}
+
+            _ ->
+              res
+          end
+
+        _ ->
+          %{"success" => false, "error" => "Malformed Body"}
+      end
+    end
+
+    def delete(id, env) do
+      env = List.to_string(env)
+      id = List.to_string(id)
+
+      Amps.Users.User.delete(id, env)
+    end
+
+    def create_session(user, env) do
+      env = List.to_string(env)
+
+      case user do
+        {'Map', list} ->
+          body = PyService.to_map(list)
+          user = Amps.Users.authenticate(body, env: "")
+
+          if user do
+            Amps.Users.create_session(user, env)
+          else
+            %{
+              "success" => false,
+              "error" => "Invalid Credentials"
+            }
+          end
+
+        _ ->
+          %{"success" => false, "error" => "Malformed Body"}
+      end
+    end
+
+    def authenticate(access_token, env) do
+      env = List.to_string(env)
+      access_token = List.to_string(access_token)
+      Amps.Users.verify_session(access_token, env)
+    end
+
+    def renew_session(renewal_token, env) do
+      env = List.to_string(env)
+      renewal_token = List.to_string(renewal_token)
+      Amps.Users.renew_session(renewal_token, env)
+    end
+
+    def delete_session(access_token, env) do
+      env = List.to_string(env)
+      access_token = List.to_string(access_token)
+      Amps.Users.delete_session(access_token, env)
     end
   end
 
