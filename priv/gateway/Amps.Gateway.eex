@@ -133,7 +133,7 @@ defmodule :"Amps.Gateway<%= if env do%>.<%= env %><% end %>.<%= name %>" do
     {msg, _sid} = AmpsEvents.start_session(msg, %{"service" => msg["service"]}, conn.private.env)
 
 
-    topic = "amps.svcs.#{conn.private.opts["name"]}.#{conn.method}#{route["path"]}"
+    topic = "amps.svcs.#{conn.private.opts["name"]}.#{route["method"]}#{route["path"]}"
 
 
 
