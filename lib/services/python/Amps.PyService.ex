@@ -334,6 +334,7 @@ defmodule Amps.PyService do
 
           case res do
             %{"success" => true, "user" => user, "id" => id} ->
+              AmpsUtil.ui_event(AmpsUtil.index(env, "users"), id, "create", env)
               %{"success" => true, "id" => id}
 
             _ ->
@@ -356,6 +357,7 @@ defmodule Amps.PyService do
 
           case res do
             %{"success" => true, "user" => user, "id" => id} ->
+              AmpsUtil.ui_event(AmpsUtil.index(env, "users"), id, "update", env)
               %{"success" => true, "id" => id}
 
             _ ->
@@ -370,8 +372,12 @@ defmodule Amps.PyService do
     def delete(id, env) do
       env = List.to_string(env)
       id = List.to_string(id)
+      col = AmpsUtil.index(env, "users")
+      object = Amps.DB.find_by_id(col, id)
 
-      Amps.Users.User.delete(id, env)
+      res = Amps.Users.User.delete(id, env)
+      AmpsUtil.ui_delete_event(col, object, env)
+      res
     end
 
     def create_session(user, env) do
