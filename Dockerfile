@@ -24,7 +24,7 @@ RUN mix release
 FROM elixir:1.12.1
 ARG BUILD_REL=amps
 RUN apt-get update
-RUN apt install gcc build-essential zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev libsqlite3-dev wget libbz2-dev -y
+RUN apt install gcc build-essential zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev libsqlite3-dev wget libbz2-dev libldap2-dev python-dev libsasl2-dev -y
 RUN wget https://www.python.org/ftp/python/3.9.7/Python-3.9.7.tgz
 RUN tar -xvf Python-3.9.7.tgz
 RUN cd Python-3.9.7/ && ./configure 
