@@ -277,7 +277,7 @@ defmodule Amps.PyService do
         {:ok, id} = Amps.DB.insert(collection, body)
         AmpsUtil.ui_event(collection, id, "create", env)
         id
-        %{"success" => true, id => id}
+        %{"success" => true, "id" => id}
 
       nil ->
         %{"success" => false, "error" => "Invalid object key"}
@@ -299,20 +299,11 @@ defmodule Amps.PyService do
     end
   end
 
-  def delete(collection, clauses) do
+  def delete(collection, id) do
     case obj_check(collection) do
       {_, {env, _}} ->
-        clauses =
-          case clauses do
-            {'Map', list} ->
-              to_map(list)
-
-            _ ->
-              %{}
-          end
-
-        object = Amps.DB.find_one(collection, clauses)
-        result = Amps.DB.delete(collection, clauses)
+        object = Amps.DB.find_by_id(collection, id)
+        result = Amps.DB.delete_by_id(collection, id)
         AmpsUtil.ui_delete_event(collection, object, env)
         %{"success" => true, "id" => object["_id"]}
 
