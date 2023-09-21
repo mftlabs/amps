@@ -347,7 +347,7 @@ defmodule Amps.PyService do
           res = Amps.Users.User.update(id, body, env)
 
           case res do
-            %{"success" => true, "user" => user, "id" => id} ->
+            %{"success" => true, "user" => _user, "id" => id} ->
               AmpsUtil.ui_event(AmpsUtil.index(env, "users"), id, "update", env)
               %{"success" => true, "id" => id}
 

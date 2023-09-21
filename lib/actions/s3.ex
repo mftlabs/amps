@@ -164,6 +164,7 @@ defmodule Amps.Actions.S3 do
 
   def req(provider, env) do
     req = [
+      refreshable: false,
       access_key_id: provider["key"],
       secret_access_key: provider["secret"]
     ]
