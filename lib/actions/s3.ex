@@ -106,16 +106,25 @@ defmodule Amps.Actions.S3 do
               )
               |> ExAws.request(req)
             else
-              fun = fn stream ->
-                ExAws.S3.upload(
-                  stream,
+              if msg["fsize"] > 5_242_880 do
+                fun = fn stream ->
+                  ExAws.S3.upload(
+                    stream,
+                    parms["bucket"],
+                    Path.join(parms["prefix"], msg["fname"])
+                  )
+                  |> ExAws.request(req)
+                end
+
+                AmpsUtil.stream(msg, env, nil, fun)
+              else
+                ExAws.S3.put_object(
                   parms["bucket"],
-                  Path.join(parms["prefix"], msg["fname"])
+                  Path.join(parms["prefix"], msg["fname"]),
+                  AmpsUtil.get_data(msg, env)
                 )
                 |> ExAws.request(req)
               end
-
-              AmpsUtil.stream(msg, env, nil, fun)
             end
 
           case resp do
