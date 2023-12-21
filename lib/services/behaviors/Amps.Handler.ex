@@ -169,7 +169,6 @@ defmodule Amps.Handler do
 
       def handle_call({:register, {message, msgid}}, _, state) do
         info = Amps.Handlers.is_registered(state.name, msgid)
-
         handler = self()
 
         info =
@@ -180,7 +179,7 @@ defmodule Amps.Handler do
                   progress(handler, message, msgid)
                 end)
 
-              Amps.Handlers.register(state.name, message, msgid, progress)
+              Amps.Handlers.register(state, message, msgid, progress)
 
             :skip ->
               :skip

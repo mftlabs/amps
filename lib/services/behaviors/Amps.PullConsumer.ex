@@ -60,6 +60,7 @@ defmodule Amps.PullConsumer do
               try do
                 parms = state.parms
                 msg = data["msg"]
+
                 msg = Map.merge(msg, %{sub: Process.info(self())[:registered_name]})
 
                 {msg, sid, skip} =
@@ -93,9 +94,18 @@ defmodule Amps.PullConsumer do
                               parms["name"] <>
                                 " (Attempt " <>
                                 Integer.to_string(info.attempts) <> ")",
-                            "status" => "started"
+                            "status" => "started",
+                            "attempt" => info.attempts,
+                            "subscriber" => parms["name"]
                           },
                           state.env
+                        )
+
+                      msg =
+                        Map.put(
+                          msg,
+                          "service",
+                          parms["name"]
                         )
 
                       {msg, sid, false}
@@ -157,16 +167,23 @@ defmodule Amps.PullConsumer do
                                   mstate["return"],
                                   mstate["contextid"] <> parms["name"],
                                   {action_name(state), msg["msgid"],
-                                   %{"status" => "retrying", "error" => Exception.message(error)}}
+                                   %{
+                                     "status" => "retrying",
+                                     "error" => Exception.message(error)
+                                   }}
                                 )
                               end
 
                               AmpsEvents.send_history(
-                                AmpsUtil.env_topic("amps.events.action", state.env),
+                                AmpsUtil.env_topic(
+                                  "amps.events.action",
+                                  state.env
+                                ),
                                 "message_events",
                                 msg,
                                 %{
-                                  status: "retrying",
+                                  status: "Sleeping for #{parms["backoff"]} seconds",
+                                  sleepDuration: parms["backoff"],
                                   topic: parms["topic"],
                                   action: action_name(state),
                                   reason: inspect(error),
@@ -181,6 +198,22 @@ defmodule Amps.PullConsumer do
                               )
 
                               Process.sleep(parms["backoff"] * 1000)
+
+                              AmpsEvents.send_history(
+                                AmpsUtil.env_topic(
+                                  "amps.events.action",
+                                  state.env
+                                ),
+                                "message_events",
+                                msg,
+                                %{
+                                  status: "retrying",
+                                  topic: parms["topic"],
+                                  action: action_name(state),
+                                  reason: inspect(error),
+                                  subscriber: name
+                                }
+                              )
 
                               {:nack, "retrying",
                                fn ->
@@ -198,17 +231,27 @@ defmodule Amps.PullConsumer do
                                   mstate["return"],
                                   mstate["contextid"] <> parms["name"],
                                   {action_name(state), msg["msgid"],
-                                   %{"status" => "failed", "error" => Exception.message(error)}}
+                                   %{
+                                     "status" => "failed",
+                                     "error" => Exception.message(error)
+                                   }}
                                 )
                               end
 
                               Logger.error(
                                 "Action Failed\n" <>
-                                  Exception.format(:error, error, __STACKTRACE__)
+                                  Exception.format(
+                                    :error,
+                                    error,
+                                    __STACKTRACE__
+                                  )
                               )
 
                               AmpsEvents.send_history(
-                                AmpsUtil.env_topic("amps.events.action", state.env),
+                                AmpsUtil.env_topic(
+                                  "amps.events.action",
+                                  state.env
+                                ),
                                 "message_events",
                                 msg,
                                 %{

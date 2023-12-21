@@ -55,18 +55,14 @@ defmodule Amps.Actions.S3 do
                     end)
 
                   events =
-                    if parms["ackmode"] == "delete" do
-                      Enum.map(events, fn {event, path} ->
+                    Enum.map(events, fn {event, path} ->
+                      if parms["ackmode"] == "delete" do
                         ExAws.S3.delete_object(parms["bucket"], path)
                         |> ExAws.request(req)
+                      end
 
-                        event
-                      end)
-                    else
-                      Enum.map(events, fn {event, _} ->
-                        event
-                      end)
-                    end
+                      Map.merge(event, %{"parent" => msg["msgid"], "sid" => msg["sid"]})
+                    end)
 
                   {:send, events}
 

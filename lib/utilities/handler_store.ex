@@ -138,6 +138,7 @@ defmodule Amps.Handlers do
             messages =
               if messages[msgid] do
                 {progress, messages} = pop_in(messages, [msgid, :in_progress, message.reply_to])
+
                 Process.exit(progress, :shutdown)
                 messages
               else
@@ -251,7 +252,9 @@ defmodule Amps.Handlers do
     res
   end
 
-  def register(name, message, msgid, progress) do
+  def register(state, message, msgid, progress) do
+    name = state.name
+
     {:atomic, res} =
       :mnesia.transaction(fn ->
         case :mnesia.wread({:handler, name}) do
@@ -259,11 +262,33 @@ defmodule Amps.Handlers do
             nil
 
           [{:handler, name, messages}] ->
+            body = Jason.decode!(message.body)
+            msg = body["msg"]
+            coll = AmpsUtil.index(state.env, "message_events")
+
+            msgs =
+              Amps.DB.find(coll, %{
+                "status" => "started",
+                "msgid" => msgid,
+                "subscriber" => state.parms["name"]
+              })
+
+            skip =
+              if Amps.DB.find_one(coll, %{
+                   "status" => "skipping",
+                   "msgid" => msgid,
+                   "subscriber" => state.parms["name"]
+                 }) do
+                true
+              else
+                false
+              end
+
             info = %{
-              attempts: 1,
+              attempts: Enum.count(msgs) + 1,
               in_progress: %{message.reply_to => progress},
               message: message,
-              skip: false
+              skip: skip
             }
 
             messages = Map.put(messages, msgid, info)

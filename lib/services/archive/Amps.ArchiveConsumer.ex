@@ -327,104 +327,139 @@ defmodule Amps.ArchivePullConsumer do
     end
   end
 
+  def sleep_progress(message, msgid, duration) do
+    Process.sleep(5000)
+    curr = duration - 5000
+    # fname = Jason.decode!(message.body)["msg"]["fname"]
+    # IO.inspect("Progress for #{fname} #{curr}")
+
+    if !(curr <= 0) do
+      Jetstream.ack_progress(message)
+      sleep_progress(message, msgid, curr)
+    end
+  end
+
   def handle_info({:msg, message}, state) do
     try do
       data = Poison.decode!(message.body)
       msg = data["msg"]
 
       if msg["data"] || msg["fpath"] do
-        Logger.info("Archiving Message #{msg["msgid"]}")
-        parms = state[:parms]
-        name = parms["name"]
+        archived =
+          Amps.DB.find_one(
+            AmpsUtil.index(state.env, "message_events"),
+            %{
+              "msgid" => msg["msgid"],
+              "status" => "archived"
+            }
+          )
 
-        AmpsEvents.send_history(
-          AmpsUtil.env_topic("amps.events.action", state.env),
-          "message_events",
-          msg,
-          %{
-            "status" => "archiving",
-            "action" => "Archive"
-          }
-        )
+        archived =
+          if archived do
+            Amps.ArchiveConsumer.apath(msg, state.env) ==
+              Amps.ArchiveConsumer.apath(archived, state.env)
+          else
+            false
+          end
 
-        status =
-          try do
-            archive = Amps.DB.find_one("providers", %{"_id" => Amps.Defaults.get("aprovider")})
+        if !archived do
+          Logger.info("Archiving Message #{msg["msgid"]}")
+          parms = state[:parms]
+          name = parms["name"]
 
-            case archive["atype"] do
-              "s3" ->
-                s3_archive(msg, archive, state.env)
+          AmpsEvents.send_history(
+            AmpsUtil.env_topic("amps.events.action", state.env),
+            "message_events",
+            msg,
+            %{
+              "status" => "archiving",
+              "action" => "Archive"
+            }
+          )
 
-              _ ->
-                nil
-            end
+          status =
+            try do
+              archive = Amps.DB.find_one("providers", %{"_id" => Amps.Defaults.get("aprovider")})
 
-            Logger.info("Archived Message #{msg["msgid"]}")
+              case archive["atype"] do
+                "s3" ->
+                  s3_archive(msg, archive, state.env)
 
-            AmpsEvents.send_history(
-              AmpsUtil.env_topic("amps.events.action", state.env),
-              "message_events",
-              msg,
-              %{
-                "status" => "archived",
-                "action" => "Archive"
-              }
-            )
+                _ ->
+                  nil
+              end
 
-            Jetstream.ack(message)
-            Amps.ArchiveHandler.reset_failure(state.handler)
-            "archived"
-          rescue
-            e in NackError ->
-              e
-
-              failures = Amps.ArchiveHandler.add_failure(state.handler)
-
-              Logger.error(
-                "Archive Failed for message #{msg["msgid"]}\nS3 Issue #{e.message} - Will Retry.\n" <>
-                  Exception.format(:error, e, __STACKTRACE__)
-              )
-
-              backoff =
-                if failures > 5 do
-                  300_000
-                else
-                  failures * 60000
-                end
+              Logger.info("Archived Message #{msg["msgid"]}")
 
               AmpsEvents.send_history(
                 AmpsUtil.env_topic("amps.events.action", state.env),
                 "message_events",
                 msg,
                 %{
-                  "status" => "archiving failed - retrying",
-                  "action" => "Archive"
-                }
-              )
-
-              Process.sleep(backoff)
-              Jetstream.nack(message)
-              "archiving failed - retrying"
-
-            e ->
-              Logger.error(
-                "Archive Failed: Error parsing message #{msg["msgid"]}, skipping message.\n" <>
-                  Exception.format(:error, e, __STACKTRACE__)
-              )
-
-              AmpsEvents.send_history(
-                AmpsUtil.env_topic("amps.events.action", state.env),
-                "message_events",
-                msg,
-                %{
-                  "status" => "archiving failed - skipping",
+                  "status" => "archived",
                   "action" => "Archive"
                 }
               )
 
               Jetstream.ack(message)
-              "archiving failed - skipping"
-          end
+              Amps.ArchiveHandler.reset_failure(state.handler)
+              "archived"
+            rescue
+              e in NackError ->
+                e
+
+                failures = Amps.ArchiveHandler.add_failure(state.handler)
+
+                Logger.error(
+                  "Archive Failed for message #{msg["msgid"]}\nS3 Issue #{e.message} - Will Retry.\n" <>
+                    Exception.format(:error, e, __STACKTRACE__)
+                )
+
+                backoff =
+                  if failures > 5 do
+                    300_000
+                  else
+                    failures * 60000
+                  end
+
+                AmpsEvents.send_history(
+                  AmpsUtil.env_topic("amps.events.action", state.env),
+                  "message_events",
+                  msg,
+                  %{
+                    "status" => "archiving failed - retrying",
+                    "action" => "Archive"
+                  }
+                )
+
+                sleep_progress(message, msg["msgid"], backoff)
+                Jetstream.nack(message)
+                "archiving failed - retrying"
+
+              e ->
+                Logger.error(
+                  "Archive Failed: Error parsing message #{msg["msgid"]}, skipping message.\n" <>
+                    Exception.format(:error, e, __STACKTRACE__)
+                )
+
+                AmpsEvents.send_history(
+                  AmpsUtil.env_topic("amps.events.action", state.env),
+                  "message_events",
+                  msg,
+                  %{
+                    "status" => "archiving failed - skipping",
+                    "action" => "Archive"
+                  }
+                )
+
+                Jetstream.ack(message)
+                "archiving failed - skipping"
+            end
+        else
+          Logger.info("Skipping Archiving #{msg["msgid"]} - Already Archived")
+          Jetstream.ack(message)
+          Amps.ArchiveHandler.reset_failure(state.handler)
+        end
       else
         Logger.info("Skipping Archiving #{msg["msgid"]} - No Data")
         Jetstream.ack(message)

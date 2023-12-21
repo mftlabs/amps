@@ -123,7 +123,7 @@ defmodule :"Amps.Gateway<%= if env do%>.<%= env %><% end %>.<%= name %>" do
       "stime" => stime,
       "path_params" => conn.path_params,
       "query_params" => conn.query_params,
-      "service" => conn.private.opts["name"],
+      "service" => "#{conn.private.opts["name"]} #{route["method"]} #{route["path"]}",
       "request_path" => conn.request_path,
       "route_path" => route["path"],
       "user" => user,
@@ -157,10 +157,10 @@ defmodule :"Amps.Gateway<%= if env do%>.<%= env %><% end %>.<%= name %>" do
         {:error, reason} ->
           # cannot write temp file (500 internal service error)
           handle_error(conn, reason, msg)
-
+            AmpsEvents.end_session(msg["sid"], conn.private.env)
         {:ok, conn} ->
           # temp file written okay
-
+            AmpsEvents.end_session(msg["sid"], conn.private.env)
           do_action(msg, route, conn)
       end
     else
@@ -178,6 +178,8 @@ defmodule :"Amps.Gateway<%= if env do%>.<%= env %><% end %>.<%= name %>" do
   end
 
   def do_action(msg, route, conn) do
+      {msg, _sid} = AmpsEvents.start_session(msg, %{"service" => msg["service"] <> " handler"}, conn.private.env)
+
     IO.inspect(route)
     actparms =
       DB.find_by_id(AmpsUtil.index(conn.private.env, "actions"), route["action"])
@@ -268,6 +270,18 @@ defmodule :"Amps.Gateway<%= if env do%>.<%= env %><% end %>.<%= name %>" do
                   end)
 
                   send_resp(conn, 202, "Action performed successfully\nMessage sent to topic(s):\n" <> topics)
+                
+                {:sent, response} ->
+                  AmpsEvents.send_history(
+                    AmpsUtil.env_topic("amps.events.action", conn.private.env),
+                    "message_events",
+                    msg,
+                    %{
+                      "status" => "completed",
+                      "action" => actparms["name"]
+                    }
+                  )
+                  send_resp(conn, 200, response)
                 {:resp, responses} ->
                   AmpsEvents.send_history(
                     AmpsUtil.env_topic("amps.events.action", conn.private.env),

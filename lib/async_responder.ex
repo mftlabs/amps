@@ -1,4 +1,5 @@
 defmodule Amps.AsyncResponder do
+  alias Amps.DB
   # alias Amps.DB
   require Logger
   use GenServer
@@ -36,11 +37,22 @@ defmodule Amps.AsyncResponder do
           AmpsEvents.send(event, parms, %{"return" => id}, env)
         end)
 
-        receive do
-          {:resp, responses} ->
-            Amps.Responders.delete(id)
+        subs =
+          DB.find(AmpsUtil.index(env, "services"), %{
+            "type" => "subscriber",
+            "topic" => parms["output"]
+          })
 
-            {:resp, responses}
+        if Enum.count(subs) == 0 do
+          Amps.Responders.delete(id)
+          {:sent, "Action performed successfully\nMessage sent to topic:\n" <> parms["output"]}
+        else
+          receive do
+            {:resp, responses} ->
+              Amps.Responders.delete(id)
+
+              {:resp, responses}
+          end
         end
       end)
       |> Task.await(timeout)
