@@ -42,13 +42,14 @@ defmodule Amps.HistoryHandler do
     {:ok, pid} = Supervisor.start_link(children, strategy: :one_for_one)
 
     # After started, we can query the supervisor for information
+    Amps.History.put(parms["name"])
 
     state = %{
       parms: parms,
       messages: []
     }
 
-    schedule_bulk()
+    # schedule_bulk()
 
     {:ok, state}
   end
@@ -59,6 +60,7 @@ defmodule Amps.HistoryHandler do
 
   def handle_cast({:message, message}, state) do
     state = Map.put(state, :messages, [message | state.messages])
+    Amps.History.put_message(state.parms["name"], message)
     {:noreply, state}
   end
 
@@ -74,12 +76,10 @@ defmodule Amps.HistoryHandler do
             end)
           end)
 
-        Enum.each(indexes, fn {index, ops} ->
-          if index == "sessions" do
-            # IO.inspect(ops)
-          end
+        # IO.inspect(indexes)
 
-          res = Amps.DB.bulk_perform(ops, index)
+        Enum.each(indexes, fn {index, ops} ->
+          Amps.DB.bulk_perform(ops, index)
         end)
 
         # case res do
@@ -97,6 +97,7 @@ defmodule Amps.HistoryHandler do
         state
       end
 
+    Amps.History.clear(state.parms["name"])
     {:noreply, state}
   end
 

@@ -23,173 +23,147 @@ defmodule Amps.Application do
     task = Task.async(Amps.Startup, :startup, [])
     Task.await(task, 300_000)
 
-    children = [
-      # Start the PubSub system
-      {Phoenix.PubSub, name: Amps.PubSub},
-      {
-        Mnesiac.Supervisor,
+    children =
+      [
+        # Start the PubSub system
+        {Phoenix.PubSub, name: Amps.PubSub},
+        {
+          Mnesiac.Supervisor,
+          [
+            [name: Amps.MnesiacSupervisor]
+          ]
+        },
+        {Pow.Store.Backend.MnesiaCache, extra_db_nodes: {Node, :list, []}},
+        # Recover from netsplit
+        Pow.Store.Backend.MnesiaCache.Unsplit,
+        # {Amps.SSL,
+        #  [
+        #    :svc_host,
+        #    {Amps.CowboySupervisor,
+        #     [http: [port: 80], https: [port: 443], ref: :svc_host, plug: Amps.SSLRouter, opts: []]}
+        #  ]},
+        Supervisor.Spec.worker(Gnat.ConnectionSupervisor, [
+          gnat_supervisor_settings,
+          []
+        ]),
+        Amps.DB.get_db(),
+        #      AmpsWeb.Vault,
+        Amps.SvcHandler,
+        Amps.SystemHandler,
+        Amps.SchedHandler,
+        Amps.ScriptHandler,
+        Amps.SvcSupervisor,
+        Amps.SvcManager,
+        Amps.EnvHandler,
+        Amps.EnvSupervisor,
+        Amps.EnvManager,
+        {Highlander, {Amps.Scheduler, []}},
+        Amps.SystemScheduler
+      ] ++
+        Enum.reduce(
+          [
+            %{
+              "name" => "event_handler",
+              "subs_count" => 3,
+              "topic" => "amps.events.*"
+            },
+            %{
+              "name" => "action_handler",
+              "subs_count" => 3,
+              "topic" => "amps.actions.>",
+              "receipt" => true,
+              "index" => "message_events"
+            },
+            %{
+              "name" => "service_handler",
+              "subs_count" => 3,
+              "topic" => "amps.svcs.>",
+              "receipt" => true,
+              "index" => "message_events"
+            },
+            %{
+              "name" => "mailbox_handler",
+              "subs_count" => 3,
+              "topic" => "amps.mailbox.>",
+              "receipt" => true,
+              "index" => ["message_events", "mailbox"],
+              "doc" => fn topic, data ->
+                pieces =
+                  String.split(topic, ".")
+                  |> Enum.take(-2)
+
+                Map.merge(data, %{
+                  "recipient" => Enum.at(pieces, 0),
+                  "status" => "mailboxed",
+                  "mailbox" => Enum.at(pieces, 1),
+                  "mtime" => DateTime.utc_now() |> DateTime.to_iso8601()
+                })
+              end
+            },
+            %{
+              "name" => "data_handler",
+              "subs_count" => 3,
+              "topic" => "amps.data.>",
+              "receipt" => true,
+              "index" => "message_events"
+            },
+            %{
+              "name" => "object_handler",
+              "subs_count" => 3,
+              "topic" => "amps.objects.>",
+              "receipt" => true,
+              "index" => "message_events"
+            },
+            %{
+              "name" => "service_logs",
+              "subs_count" => 3,
+              "topic" => "amps.events.svcs.*.logs"
+            },
+            %{
+              "name" => "ufa_logs",
+              "subs_count" => 3,
+              "topic" => "amps.events.ufa.*.logs"
+            }
+          ],
+          [],
+          fn conf, acc ->
+            acc ++
+              [
+                %{
+                  id: conf["name"],
+                  start:
+                    {Amps.HistoryHandler, :start_link,
+                     [
+                       conf
+                     ]}
+                },
+                {Highlander,
+                 %{
+                   id: conf["name"] <> "_bulk",
+                   start:
+                     {Amps.HistoryBulker, :start_link,
+                      [
+                        conf
+                      ]}
+                 }}
+              ]
+          end
+        ) ++
         [
-          [name: Amps.MnesiacSupervisor]
+          Amps.ArchiveSupervisor,
+          Amps.ArchiveManager,
+          Amps.Files,
+
+          # add this to db config...
+
+          # worker pool to run python actions
+          :poolboy.child_spec(
+            :worker,
+            Application.get_env(:amps, :pyworker)[:config]
+          ),
+          Supervisor.child_spec({Task, fn -> synchronize() end}, id: :synch),
+          {Highlander, {Amps.Archive, []}}
         ]
-      },
-      {Pow.Store.Backend.MnesiaCache, extra_db_nodes: {Node, :list, []}},
-      # Recover from netsplit
-      Pow.Store.Backend.MnesiaCache.Unsplit,
-      # {Amps.SSL,
-      #  [
-      #    :svc_host,
-      #    {Amps.CowboySupervisor,
-      #     [http: [port: 80], https: [port: 443], ref: :svc_host, plug: Amps.SSLRouter, opts: []]}
-      #  ]},
-      Supervisor.Spec.worker(Gnat.ConnectionSupervisor, [
-        gnat_supervisor_settings,
-        []
-      ]),
-      Amps.DB.get_db(),
-      #      AmpsWeb.Vault,
-      Amps.SvcHandler,
-      Amps.SystemHandler,
-      Amps.SchedHandler,
-      Amps.ScriptHandler,
-      Amps.SvcSupervisor,
-      Amps.SvcManager,
-      Amps.EnvHandler,
-      Amps.EnvSupervisor,
-      Amps.EnvManager,
-      {Highlander, {Amps.Scheduler, []}},
-      Amps.SystemScheduler,
-      %{
-        id: "event_handler",
-        start:
-          {Amps.HistoryHandler, :start_link,
-           [
-             %{
-               "name" => "event_handler",
-               "subs_count" => 3,
-               "topic" => "amps.events.*"
-             }
-           ]}
-      },
-      %{
-        id: "action_handler",
-        start:
-          {Amps.HistoryHandler, :start_link,
-           [
-             %{
-               "name" => "action_handler",
-               "subs_count" => 3,
-               "topic" => "amps.actions.>",
-               "receipt" => true,
-               "index" => "message_events"
-             }
-           ]}
-      },
-      %{
-        id: "service_handler",
-        start:
-          {Amps.HistoryHandler, :start_link,
-           [
-             %{
-               "name" => "service_handler",
-               "subs_count" => 3,
-               "topic" => "amps.svcs.>",
-               "receipt" => true,
-               "index" => "message_events"
-             }
-           ]}
-      },
-      %{
-        id: "mailbox_handler",
-        start:
-          {Amps.HistoryHandler, :start_link,
-           [
-             %{
-               "name" => "mailbox_handler",
-               "subs_count" => 3,
-               "topic" => "amps.mailbox.>",
-               "receipt" => true,
-               "index" => ["message_events", "mailbox"],
-               "doc" => fn topic, data ->
-                 pieces =
-                   String.split(topic, ".")
-                   |> Enum.take(-2)
-
-                 Map.merge(data, %{
-                   "recipient" => Enum.at(pieces, 0),
-                   "status" => "mailboxed",
-                   "mailbox" => Enum.at(pieces, 1),
-                   "mtime" => DateTime.utc_now() |> DateTime.to_iso8601()
-                 })
-               end
-             }
-           ]}
-      },
-      %{
-        id: "data_handler",
-        start:
-          {Amps.HistoryHandler, :start_link,
-           [
-             %{
-               "name" => "data_handler",
-               "subs_count" => 3,
-               "topic" => "amps.data.>",
-               "receipt" => true,
-               "index" => "message_events"
-             }
-           ]}
-      },
-      %{
-        id: "object_handler",
-        start:
-          {Amps.HistoryHandler, :start_link,
-           [
-             %{
-               "name" => "object_handler",
-               "subs_count" => 3,
-               "topic" => "amps.objects.>",
-               "receipt" => true,
-               "index" => "message_events"
-             }
-           ]}
-      },
-      %{
-        id: "service_logs",
-        start:
-          {Amps.HistoryHandler, :start_link,
-           [
-             %{
-               "name" => "service_logs",
-               "subs_count" => 3,
-               "topic" => "amps.events.svcs.*.logs"
-             }
-           ]}
-      },
-      %{
-        id: "ufa_logs",
-        start:
-          {Amps.HistoryHandler, :start_link,
-           [
-             %{
-               "name" => "ufa_logs",
-               "subs_count" => 3,
-               "topic" => "amps.events.ufa.*.logs"
-             }
-           ]}
-      },
-      Amps.ArchiveSupervisor,
-      Amps.ArchiveManager,
-      Amps.Files,
-
-      # add this to db config...
-
-      # worker pool to run python actions
-      :poolboy.child_spec(
-        :worker,
-        Application.get_env(:amps, :pyworker)[:config]
-      ),
-      Supervisor.child_spec({Task, fn -> synchronize() end}, id: :synch),
-      {Highlander, {Amps.Archive, []}}
-    ]
 
     res =
       Supervisor.start_link(children,
