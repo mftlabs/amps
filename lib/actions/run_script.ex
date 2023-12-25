@@ -23,43 +23,51 @@ defmodule Amps.Actions.RunScript do
         Logger.info("Script returned: #{inspect(rparm)}")
 
         if parms["send_output"] do
-          msgid = AmpsUtil.get_id()
-          newmsg = rparm["msg"]
+          newmsgs = rparm["msgs"]
 
-          event =
-            if newmsg do
-              msg =
-                msg
-                |> Map.merge(newmsg)
-                |> Map.merge(%{
-                  "msgid" => msgid,
-                  "parent" => msg["msgid"]
-                })
+          events =
+            if newmsgs do
+              Enum.map(newmsgs, fn newmsg ->
+                msgid = AmpsUtil.get_id()
 
-              if newmsg["data"] do
-                Map.drop(msg, ["fpath", "fsize"])
-              else
-                Map.drop(msg, ["data"])
-              end
+                msg =
+                  msg
+                  |> Map.merge(newmsg)
+                  |> Map.merge(%{
+                    "msgid" => msgid,
+                    "parent" => msg["msgid"]
+                  })
+
+                if newmsg["data"] do
+                  Map.drop(msg, ["fpath", "fsize"])
+                else
+                  Map.drop(msg, ["data"])
+                end
+              end)
             else
-              Map.merge(
-                msg,
-                %{
-                  "msgid" => msgid,
-                  "parent" => msg["msgid"],
-                  "ftime" => DateTime.to_iso8601(DateTime.utc_now()),
-                  "fname" => AmpsUtil.format(parms["format"], msg)
-                }
-              )
+              msgid = AmpsUtil.get_id()
+
+              [
+                Map.merge(
+                  msg,
+                  %{
+                    "msgid" => msgid,
+                    "parent" => msg["msgid"],
+                    "ftime" => DateTime.to_iso8601(DateTime.utc_now()),
+                    "fname" => AmpsUtil.format(parms["format"], msg)
+                  }
+                )
+              ]
             end
 
           IO.inspect(parms)
-          {:send, [event]}
+          {:send, events}
         else
           {:ok, rparm}
         end
 
       {:error, error} ->
+        IO.inspect(error)
         raise error
     end
   end

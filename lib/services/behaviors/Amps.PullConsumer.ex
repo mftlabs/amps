@@ -186,7 +186,7 @@ defmodule Amps.PullConsumer do
                                   sleepDuration: parms["backoff"],
                                   topic: parms["topic"],
                                   action: action_name(state),
-                                  reason: inspect(error),
+                                  reason: Exception.message(error),
                                   subscriber: name
                                 }
                               )
@@ -210,7 +210,7 @@ defmodule Amps.PullConsumer do
                                   status: "retrying",
                                   topic: parms["topic"],
                                   action: action_name(state),
-                                  reason: inspect(error),
+                                  reason: Exception.message(error),
                                   subscriber: name
                                 }
                               )
@@ -258,7 +258,7 @@ defmodule Amps.PullConsumer do
                                   status: "failed",
                                   topic: parms["topic"],
                                   action: action_name(state),
-                                  reason: inspect(error),
+                                  reason: Exception.message(error),
                                   subscriber: name
                                 }
                               )
