@@ -46,8 +46,8 @@ defmodule Amps.PyService do
         parms
       end
 
-    path = AmpsUtil.get_mod_path(env)
-    util = Path.join(AmpsUtil.get_mod_path(), "util")
+    path = AmpsUtil.get_mod_path(env, "python")
+    util = Path.join(path, "util")
     IO.inspect(util)
 
     tmp = AmpsUtil.get_env(:storage_temp)
@@ -83,7 +83,7 @@ defmodule Amps.PyService do
   end
 
   def check_script(name, env) do
-    path = AmpsUtil.get_mod_path(env)
+    path = AmpsUtil.get_mod_path(env, "python")
     script_path = Path.join(path, name <> ".py")
 
     if File.exists?(script_path) do
@@ -134,7 +134,7 @@ defmodule Amps.PyService do
 
         converted_value =
           case value do
-            {'Map', inner_key_value_list} ->
+            {~c"Map", inner_key_value_list} ->
               to_map(inner_key_value_list)
 
             _ ->
@@ -185,11 +185,11 @@ defmodule Amps.PyService do
     end
   end
 
-  def find(collection, clauses \\ {'Map', []}, opts \\ {'Map', []}) do
+  def find(collection, clauses \\ {~c"Map", []}, opts \\ {~c"Map", []}) do
     if obj_check(collection) || AmpsUtil.base_index(collection) == "users" do
       clauses =
         case clauses do
-          {'Map', list} ->
+          {~c"Map", list} ->
             to_map(list)
 
           _ ->
@@ -198,7 +198,7 @@ defmodule Amps.PyService do
 
       opts =
         case opts do
-          {'Map', list} ->
+          {~c"Map", list} ->
             to_map(list)
 
           _ ->
@@ -213,11 +213,11 @@ defmodule Amps.PyService do
     end
   end
 
-  def find_one(collection, clauses \\ {'Map', []}, opts \\ {'Map', []}) do
+  def find_one(collection, clauses \\ {~c"Map", []}, opts \\ {~c"Map", []}) do
     if obj_check(collection) || AmpsUtil.base_index(collection) == "users" do
       clauses =
         case clauses do
-          {'Map', list} ->
+          {~c"Map", list} ->
             to_map(list)
 
           _ ->
@@ -226,7 +226,7 @@ defmodule Amps.PyService do
 
       opts =
         case opts do
-          {'Map', list} ->
+          {~c"Map", list} ->
             to_map(list)
 
           _ ->
@@ -270,7 +270,7 @@ defmodule Amps.PyService do
   def create(collection, body) do
     case obj_check(collection) do
       {obj, {env, _}} ->
-        {'Map', list} = body
+        {~c"Map", list} = body
 
         body = to_map(list) |> sanitize(obj)
 
@@ -287,7 +287,7 @@ defmodule Amps.PyService do
   def update(collection, body, id) do
     case obj_check(collection) do
       {obj, {env, _}} ->
-        {'Map', list} = body
+        {~c"Map", list} = body
         body = to_map(list) |> sanitize(obj)
 
         Amps.DB.update(collection, body, id)
@@ -319,7 +319,7 @@ defmodule Amps.PyService do
       env = List.to_string(env)
 
       case body do
-        {'Map', list} ->
+        {~c"Map", list} ->
           body = PyService.to_map(list)
           res = Amps.Users.User.create(body, env)
 
@@ -342,7 +342,7 @@ defmodule Amps.PyService do
       id = List.to_string(id)
 
       case body do
-        {'Map', list} ->
+        {~c"Map", list} ->
           body = PyService.to_map(list)
           res = Amps.Users.User.update(id, body, env)
 
@@ -375,7 +375,7 @@ defmodule Amps.PyService do
       env = List.to_string(env)
 
       case user do
-        {'Map', list} ->
+        {~c"Map", list} ->
           body = PyService.to_map(list)
           user = Amps.Users.authenticate(body, env: "")
 
@@ -437,7 +437,7 @@ defmodule Amps.PyService do
         parms
       end
 
-    path = AmpsUtil.get_mod_path(env)
+    path = AmpsUtil.get_mod_path(env, "python")
     tmp = AmpsUtil.get_env(:storage_temp)
     # {:ok, pid} = :python.start([{:python_path, to_charlist(path)}])
     IO.inspect(parms)

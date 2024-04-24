@@ -10,7 +10,7 @@ defmodule Amps.PyHandler do
     env = state.env
 
     parms = state.parms
-    path = AmpsUtil.get_mod_path(env, [parms["service"]])
+    path = AmpsUtil.get_mod_path(env, "python", [parms["service"]])
 
     {:ok, pid} =
       :pythra.start_link([String.to_charlist(path)], [

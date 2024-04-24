@@ -82,10 +82,10 @@ defmodule Amps.Handler do
             children =
               Enum.reduce(1..count, [], fn x, acc ->
                 name = String.to_atom(env <> "-" <> parms["name"] <> Integer.to_string(x))
-                IO.inspect("SUB SPEC")
+                # IO.inspect("SUB SPEC")
 
                 spec = unquote(Keyword.get(usingopts, :sub_spec, Amps.EventPullConsumer))
-                IO.inspect(spec)
+                # IO.inspect(spec)
 
                 [
                   %{

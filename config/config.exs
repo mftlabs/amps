@@ -148,7 +148,7 @@ config :amps, Amps.Cluster,
   ]
 
 # Swoosh API client is needed for adapters other than SMTP.
-config :swoosh, :api_client, false
+config :swoosh, :api_client, Swoosh.ApiClient.Hackney
 
 config :amps_web,
   generators: [context_app: :amps]
@@ -187,6 +187,7 @@ config :amps_web, AmpsWeb.Endpoint,
   pg_addr: System.get_env("AMPS_POSTGRES_ADDR"),
   elastic_prefix: System.get_env("AMPS_ELASTIC_INDEX", "")
 
+# load_data: [1, 2, 3]
 # Configures the mailer
 #
 # By default it uses the "Local" adapter which stores the emails
@@ -308,6 +309,7 @@ config :amps, :services,
   nats: Amps.NATS
 
 config :amps, :actions,
+  email: Amps.Actions.Email,
   strrepl: Amps.Actions.StringReplace,
   mailbox: Amps.Actions.Mailbox,
   sftpput: Amps.Actions.SftpPut,

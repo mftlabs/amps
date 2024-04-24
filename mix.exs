@@ -43,7 +43,6 @@ defmodule Amps.MixProject do
       {:plug_cowboy, "~> 2.0"},
       {:uuid, "~> 2.0", hex: :uuid_erl},
       {:poison, "~> 3.1"},
-      {:export, "~> 0.0.7"},
       {:erlport,
        [
          env: :prod,
@@ -80,7 +79,9 @@ defmodule Amps.MixProject do
       {:amps_core,
        [git: "https://github.com/mftlabs/amps-core", branch: "separation_test", override: true]},
       {:site_encrypt, "~> 0.5.0"},
-      {:highlander, "~> 0.2.1"}
+      {:highlander, "~> 0.2.1"},
+      {:rustler, "~> 0.30.0"},
+      {:tls_certificate_check, "~> 1.0"}
     ]
   end
 

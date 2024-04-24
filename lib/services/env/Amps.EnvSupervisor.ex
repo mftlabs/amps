@@ -43,7 +43,9 @@ defmodule Amps.EnvSupervisor do
          ) do
       {:ok, pid} ->
         Process.register(pid, name)
-        File.mkdir_p!(AmpsUtil.get_mod_path(env, []))
+        File.mkdir_p!(AmpsUtil.get_mod_path(env, "python", []))
+        File.mkdir_p!(AmpsUtil.get_mod_path(env, "rust", []))
+
 
       # AmpsEvents.send_history(
       #   "amps.events.svcs.#{config["name"]}.logs",

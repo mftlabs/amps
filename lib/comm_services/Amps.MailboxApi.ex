@@ -9,7 +9,7 @@ defmodule Amps.MailboxApi do
   plug(Plug.Parsers,
     parsers: [:urlencoded, :multipart],
     pass: ["*/*"],
-    length: Amps.Defaults.get("max_upload", 15_000_000_000),
+    length: 15_000_000_000,
     json_decoder: Jason
   )
 

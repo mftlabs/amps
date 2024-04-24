@@ -85,7 +85,7 @@ defmodule Amps.SchedHandler do
         #   AmpsUtil.update_util(name)
 
         _ ->
-          Logger.error("Unsupported action #{action} on node #{node}")
+          Logger.error("Unsupported action #{action} on node #{node()}")
       end
 
     resp
