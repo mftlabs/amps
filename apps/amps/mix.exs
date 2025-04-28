@@ -76,7 +76,8 @@ defmodule Amps.MixProject do
       {:gen_smtp, "~> 1.0"},
       {:absinthe, "~> 1.7.0"},
       {:ldap_ex, "~> 0.2.2"},
-      {:timex, "~> 3.7.8"}
+      {:timex, "~> 3.7.8"},
+      {:ssl_verify_fun, "~> 1.1.7"}
     ]
   end
 
