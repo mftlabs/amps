@@ -9,7 +9,7 @@ defmodule :"Amps.Gateway<%= if env do%>.<%= env %><% end %>.<%= name %>" do
     parsers: [:urlencoded, :multipart],
     pass: ["*/*"],
     length: Amps.Defaults.get("max_upload", 15_000_000_000),
-    json_decoder: Jason
+    json_decoder: JSON
   )
 
   plug(Plug.Logger, log: :debug)
@@ -302,7 +302,7 @@ defmodule :"Amps.Gateway<%= if env do%>.<%= env %><% end %>.<%= name %>" do
 
                     end
                   end)
-                  send_resp(conn, 200, Jason.encode!(responses))
+                  send_resp(conn, 200, JSON.encode!(responses))
 
               end
 

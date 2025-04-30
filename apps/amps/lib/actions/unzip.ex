@@ -7,7 +7,7 @@ defmodule Amps.Actions.Unzip do
     {:ok, pid} =
       :python.start([{:python_path, to_charlist(Application.app_dir(:amps, "priv/py/actions"))}])
 
-    case :python.call(pid, :unzip, :run, [Jason.encode!(input)]) do
+    case :python.call(pid, :unzip, :run, [JSON.encode!(input)]) do
       %{'status' => 'failed', 'message' => error} ->
         raise error
 

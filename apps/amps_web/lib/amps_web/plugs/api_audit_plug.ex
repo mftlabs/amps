@@ -15,7 +15,7 @@ defmodule AmpsWeb.AuditPlug do
 
     params = info.path_params
 
-    entity = Jason.encode!(params)
+    entity = JSON.encode!(params)
 
     Logger.info("#{user.firstname} #{user.lastname} performed #{info.plug_opts} on #{entity}")
 

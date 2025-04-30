@@ -72,7 +72,7 @@ defmodule AmpsWeb.Minio do
     case params do
       {:create_user, {access, secret}} ->
         body =
-          Jason.encode!(%{
+          JSON.encode!(%{
             "accessKey" => access,
             "secretKey" => secret,
             "groups" => [],
@@ -83,7 +83,7 @@ defmodule AmpsWeb.Minio do
           HTTPoison.post(host <> "/api/v1/users", body, headers)
 
         IO.inspect(body)
-        {:reply, {:ok, Jason.decode!(body)}, token}
+        {:reply, {:ok, JSON.decode!(body)}, token}
 
       {:create_policy, {policy_name, bucket_name}} ->
         policy =
@@ -91,7 +91,7 @@ defmodule AmpsWeb.Minio do
           |> String.replace("{BUCKETNAME}", bucket_name)
 
         body =
-          Jason.encode!(%{
+          JSON.encode!(%{
             name: policy_name,
             policy: policy
           })
@@ -100,14 +100,14 @@ defmodule AmpsWeb.Minio do
           HTTPoison.post(host <> "/api/v1/policies", body, headers)
 
         IO.inspect(body)
-        {:reply, {:ok, Jason.decode!(body)}, token}
+        {:reply, {:ok, JSON.decode!(body)}, token}
 
       :get_users ->
         {:ok, %HTTPoison.Response{status_code: 200, body: body}} =
           HTTPoison.get(host <> "/api/v1/users", headers)
 
         IO.inspect(body)
-        {:reply, {:ok, Jason.decode!(body)}, token}
+        {:reply, {:ok, JSON.decode!(body)}, token}
 
       {:attach_policy, {access_key, policy_name}} ->
         options = [params: [name: access_key]]
@@ -115,7 +115,7 @@ defmodule AmpsWeb.Minio do
         {:ok, %HTTPoison.Response{status_code: 200, body: body}} =
           HTTPoison.get(host <> "/api/v1/user", headers, options)
 
-        user = Jason.decode!(body)
+        user = JSON.decode!(body)
         policies = user["policy"]
 
         policy =
@@ -132,7 +132,7 @@ defmodule AmpsWeb.Minio do
         policy = policy <> policy_name
 
         body =
-          Jason.encode!(%{"entityName" => access_key, "entityType" => "user", "name" => [policy]})
+          JSON.encode!(%{"entityName" => access_key, "entityType" => "user", "name" => [policy]})
 
         {:ok, %HTTPoison.Response{status_code: 204, body: _body}} =
           HTTPoison.put(host <> "/api/v1/set-policy/", body, headers)
@@ -140,7 +140,7 @@ defmodule AmpsWeb.Minio do
         {:reply, {:ok, {policy_name, access_key}}, token}
 
       {:create_bucket_event, {bucket_name, config}} ->
-        body = Jason.encode!(%{"configuration" => config, "ignoreExisting" => true})
+        body = JSON.encode!(%{"configuration" => config, "ignoreExisting" => true})
 
         {:ok, %HTTPoison.Response{status_code: 201, body: _body}} =
           HTTPoison.post(
@@ -152,7 +152,7 @@ defmodule AmpsWeb.Minio do
         {:reply, {:ok, :success}, token}
 
       {:create_bucket, config} ->
-        body = Jason.encode!(config)
+        body = JSON.encode!(config)
 
         {:ok, %HTTPoison.Response{status_code: 201, body: _body}} =
           HTTPoison.post(
@@ -209,7 +209,7 @@ defmodule AmpsWeb.Minio do
   end
 
   defp fetch_token() do
-    body = Jason.encode!(%{"accessKey" => "minioadmin", "secretKey" => "minioadmin"})
+    body = JSON.encode!(%{"accessKey" => "minioadmin", "secretKey" => "minioadmin"})
     headers = [{"Content-type", "application/json"}]
     host = Application.fetch_env!(:amps_web, AmpsWeb.Endpoint)[:minio_addr]
 

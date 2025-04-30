@@ -251,7 +251,7 @@ config :ex_aws,
   # access_key_id: "minioadmin",
   # secret_access_key:  "minioadmin",
   # region: "us-east-2",
-  json_codec: Jason
+  json_codec: JSON
 
 config :ex_aws, :retries,
   max_attempts: 2,
@@ -363,8 +363,7 @@ config :logger, :console,
 
 config :logger, :backends, [:console, Amps.Logger]
 
-# Use Jason for JSON parsing in Phoenix
-config :phoenix, :json_library, Jason
+config :phoenix, :json_library, JSON
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

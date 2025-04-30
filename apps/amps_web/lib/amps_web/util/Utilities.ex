@@ -2,15 +2,12 @@ defmodule AmpsWeb.Util do
   require Logger
   import Argon2
   alias Amps.DB
-  # alias AmpsWeb.Encryption
   alias Amps.SvcManager
   alias AmpsWeb.Util
-  # alias AmpsWeb.ServiceController
-  # alias Elixlsx.Workbook
-  # alias Elixlsx.Sheet
-  @numbers '0123456789'
-  @letters 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMOPQRSTUVWXYZ'
-  @symbols '$@!@#$%&*'
+
+  @numbers "0123456789"
+  @letters "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMOPQRSTUVWXYZ"
+  @symbols "$@!@#$%&*"
 
   def create_password do
     numbers = Enum.shuffle(@numbers) |> Enum.take(2)
@@ -484,7 +481,7 @@ defmodule AmpsWeb.Util do
 
           # fn msg, obj, env ->
           #   obj = obj |> Map.put("password", password)
-          #   msg = Map.put(msg, "data", Jason.encode!(obj))
+          #   msg = Map.put(msg, "data", JSON.encode!(obj))
 
           #   Amps.Onboarding.onboard(
           #     msg,
@@ -889,8 +886,8 @@ defmodule AmpsWeb.Util do
         Map.put(
           msg,
           "data",
-          Jason.encode!(obj |> AmpsUtil.filter())
-          |> Jason.Formatter.pretty_print()
+          JSON.encode!(obj |> AmpsUtil.filter())
+          |> JSON.Formatter.pretty_print()
         )
 
       AmpsEvents.send(
@@ -927,8 +924,8 @@ defmodule AmpsWeb.Util do
         Map.put(
           msg,
           "data",
-          Jason.encode!(body |> AmpsUtil.filter())
-          |> Jason.Formatter.pretty_print()
+          JSON.encode!(body |> AmpsUtil.filter())
+          |> JSON.Formatter.pretty_print()
         )
 
       AmpsEvents.send(
@@ -951,8 +948,8 @@ defmodule AmpsWeb.Util do
       msg = %{
         "msgid" => AmpsUtil.get_id(),
         "data" =>
-          Jason.encode!(body |> AmpsUtil.filter())
-          |> Jason.Formatter.pretty_print(),
+          JSON.encode!(body |> AmpsUtil.filter())
+          |> JSON.Formatter.pretty_print(),
         "field" => field,
         "fieldid" => fieldid,
         "action" => action,

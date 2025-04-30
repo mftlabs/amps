@@ -23,7 +23,7 @@ defmodule Amps.Actions.AWS do
   def parse_bucket_event(msg, parms, env) do
     try do
       body = AmpsUtil.get_data(msg, env)
-      event = Jason.decode!(body)
+      event = JSON.decode!(body)
       [ev] = event["Records"]
       IO.inspect(ev)
 

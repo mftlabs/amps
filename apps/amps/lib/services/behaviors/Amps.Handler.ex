@@ -155,7 +155,7 @@ defmodule Amps.Handler do
       def progress(pid, message, msgid, total \\ 0) do
         Process.sleep(5000)
         curr = total + 5000
-        # fname = Jason.decode!(message.body)["msg"]["fname"]
+        # fname = JSON.decode!(message.body)["msg"]["fname"]
         # IO.inspect("Progress for #{fname} #{curr}")
 
         in_progress = GenServer.call(pid, {:progress, message, msgid})

@@ -1,6 +1,6 @@
 defmodule AmpsWeb.FileHandler do
   def handle_message(message) do
-    data = Jason.decode!(message.body)
+    data = JSON.decode!(message.body)
     handle_events(data["Records"])
   end
 

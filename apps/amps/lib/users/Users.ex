@@ -263,7 +263,7 @@ defmodule Amps.Users.DB do
 end
 
 defmodule Amps.Users.User do
-  @derive Jason.Encoder
+  @derive JSON.Encoder
   defstruct firstname: nil,
             phone: nil,
             email: nil,

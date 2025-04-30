@@ -22,7 +22,7 @@ defmodule Amps.Actions.SharePoint do
             params: [{"select", "name,folder,id,size,@microsoft.graph.downloadUrl"}]
           )
 
-        folder = Jason.decode!(res.body)
+        folder = JSON.decode!(res.body)
 
         if Map.has_key?(folder, "error") do
           raise "Folder Not Found"
@@ -89,7 +89,7 @@ defmodule Amps.Actions.SharePoint do
          )}
       )
 
-    body = Jason.decode!(res.body)
+    body = JSON.decode!(res.body)
 
     body["access_token"]
   end
@@ -108,7 +108,7 @@ defmodule Amps.Actions.SharePoint do
         [{"Authorization", "Bearer " <> token}]
       )
 
-    body = Jason.decode!(res.body)
+    body = JSON.decode!(res.body)
 
     body["id"]
   end
@@ -126,7 +126,7 @@ defmodule Amps.Actions.SharePoint do
               params: [{"select", "name,folder,id,size,@microsoft.graph.downloadUrl"}]
             )
 
-          folder = Jason.decode!(res.body)
+          folder = JSON.decode!(res.body)
           scan_folder(parms, folder, token, url, Path.join(nested, obj["name"]), rooturl, acc)
         else
           acc
@@ -272,7 +272,7 @@ defmodule Amps.Actions.SharePoint do
     {:ok, res} =
       HTTPoison.post(
         url,
-        Jason.encode!(%{
+        JSON.encode!(%{
           "item" => %{
             "@microsoft.graph.conflictBehavior" => "rename"
           }
@@ -280,7 +280,7 @@ defmodule Amps.Actions.SharePoint do
         [{"Authorization", "Bearer " <> token}, {"content-type", "application/json"}]
       )
 
-    body = Jason.decode!(res.body)
+    body = JSON.decode!(res.body)
 
     chunk_size =
       if size < 62_914_560 do
@@ -313,7 +313,7 @@ defmodule Amps.Actions.SharePoint do
           recv_timeout: 60000
         )
 
-      _body = Jason.decode!(res.body)
+      _body = JSON.decode!(res.body)
       # IO.inspect(body["nextExpectedRanges"])
 
       if not done do

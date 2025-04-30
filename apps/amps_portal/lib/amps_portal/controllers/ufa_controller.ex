@@ -54,7 +54,7 @@ defmodule AmpsPortal.UFAController do
               Map.put(acc, name, rule)
             end)
 
-          encoded = Jason.encode!(schedule)
+          encoded = JSON.encode!(schedule)
 
           AmpsEvents.send_history(
             AmpsUtil.env_topic("amps.events.ufa.#{user["username"]}.logs", conn.assigns().env),
@@ -109,7 +109,7 @@ defmodule AmpsPortal.UFAController do
         send_resp(conn, 403, "Forbidden")
 
       user ->
-        meta = Jason.decode!(meta)
+        meta = JSON.decode!(meta)
         msgid = meta["msgid"]
 
         dir = AmpsUtil.tempdir(msgid)
@@ -165,7 +165,7 @@ defmodule AmpsPortal.UFAController do
       user ->
         case receive_message({user, rule}, conn.assigns().env) do
           {:message, message} ->
-            msg = Jason.decode!(message.body)["msg"]
+            msg = JSON.decode!(message.body)["msg"]
 
             conn =
               conn
@@ -240,7 +240,7 @@ defmodule AmpsPortal.UFAController do
 
       user ->
         res = Jetstream.ack(%{gnat: Process.whereis(:gnat), reply_to: reply})
-        msg = Jason.decode!(get_req_header(conn, "amps-message"))
+        msg = JSON.decode!(get_req_header(conn, "amps-message"))
         msg = msg["msg"]
         rule = get_req_header(conn, "amps-rule")
 
@@ -540,7 +540,7 @@ defmodule AmpsPortal.UFAController do
 
   def agent_login(conn, %{"username" => username, "token" => token, "tokenid" => tokenid}) do
     {:ok, parms} = Phoenix.Token.verify(AmpsPortal.Endpoint, "auth", token, max_age: :infinity)
-    %{"uid" => username} = Jason.decode!(parms)
+    %{"uid" => username} = JSON.decode!(parms)
 
     case DB.find_one(Util.conn_index(conn, "tokens"), %{"username" => username}) do
       nil ->

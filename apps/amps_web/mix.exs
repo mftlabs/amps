@@ -51,14 +51,11 @@ defmodule AmpsWeb.MixProject do
       {:argon2_elixir, "~> 3.0"},
       {:gettext, "~> 0.26.2"},
       {:amps, in_umbrella: true},
-      {:jason, "~> 1.2"},
       {:plug_cowboy, "~> 2.5"},
       {:libvault, "~> 0.2.3"},
       {:mongodb_driver, "~> 0.7"},
       {:ex_aws_s3, "~> 2.3.1"},
       {:glob, "~> 1.0"},
-      {:httpoison, "~> 1.8"},
-      #      {:postgrex, "~> 0.15.10"},
       {:pow, "~> 1.0.25"},
       {:pow_assent, "~> 0.4.12"},
       {:redirect, "~> 0.3.0"},
@@ -76,7 +73,6 @@ defmodule AmpsWeb.MixProject do
       {:amps_mongodb, [git: "https://github.com/mftlabs/amps-mongodb", branch: "main"]},
       {:unplug, "~> 1.0.0"}
 
-      # {:uuid, "~> 1.1"}
     ]
   end
 

@@ -9,8 +9,8 @@ defmodule Amps.MailboxApi do
   plug(Plug.Parsers,
     parsers: [:urlencoded, :multipart],
     pass: ["*/*"],
-    length: Amps.Defaults.get("max_upload", 15_000_000_000),
-    json_decoder: Jason
+    length: 15_000_000_000,
+    json_decoder: JSON
   )
 
   plug(Plug.Logger, log: :debug)
@@ -36,11 +36,11 @@ defmodule Amps.MailboxApi do
       {:ok, _} ->
         result = AmpsMailbox.get_mailboxes(user, conn.private.env)
         # list successful (200 ok)
-        send_resp(conn, 200, Poison.encode!(result))
+        send_resp(conn, 200, JSON.encode!(result))
 
       {:error, reason} ->
         # auth failure (401 unauthorized)
-        send_resp(conn, 401, Poison.encode!(%{error: reason}))
+        send_resp(conn, 401, JSON.encode!(%{error: reason}))
     end
   end
 
@@ -71,12 +71,12 @@ defmodule Amps.MailboxApi do
             result = AmpsMailbox.list_messages(user, mailbox, limit, conn.private.env)
             count = Enum.count(result)
             # list successful (200 ok)
-            send_resp(conn, 200, Poison.encode!(%{count: count, messages: result}))
+            send_resp(conn, 200, JSON.encode!(%{count: count, messages: result}))
         end
 
       {:error, reason} ->
         # auth failure (401 unauthorized)
-        send_resp(conn, 401, Poison.encode!(%{error: reason}))
+        send_resp(conn, 401, JSON.encode!(%{error: reason}))
     end
   end
 
@@ -100,7 +100,7 @@ defmodule Amps.MailboxApi do
 
       {:error, reason} ->
         # auth failure (401 unauthorized)
-        send_resp(conn, 401, Poison.encode!(%{error: reason}))
+        send_resp(conn, 401, JSON.encode!(%{error: reason}))
     end
   end
 
@@ -113,7 +113,7 @@ defmodule Amps.MailboxApi do
         send_resp(
           conn,
           500,
-          Poison.encode!(%{msgid: msgid, status: reason})
+          JSON.encode!(%{msgid: msgid, status: reason})
         )
 
       {:ok, _conn} ->
@@ -158,12 +158,12 @@ defmodule Amps.MailboxApi do
             send_resp(
               conn,
               201,
-              Poison.encode!(%{msgid: msgid, status: "accepted"})
+              JSON.encode!(%{msgid: msgid, status: "accepted"})
             )
 
             #              :error ->
             # register reports failure (400 bad request)
-            #                send_resp(conn, 400, Poison.encode!(%{msgid: msgid, status: "rejected"}))
+            #                send_resp(conn, 400, JSON.encode!(%{msgid: msgid, status: "rejected"}))
         end
     end
   end
@@ -187,7 +187,7 @@ defmodule Amps.MailboxApi do
 
       {:error, reason} ->
         # auth failure (401 unauthorized)
-        send_resp(conn, 401, Poison.encode!(%{error: reason}))
+        send_resp(conn, 401, JSON.encode!(%{error: reason}))
     end
   end
 
@@ -196,7 +196,7 @@ defmodule Amps.MailboxApi do
       {:ok, _} ->
         case AmpsMailbox.get_message(user, mailbox, msgid, conn.private.env) do
           nil ->
-            send_resp(conn, 404, Poison.encode!(%{error: "Message Not Found"}))
+            send_resp(conn, 404, JSON.encode!(%{error: "Message Not Found"}))
 
           msg ->
             stream = AmpsUtil.stream(msg, conn.private.env)
@@ -222,7 +222,7 @@ defmodule Amps.MailboxApi do
 
       {:error, reason} ->
         # auth failure (401 unauthorized)
-        send_resp(conn, 401, Poison.encode!(%{error: reason}))
+        send_resp(conn, 401, JSON.encode!(%{error: reason}))
     end
   end
 
@@ -231,11 +231,11 @@ defmodule Amps.MailboxApi do
       {:ok, _} ->
         AmpsMailbox.delete_message(user, mailbox, msgid, conn.private.env)
         # delete successful (200 ok)
-        send_resp(conn, 200, Poison.encode!(%{msgid: msgid, status: "deleted"}))
+        send_resp(conn, 200, JSON.encode!(%{msgid: msgid, status: "deleted"}))
 
       {:error, reason} ->
         # auth failure (401 unauthorized)
-        send_resp(conn, 401, Poison.encode!(%{error: reason}))
+        send_resp(conn, 401, JSON.encode!(%{error: reason}))
     end
   end
 
@@ -369,7 +369,7 @@ defmodule Amps.MailboxApi do
 
   defp verify_token(tokenid, token, env) do
     {:ok, parms} = Phoenix.Token.verify(AmpsPortal.Endpoint, "auth", token, max_age: :infinity)
-    %{"uid" => username} = Jason.decode!(parms)
+    %{"uid" => username} = JSON.decode!(parms)
 
     case Amps.DB.find_one(AmpsUtil.index(env, "tokens"), %{"username" => username}) do
       nil ->

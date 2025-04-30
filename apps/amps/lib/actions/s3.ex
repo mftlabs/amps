@@ -149,7 +149,7 @@ defmodule Amps.Actions.S3 do
                 [obj.key | acc]
               end)
 
-            {:ok, Jason.encode!(keys)}
+            {:ok, JSON.encode!(keys)}
           end
       end
     catch

@@ -146,7 +146,7 @@ defmodule Amps.Action.Batch do
         _ ->
           receive do
             {:msg, message} ->
-              msg = Jason.decode!(message.body)["msg"]
+              msg = JSON.decode!(message.body)["msg"]
               Jetstream.ack_next(message, state.listening_topic)
 
               get_messages(state, messages ++ [msg])

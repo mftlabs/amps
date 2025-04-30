@@ -26,7 +26,7 @@ defmodule AmpsWeb.Stream do
 
   def handle_info({:msg, message}, state) do
     IO.puts(message.topic <> " message received")
-    _data = Jason.decode!(message.body)
+    _data = JSON.decode!(message.body)
     {:noreply, state}
   end
 

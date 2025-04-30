@@ -323,7 +323,7 @@ defmodule Amps.PullConsumer do
               IO.inspect(msg)
 
               try do
-                Jason.decode!(msg.body)["msg"]["ackmode"]
+                JSON.decode!(msg.body)["msg"]["ackmode"]
               rescue
                 e ->
                   "nack"

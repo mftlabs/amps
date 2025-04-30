@@ -37,14 +37,13 @@ defmodule Amps.MixProject do
   defp deps do
     [
       {:amps_mongodb, [git: "https://github.com/mftlabs/amps-mongodb", branch: "main"]},
-      #      {:amps_kafka, [git: "https://github.com/mftlabs/amps_kafka", branch: "main"]},
       {:phoenix_pubsub, "~> 2.0"},
       {:swoosh, "~> 1.3"},
       {:plug_cowboy, "~> 2.0"},
       {:uuid, "~> 2.0", hex: :uuid_erl},
-      {:poison, "~> 3.1"},
       {:export, "~> 0.1.1"},
       {:erlport, "~>0.11.0"},
+      {:libvault, "~> 0.2.3"},
       {:poolboy, "~> 1.5"},
       {:glob, "~> 1.0"},
       {:sftp_client, "~> 1.4"},
@@ -53,6 +52,7 @@ defmodule Amps.MixProject do
       {:gnat, "~> 1.5.2"},
       {:httpoison, "~> 1.8"},
       {:zstream, "~> 0.6.0"},
+      {:pow, "~> 1.0.25"},
       {:ex_aws, "~> 2.0"},
       {:ex_aws_s3, "~> 2.0"},
       {:ex_aws_sqs, "~> 3.3"},

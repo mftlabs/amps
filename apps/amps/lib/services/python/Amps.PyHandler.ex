@@ -34,8 +34,8 @@ defmodule Amps.PyHandler do
 
     service =
       :pythra.init(pid, svc, svc, [], [
-        {:parms, Jason.encode!(parms)},
-        {:sysparms, Jason.encode!(%{"tempdir" => AmpsUtil.get_env(:storage_temp)})},
+        {:parms, JSON.encode!(parms)},
+        {:sysparms, JSON.encode!(%{"tempdir" => AmpsUtil.get_env(:storage_temp)})},
         {:pid, self()},
         {:env, env},
         {:lhandler, log_handler}
@@ -61,8 +61,8 @@ defmodule Amps.PyHandler do
 
   def send_message(msg, parms, env) do
     if parms["send_output"] do
-      msg = Jason.decode!(msg)
-      parms = Jason.decode!(parms)
+      msg = JSON.decode!(msg)
+      parms = JSON.decode!(parms)
 
       AmpsEvents.send(
         msg,
@@ -79,7 +79,7 @@ defmodule Amps.PyHandler do
 
   def put_response({resp, id}, state) do
     :pythra.method(state.process.pid, state.process.service, :__response__, [
-      Jason.encode!(resp),
+      JSON.encode!(resp),
       id
     ])
   end
@@ -87,7 +87,7 @@ defmodule Amps.PyHandler do
   def handle_info({{:new, msg, action, response, timeout}, id}, state) do
     parms = state.parms
     Logger.debug("Handling new message in service #{parms["name"]}")
-    msg = Jason.decode!(msg)
+    msg = JSON.decode!(msg)
 
     {msg, sid} =
       AmpsEvents.start_session(
@@ -194,7 +194,7 @@ defmodule Amps.PyHandler do
 
   def handle_info({{:authenticate, user}, id}, state) do
     # Process.sleep(2000)
-    user = Jason.decode!(user)
+    user = JSON.decode!(user)
 
     resp =
       case custom_auth(user, state.env) do

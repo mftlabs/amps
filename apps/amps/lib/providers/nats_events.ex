@@ -44,14 +44,14 @@ defmodule AmpsEvents do
         end
 
       topic = AmpsUtil.env_topic(topic, env)
-      Gnat.pub(:gnat, topic, Poison.encode!(data))
+      Gnat.pub(:gnat, topic, JSON.encode!(data))
       # send_history("amps.events.messages", "messages", msg)
     else
       topic = "amps.action.error"
       newstate = Map.put(state, :error, "output topic missing in action")
       data = %{msg: msg, state: newstate}
 
-      Gnat.pub(:gnat, topic, Poison.encode!(data))
+      Gnat.pub(:gnat, topic, JSON.encode!(data))
     end
   end
 
@@ -59,7 +59,7 @@ defmodule AmpsEvents do
     app = Map.merge(app, %{"index" => index, "etime" => AmpsUtil.gettime()})
     data = Map.merge(msg, app)
     Logger.debug("post event #{topic}   #{inspect(data)}")
-    Gnat.pub(:gnat, topic, Poison.encode!(%{"msg" => data}))
+    Gnat.pub(:gnat, topic, JSON.encode!(%{"msg" => data}))
   end
 
   def send_history_update(topic, index, msg, clauses, env \\ "") do
@@ -70,7 +70,7 @@ defmodule AmpsEvents do
     Gnat.pub(
       :gnat,
       topic,
-      Poison.encode!(%{
+      JSON.encode!(%{
         "msg" => Map.merge(msg, %{"index" => index}),
         "op" => "update",
         "clauses" => clauses
@@ -79,12 +79,12 @@ defmodule AmpsEvents do
   end
 
   defp send_event(topic, data) do
-    Gnat.pub(:gnat, topic, Poison.encode!(data))
+    Gnat.pub(:gnat, topic, JSON.encode!(data))
   end
 
   def message(msg) do
     IO.puts("event: message - #{inspect(msg)}")
-    send_event("amps.events.message", Poison.encode!(msg))
+    send_event("amps.events.message", JSON.encode!(msg))
   end
 
   def start_session(msg, session, env) do
@@ -112,7 +112,7 @@ defmodule AmpsEvents do
     Gnat.pub(
       :gnat,
       AmpsUtil.env_topic("amps.events.sessions", env),
-      Poison.encode!(%{"msg" => session})
+      JSON.encode!(%{"msg" => session})
     )
 
     msg =
@@ -170,7 +170,7 @@ defmodule AmpsEvents do
       })
 
     IO.puts("event: session start #{inspect(data)}")
-    send_event("amps.events.session", Poison.encode!(data))
+    send_event("amps.events.session", JSON.encode!(data))
   end
 
   def session_end(session, status, text \\ "") do
@@ -183,7 +183,7 @@ defmodule AmpsEvents do
         "stime" => AmpsUtil.gettime()
       })
 
-    send_event("amps.events.session", Poison.encode!(data))
+    send_event("amps.events.session", JSON.encode!(data))
   end
 
   def session_info(source, session_id, session) do
@@ -196,7 +196,7 @@ defmodule AmpsEvents do
       })
 
     IO.puts("session info event: #{inspect(data)}")
-    send_event("amps.events.session_info", Poison.encode!(data))
+    send_event("amps.events.session_info", JSON.encode!(data))
   end
 
   def session_debug(source, session_id, session) do

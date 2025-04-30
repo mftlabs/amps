@@ -65,7 +65,7 @@ defmodule AmpsWeb.DataController do
       end
 
     if path do
-      demo = Jason.decode!(File.read!(Path.join(path, "pkg.json")))
+      demo = JSON.decode!(File.read!(Path.join(path, "pkg.json")))
 
       case DB.find_one("packages", Map.take(demo, ["name", "description"])) do
         nil ->
@@ -172,7 +172,7 @@ defmodule AmpsWeb.DataController do
 
     # onb = fn msg, obj, env ->
     #   obj = obj |> Map.put("password", password)
-    #   msg = Map.put(msg, "data", Jason.encode!(obj))
+    #   msg = Map.put(msg, "data", JSON.encode!(obj))
 
     #   Amps.Onboarding.onboard(
     #     msg,
@@ -206,7 +206,7 @@ defmodule AmpsWeb.DataController do
 
     # onb = fn msg, obj, env ->
     #   obj = obj |> Map.put("password", password)
-    #   msg = Map.put(msg, "data", Jason.encode!(obj))
+    #   msg = Map.put(msg, "data", JSON.encode!(obj))
 
     #   Amps.Onboarding.onboard(
     #     msg,
@@ -251,7 +251,7 @@ defmodule AmpsWeb.DataController do
     res = File.cp(file.path, fpath)
     IO.inspect(res)
     info = File.stat!(fpath)
-    meta = Jason.decode!(meta)
+    meta = JSON.decode!(meta)
 
     msg =
       Map.merge(
@@ -368,7 +368,7 @@ defmodule AmpsWeb.DataController do
                     key = Enum.at(headers, idx)
 
                     try do
-                      val = Jason.decode!(val)
+                      val = JSON.decode!(val)
 
                       Map.put(obj, key, val)
                     rescue
@@ -463,7 +463,7 @@ defmodule AmpsWeb.DataController do
 
         v =
           if is_list(v) || is_map(v) do
-            Jason.encode!(v)
+            JSON.encode!(v)
           else
             v
           end
@@ -624,7 +624,7 @@ defmodule AmpsWeb.DataController do
   def export_collection(conn, %{
         "collection" => collection
       }) do
-    filters = conn.query_params["filters"] |> Jason.decode!()
+    filters = conn.query_params["filters"] |> JSON.decode!()
 
     binary =
       case export(collection, conn.assigns().env, filters) do
@@ -722,7 +722,7 @@ defmodule AmpsWeb.DataController do
     meta =
       Map.merge(
         %{"msgid" => msgid, "user" => user.username, "service" => "Topic Event"},
-        Jason.decode!(meta)
+        JSON.decode!(meta)
       )
 
     {msg, sid} = AmpsEvents.start_session(meta, %{"service" => "Topic Event"}, conn.assigns().env)
@@ -837,7 +837,7 @@ defmodule AmpsWeb.DataController do
     imports = Enum.reverse(imports)
     demo = demo |> Map.put("imports", imports) |> Map.put("scripts", "scripts")
     IO.inspect(demo)
-    File.write(Path.join(dir, "pkg.json"), Jason.encode!(demo) |> Jason.Formatter.pretty_print())
+    File.write(Path.join(dir, "pkg.json"), JSON.encode!(demo) |> JSON.Formatter.pretty_print())
     IO.inspect(demo)
     readme = "# #{demo["name"]}\n## #{demo["desc"]}"
     IO.inspect(readme)
@@ -862,7 +862,7 @@ defmodule AmpsWeb.DataController do
     obj = Amps.DB.find_one("message_events", %{"_id" => id})
     body = conn.body_params()
     topic = body["topic"]
-    meta = Jason.decode!(body["meta"])
+    meta = JSON.decode!(body["meta"])
 
     msg = obj |> Map.drop(["status", "action", "topic", "_id", "index", "etime"])
     {msg, sid} = AmpsEvents.start_session(msg, %{"service" => "Reroute"}, conn.assigns().env)
@@ -877,13 +877,13 @@ defmodule AmpsWeb.DataController do
     body = conn.body_params()
     ids = body["ids"]
     _topic = body["topic"]
-    _meta = Jason.decode!(body["meta"])
+    _meta = JSON.decode!(body["meta"])
 
     Enum.each(ids, fn id ->
       obj = Amps.DB.find_one("message_events", %{"_id" => id})
       body = conn.body_params()
       topic = body["topic"]
-      meta = Jason.decode!(body["meta"])
+      meta = JSON.decode!(body["meta"])
 
       msg = obj |> Map.drop(["status", "action", "topic", "_id", "index", "etime"])
 
@@ -1058,7 +1058,7 @@ defmodule AmpsWeb.DataController do
     end
 
     # onb = fn msg, obj, env ->
-    #   msg = Map.put(msg, "data", Jason.encode!(obj))
+    #   msg = Map.put(msg, "data", JSON.encode!(obj))
 
     #   Amps.Onboarding.onboard(
     #     msg,
@@ -1453,7 +1453,7 @@ defmodule S3 do
 
     {:ok, path} = Temp.mkdir()
     schedulepath = path <> "/schedule.json"
-    _result = File.write(schedulepath, Jason.encode!(schedule))
+    _result = File.write(schedulepath, JSON.encode!(schedule))
 
     _put =
       ExAws.S3.put_object(
@@ -1504,7 +1504,7 @@ defmodule S3 do
 
     {:ok, path} = Temp.mkdir()
     schedulepath = path <> "/schedule.json"
-    _result = File.write(schedulepath, Jason.encode!(schedule))
+    _result = File.write(schedulepath, JSON.encode!(schedule))
 
     _put =
       ExAws.S3.put_object(
@@ -1590,7 +1590,7 @@ defmodule S3 do
     msgid = message["msgid"]
     stime = DateTime.to_iso8601(DateTime.utc_now())
 
-    Gnat.pub(:gnat, "AMPS.Events.Reprocess", Jason.encode!(message))
+    Gnat.pub(:gnat, "AMPS.Events.Reprocess", JSON.encode!(message))
 
     ev = %{
       msgid: msgid,

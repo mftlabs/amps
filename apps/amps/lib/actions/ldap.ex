@@ -87,7 +87,7 @@ defmodule Amps.Actions.LDAP do
 
         case LDAPEx.Client.search(ldap, req, parms["timeout"] || 15000) do
           {:ok, {results, _}} ->
-            res = Jason.encode!(results)
+            res = JSON.encode!(results)
             size = byte_size(res)
             msgid = AmpsUtil.get_id()
 

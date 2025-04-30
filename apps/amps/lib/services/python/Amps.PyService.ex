@@ -29,7 +29,7 @@ defmodule Amps.PyService do
 
     module = String.to_atom(parms["module"])
     xparm = %{:msg => msg, :parms => parms, :sysparms => %{"tempdir" => tmp}}
-    jparms = Poison.encode!(xparm)
+    jparms = JSON.encode!(xparm)
 
     {:ok, pid} = :pythra.start_link([String.to_charlist(path), String.to_charlist(util)])
 
@@ -126,7 +126,7 @@ defmodule Amps.PyService do
     IO.inspect(parms)
     module = String.to_atom(parms["module"])
     xparm = %{:msg => msg, :parms => parms, :sysparms => %{"tempdir" => tmp}}
-    jparms = Poison.encode!(xparm)
+    jparms = JSON.encode!(xparm)
 
     {:ok, pid} = :pythra.start_link([String.to_charlist(path)])
     IO.inspect(self())
@@ -156,7 +156,7 @@ defmodule Amps.PyService do
     # {:ok, pid} = :python.start([{:python_path, to_charlist(path)}])
     module = String.to_atom(parms["module"])
     xparm = %{:msg => msg, :parms => parms, :sysparms => %{"tempdir" => tmp}}
-    jparms = Poison.encode!(xparm)
+    jparms = JSON.encode!(xparm)
 
     {:ok, pid} = :pythra.start_link([String.to_charlist(path)])
 

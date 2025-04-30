@@ -49,7 +49,7 @@ defmodule AmpsWeb.Vault do
 
           config ->
             try do
-              keys = Jason.decode!(AmpsWeb.Encryption.decrypt(config["keys"]))
+              keys = JSON.decode!(AmpsWeb.Encryption.decrypt(config["keys"]))
               IO.puts("Fetching Vault Credentials")
 
               unseal_vault(vault, keys)
@@ -71,7 +71,7 @@ defmodule AmpsWeb.Vault do
           nil ->
             Amps.DB.insert("config", %{
               "name" => "vault",
-              "keys" => AmpsWeb.Encryption.encrypt(Jason.encode!(keys))
+              "keys" => AmpsWeb.Encryption.encrypt(JSON.encode!(keys))
             })
 
           body ->
@@ -79,7 +79,7 @@ defmodule AmpsWeb.Vault do
               "config",
               %{
                 "name" => "vault",
-                "keys" => AmpsWeb.Encryption.encrypt(Jason.encode!(keys))
+                "keys" => AmpsWeb.Encryption.encrypt(JSON.encode!(keys))
               },
               BSON.ObjectId.encode!(body["_id"])
             )
@@ -87,11 +87,11 @@ defmodule AmpsWeb.Vault do
           _ ->
             Amps.DB.insert("config", %{
               "name" => "vault",
-              "keys" => AmpsWeb.Encryption.encrypt(Jason.encode!(keys))
+              "keys" => AmpsWeb.Encryption.encrypt(JSON.encode!(keys))
             })
         end
 
-        # IO.inspect(File.write("keys/keys.json", Jason.encode!(keys), [:binary]))
+        # IO.inspect(File.write("keys/keys.json", JSON.encode!(keys), [:binary]))
         {:ok, keys}
     end
   end

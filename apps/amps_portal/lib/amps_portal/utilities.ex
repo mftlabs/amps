@@ -79,7 +79,7 @@ defmodule AmpsPortal.Util do
   def after_token_create(user, body, env) do
     tokenid = body["id"]
     index = index(env, "tokens")
-    data = Jason.encode!(%{"uid" => user["username"]})
+    data = JSON.encode!(%{"uid" => user["username"]})
 
     secret = Phoenix.Token.sign(AmpsPortal.Endpoint, "auth", data)
 
@@ -113,9 +113,9 @@ defmodule AmpsPortal.Util do
   end
 
   def create_filter(qp, filter) do
-    filters = Jason.decode!(Map.get(qp, "filters", "{}"))
+    filters = JSON.decode!(Map.get(qp, "filters", "{}"))
 
-    Map.put(qp, "params", Jason.encode!(%{filters: Map.merge(filters, filter)}))
+    Map.put(qp, "params", JSON.encode!(%{filters: Map.merge(filters, filter)}))
   end
 
   def conn_index(conn, index) do
@@ -147,7 +147,7 @@ defmodule AmpsPortal.Util do
 
   def verify_token(tokenid, token, env) do
     {:ok, parms} = Phoenix.Token.verify(AmpsPortal.Endpoint, "auth", token, max_age: :infinity)
-    %{"uid" => username} = Jason.decode!(parms)
+    %{"uid" => username} = JSON.decode!(parms)
 
     case DB.find_one(index(env, "tokens"), %{"username" => username}) do
       nil ->

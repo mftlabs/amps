@@ -26,7 +26,7 @@ defmodule Amps.PyConsumer do
 
     resp =
       :pythra.method(state.process.pid, state.process.service, :__receive__, [
-        Jason.encode!(msg)
+        JSON.encode!(msg)
       ])
 
     case resp do

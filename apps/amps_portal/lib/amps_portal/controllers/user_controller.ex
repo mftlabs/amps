@@ -177,7 +177,7 @@ defmodule AmpsPortal.UserController do
 
         # onb = fn msg, obj, env ->
         #   obj = obj |> Map.put("password", user["password"])
-        #   msg = Map.put(msg, "data", Jason.encode!(obj))
+        #   msg = Map.put(msg, "data", JSON.encode!(obj))
 
         #   Amps.Onboarding.onboard(
         #     msg,

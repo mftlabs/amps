@@ -482,7 +482,7 @@ defmodule AmpsUtil do
   end
 
   def get_local_file(msg, env) do
-    msg = Jason.decode!(msg)
+    msg = JSON.decode!(msg)
     local_file(msg, env)
   end
 
