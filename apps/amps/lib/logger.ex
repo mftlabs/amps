@@ -7,13 +7,16 @@ defmodule Amps.Logger do
             messages: []
 
   @impl true
-  def init(parms) do
+  def init(_parms) do
     # config = Application.get_env(:logger, :console)
     config = Application.get_env(:amps, __MODULE__)
 
     level = Keyword.get(config, :level, :debug)
     IO.inspect(Keyword.get(config, :format))
-    format = Logger.Formatter.compile(Keyword.get(config, :format))
+
+    format =
+      Logger.Formatter.compile(Keyword.get(config, :format, "$time $metadata[$level] $message\n"))
+
     IO.inspect(format)
 
     state = %__MODULE__{level: level, format: format}
@@ -25,8 +28,8 @@ defmodule Amps.Logger do
   end
 
   @impl true
-  def handle_call({:configure, options}, state) do
-    {:ok, :ok, :ok}
+  def handle_call({:configure, _options}, _from, state) do
+    {:reply, :ok, state}
   end
 
   @impl true

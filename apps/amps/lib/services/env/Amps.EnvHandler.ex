@@ -8,10 +8,10 @@ defmodule Amps.EnvHandler do
     GenServer.start_link(__MODULE__, args, name: __MODULE__)
   end
 
-  def init(args) do
+  def init(_args) do
     # Process.link(connection_pid)
     Logger.info("Starting Service Handler")
-    listening_topic = "_CON.#{nuid()}"
+    # listening_topic = "_CON.#{nuid()}"
 
     connection_pid = Process.whereis(:gnat)
 
@@ -30,7 +30,7 @@ defmodule Amps.EnvHandler do
 
   def get_data(body) do
     try do
-      Poison.decode!(body)
+      JSON.decode!(body)
     rescue
       error ->
         Logger.warning("action failed #{inspect(error)}")
@@ -86,7 +86,7 @@ defmodule Amps.EnvHandler do
 
     if env["active"] do
       case EnvManager.start_env(name) do
-        {:ok, res} ->
+        {:ok, _res} ->
           %{
             "success" => true
           }
@@ -102,7 +102,7 @@ defmodule Amps.EnvHandler do
 
   def start_env(name) do
     case EnvManager.start_env(name) do
-      {:ok, res} ->
+      {:ok, _res} ->
         %{
           "success" => true
         }
@@ -138,7 +138,7 @@ defmodule Amps.EnvHandler do
     {:noreply, state}
   end
 
-  def handle_info({:DOWN, ref, :process, pid, reason}, state) do
+  def handle_info({:DOWN, _ref, :process, _pid, reason}, state) do
     Logger.info("Process ended: #{reason}")
     {:noreply, state}
   end
@@ -160,5 +160,5 @@ defmodule Amps.EnvHandler do
     {:reply, :ok, state}
   end
 
-  defp nuid(), do: :crypto.strong_rand_bytes(12) |> Base.encode64()
+  # defp nuid(), do: :crypto.strong_rand_bytes(12) |> Base.encode64()
 end

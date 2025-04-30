@@ -7,6 +7,6 @@ defmodule AmpsPortal.PageController do
   end
 
   def execute_test(conn, _params) do
-    json(conn,  %{"message" => "Welcome to AMPS!"})
+    json(conn, %{"message" => "Welcome to AMPS!"})
   end
 end

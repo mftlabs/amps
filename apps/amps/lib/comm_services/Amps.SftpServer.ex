@@ -118,8 +118,9 @@ defmodule Amps.SftpServer do
     options = args[:parms]
     env = args[:env] || ""
     :ok = :ssh.start()
-#    key = AmpsUtil.get_key(options["server_key"], env)
+    #    key = AmpsUtil.get_key(options["server_key"], env)
     server_key = options["server_key"]
+
     case Amps.DB.find_by_id(AmpsUtil.index(env, "keys"), server_key)["data"] do
       {nil} ->
         reason = "cannot start sftp server: server_key npot found for env #{env}"
@@ -127,19 +128,20 @@ defmodule Amps.SftpServer do
         {:error, reason}
 
       {:error, reason} ->
-          Logger.warning("cannot start sftp server #{inspect(reason)}")
-          {:error, reason}
+        Logger.warning("cannot start sftp server #{inspect(reason)}")
+        {:error, reason}
 
       key ->
         opts = Map.put(options, "server_key", key)
+
         case init_daemon(opts, env) do
           {:ok, pid, ref, options} ->
             {:ok,
              %{
-                options: options,
-                daemons: [%{pid: pid, ref: ref, options: options}],
+               options: options,
+               daemons: [%{pid: pid, ref: ref, options: options}],
                env: env
-              }}
+             }}
 
           other ->
             Logger.warning("cannot start sftp server #{inspect(other)}")
@@ -390,13 +392,13 @@ defmodule Amps.SftpHandler do
 
       IO.inspect(msg)
 
-      #mailboxtopic = "amps.mailbox.#{user}.#{msg["mailbox"]}"
+      # mailboxtopic = "amps.mailbox.#{user}.#{msg["mailbox"]}"
 
       # IO.inspect(state)
       # state = List.keydelete(state, :options, 0)
 
       AmpsEvents.send(msg, %{"output" => topic}, %{}, env)
-      #AmpsEvents.send(msg, %{"output" => mailboxtopic}, %{}, env)
+      # AmpsEvents.send(msg, %{"output" => mailboxtopic}, %{}, env)
 
       delete.()
       # AmpsEvents.send_history(

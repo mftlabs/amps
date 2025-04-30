@@ -6,7 +6,7 @@ defmodule ServiceMonitoring do
     host = Application.fetch_env!(:amps_web, AmpsWeb.Endpoint)[:nats_addr]
     url = "http://localhost:8222/varz"
     response = HTTPoison.get!(url)
-    req = Poison.decode!(response.body)
+    req = JSON.decode!(response.body)
     # IO.puts(req)
     DB.insert("service_monitoring", %{
       "service_type" => "nats",
@@ -20,7 +20,7 @@ defmodule ServiceMonitoring do
       "http://localhost:9600/_plugins/_performanceanalyzer/metrics?metrics=Latency,CPU_Utilization&agg=avg,max&dim=ShardID&nodes=all"
 
     response = HTTPoison.get!(url)
-    req = Poison.decode!(response.body)
+    req = JSON.decode!(response.body)
     # IO.puts(req)
     DB.insert("service_monitoring", %{
       "service_type" => "opensearch",

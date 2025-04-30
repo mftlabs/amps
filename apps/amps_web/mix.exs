@@ -71,13 +71,6 @@ defmodule AmpsWeb.MixProject do
       {:elixlsx, "~> 0.5.1"},
       {:xlsxir, "~> 1.6.4"},
       {:earmark, "~> 1.4"},
-      {:erlport,
-       [
-         env: :prod,
-         override: true,
-         git: "https://github.com/erlport/erlport.git",
-         branch: "master"
-       ]},
       {:swoosh, "~> 1.3"},
       {:file_type, "~> 0.1.0"},
       {:amps_mongodb, [git: "https://github.com/mftlabs/amps-mongodb", branch: "main"]},

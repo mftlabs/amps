@@ -34,7 +34,7 @@ defmodule Amps.ArchiveHandler do
       end)
 
     # Now we start the supervisor with the children and a strategy
-    {:ok, pid} = Supervisor.start_link(children, strategy: :one_for_one)
+    {:ok, _pid} = Supervisor.start_link(children, strategy: :one_for_one)
 
     # After started, we can query the supervisor for information
 

@@ -31,11 +31,14 @@ defmodule Amps.Actions.PGPDecrypt do
       |> :os.cmd()
 
     IO.inspect(exec)
-    command = "#{if msg["data"] do
-      "echo \"#{msg["data"]}\" | "
-    end}gpg --batch --pinentry-mode loopback --passphrase #{parms["passphrase"]} -o #{fpath} --decrypt #{if msg["fpath"] do
-      msg["fpath"]
-    end}"
+
+    command =
+      "#{if msg["data"] do
+        "echo \"#{msg["data"]}\" | "
+      end}gpg --batch --pinentry-mode loopback --passphrase #{parms["passphrase"]} -o #{fpath} --decrypt #{if msg["fpath"] do
+        msg["fpath"]
+      end}"
+
     IO.inspect(exec)
 
     exec =

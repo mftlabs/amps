@@ -17,7 +17,7 @@ defmodule Amps.HistoryConsumer do
       end
 
     # IO.puts("starting event listener #{inspect(parms)}")
-    name = parms[:name]
+    # name = parms[:name]
     GenServer.start_link(__MODULE__, parms)
   end
 
@@ -36,24 +36,24 @@ defmodule Amps.HistoryConsumer do
     }
   end
 
-  defp get_names(parms) do
-    topic = parms["topic"]
-    safe = String.replace(topic, ".", "_")
-    consumer = String.replace(safe, "*", "_")
+  # defp get_names(parms) do
+  #   topic = parms["topic"]
+  #   safe = String.replace(topic, ".", "_")
+  #   consumer = String.replace(safe, "*", "_")
 
-    [base, part, _other] = String.split(topic, ".", parts: 3)
+  #   [base, part, _other] = String.split(topic, ".", parts: 3)
 
-    stream = AmpsUtil.get_env_parm(:streams, String.to_atom(base <> "." <> part))
+  #   stream = AmpsUtil.get_env_parm(:streams, String.to_atom(base <> "." <> part))
 
-    {stream, consumer}
-  end
+  #   {stream, consumer}
+  # end
 
   # GenServer callbacks
   def handle_info({:initial_connect, opts}, state) do
     # IO.puts("opts #{inspect(opts)}")
     # IO.puts("state #{inspect(state)}")
     name = Atom.to_string(state[:name])
-    sub = String.to_atom(name <> "_sup")
+    # sub = String.to_atom(name <> "_sup")
     # IO.puts("sub: #{inspect(sub)}")
 
     pid = Process.whereis(:gnat)
@@ -97,7 +97,7 @@ defmodule Amps.HistoryConsumer do
     {:noreply, state}
   end
 
-  def handle_info({val, _opts}, state) do
+  def handle_info({_val, _opts}, state) do
     # IO.puts("got event #{inspect(val)}")
     {:noreply, state}
   end
@@ -106,7 +106,7 @@ end
 defmodule Amps.HistoryPullConsumer do
   use GenServer
   require Logger
-  alias Amps.DB
+  # alias Amps.DB
 
   def init(%{
         parms: parms,
@@ -161,7 +161,7 @@ defmodule Amps.HistoryPullConsumer do
 
   def handle_info({:msg, message}, state) do
     try do
-      data = Poison.decode!(message.body)
+      data = JSON.decode!(message.body)
       parms = state[:parms]
       name = parms["name"]
 
@@ -218,7 +218,7 @@ defmodule Amps.HistoryPullConsumer do
     rescue
       e ->
         Logger.error(Exception.format(:error, e, __STACKTRACE__))
-        Logger.warn("Unexpected Message in History")
+        Logger.warning("Unexpected Message in History")
         Amps.HistoryHandler.put_message(state.handler, {[], message})
     end
 
@@ -236,14 +236,12 @@ defmodule Amps.HistoryPullConsumer do
     {:noreply, state}
   end
 
-  def handle_call(parms, _from, state) do
+  def handle_call(_parms, _from, state) do
     # IO.puts("handler call called #{inspect(parms)}")
     {:reply, :ok, state}
   end
 
-  def terminate(reason, state) do
+  def terminate(_reason, state) do
     Gnat.unsub(:gnat, state.sid)
   end
-
-  defp nuid(), do: :crypto.strong_rand_bytes(12) |> Base.encode64()
 end

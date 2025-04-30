@@ -1,6 +1,7 @@
 defmodule Amps.EventPullConsumer do
   @behaviour Amps.PullConsumer
-  use Amps.PullConsumer
+  # use Amps.PullConsumer
+  require Logger
 
   @impl Amps.PullConsumer
   def initialize(state) do
@@ -14,10 +15,10 @@ defmodule Amps.EventPullConsumer do
   end
 
   @impl Amps.PullConsumer
-  def process(message, msg, process_task, mstate, state) do
+  def process(message, msg, _process_task, mstate, state) do
     actparms = state.actparms
     parms = state.parms
-    sid = msg["sid"]
+    # sid = msg["sid"]
 
     name = parms["name"]
     mctx = {mstate, state.env}
@@ -43,147 +44,146 @@ defmodule Amps.EventPullConsumer do
       )
 
     # IO.puts("opts after lookup #{inspect(actparms)}")
-    status =
-      case handler.run(msg, actparms, mctx) do
-        {:ok, result} ->
-          Logger.info("Action Completed #{inspect(result)}")
-          # IO.puts("ack next message")
+    case handler.run(msg, actparms, mctx) do
+      {:ok, result} ->
+        Logger.info("Action Completed #{inspect(result)}")
+        # IO.puts("ack next message")
 
-          if mstate["return"] do
-            Amps.AsyncResponder.put_response(
-              mstate["return"],
-              mstate["contextid"] <> parms["name"],
-              {actparms["name"], msg["msgid"], result}
-            )
-          end
+        if mstate["return"] do
+          Amps.AsyncResponder.put_response(
+            mstate["return"],
+            mstate["contextid"] <> parms["name"],
+            {actparms["name"], msg["msgid"], result}
+          )
+        end
 
-          # IO.inspect(state)
+        # IO.inspect(state)
 
-          {status, reason} =
-            if is_map(result) do
-              if Map.has_key?(result, "status") do
-                status = result["status"]
-                reason = result["reason"] || nil
-                {status, reason}
-              else
-                {"completed", nil}
-              end
+        {status, reason} =
+          if is_map(result) do
+            if Map.has_key?(result, "status") do
+              status = result["status"]
+              reason = result["reason"] || nil
+              {status, reason}
             else
               {"completed", nil}
             end
+          else
+            {"completed", nil}
+          end
 
-          event = %{
-            "topic" => AmpsUtil.env_topic(parms["topic"], state.env),
-            "status" => status,
+        event = %{
+          "topic" => AmpsUtil.env_topic(parms["topic"], state.env),
+          "status" => status,
+          "action" => actparms["name"],
+          "subscriber" => name
+        }
+
+        event =
+          if reason do
+            Map.put(event, "reason", reason)
+          else
+            event
+          end
+
+        AmpsEvents.send_history(
+          AmpsUtil.env_topic(
+            "amps.events.action",
+            state.env
+          ),
+          "message_events",
+          msg,
+          event
+        )
+
+        {:ack, status}
+
+      {:send, events} ->
+        Enum.each(events, fn event ->
+          event =
+            if Map.has_key?(event, "user") do
+              event
+            else
+              Map.put(event, "user", parms["name"])
+            end
+
+          AmpsEvents.send(
+            event,
+            actparms,
+            mstate,
+            state.env
+          )
+        end)
+
+        if mstate["return"] do
+          Amps.AsyncResponder.resolve_message(
+            mstate["return"],
+            mstate["contextid"] <> parms["name"]
+          )
+        end
+
+        Logger.info("Action Completed #{parms["name"]}")
+
+        # IO.puts("ack next message")
+
+        AmpsEvents.send_history(
+          AmpsUtil.env_topic(
+            "amps.events.action",
+            state.env
+          ),
+          "message_events",
+          msg,
+          %{
+            "topic" => parms["topic"],
+            "status" => "completed",
             "action" => actparms["name"],
             "subscriber" => name
           }
+        )
 
-          event =
-            if reason do
-              Map.put(event, "reason", reason)
-            else
-              event
-            end
+        {:ack, "completed"}
 
-          AmpsEvents.send_history(
-            AmpsUtil.env_topic(
-              "amps.events.action",
-              state.env
-            ),
-            "message_events",
-            msg,
-            event
+      {:send, events, topic} ->
+        Logger.info(topic)
+
+        Enum.each(events, fn event ->
+          AmpsEvents.send(
+            event,
+            %{"output" => topic},
+            mstate,
+            state.env
           )
+        end)
 
-          {:ack, status}
-
-        {:send, events} ->
-          Enum.each(events, fn event ->
-            event =
-              if Map.has_key?(event, "user") do
-                event
-              else
-                Map.put(event, "user", parms["name"])
-              end
-
-            AmpsEvents.send(
-              event,
-              actparms,
-              mstate,
-              state.env
-            )
-          end)
-
-          if mstate["return"] do
-            Amps.AsyncResponder.resolve_message(
-              mstate["return"],
-              mstate["contextid"] <> parms["name"]
-            )
-          end
-
-          Logger.info("Action Completed #{parms["name"]}")
-
-          # IO.puts("ack next message")
-
-          AmpsEvents.send_history(
-            AmpsUtil.env_topic(
-              "amps.events.action",
-              state.env
-            ),
-            "message_events",
-            msg,
-            %{
-              "topic" => parms["topic"],
-              "status" => "completed",
-              "action" => actparms["name"],
-              "subscriber" => name
-            }
+        if mstate["return"] do
+          Amps.AsyncResponder.resolve_message(
+            mstate["return"],
+            mstate["contextid"] <> parms["name"]
           )
+        end
 
-          {:ack, "completed"}
+        Logger.info("Action Completed #{parms["name"]}")
 
-        {:send, events, topic} ->
-          Logger.info(topic)
+        # IO.puts("ack next message")
 
-          Enum.each(events, fn event ->
-            AmpsEvents.send(
-              event,
-              %{"output" => topic},
-              mstate,
-              state.env
-            )
-          end)
+        AmpsEvents.send_history(
+          AmpsUtil.env_topic(
+            "amps.events.action",
+            state.env
+          ),
+          "message_events",
+          msg,
+          %{
+            "topic" => parms["topic"],
+            "status" => "completed",
+            "action" => actparms["name"],
+            "subscriber" => name
+          }
+        )
 
-          if mstate["return"] do
-            Amps.AsyncResponder.resolve_message(
-              mstate["return"],
-              mstate["contextid"] <> parms["name"]
-            )
-          end
-
-          Logger.info("Action Completed #{parms["name"]}")
-
-          # IO.puts("ack next message")
-
-          AmpsEvents.send_history(
-            AmpsUtil.env_topic(
-              "amps.events.action",
-              state.env
-            ),
-            "message_events",
-            msg,
-            %{
-              "topic" => parms["topic"],
-              "status" => "completed",
-              "action" => actparms["name"],
-              "subscriber" => name
-            }
-          )
-
-          Amps.EventHandler.stop_process(state.handler, message, msg["msgid"])
-          {:ack, "completed"}
-      end
+        Amps.EventHandler.stop_process(state.handler, message, msg["msgid"])
+        {:ack, "completed"}
+    end
   end
 
   @impl Amps.PullConsumer

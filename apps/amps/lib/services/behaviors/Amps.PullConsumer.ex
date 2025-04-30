@@ -11,7 +11,7 @@ defmodule Amps.PullConsumer do
               | {ackstate :: atom(), status :: binary(), post :: fun()}
   @callback action_name(state :: map()) :: binary()
 
-  defmacro __using__(opts) do
+  defmacro __using__(_opts) do
     quote do
       use Jetstream.PullConsumer
       use GenServer
@@ -36,7 +36,7 @@ defmodule Amps.PullConsumer do
 
       def get_data(body) do
         try do
-          Poison.decode!(body)
+          JSON.decode!(body)
         rescue
           error ->
             Logger.warning("Data Failure #{inspect(error)}")

@@ -33,15 +33,17 @@ defmodule Amps.Actions.PGPEncrypt do
 
     keyid = "0x" <> exec
 
-    command = "#{if msg["data"] do
-      "echo \"#{msg["data"]}\" | "
-    end}gpg --batch #{if parms["armor"] do
-      "--armor"
-    end} #{if !parms["compress"] do
-      "-z 0"
-    end} --recipient-file #{key} --local-user #{keyid} --pinentry-mode loopback --passphrase #{parms["passphrase"]} --sign -o #{fpath} --encrypt #{if msg["fpath"] do
-      msg["fpath"]
-    end}"
+    command =
+      "#{if msg["data"] do
+        "echo \"#{msg["data"]}\" | "
+      end}gpg --batch #{if parms["armor"] do
+        "--armor"
+      end} #{if !parms["compress"] do
+        "-z 0"
+      end} --recipient-file #{key} --local-user #{keyid} --pinentry-mode loopback --passphrase #{parms["passphrase"]} --sign -o #{fpath} --encrypt #{if msg["fpath"] do
+        msg["fpath"]
+      end}"
+
     IO.inspect(command)
 
     exec =

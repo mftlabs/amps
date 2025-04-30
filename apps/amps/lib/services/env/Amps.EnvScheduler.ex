@@ -109,23 +109,22 @@ defmodule Amps.EnvScheduler do
           pieces = ["0", "0", "0", "*", "*", "*"]
           val = "*/" <> job["value"]
 
-          pieces =
-            case job["unit"] do
-              "Hours" ->
-                pieces
-                |> List.replace_at(2, val)
+          case job["unit"] do
+            "Hours" ->
+              pieces
+              |> List.replace_at(2, val)
 
-              "Minutes" ->
-                pieces
-                |> List.replace_at(2, "*")
-                |> List.replace_at(1, val)
+            "Minutes" ->
+              pieces
+              |> List.replace_at(2, "*")
+              |> List.replace_at(1, val)
 
-              "Seconds" ->
-                pieces
-                |> List.replace_at(2, "*")
-                |> List.replace_at(1, "*")
-                |> List.replace_at(0, val)
-            end
+            "Seconds" ->
+              pieces
+              |> List.replace_at(2, "*")
+              |> List.replace_at(1, "*")
+              |> List.replace_at(0, val)
+          end
 
         _ ->
           pieces = ["*", "*", "*", "*", "*", "*"]

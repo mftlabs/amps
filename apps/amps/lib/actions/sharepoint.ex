@@ -29,7 +29,6 @@ defmodule Amps.Actions.SharePoint do
         else
           events = scan_folder(parms, folder, token, url, "", rooturl, [])
 
-
           events =
             if parms["ackmode"] == "delete" do
               Enum.map(events, fn {event, obj} ->

@@ -82,7 +82,6 @@ defmodule Amps.SvcManager do
         nil ->
           res = load_service(name)
           IO.inspect(res)
-          res
 
           DB.find_one_and_update("services", %{"name" => name}, %{
             "active" => true
@@ -133,7 +132,7 @@ defmodule Amps.SvcManager do
                 {cert, {keytype, key}}
               rescue
                 e ->
-                  raise "Error parsing key and/or certificate"
+                  raise "Error parsing key and/or certificate #{e}"
               end
 
             {Plug.Cowboy,
@@ -229,7 +228,7 @@ defmodule Amps.SvcManager do
                 {cert, {keytype, key}}
               rescue
                 e ->
-                  raise "Error parsing key and/or certificate"
+                  raise "Error parsing key and/or certificate #{e}"
               end
 
             {Plug.Cowboy,
@@ -320,7 +319,7 @@ defmodule Amps.SvcManager do
 
               case get_spec(name, opts) do
                 {:error, error} ->
-                  Logger.warn("Service #{name} could not be started. Error: #{inspect(error)}")
+                  Logger.warning("Service #{name} could not be started. Error: #{inspect(error)}")
 
                   raise error
 

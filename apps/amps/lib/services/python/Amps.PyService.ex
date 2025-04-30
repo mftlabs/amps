@@ -183,7 +183,7 @@ defmodule Amps.PyService do
       result ->
         rparm =
           try do
-            Poison.decode!(result)
+            JSON.decode!(result)
           rescue
             _ ->
               {:error, "JSON Encoded object not returned from script"}
@@ -211,7 +211,7 @@ defmodule Amps.PyService do
       result ->
         rparm =
           try do
-            Poison.decode!(result)
+            JSON.decode!(result)
           rescue
             _ ->
               {:reply, {:error, "JSON Encoded object not returned from script"}, pid}

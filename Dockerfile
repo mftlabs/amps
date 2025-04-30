@@ -62,6 +62,6 @@ WORKDIR /amps
 
 ENV PYTHONUSERBASE=/.local
 
-ENV ERLPORT_PYTHON=/usr/bin/python3
+ENV ERLPORT_PYTHON=/amps/py3/bin/python3
 
 CMD ["./amps/bin/amps", "start"]

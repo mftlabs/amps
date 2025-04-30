@@ -71,7 +71,7 @@ defmodule Amps.PyHandler do
         env
       )
     else
-      Logger.warn(
+      Logger.warning(
         "Attempted to Send Message in Service #{parms["name"]} when \"Send Output\" disabled."
       )
     end
@@ -176,7 +176,7 @@ defmodule Amps.PyHandler do
           msg["msgod"]
         end
       else
-        Logger.warn(
+        Logger.warning(
           "Attempted to Send Message in Service #{parms["name"]} with unmapped action #{action}."
         )
 

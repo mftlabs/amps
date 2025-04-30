@@ -8,7 +8,7 @@ defmodule Amps.ArchiveManager do
     GenServer.start_link(__MODULE__, name: :"archive-mgr")
   end
 
-  def init(env) do
+  def init(_env) do
     Process.send_after(self(), :initial_connect, 0)
     {:ok, %{}}
   end
@@ -79,14 +79,6 @@ defmodule Amps.ArchiveManager do
   end
 
   # GenServer callbacks
-  def handle_info(:initial_connect, state) do
-    connection_pid = Process.whereis(:gnat)
-
-    {:ok, _sid} = Gnat.sub(connection_pid, self(), "amps.events.archive.handler.>")
-
-    load_archivers()
-    {:noreply, state}
-  end
 
   def handle_service({action, name}) do
     resp =
@@ -147,7 +139,7 @@ defmodule Amps.ArchiveManager do
 
     if env["active"] do
       case load_archive(name) do
-        {:ok, res} ->
+        {:ok, _res} ->
           %{
             "success" => true
           }
@@ -163,7 +155,7 @@ defmodule Amps.ArchiveManager do
 
   def start_archive(name) do
     case load_archive(name) do
-      {:ok, res} ->
+      {:ok, _res} ->
         %{
           "success" => true
         }
@@ -192,6 +184,15 @@ defmodule Amps.ArchiveManager do
       {:error, reason} ->
         reason
     end
+  end
+
+  def handle_info(:initial_connect, state) do
+    connection_pid = Process.whereis(:gnat)
+
+    {:ok, _sid} = Gnat.sub(connection_pid, self(), "amps.events.archive.handler.>")
+
+    load_archivers()
+    {:noreply, state}
   end
 
   def handle_info({:msg, message}, state) do
@@ -260,7 +261,6 @@ defmodule Amps.ArchiveManager do
         nil ->
           res = load_archive(name)
           IO.inspect(res)
-          res
 
           DB.find_one_and_update(
             AmpsUtil.index(state, "services"),
@@ -365,11 +365,11 @@ defmodule Amps.ArchiveManager do
                 {:ok, "Started #{parms["name"]}"}
 
               pid ->
-                {:ok, "Already Running"}
+                {:ok, "Already Running #{pid}"}
             end
           rescue
             e ->
-              error = "#{inspect(e)}"
+              # error = "#{inspect(e)}"
 
               # AmpsEvents.send_history(
               #   AmpsUtil.env_topic("amps.events.svcs.#{svcname}.logs", env),
@@ -404,7 +404,7 @@ defmodule Amps.ArchiveManager do
           Logger.info("Archiver not found for environment #{name}")
           nil
 
-        parms ->
+        _parms ->
           case Process.whereis(:"#{name}-archive") do
             nil ->
               nil

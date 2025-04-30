@@ -33,7 +33,7 @@ defmodule Amps.Actions.Router do
 
   # def run(subject, body) do
   #   try do
-  #     data = Poison.decode!(body)
+  #     data = JSON.decode!(body)
   #     msg = data[:msg]
   #     state = data[:state]
 

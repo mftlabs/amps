@@ -115,11 +115,13 @@ defmodule AmpsWeb.UtilScriptController do
     case DB.find_one(index, %{"name" => name}) do
       nil ->
         DB.insert(index, %{"name" => name, "data" => body["data"]})
+
       script ->
         DB.find_one_and_update(index, %{"_id" => script["_id"]}, %{
           "data" => body["data"]
         })
     end
+
     json(conn, :ok)
   end
 

@@ -44,7 +44,7 @@ defmodule AmpsWeb.Stream do
   def handle_info(other, state) do
     require Logger
 
-    Logger.warn("received unexpected message: #{inspect(other)}")
+    Logger.warning("received unexpected message: #{inspect(other)}")
 
     {:noreply, state}
   end

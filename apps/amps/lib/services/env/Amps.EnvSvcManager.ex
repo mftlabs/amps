@@ -83,7 +83,7 @@ defmodule Amps.EnvSvcManager do
         nil ->
           res = load_service(name, state)
           IO.inspect(res)
-          #res
+          # res
 
           DB.find_one_and_update(
             AmpsUtil.index(state, "services"),
@@ -124,9 +124,9 @@ defmodule Amps.EnvSvcManager do
           if args["tls"] do
             {cert, key} =
               try do
-#                cert = AmpsUtil.get_key(args["cert"], env)
+                #                cert = AmpsUtil.get_key(args["cert"], env)
                 cert = Amps.DB.find_by_id(AmpsUtil.index(env, "keys"), args["cert"])["data"]
-#                key = AmpsUtil.get_key(args["key"], env)
+                #                key = AmpsUtil.get_key(args["key"], env)
                 key = Amps.DB.find_by_id(AmpsUtil.index(env, "keys"), args["key"])["data"]
 
                 cert = X509.Certificate.from_pem!(cert) |> X509.Certificate.to_der()
@@ -193,8 +193,8 @@ defmodule Amps.EnvSvcManager do
           if args["tls"] do
             {cert, key} =
               try do
-#                cert = AmpsUtil.get_key(args["cert"], env)
-#                key = AmpsUtil.get_key(args["key"], env)
+                #                cert = AmpsUtil.get_key(args["cert"], env)
+                #                key = AmpsUtil.get_key(args["key"], env)
                 cert = Amps.DB.find_by_id(AmpsUtil.index(env, "keys"), args["cert"])["data"]
                 key = Amps.DB.find_by_id(AmpsUtil.index(env, "keys"), args["key"])["data"]
 
@@ -297,7 +297,7 @@ defmodule Amps.EnvSvcManager do
 
               case get_spec(name, opts, env) do
                 {:error, error} ->
-                  Logger.warn("Service #{name} could not be started. Error: #{inspect(error)}")
+                  Logger.warning("Service #{name} could not be started. Error: #{inspect(error)}")
 
                   raise error
 
@@ -349,7 +349,8 @@ defmodule Amps.EnvSvcManager do
 
         # This match pattern worked for kafka errors in my local testing, but I worry it is too specific.
 
-        {:shutdown, {:failed_to_start_child, _module, {{:badmatch, {:error, {e, _stacktrace}}}, _}}} =
+        {:shutdown,
+         {:failed_to_start_child, _module, {{:badmatch, {:error, {e, _stacktrace}}}, _}}} =
           error
 
         error =

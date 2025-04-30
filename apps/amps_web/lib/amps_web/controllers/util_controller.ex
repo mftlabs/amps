@@ -702,7 +702,7 @@ defmodule AmpsWeb.UtilController do
               step = Map.merge(step, %{"rule" => rule})
 
               if check_loop_new(step, topics) do
-                # Logger.warn("Workflow loop detected")
+                # Logger.warning("Workflow loop detected")
                 %{"loop" => true, "topic" => topic}
               else
                 topics = [step | topics]
@@ -726,7 +726,7 @@ defmodule AmpsWeb.UtilController do
               end
             else
               if check_loop_new(step, topics) do
-                # Logger.warn("Workflow loop detected")
+                # Logger.warning("Workflow loop detected")
                 %{"loop" => true, "topic" => topic}
               else
                 topics = [step | topics]

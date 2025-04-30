@@ -8,10 +8,10 @@ defmodule Amps.SvcHandler do
     GenServer.start_link(__MODULE__, args, name: __MODULE__)
   end
 
-  def init(args) do
+  def init(_args) do
     # Process.link(connection_pid)
     Logger.info("Starting Service Handler")
-    listening_topic = "_CON.#{nuid()}"
+    # listening_topic = "_CON.#{nuid()}"
 
     connection_pid = Process.whereis(:gnat)
 
@@ -33,7 +33,7 @@ defmodule Amps.SvcHandler do
     IO.inspect(body)
 
     try do
-      Poison.decode!(body)
+      JSON.decode!(body)
     rescue
       error ->
         Logger.warning("action failed #{inspect(error)}")
@@ -90,7 +90,7 @@ defmodule Amps.SvcHandler do
 
     if svc["active"] do
       case SvcManager.start_service(svcname) do
-        {:ok, res} ->
+        {:ok, _res} ->
           %{
             "success" => true
           }
@@ -106,7 +106,7 @@ defmodule Amps.SvcHandler do
 
   def start_service(svcname) do
     case SvcManager.start_service(svcname) do
-      {:ok, res} ->
+      {:ok, _res} ->
         %{
           "success" => true
         }
@@ -142,7 +142,7 @@ defmodule Amps.SvcHandler do
     {:noreply, state}
   end
 
-  def handle_info({:DOWN, ref, :process, pid, reason}, state) do
+  def handle_info({:DOWN, _ref, :process, pid, reason}, state) do
     IO.inspect(Process.info(pid))
 
     Logger.info("Process ended: #{reason}")
@@ -167,5 +167,5 @@ defmodule Amps.SvcHandler do
     {:reply, :ok, state}
   end
 
-  defp nuid(), do: :crypto.strong_rand_bytes(12) |> Base.encode64()
+  # defp nuid(), do: :crypto.strong_rand_bytes(12) |> Base.encode64()
 end

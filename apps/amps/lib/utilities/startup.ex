@@ -17,8 +17,8 @@ defmodule Amps.Startup do
   end
 
   def tzdata() do
-      %Timex.TimezoneInfo{full_name: fullname} = Timex.Timezone.local()
-      Application.put_env(:amps, :timezone, fullname)
+    %Timex.TimezoneInfo{full_name: fullname} = Timex.Timezone.local()
+    Application.put_env(:amps, :timezone, fullname)
   end
 
   def nats() do

@@ -768,7 +768,7 @@ defmodule AmpsUtil do
 
       :"Elixir.Swoosh.Adapters.#{type}".deliver(email, config)
     else
-      Logger.warn("Amps Mailer not configured")
+      Logger.warning("Amps Mailer not configured")
     end
   end
 
