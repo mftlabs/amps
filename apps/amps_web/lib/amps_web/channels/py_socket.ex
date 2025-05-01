@@ -1,10 +1,10 @@
 defmodule AmpsWeb.PySocket do
   @behaviour Phoenix.Socket.Transport
-  alias AmpsWeb.Python
-  alias AmpsWeb.APIAuthPlug
-  import Plug.Conn
+ # alias AmpsWeb.Python
+ # alias AmpsWeb.APIAuthPlug
+ # import Plug.Conn
 
-  def child_spec(opts) do
+  def child_spec(_opts) do
     # We won't spawn any process, so let's return a dummy task
     %{
       id: __MODULE__,

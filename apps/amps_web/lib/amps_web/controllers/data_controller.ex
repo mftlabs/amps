@@ -3,11 +3,11 @@ defmodule AmpsWeb.DataController do
   require Logger
   import Argon2
   alias Amps.DB
-  alias AmpsWeb.Encryption
+  #alias AmpsWeb.Encryption
   alias Amps.SvcManager
   alias Amps.VaultDatabase
   alias AmpsWeb.Util
-  alias AmpsWeb.ServiceController
+  #alias AmpsWeb.ServiceController
   alias Elixlsx.Workbook
   alias Elixlsx.Sheet
 
@@ -36,10 +36,10 @@ defmodule AmpsWeb.DataController do
   plug(AmpsWeb.AuditPlug)
 
   def upload_package(conn, %{"file" => file}) do
-    folder = String.trim(file.filename, ".zip")
+    #folder = String.trim(file.filename, ".zip")
     id = AmpsUtil.get_id()
     cwd = Path.join(Amps.Defaults.get("storage_temp"), id)
-    res = :zip.unzip(File.read!(file.path), cwd: cwd)
+    :zip.unzip(File.read!(file.path), cwd: cwd)
     path = cwd
 
     path =
@@ -48,7 +48,7 @@ defmodule AmpsWeb.DataController do
       else
         files = File.ls!(path)
 
-        Enum.reduce_while(files, "", fn file, acc ->
+        Enum.reduce_while(files, "", fn file, _acc ->
           np = Path.join(path, file)
           dir = File.dir?(np)
 
@@ -112,8 +112,8 @@ defmodule AmpsWeb.DataController do
 
     case Application.get_env(:amps_web, AmpsWeb.Endpoint)[:authmethod] do
       "vault" ->
-        VaultDatabase.update_vault_password(user["username"], password)
-
+       # VaultDatabase.update_vault_password(user["username"], password)
+        IO.puts("WARNING - vault not implemented")
       "db" ->
         %{password_hash: hashed} = add_hash(password)
         Map.put(user, "password", hashed)
@@ -129,21 +129,21 @@ defmodule AmpsWeb.DataController do
   def reset_admin_password(conn, %{"id" => id}) do
     obj = Amps.DB.find_one("users", %{"_id" => id})
     _length = 15
-
-    symbol_count = Enum.count(@symbols)
+    symbols = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMOPQRSTUVWXYZ$@~!@#$%^&*"
+    symbol_count = Enum.count(symbols)
 
     password =
       for _ <- 1..15,
           into: "",
-          do: <<Enum.at(@symbols, :crypto.rand_uniform(0, symbol_count))>>
+          do: <<Enum.at(symbols, :crypto.rand_uniform(0, symbol_count))>>
 
     # IO.inspect(password)
     # res = PowResetPassword.Plug.update_user_password(conn, %{"password" => hashed})
 
     case Application.get_env(:amps_web, AmpsWeb.Endpoint)[:authmethod] do
       "vault" ->
-        VaultDatabase.update_vault_password(obj["username"], password)
-
+        #VaultDatabase.update_vault_password(obj["username"], password)
+        IO.puts("WARNING - vault not implemented")
       "db" ->
         %{password_hash: hashed} = add_hash(password)
 
@@ -837,7 +837,7 @@ defmodule AmpsWeb.DataController do
     imports = Enum.reverse(imports)
     demo = demo |> Map.put("imports", imports) |> Map.put("scripts", "scripts")
     IO.inspect(demo)
-    File.write(Path.join(dir, "pkg.json"), JSON.encode!(demo) |> JSON.Formatter.pretty_print())
+    File.write(Path.join(dir, "pkg.json"), JSON.encode!(demo) |> Jason.Formatter.pretty_print())
     IO.inspect(demo)
     readme = "# #{demo["name"]}\n## #{demo["desc"]}"
     IO.inspect(readme)
@@ -1612,23 +1612,23 @@ defmodule S3 do
     # IO.puts("updated status #{inspect(val)}")
   end
 
-  defp add_headers(req, add) do
-    IO.inspect(add)
+  # defp add_headers(req, add) do
+  #   IO.inspect(add)
 
-    %ExAws.Operation.S3{headers: headers} = req
-    IO.inspect(headers)
+  #   %ExAws.Operation.S3{headers: headers} = req
+  #   IO.inspect(headers)
 
-    headers =
-      Enum.reduce(add, headers, fn {k, v}, acc ->
-        Map.put(acc, k, v)
-      end)
+  #   headers =
+  #     Enum.reduce(add, headers, fn {k, v}, acc ->
+  #       Map.put(acc, k, v)
+  #     end)
 
-    Map.put(
-      req,
-      :headers,
-      headers
-    )
-  end
+  #   Map.put(
+  #     req,
+  #     :headers,
+  #     headers
+  #   )
+  # end
 
   def put_object_copy(to, to_path, from, from_path, opts \\ []) do
     req = ExAws.S3.put_object_copy(to, to_path, from, from_path, opts)

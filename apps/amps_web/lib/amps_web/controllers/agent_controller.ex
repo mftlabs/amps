@@ -97,7 +97,7 @@ defmodule AmpsWeb.AgentController do
 
     {:ok, zippath} = Temp.mkdir()
     zippath = Path.join(zippath, zipname)
-    {:ok, zip} = :zip.create(zippath, files, cwd: agentfolder)
+    {:ok, zip} = :zip.create(zippath, files, [cwd: agentfolder])
 
     IO.inspect(zip)
 

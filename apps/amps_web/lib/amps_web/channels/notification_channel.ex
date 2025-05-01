@@ -96,7 +96,7 @@ defmodule AmpsWeb.NotificationChannel do
             {:ok, info} ->
               acc <> " " <> Integer.to_string(info.num_pending)
 
-            {:error, error} ->
+            {:error, _error} ->
               acc
           end
         end)
@@ -109,7 +109,7 @@ defmodule AmpsWeb.NotificationChannel do
         {:ok, info} ->
           {:reply, {:ok, Integer.to_string(info.num_pending)}, socket}
 
-        {:error, error} ->
+        {:error, _error} ->
           {:reply, {:ok, "Error"}, socket}
       end
     end

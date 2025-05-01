@@ -63,14 +63,15 @@ defmodule AmpsWeb.UtilController do
       case service do
         nil ->
           case :gen_tcp.listen(port, []) do
-            {:ok, socket} ->
-              case socket do
-                :eaddrinuse ->
-                  true
-
-                _ ->
-                  false
-              end
+            {:ok, _socket} ->
+               false
+        #        case socket do
+      #          :eaddrinuse ->
+      #            true
+#
+#                _ ->
+#                  false
+#              end
 
             {:error, _reason} ->
               true
@@ -857,7 +858,7 @@ defmodule AmpsWeb.UtilController do
       {:ok, page} ->
         json(conn, %{"success" => true, "page" => page})
 
-      {:error, error} ->
+      {:error, _error} ->
         json(conn, %{"success" => false})
     end
   end
@@ -865,7 +866,7 @@ defmodule AmpsWeb.UtilController do
   def msg_session(conn, %{"msgid" => msgid, "sid" => sid}) do
     json(
       conn,
-      DB.find_one(Util.index(conn.assigns.env, "message_events"), %{
+      DB.find_one(AmpsDatabaseUtil.index(conn.assigns.env, "message_events"), %{
         "msgid" => msgid,
         "sid" => sid
       })
