@@ -1,12 +1,12 @@
 defmodule AmpsPortal.UserEmail do
   import Swoosh.Email
 
-  def reset(user, link, host) do
+  def reset(user, link, _host) do
     fullname = user.firstname <> " " <> user.lastname
 
-    logo_data =
-      "data:image/png;base64," <>
-        Base.encode64(File.read!(Path.join([:code.priv_dir(:amps_web), "static/images", "logo"])))
+  #  logo_data =
+  #    "data:image/png;base64," <>
+  #      Base.encode64(File.read!(Path.join([:code.priv_dir(:amps_web), "static/images", "logo"])))
 
     # logo = "data:image/png;base64,#{logo_data}"
 

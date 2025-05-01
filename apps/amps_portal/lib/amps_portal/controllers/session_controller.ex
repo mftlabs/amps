@@ -3,7 +3,7 @@ defmodule AmpsPortal.SessionController do
 
   alias AmpsPortal.APIAuthPlug
   alias Plug.Conn
-  alias AmpsPortal.Util
+ # alias AmpsPortal.Util
 
   @spec create(Conn.t(), map()) :: Conn.t()
   def create(conn, %{"user" => user_params}) do
@@ -11,8 +11,7 @@ defmodule AmpsPortal.SessionController do
     |> custom_auth(user_params)
     |> case do
       {:ok, conn} ->
-        user =
-          Amps.DB.find_one(AmpsUtil.index(conn.assigns.env, "users"), %{
+        Amps.DB.find_one(AmpsUtil.index(conn.assigns.env, "users"), %{
             "username" => user_params["username"]
           })
           |> Map.put("password", user_params["password"])

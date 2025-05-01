@@ -22,7 +22,7 @@ defmodule AmpsPortal.MailboxController do
 
       user ->
         body = conn.body_params()
-        result = DB.add_to_field(Util.conn_index(conn, "users"), body, user.id, "mailboxes")
+        DB.add_to_field(Util.conn_index(conn, "users"), body, user.id, "mailboxes")
         json(conn, :ok)
     end
   end

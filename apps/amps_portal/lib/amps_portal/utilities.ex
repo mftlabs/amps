@@ -72,7 +72,7 @@ defmodule AmpsPortal.Util do
     AmpsUtil.create_consumer(stream, consumer, AmpsUtil.env_topic(body["topic"], env), opts)
   end
 
-  def before_token_create(body, env) do
+  def before_token_create(body, _env) do
     Map.merge(body, %{"id" => AmpsUtil.get_id()})
   end
 

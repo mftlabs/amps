@@ -81,7 +81,6 @@ defmodule AmpsPortal.APIAuthPlug do
   """
   @spec renew(Conn.t(), Config.t()) :: {Conn.t(), map() | nil}
   def renew(conn, config) do
-    alias Pow.Store.Base
     store_config = store_config(config)
     IO.inspect(store_config)
 

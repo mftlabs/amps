@@ -6,9 +6,7 @@ defmodule AmpsPortal.UserController do
   alias AmpsPortal.Util
   alias Plug.Conn
   alias Pow.{Config, Plug, Store.Backend.EtsCache, UUID}
-  alias PowResetPassword.Ecto.Context, as: ResetPasswordContext
   alias PowResetPassword.Store.ResetTokenCache
-  import PowResetPassword.Plug
 
   def get(conn, _params) do
     Util.conn_index(conn, "users")
@@ -76,12 +74,11 @@ defmodule AmpsPortal.UserController do
 
   def create_link() do
     #   host = data["host"]
-    conn =
-      Pow.Plug.put_config(%Conn{},
-        mod: AmpsPortal.APIAuthPlug,
-        plug: AmpsPortal.APIAuthPlug,
-        otp_app: :amps_portal
-      )
+    Pow.Plug.put_config(%Conn{},
+      mod: AmpsPortal.APIAuthPlug,
+      plug: AmpsPortal.APIAuthPlug,
+      otp_app: :amps_portal
+    )
 
     #   conn =
     #     put_private(
@@ -164,8 +161,7 @@ defmodule AmpsPortal.UserController do
         config = Plug.fetch_config(conn)
         index = Util.conn_index(conn, "users")
 
-        res =
-          Amps.DB.find_one_and_update(
+        Amps.DB.find_one_and_update(
             index,
             %{"username" => user["username"]},
             %{
@@ -275,9 +271,9 @@ defmodule AmpsPortal.UserController do
     :ok
   end
 
-  defp reset_password_user(conn) do
-    conn.assigns[:reset_password_user]
-  end
+  # defp reset_password_user(conn) do
+  #   conn.assigns[:reset_password_user]
+  # end
 
   defp store(config) do
     case Config.get(config, :reset_password_token_store) do
@@ -324,7 +320,7 @@ defmodule AmpsPortal.UserController do
         body = conn.body_params()
         body = Util.before_token_create(body, conn.assigns.env)
         index = Util.conn_index(conn, "users")
-        fieldid = DB.add_to_field(index, body, user["_id"], "tokens")
+        DB.add_to_field(index, body, user["_id"], "tokens")
         updated = DB.find_one(index, %{"_id" => user["_id"]})
         Util.after_token_create(updated, body, conn.assigns.env)
         json(conn, user["tokens"])
@@ -366,29 +362,19 @@ defmodule AmpsPortal.UserController do
         index = Util.conn_index(conn, "users")
         user = DB.find_one(index, %{"username" => user.username})
         item = DB.get_in_field(index, user["_id"], "tokens", id)
-        result = DB.delete_from_field(index, body, user["_id"], "tokens", id)
+        DB.delete_from_field(index, body, user["_id"], "tokens", id)
         Util.after_token_delete(user, item, conn.assigns.env)
         json(conn, :ok)
     end
   end
 
   def duplicate_username(conn, %{"username" => username}) do
-    body = conn.body_params()
-
-    duplicate =
-      DB.find_one(Util.conn_index(conn, "users"), %{"username" => username}) !=
-        nil
-
+    duplicate = DB.find_one(Util.conn_index(conn, "users"), %{"username" => username}) != nil
     json(conn, duplicate)
   end
 
   def duplicate_email(conn, %{"email" => email}) do
-    body = conn.body_params()
-
-    duplicate =
-      DB.find_one(Util.conn_index(conn, "users"), %{"email" => email}) !=
-        nil
-
+    duplicate = DB.find_one(Util.conn_index(conn, "users"), %{"email" => email}) != nil
     json(conn, duplicate)
   end
 end

@@ -1,7 +1,7 @@
 defmodule AmpsPortal.UFAController do
   use AmpsPortal, :controller
-  import Argon2
-  import Jetstream
+  #import Argon2
+  #import Jetstream
   alias Amps.DB
   require Logger
   alias AmpsPortal.Util
@@ -239,7 +239,7 @@ defmodule AmpsPortal.UFAController do
         send_resp(conn, 403, "Forbidden")
 
       user ->
-        res = Jetstream.ack(%{gnat: Process.whereis(:gnat), reply_to: reply})
+        Jetstream.ack(%{gnat: Process.whereis(:gnat), reply_to: reply})
         msg = JSON.decode!(get_req_header(conn, "amps-message"))
         msg = msg["msg"]
         rule = get_req_header(conn, "amps-rule")
@@ -304,8 +304,8 @@ defmodule AmpsPortal.UFAController do
     end
   end
 
-  def subscribe(consumer, parms) do
-    group = String.replace(parms["name"], " ", "_")
+  def subscribe(consumer, _parms) do
+    #group = String.replace(parms["name"], " ", "_")
 
     {:ok, sid} = Gnat.sub(consumer.connection_pid, self(), consumer.listening_topic)
 
@@ -538,7 +538,7 @@ defmodule AmpsPortal.UFAController do
     end
   end
 
-  def agent_login(conn, %{"username" => username, "token" => token, "tokenid" => tokenid}) do
+  def agent_login(conn, %{"username" => _username, "token" => token, "tokenid" => tokenid}) do
     {:ok, parms} = Phoenix.Token.verify(AmpsPortal.Endpoint, "auth", token, max_age: :infinity)
     %{"uid" => username} = JSON.decode!(parms)
 
