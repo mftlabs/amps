@@ -24,8 +24,9 @@ defmodule AmpsWeb.Users do
       _ ->
         case authmethod() do
           "vault" ->
-           # AmpsWeb.Users.Vault.authenticate(body)
+            # AmpsWeb.Users.Vault.authenticate(body)
             AmpsWeb.Users.DB.authenticate(body)
+
           _ ->
             AmpsWeb.Users.DB.authenticate(body)
         end
@@ -37,8 +38,9 @@ defmodule AmpsWeb.Users do
   def create(body) do
     case authmethod() do
       "vault" ->
-        #AmpsWeb.Users.Vault.create(body)
+        # AmpsWeb.Users.Vault.create(body)
         AmpsWeb.Users.DB.create(body)
+
       _ ->
         AmpsWeb.Users.DB.create(body)
     end

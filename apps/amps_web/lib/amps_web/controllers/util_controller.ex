@@ -3,16 +3,16 @@ defmodule AmpsWeb.UtilController do
   require Logger
   import Argon2
   alias Amps.DB
-  #alias AmpsWeb.Encryption
-  #alias Amps.SvcManager
-  #alias AmpsWeb.ServiceController
-  #alias Amps.VaultDatabase
-  #alias AmpsWeb.Util
+  # alias AmpsWeb.Encryption
+  # alias Amps.SvcManager
+  # alias AmpsWeb.ServiceController
+  # alias Amps.VaultDatabase
+  # alias AmpsWeb.Util
 
   @loop_delimiter "//"
 
   def verify(conn, %{"username" => _username}) do
-   # user = DB.find_one(Util.index(conn.assigns.env, "users"), %{"username" => username})
+    # user = DB.find_one(Util.index(conn.assigns.env, "users"), %{"username" => username})
     # auths = Amps.Onboarding.verify(user)
     json(conn, :ok)
   end
@@ -149,7 +149,7 @@ defmodule AmpsWeb.UtilController do
 
     root = Amps.DB.find_one("admin", %{"systemdefault" => true})
 
-    #host = Application.fetch_env!(:amps_web, AmpsWeb.Endpoint)[:vault_addr]
+    # host = Application.fetch_env!(:amps_web, AmpsWeb.Endpoint)[:vault_addr]
 
     # username = System.get_env("AMPS_ROOT_USER", "root")
     # password = System.get_env("AMPS_ROOT_PASS", "ampsadmin")
@@ -162,7 +162,7 @@ defmodule AmpsWeb.UtilController do
           "role" => "Admin"
         })
 
-      #password = root["password"]
+      # password = root["password"]
       %{password_hash: hashed} = add_hash(root["password"])
       root = Map.put(root, "password", hashed)
 
@@ -480,56 +480,56 @@ defmodule AmpsWeb.UtilController do
     step = %{"topic" => sub["topic"]}
 
     if action["type"] == "router" do
-        # rule = RouterAction.evaluate(action, meta)
+      # rule = RouterAction.evaluate(action, meta)
 
-        # rule["topic"]
+      # rule["topic"]
 
-        step =
-          Enum.reduce(action["rules"], [], fn id, acc ->
-            rule = Amps.DB.find_one(AmpsUtil.index(env, "rules"), %{"_id" => id})
+      step =
+        Enum.reduce(action["rules"], [], fn id, acc ->
+          rule = Amps.DB.find_one(AmpsUtil.index(env, "rules"), %{"_id" => id})
 
-            IO.inspect(rule["patterns"])
+          IO.inspect(rule["patterns"])
 
-            topics =
-              topics ++
-                [
-                  %{
-                    "topic" => sub["topic"],
-                    "sub" => sub,
-                    "action" => action,
-                    "rule" => rule
-                  }
-                ]
+          topics =
+            topics ++
+              [
+                %{
+                  "topic" => sub["topic"],
+                  "sub" => sub,
+                  "action" => action,
+                  "rule" => rule
+                }
+              ]
 
-            [
-              find_topic_loop(rule["output"], Map.merge(meta, %{}), topics)
-              | acc
-            ]
-          end)
+          [
+            find_topic_loop(rule["output"], Map.merge(meta, %{}), topics)
+            | acc
+          ]
+        end)
 
-        step
+      step
     else
-        topics =
-          topics ++
-            [%{"topic" => sub["topic"], "sub" => sub, "action" => action}]
+      topics =
+        topics ++
+          [%{"topic" => sub["topic"], "sub" => sub, "action" => action}]
 
-        output = fn action ->
-          find_topic_loop(action["output"], Map.merge(meta, %{}), topics)
-        end
+      output = fn action ->
+        find_topic_loop(action["output"], Map.merge(meta, %{}), topics)
+      end
 
-        if Map.has_key?(action, "send_output") do
-          if(action["send_output"]) do
-            output.(action)
-          else
-            step
-          end
+      if Map.has_key?(action, "send_output") do
+        if(action["send_output"]) do
+          output.(action)
         else
-          if action["output"] do
-            output.(action)
-          else
-            topics ++ [@loop_delimiter]
-          end
+          step
         end
+      else
+        if action["output"] do
+          output.(action)
+        else
+          topics ++ [@loop_delimiter]
+        end
+      end
     end
   end
 
@@ -687,33 +687,88 @@ defmodule AmpsWeb.UtilController do
         active: true
       })
 
-      Enum.reduce(subs, [], fn sub, steps ->
-        if match_topic(sub["topic"], topic) do
-          action = DB.find_one(AmpsUtil.index(env, "actions"), %{"_id" => sub["handler"]})
+    Enum.reduce(subs, [], fn sub, steps ->
+      if match_topic(sub["topic"], topic) do
+        action = DB.find_one(AmpsUtil.index(env, "actions"), %{"_id" => sub["handler"]})
 
-          step = %{"action" => action, "sub" => sub, "topic" => sub["topic"]}
+        step = %{"action" => action, "sub" => sub, "topic" => sub["topic"]}
 
-          step =
-            if action["type"] == "router" do
-              rule = Amps.Actions.Router.evaluate(action, meta, env)
-              step = Map.merge(step, %{"rule" => rule})
+        step =
+          if action["type"] == "router" do
+            rule = Amps.Actions.Router.evaluate(action, meta, env)
+            step = Map.merge(step, %{"rule" => rule})
 
-              if check_loop_new(step, topics) do
-                # Logger.warning("Workflow loop detected")
-                %{"loop" => true, "topic" => topic}
-              else
-                topics = [step | topics]
+            if check_loop_new(step, topics) do
+              # Logger.warning("Workflow loop detected")
+              %{"loop" => true, "topic" => topic}
+            else
+              topics = [step | topics]
 
-                # rule["topic"]
+              # rule["topic"]
 
-                steps = find_topics(rule["output"], Map.merge(meta, %{}), topics, env)
+              steps = find_topics(rule["output"], Map.merge(meta, %{}), topics, env)
+
+              step =
+                step
+                |> Map.put(
+                  "action",
+                  Map.merge(action, %{"output" => rule["output"]})
+                )
+                |> Map.put(
+                  "steps",
+                  steps
+                )
+
+              step
+            end
+          else
+            if check_loop_new(step, topics) do
+              # Logger.warning("Workflow loop detected")
+              %{"loop" => true, "topic" => topic}
+            else
+              topics = [step | topics]
+
+              output = fn action ->
+                meta =
+                  if action["format"] do
+                    try do
+                      Map.merge(
+                        meta,
+                        %{
+                          "fname" => AmpsUtil.format(action["format"], meta)
+                        }
+                      )
+                    rescue
+                      _e ->
+                        meta
+                    end
+                  else
+                    meta
+                  end
+
+                IO.inspect(meta)
+
+                steps =
+                  if is_list(action["output"]) do
+                    Enum.map(action["output"], fn topic ->
+                      find_topics(
+                        topic,
+                        Map.merge(meta, %{}),
+                        topics,
+                        env
+                      )
+                    end)
+                  else
+                    find_topics(
+                      action["output"],
+                      Map.merge(meta, %{}),
+                      topics,
+                      env
+                    )
+                  end
 
                 step =
                   step
-                  |> Map.put(
-                    "action",
-                    Map.merge(action, %{"output" => rule["output"]})
-                  )
                   |> Map.put(
                     "steps",
                     steps
@@ -721,83 +776,28 @@ defmodule AmpsWeb.UtilController do
 
                 step
               end
-            else
-              if check_loop_new(step, topics) do
-                # Logger.warning("Workflow loop detected")
-                %{"loop" => true, "topic" => topic}
-              else
-                topics = [step | topics]
 
-                output = fn action ->
-                  meta =
-                    if action["format"] do
-                      try do
-                        Map.merge(
-                          meta,
-                          %{
-                            "fname" => AmpsUtil.format(action["format"], meta)
-                          }
-                        )
-                      rescue
-                        _e ->
-                          meta
-                      end
-                    else
-                      meta
-                    end
-
-                  IO.inspect(meta)
-
-                  steps =
-                    if is_list(action["output"]) do
-                      Enum.map(action["output"], fn topic ->
-                        find_topics(
-                          topic,
-                          Map.merge(meta, %{}),
-                          topics,
-                          env
-                        )
-                      end)
-                    else
-                      find_topics(
-                        action["output"],
-                        Map.merge(meta, %{}),
-                        topics,
-                        env
-                      )
-                    end
-
-                  step =
-                    step
-                    |> Map.put(
-                      "steps",
-                      steps
-                    )
-
+              if Map.has_key?(action, "send_output") do
+                if(action["send_output"]) do
+                  output.(action)
+                else
                   step
                 end
-
-                if Map.has_key?(action, "send_output") do
-                  if(action["send_output"]) do
-                    output.(action)
-                  else
-                    step
-                  end
+              else
+                if action["output"] do
+                  output.(action)
                 else
-                  if action["output"] do
-                    output.(action)
-                  else
-                    step
-                  end
+                  step
                 end
               end
             end
+          end
 
-          [step | steps]
-        else
-          steps
-        end
-      end)
+        [step | steps]
+      else
+        steps
+      end
+    end)
   end
 
   defp match_topic(stopic, wtopic) do

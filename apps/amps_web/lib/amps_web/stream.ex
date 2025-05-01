@@ -14,9 +14,8 @@ defmodule AmpsWeb.Stream do
         # (required) the registered named you want to give the Gnat connection
         # number of milliseconds to wait between consecutive reconnect attempts (default: 2_000)
         backoff_period: 4_000,
-        connection_settings: [
-          %{host: '0.0.0.0', port: 4222}
-        ]
+        host: "0.0.0.0",
+        port: 4222
       })
 
     {:ok, _subscription} = Gnat.sub(gnat, self(), "AMPS.Messages")

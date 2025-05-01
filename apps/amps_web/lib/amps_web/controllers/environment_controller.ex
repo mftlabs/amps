@@ -1,8 +1,8 @@
 defmodule AmpsWeb.EnvironmentController do
   use AmpsWeb, :controller
   require Logger
-  import Argon2
-  alias Amps.DB
+  # import Argon2
+  # alias Amps.DB
   alias Amps.SvcManager
 
   plug(

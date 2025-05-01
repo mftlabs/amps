@@ -887,7 +887,7 @@ defmodule AmpsWeb.Util do
           msg,
           "data",
           JSON.encode!(obj |> AmpsUtil.filter())
-          |> JSON.Formatter.pretty_print()
+          |> Jason.Formatter.pretty_print()
         )
 
       AmpsEvents.send(
@@ -925,7 +925,7 @@ defmodule AmpsWeb.Util do
           msg,
           "data",
           JSON.encode!(body |> AmpsUtil.filter())
-          |> JSON.Formatter.pretty_print()
+          |> Jason.Formatter.pretty_print()
         )
 
       AmpsEvents.send(
@@ -949,7 +949,7 @@ defmodule AmpsWeb.Util do
         "msgid" => AmpsUtil.get_id(),
         "data" =>
           JSON.encode!(body |> AmpsUtil.filter())
-          |> JSON.Formatter.pretty_print(),
+          |> Jason.Formatter.pretty_print(),
         "field" => field,
         "fieldid" => fieldid,
         "action" => action,
@@ -979,7 +979,7 @@ defmodule AmpsWeb.Util do
   end
 
   def force_ssl(val) do
-    result = DB.find_one_and_update("config", %{"name" => "SYSTEM"}, %{"force_ssl" => val})
+    DB.find_one_and_update("config", %{"name" => "SYSTEM"}, %{"force_ssl" => val})
     Amps.SvcManager.load_system_parms()
   end
 end

@@ -3,7 +3,7 @@ defmodule ServiceMonitoring do
   alias Amps.DB
 
   def get_nats_info do
-   # host = Application.fetch_env!(:amps_web, AmpsWeb.Endpoint)[:nats_addr]
+    # host = Application.fetch_env!(:amps_web, AmpsWeb.Endpoint)[:nats_addr]
     url = "http://localhost:8222/varz"
     response = HTTPoison.get!(url)
     req = JSON.decode!(response.body)
@@ -37,7 +37,7 @@ defmodule ServiceMonitoring do
 
     disk =
       case :disksup.get_disk_data() do
-        [{"none", 0, 0}] ->
+        [{~c"none", 0, 0}] ->
           []
 
         other ->

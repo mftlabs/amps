@@ -69,7 +69,7 @@ defmodule AmpsWeb.FileHandler do
       map
     else
       Map.merge(map, %{
-        "msgid" => AmpsUtil.get_id,
+        "msgid" => AmpsUtil.get_id(),
         "direct" => "true"
       })
     end

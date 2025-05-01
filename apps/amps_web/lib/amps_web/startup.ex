@@ -164,7 +164,7 @@ defmodule AmpsWeb.Startup do
 
   def create_root() do
     root = Amps.DB.find_one("admin", %{"systemdefault" => true})
-  #  host = Application.fetch_env!(:amps_web, AmpsWeb.Endpoint)[:vault_addr]
+    #  host = Application.fetch_env!(:amps_web, AmpsWeb.Endpoint)[:vault_addr]
 
     username = System.get_env("AMPS_ROOT_USER", "root")
     password = System.get_env("AMPS_ROOT_PASS", "ampsadmin")

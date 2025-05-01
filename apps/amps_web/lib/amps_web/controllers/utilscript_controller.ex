@@ -1,11 +1,11 @@
 defmodule AmpsWeb.UtilScriptController do
   use AmpsWeb, :controller
   require Logger
- # alias AmpsWeb.Python
+  # alias AmpsWeb.Python
   alias Amps.DB
   alias AmpsWeb.Util
 
-  #@symbols "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMOPQRSTUVWXYZ$@!@#$%&*"
+  # @symbols "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMOPQRSTUVWXYZ$@!@#$%&*"
 
   plug(
     AmpsWeb.EnsureRolePlug,

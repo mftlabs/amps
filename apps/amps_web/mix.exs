@@ -73,7 +73,6 @@ defmodule AmpsWeb.MixProject do
       {:file_type, "~> 0.1.0"},
       {:amps_mongodb, [git: "https://github.com/mftlabs/amps-mongodb", branch: "main"]},
       {:unplug, "~> 1.0.0"}
-
     ]
   end
 
