@@ -57,7 +57,7 @@ defmodule AmpsPortal.UFAController do
           encoded = JSON.encode!(schedule)
 
           AmpsEvents.send_history(
-            AmpsUtil.env_topic("amps.events.ufa.#{user["username"]}.logs", conn.assigns().env),
+            AmpsUtil.env_topic("amps.events.ufa.#{user["username"]}.logs", conn.assigns.env),
             "ufa_logs",
             %{
               "user" => user["username"],
@@ -83,7 +83,7 @@ defmodule AmpsPortal.UFAController do
 
       user ->
         AmpsEvents.send_history(
-          AmpsUtil.env_topic("amps.events.ufa.#{user.username}.logs", conn.assigns().env),
+          AmpsUtil.env_topic("amps.events.ufa.#{user.username}.logs", conn.assigns.env),
           "ufa_logs",
           %{
             "user" => user.username,
@@ -132,7 +132,7 @@ defmodule AmpsPortal.UFAController do
 
         topic = "amps.svcs.ufa." <> username
 
-        AmpsEvents.send(msg, %{"output" => topic}, %{}, conn.assigns().env)
+        AmpsEvents.send(msg, %{"output" => topic}, %{}, conn.assigns.env)
 
         # AmpsEvents.send_history(
         #   "amps.events.messages",
@@ -144,7 +144,7 @@ defmodule AmpsPortal.UFAController do
         # )
 
         AmpsEvents.send_history(
-          AmpsUtil.env_topic("amps.events.ufa.#{user.username}.logs", conn.assigns().env),
+          AmpsUtil.env_topic("amps.events.ufa.#{user.username}.logs", conn.assigns.env),
           "ufa_logs",
           Map.merge(msg, %{
             "user" => user.username,
@@ -163,7 +163,7 @@ defmodule AmpsPortal.UFAController do
         send_resp(conn, 403, "Forbidden")
 
       user ->
-        case receive_message({user, rule}, conn.assigns().env) do
+        case receive_message({user, rule}, conn.assigns.env) do
           {:message, message} ->
             msg = JSON.decode!(message.body)["msg"]
 
@@ -173,7 +173,7 @@ defmodule AmpsPortal.UFAController do
               |> put_resp_header("amps-message", message.body)
 
             AmpsEvents.send_history(
-              AmpsUtil.env_topic("amps.events.ufa.#{user.username}.logs", conn.assigns().env),
+              AmpsUtil.env_topic("amps.events.ufa.#{user.username}.logs", conn.assigns.env),
               "ufa_logs",
               Map.merge(msg, %{
                 "user" => user.username,
@@ -192,7 +192,7 @@ defmodule AmpsPortal.UFAController do
               )
             else
               # if msg["temp"] do
-              stream = AmpsUtil.stream(msg, conn.assigns().env)
+              stream = AmpsUtil.stream(msg, conn.assigns.env)
 
               conn =
                 conn
@@ -245,7 +245,7 @@ defmodule AmpsPortal.UFAController do
         rule = get_req_header(conn, "amps-rule")
 
         AmpsEvents.send_history(
-          AmpsUtil.env_topic("amps.events.ufa.#{user.username}.logs", conn.assigns().env),
+          AmpsUtil.env_topic("amps.events.ufa.#{user.username}.logs", conn.assigns.env),
           "ufa_logs",
           Map.merge(msg, %{
             "user" => user.username,
@@ -506,7 +506,7 @@ defmodule AmpsPortal.UFAController do
         )
 
         tokens =
-          Amps.DB.find_one(Util.index(conn.assigns().env, "tokens"), %{
+          Amps.DB.find_one(Util.index(conn.assigns.env, "tokens"), %{
             "username" => user["username"]
           })
 
@@ -556,7 +556,7 @@ defmodule AmpsPortal.UFAController do
               if user["username"] == username do
                 userstruct =
                   Amps.Users.get_by(%{"username" => user["username"]},
-                    env: conn.assigns().env
+                    env: conn.assigns.env
                   )
 
                 {a, r} = generate_credentials(conn, userstruct)
@@ -564,7 +564,7 @@ defmodule AmpsPortal.UFAController do
                 AmpsEvents.send_history(
                   AmpsUtil.env_topic(
                     "amps.events.ufa.#{user["username"]}.logs",
-                    conn.assigns().env
+                    conn.assigns.env
                   ),
                   "ufa_logs",
                   %{
@@ -612,7 +612,7 @@ defmodule AmpsPortal.UFAController do
         fieldid = DB.add_to_field(index, body, user.id, "rules")
         user = DB.find_one(index, %{"_id" => user.id})
         rule = Map.put(body, "_id", fieldid)
-        AmpsPortal.Util.agent_rule_creation(user, rule, conn.assigns().env)
+        AmpsPortal.Util.agent_rule_creation(user, rule, conn.assigns.env)
 
         json(conn, :ok)
     end
@@ -629,7 +629,7 @@ defmodule AmpsPortal.UFAController do
         body = Map.put(body, "_id", id)
         DB.update_in_field(index, body, user.id, "rules", id)
         rule = DB.get_in_field(index, user.id, "rules", id)
-        AmpsPortal.Util.agent_rule_update(user.id, rule, conn.assigns().env)
+        AmpsPortal.Util.agent_rule_update(user.id, rule, conn.assigns.env)
 
         json(conn, :ok)
     end

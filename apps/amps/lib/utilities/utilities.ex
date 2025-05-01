@@ -418,7 +418,7 @@ defmodule AmpsUtil do
     else
       if File.exists?(msg["fpath"]) do
         if chunk_size do
-          File.stream!(msg["fpath"], [read_ahead: chunk_size], chunk_size)
+          File.stream!(msg["fpath"], [], chunk_size)
         else
           File.stream!(msg["fpath"])
         end

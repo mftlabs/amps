@@ -1,0 +1,11 @@
+{application,amps_mongodb,
+             [{modules,['Elixir.Amps.DB','Elixir.AmpsDatabase',
+                        'Elixir.Jason.Encoder.BSON.ObjectId',
+                        'Elixir.MongoFilter',
+                        'Elixir.Poison.Encoder.BSON.ObjectId']},
+              {optional_applications,[]},
+              {applications,[kernel,stdlib,elixir,amps_core,mongodb_driver,
+                             uuid,poison,jason]},
+              {description,"amps_mongodb"},
+              {registered,[]},
+              {vsn,"0.1.0"}]}.

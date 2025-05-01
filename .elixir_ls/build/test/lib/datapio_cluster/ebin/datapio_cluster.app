@@ -1,0 +1,10 @@
+{application,datapio_cluster,
+             [{modules,['Elixir.Datapio.Cluster',
+                        'Elixir.Datapio.Cluster.Application',
+                        'Elixir.Datapio.Cluster.Mnesia']},
+              {optional_applications,[]},
+              {applications,[kernel,stdlib,elixir,logger,mnesia,libcluster]},
+              {description,"datapio_cluster"},
+              {registered,[]},
+              {vsn,"0.1.0"},
+              {mod,{'Elixir.Datapio.Cluster.Application',[]}}]}.

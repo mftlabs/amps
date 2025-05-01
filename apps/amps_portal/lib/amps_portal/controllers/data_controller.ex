@@ -139,7 +139,7 @@ defmodule AmpsPortal.DataController do
               )
             else
               # if msg["temp"] do
-              stream = AmpsUtil.stream(msg, conn.assigns().env)
+              stream = AmpsUtil.stream(msg, conn.assigns.env)
 
               conn =
                 conn

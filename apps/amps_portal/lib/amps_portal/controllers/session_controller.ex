@@ -12,12 +12,12 @@ defmodule AmpsPortal.SessionController do
     |> case do
       {:ok, conn} ->
         user =
-          Amps.DB.find_one(AmpsUtil.index(conn.assigns().env, "users"), %{
+          Amps.DB.find_one(AmpsUtil.index(conn.assigns.env, "users"), %{
             "username" => user_params["username"]
           })
           |> Map.put("password", user_params["password"])
 
-        # Task.start_link(fn -> Amps.Onboarding.synchronize(user, conn.assigns().env) end)
+        # Task.start_link(fn -> Amps.Onboarding.synchronize(user, conn.assigns.env) end)
 
         json(conn, %{
           data: %{
@@ -37,7 +37,7 @@ defmodule AmpsPortal.SessionController do
   def custom_auth(conn, params) do
     config =
       Pow.Plug.fetch_config(conn)
-      |> Keyword.put(:env, conn.assigns().env)
+      |> Keyword.put(:env, conn.assigns.env)
 
     Amps.Users.authenticate(params, config)
     |> case do
@@ -50,7 +50,7 @@ defmodule AmpsPortal.SessionController do
   def renew(conn, _params) do
     config =
       Pow.Plug.fetch_config(conn)
-      |> Keyword.put(:env, conn.assigns().env)
+      |> Keyword.put(:env, conn.assigns.env)
 
     IO.inspect(config)
 

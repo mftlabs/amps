@@ -1,0 +1,10 @@
+{application,mnesiac,
+             [{modules,['Elixir.Mnesiac','Elixir.Mnesiac.Store',
+                        'Elixir.Mnesiac.StoreManager',
+                        'Elixir.Mnesiac.Supervisor']},
+              {optional_applications,[libcluster]},
+              {applications,[kernel,stdlib,elixir,logger,runtime_tools,
+                             libcluster]},
+              {description,"mnesiac"},
+              {registered,[]},
+              {vsn,"0.3.9"}]}.

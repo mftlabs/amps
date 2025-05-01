@@ -9,8 +9,8 @@ defmodule AmpsWeb.AuditPlug do
   end
 
   def call(conn, _opts) do
-    user = conn.assigns().current_user
-    env = conn.assigns().env
+    user = conn.assigns.current_user
+    env = conn.assigns.env
     info = Phoenix.Router.route_info(AmpsWeb.Router, conn.method, conn.path_info, conn.host)
 
     params = info.path_params

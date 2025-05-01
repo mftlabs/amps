@@ -2,13 +2,14 @@ defmodule AmpsWeb.SSL do
   use SiteEncrypt.Adapter
   alias SiteEncrypt.Adapter
 
-  @impl Adapter
+
 
   def start_link(endpoint) do
     IO.inspect(endpoint)
     Adapter.start_link(__MODULE__, endpoint, endpoint)
   end
 
+  @impl Adapter
   def config(_id, endpoint) do
     IO.inspect(endpoint)
 

@@ -26,7 +26,7 @@ defmodule AmpsWeb.ServiceController do
   end
 
   def terminate(conn, %{"id" => id, "redeliver" => redeliver}) do
-    env = conn.assigns().env
+    env = conn.assigns.env
     do_terminate(id, redeliver, env)
     json(conn, :ok)
   end
@@ -67,13 +67,13 @@ defmodule AmpsWeb.ServiceController do
   end
 
   def skip(conn, %{"id" => id}) do
-    env = conn.assigns().env
+    env = conn.assigns.env
     do_skip(id, env)
     json(conn, :ok)
   end
 
   def skip(conn, %{"ids" => ids}) do
-    env = conn.assigns().env
+    env = conn.assigns.env
 
     Enum.each(ids, fn id ->
       do_skip(id, env)
@@ -115,7 +115,7 @@ defmodule AmpsWeb.ServiceController do
   end
 
   def handle_service(conn, %{"name" => name, "action" => action}) do
-    env = conn.assigns().env
+    env = conn.assigns.env
 
     topic =
       if env == "" do

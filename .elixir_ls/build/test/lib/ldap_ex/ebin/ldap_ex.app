@@ -1,0 +1,10 @@
+{application,ldap_ex,
+             [{modules,['ELDAPv3a','Elixir.LDAPEx','Elixir.LDAPEx.Client',
+                        'Elixir.LDAPEx.Client.LDAPException',
+                        'Elixir.LDAPEx.Config','Elixir.LDAPEx.ELDAPv3']},
+              {optional_applications,[]},
+              {applications,[kernel,stdlib,elixir,logger,asn1,ssl]},
+              {description,"  This is a binary instead of char_list version of the stock Erlang :eldap library.\n"},
+              {registered,[]},
+              {vsn,"0.2.6"},
+              {mod,{'Elixir.LDAPEx',[]}}]}.

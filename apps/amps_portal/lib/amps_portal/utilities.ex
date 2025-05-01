@@ -119,7 +119,7 @@ defmodule AmpsPortal.Util do
   end
 
   def conn_index(conn, index) do
-    index(conn.assigns().env, index)
+    index(conn.assigns.env, index)
   end
 
   def index(env, index) do

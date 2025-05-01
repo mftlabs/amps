@@ -649,7 +649,7 @@ defmodule AmpsWeb.Util do
         )
 
       "actions" ->
-        # _action = DB.find_one(Util.index(conn.assigns().env, "actions"), %{"_id" => id})
+        # _action = DB.find_one(Util.index(conn.assigns.env, "actions"), %{"_id" => id})
 
         if body["type"] == "batch" do
           Util.create_batch_consumer(body)

@@ -1,11 +1,11 @@
 defmodule AmpsWeb.ScriptController do
   use AmpsWeb, :controller
   require Logger
-  alias AmpsWeb.Python
+  #alias AmpsWeb.Python
   alias Amps.DB
   alias AmpsWeb.Util
 
-  @symbols '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMOPQRSTUVWXYZ$@!@#$%&*'
+  #@symbols '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMOPQRSTUVWXYZ$@!@#$%&*'
 
   plug(
     AmpsWeb.EnsureRolePlug,
@@ -25,7 +25,7 @@ defmodule AmpsWeb.ScriptController do
   plug(AmpsWeb.AuditPlug)
 
   def index(conn, _) do
-    scripts = Path.wildcard(get_path("*", conn.assigns().env))
+    scripts = Path.wildcard(get_path("*", conn.assigns.env))
 
     rows =
       Enum.reduce(scripts, [], fn script, acc ->
@@ -37,11 +37,11 @@ defmodule AmpsWeb.ScriptController do
   end
 
   def duplicate(conn, %{"name" => name}) do
-    json(conn, File.exists?(get_path(name, conn.assigns().env)))
+    json(conn, File.exists?(get_path(name, conn.assigns.env)))
   end
 
   def show(conn, %{"id" => name}) do
-    script = get_path(name, conn.assigns().env)
+    script = get_path(name, conn.assigns.env)
     info = File.stat(script)
 
     case info do
@@ -65,7 +65,7 @@ defmodule AmpsWeb.ScriptController do
   def create(conn, _params) do
     body = conn.body_params()
     name = body["name"]
-    script = get_path(name, conn.assigns().env)
+    script = get_path(name, conn.assigns.env)
 
     resp = File.mkdir_p!(Path.dirname(script))
     IO.inspect(resp)
@@ -77,7 +77,7 @@ defmodule AmpsWeb.ScriptController do
       else
         if body["template"] do
           template =
-            DB.find_one(Util.index(conn.assigns().env, "templates"), %{
+            DB.find_one(Util.index(conn.assigns.env, "templates"), %{
               "name" => body["template"]
             })
 
@@ -101,15 +101,15 @@ defmodule AmpsWeb.ScriptController do
 
     resp = File.write(script, data)
     IO.inspect(resp)
-    DB.insert(Util.index(conn.assigns().env, "scripts"), %{"name" => name, "data" => data})
+    DB.insert(Util.index(conn.assigns.env, "scripts"), %{"name" => name, "data" => data})
     json(conn, :ok)
   end
 
   def update(conn, %{"id" => name}) do
     body = conn.body_params()
-    script = get_path(name, conn.assigns().env)
+    script = get_path(name, conn.assigns.env)
     File.write(script, body["data"])
-    index = Util.index(conn.assigns().env, "scripts")
+    index = Util.index(conn.assigns.env, "scripts")
 
     case DB.find_one(index, %{"name" => name}) do
       nil ->
@@ -125,9 +125,9 @@ defmodule AmpsWeb.ScriptController do
   end
 
   def delete(conn, %{"id" => name}) do
-    script = get_path(name, conn.assigns().env)
+    script = get_path(name, conn.assigns.env)
     :ok = File.rm(script)
-    DB.delete_one(Util.index(conn.assigns().env, "scripts"), %{"name" => name})
+    DB.delete_one(Util.index(conn.assigns.env, "scripts"), %{"name" => name})
     json(conn, :ok)
   end
 
@@ -216,7 +216,7 @@ defmodule AmpsWeb.ScriptController do
 
   def get_services(conn, _params) do
     scripts =
-      Path.wildcard(get_service_path("*", conn.assigns().env))
+      Path.wildcard(get_service_path("*", conn.assigns.env))
       |> Enum.filter(fn script ->
         bn = Path.basename(script)
         File.dir?(script) && !String.starts_with?(bn, "__") && bn != "env" && bn != "util"

@@ -164,7 +164,7 @@ defmodule AmpsWeb.Startup do
 
   def create_root() do
     root = Amps.DB.find_one("admin", %{"systemdefault" => true})
-    host = Application.fetch_env!(:amps_web, AmpsWeb.Endpoint)[:vault_addr]
+  #  host = Application.fetch_env!(:amps_web, AmpsWeb.Endpoint)[:vault_addr]
 
     username = System.get_env("AMPS_ROOT_USER", "root")
     password = System.get_env("AMPS_ROOT_PASS", "ampsadmin")
@@ -187,26 +187,26 @@ defmodule AmpsWeb.Startup do
 
       IO.inspect(Application.get_env(:amps_web, AmpsWeb.Endpoint)[:authmethod] == "vault")
 
-      if Application.get_env(:amps_web, AmpsWeb.Endpoint)[:authmethod] == "vault" do
-        token = AmpsWeb.Vault.get_token(:vaulthandler)
-        IO.inspect(token)
+      # if Application.get_env(:amps_web, AmpsWeb.Endpoint)[:authmethod] == "vault" do
+      #   token = AmpsWeb.Vault.get_token(:vaulthandler)
+      #   IO.inspect(token)
 
-        {:ok, vault} =
-          Vault.new(
-            engine: Vault.Engine.KVV1,
-            auth: Vault.Auth.Token,
-            host: host,
-            credentials: %{token: token}
-          )
-          |> Vault.auth()
+      #   {:ok, vault} =
+      #     Vault.new(
+      #       engine: Vault.Engine.KVV1,
+      #       auth: Vault.Auth.Token,
+      #       host: host,
+      #       credentials: %{token: token}
+      #     )
+      #     |> Vault.auth()
 
-        result =
-          Vault.request(vault, :post, "auth/userpass/users/" <> root["username"],
-            body: %{"token_policies" => "admin,default", "password" => password}
-          )
+      #   result =
+      #     Vault.request(vault, :post, "auth/userpass/users/" <> root["username"],
+      #       body: %{"token_policies" => "admin,default", "password" => password}
+      #     )
 
-        IO.inspect(result)
-      end
+      #   IO.inspect(result)
+      # end
 
       Amps.DB.insert("admin", root)
     else

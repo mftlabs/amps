@@ -156,7 +156,7 @@ defmodule AmpsWeb.DataController do
   end
 
   def reset_password(conn, %{"id" => id}) do
-    index = Util.index(conn.assigns().env, "users")
+    index = Util.index(conn.assigns.env, "users")
     _length = 15
 
     password = Util.create_password()
@@ -177,18 +177,18 @@ defmodule AmpsWeb.DataController do
     #   Amps.Onboarding.onboard(
     #     msg,
     #     obj,
-    #     conn.assigns().env
+    #     conn.assigns.env
     #   )
     #   Map.merge(msg, %{"onboarding" => true, "user_id" => obj["_id"]})
     # end
 
-    Util.ui_event(index, id, "reset_password", conn.assigns().env)
+    Util.ui_event(index, id, "reset_password", conn.assigns.env)
 
     json(conn, %{success: %{password: password}})
   end
 
   def approve_user(conn, %{"id" => id, "group" => group}) do
-    index = Util.index(conn.assigns().env, "users")
+    index = Util.index(conn.assigns.env, "users")
     _length = 15
 
     password = Util.create_password()
@@ -216,7 +216,7 @@ defmodule AmpsWeb.DataController do
     #   Map.merge(msg, %{"onboarding" => true, "user_id" => obj["_id"]})
     # end
 
-    Util.ui_event(index, id, "approve_user", conn.assigns().env)
+    Util.ui_event(index, id, "approve_user", conn.assigns.env)
 
     json(conn, %{success: %{password: password}})
   end
@@ -267,21 +267,21 @@ defmodule AmpsWeb.DataController do
         meta
       )
 
-    {msg, sid} = AmpsEvents.start_session(msg, %{"service" => "Topic Upload"}, conn.assigns().env)
+    {msg, sid} = AmpsEvents.start_session(msg, %{"service" => "Topic Upload"}, conn.assigns.env)
 
     AmpsEvents.send(
       msg,
       %{"output" => topic},
       %{},
-      conn.assigns().env
+      conn.assigns.env
     )
 
-    AmpsEvents.end_session(sid, conn.assigns().env)
+    AmpsEvents.end_session(sid, conn.assigns.env)
     json(conn, :ok)
   end
 
   # def download_manager(conn, %{"id" => id, "os" => os}) do
-  #   mgr = Amps.DB.find_by_id(Util.index(conn.assigns().env, "system_managers"), id)
+  #   mgr = Amps.DB.find_by_id(Util.index(conn.assigns.env, "system_managers"), id)
 
   #   # _host = Application.fetch_env!(:amps_portal, AmpsWeb.Endpoint)[:url]
 
@@ -307,7 +307,7 @@ defmodule AmpsWeb.DataController do
   #     |> String.replace("{HOST}", mgr["host"])
   #     |> String.replace("{COOKIE}", "#{Node.get_cookie()}")
   #     |> String.replace("{NODE_ID}", id)
-  #     |> String.replace("{NODE_ENV}", conn.assigns().env)
+  #     |> String.replace("{NODE_ENV}", conn.assigns.env)
 
   #   # IO.inspect(script)
 
@@ -627,7 +627,7 @@ defmodule AmpsWeb.DataController do
     filters = conn.query_params["filters"] |> JSON.decode!()
 
     binary =
-      case export(collection, conn.assigns().env, filters) do
+      case export(collection, conn.assigns.env, filters) do
         {:empty, binary} ->
           binary
 
@@ -672,7 +672,7 @@ defmodule AmpsWeb.DataController do
     _body = conn.body_params()
 
     {binary, filename} =
-      case export_sub(collection, id, field, conn.assigns().env) do
+      case export_sub(collection, id, field, conn.assigns.env) do
         {:empty, res} ->
           res
 
@@ -725,22 +725,22 @@ defmodule AmpsWeb.DataController do
         JSON.decode!(meta)
       )
 
-    {msg, sid} = AmpsEvents.start_session(meta, %{"service" => "Topic Event"}, conn.assigns().env)
+    {msg, sid} = AmpsEvents.start_session(meta, %{"service" => "Topic Event"}, conn.assigns.env)
 
     AmpsEvents.send(
       msg,
       %{"output" => topic},
       %{},
-      conn.assigns().env
+      conn.assigns.env
     )
 
-    AmpsEvents.end_session(sid, conn.assigns().env)
+    AmpsEvents.end_session(sid, conn.assigns.env)
     json(conn, :ok)
   end
 
   def reprocess(conn, %{"msgid" => id}) do
     obj =
-      Amps.DB.find_one(Util.index(conn.assigns().env, "message_events"), %{
+      Amps.DB.find_one(Util.index(conn.assigns.env, "message_events"), %{
         "_id" => id
       })
 
@@ -749,10 +749,10 @@ defmodule AmpsWeb.DataController do
 
     msg = obj |> Map.drop(["status", "action", "topic", "_id", "index", "etime"])
 
-    {msg, sid} = AmpsEvents.start_session(msg, %{"service" => "Reprocess"}, conn.assigns().env)
+    {msg, sid} = AmpsEvents.start_session(msg, %{"service" => "Reprocess"}, conn.assigns.env)
 
-    AmpsEvents.send(msg, %{"output" => topic}, %{}, conn.assigns().env)
-    AmpsEvents.end_session(sid, conn.assigns().env)
+    AmpsEvents.send(msg, %{"output" => topic}, %{}, conn.assigns.env)
+    AmpsEvents.end_session(sid, conn.assigns.env)
 
     json(conn, :ok)
   end
@@ -865,10 +865,10 @@ defmodule AmpsWeb.DataController do
     meta = JSON.decode!(body["meta"])
 
     msg = obj |> Map.drop(["status", "action", "topic", "_id", "index", "etime"])
-    {msg, sid} = AmpsEvents.start_session(msg, %{"service" => "Reroute"}, conn.assigns().env)
+    {msg, sid} = AmpsEvents.start_session(msg, %{"service" => "Reroute"}, conn.assigns.env)
 
-    AmpsEvents.send(Map.merge(msg, meta), %{"output" => topic}, %{}, conn.assigns().env)
-    AmpsEvents.end_session(sid, conn.assigns().env)
+    AmpsEvents.send(Map.merge(msg, meta), %{"output" => topic}, %{}, conn.assigns.env)
+    AmpsEvents.end_session(sid, conn.assigns.env)
 
     json(conn, :ok)
   end
@@ -887,7 +887,7 @@ defmodule AmpsWeb.DataController do
 
       msg = obj |> Map.drop(["status", "action", "topic", "_id", "index", "etime"])
 
-      AmpsEvents.send(Map.merge(msg, meta), %{"output" => topic}, %{}, conn.assigns().env)
+      AmpsEvents.send(Map.merge(msg, meta), %{"output" => topic}, %{}, conn.assigns.env)
     end)
 
     json(conn, :ok)
@@ -928,7 +928,7 @@ defmodule AmpsWeb.DataController do
 
     {:ok, res} = DB.insert(collection, body)
 
-    Util.after_create(collection, Map.merge(body, %{"_id" => res}), conn.assigns().env)
+    Util.after_create(collection, Map.merge(body, %{"_id" => res}), conn.assigns.env)
 
     json(conn, res)
   end
@@ -937,7 +937,7 @@ defmodule AmpsWeb.DataController do
     body = Util.before_create(collection, conn.body_params(), conn.assigns)
     {:ok, res} = DB.insert_with_id(collection, body, id)
 
-    Util.after_create(collection, body, conn.assigns().env)
+    Util.after_create(collection, body, conn.assigns.env)
 
     json(conn, res)
   end
@@ -967,12 +967,12 @@ defmodule AmpsWeb.DataController do
     old = DB.find_by_id(collection, id)
     body = conn.body_params()
 
-    body = Util.before_update(collection, id, body, conn.assigns().env, old)
+    body = Util.before_update(collection, id, body, conn.assigns.env, old)
 
     result = DB.update(collection, body, id)
 
-    Util.after_update(collection, id, body, conn.assigns().env, old)
-    Util.ui_event(collection, id, "update", conn.assigns().env)
+    Util.after_update(collection, id, body, conn.assigns.env, old)
+    Util.ui_event(collection, id, "update", conn.assigns.env)
 
     json(conn, result)
   end
@@ -981,19 +981,19 @@ defmodule AmpsWeb.DataController do
     old = DB.find_by_id(collection, id)
     body = conn.body_params()
 
-    body = Util.before_update(collection, id, body, conn.assigns().env, old)
+    body = Util.before_update(collection, id, body, conn.assigns.env, old)
 
     {:ok, result} = DB.insert_with_id(collection, body, id)
 
-    Util.after_update(collection, id, body, conn.assigns().env, old)
-    Util.ui_event(collection, id, "update", conn.assigns().env)
+    Util.after_update(collection, id, body, conn.assigns.env, old)
+    Util.ui_event(collection, id, "update", conn.assigns.env)
 
     json(conn, result)
   end
 
   def delete(conn, %{"collection" => collection, "id" => id}) do
     object = DB.find_by_id(collection, id)
-    base_index = Util.base_index(conn.assigns().env, collection)
+    base_index = Util.base_index(conn.assigns.env, collection)
 
     case base_index do
       # "accounts" ->
@@ -1008,7 +1008,7 @@ defmodule AmpsWeb.DataController do
 
         Enum.each(rules, fn rule ->
           if rule["type"] == "download" do
-            AmpsPortal.Util.agent_rule_deletion(object, rule, conn.assigns().env)
+            AmpsPortal.Util.agent_rule_deletion(object, rule, conn.assigns.env)
           end
         end)
 
@@ -1020,12 +1020,12 @@ defmodule AmpsWeb.DataController do
         end
 
         if object["type"] == "subscriber" || (object["type"] == "pyservice" && object["receive"]) do
-          Util.delete_config_consumer(object, conn.assigns().env)
+          Util.delete_config_consumer(object, conn.assigns.env)
         end
 
         if object["type"] == "gateway" do
           mod =
-            case conn.assigns().env do
+            case conn.assigns.env do
               "" ->
                 :"Amps.Gateway.#{object["name"]}"
 
@@ -1063,13 +1063,13 @@ defmodule AmpsWeb.DataController do
     #   Amps.Onboarding.onboard(
     #     msg,
     #     obj,
-    #     conn.assigns().env
+    #     conn.assigns.env
     #   )
 
     #   Map.merge(msg, %{"onboarding" => true, "user_id" => obj["_id"]})
     # end
 
-    Util.ui_delete_event(collection, object, conn.assigns().env)
+    Util.ui_delete_event(collection, object, conn.assigns.env)
 
     json(conn, resp)
   end
@@ -1098,24 +1098,24 @@ defmodule AmpsWeb.DataController do
 
     body =
       Util.before_field_create(
-        Util.base_index(conn.assigns().env, collection),
+        Util.base_index(conn.assigns.env, collection),
         id,
         field,
         body,
-        conn.assigns().env
+        conn.assigns.env
       )
 
     fieldid = DB.add_to_field(collection, body, id, field)
     updated = DB.find_one(collection, %{"_id" => id})
 
     Util.after_field_create(
-      Util.base_index(conn.assigns().env, collection),
+      Util.base_index(conn.assigns.env, collection),
       id,
       field,
       fieldid,
       body,
       updated,
-      conn.assigns().env
+      conn.assigns.env
     )
 
     json(conn, updated)
@@ -1134,16 +1134,16 @@ defmodule AmpsWeb.DataController do
     updated = DB.find_one(collection, %{"_id" => id})
 
     Util.after_field_create(
-      Util.base_index(conn.assigns().env, collection),
+      Util.base_index(conn.assigns.env, collection),
       id,
       field,
       fieldid,
       body,
       updated,
-      conn.assigns().env
+      conn.assigns.env
     )
 
-    Util.ui_field_event(collection, id, field, fieldid, "create", conn.assigns().env)
+    Util.ui_field_event(collection, id, field, fieldid, "create", conn.assigns.env)
 
     json(conn, updated)
   end
@@ -1168,7 +1168,7 @@ defmodule AmpsWeb.DataController do
     body = conn.body_params()
     IO.inspect(%{field => body})
     DB.find_one_and_update(collection, %{"_id" => id}, %{field => body})
-    Util.ui_event(collection, id, "update.#{field}", conn.assigns().env)
+    Util.ui_event(collection, id, "update.#{field}", conn.assigns.env)
     json(conn, :ok)
   end
 
@@ -1182,7 +1182,7 @@ defmodule AmpsWeb.DataController do
     body = conn.body_params()
     result = DB.update_in_field(collection, body, id, field, fieldid)
 
-    case Util.base_index(conn.assigns().env, collection) do
+    case Util.base_index(conn.assigns.env, collection) do
       "services" ->
         case field do
           "defaults" ->
@@ -1199,7 +1199,7 @@ defmodule AmpsWeb.DataController do
       "users" ->
         case field do
           "rules" ->
-            AmpsPortal.Util.agent_rule_update(id, body, conn.assigns().env)
+            AmpsPortal.Util.agent_rule_update(id, body, conn.assigns.env)
 
           _ ->
             nil
@@ -1209,7 +1209,7 @@ defmodule AmpsWeb.DataController do
         nil
     end
 
-    Util.ui_field_event(collection, id, field, fieldid, "update", conn.assigns().env)
+    Util.ui_field_event(collection, id, field, fieldid, "update", conn.assigns.env)
 
     json(conn, result)
   end
@@ -1236,7 +1236,7 @@ defmodule AmpsWeb.DataController do
     item = DB.get_in_field(collection, id, field, fieldid)
     result = DB.delete_from_field(collection, body, id, field, fieldid)
 
-    case Util.base_index(conn.assigns().env, collection) do
+    case Util.base_index(conn.assigns.env, collection) do
       "services" ->
         case field do
           "defaults" ->
@@ -1249,10 +1249,10 @@ defmodule AmpsWeb.DataController do
       "users" ->
         case field do
           "rules" ->
-            AmpsPortal.Util.agent_rule_deletion(obj, item, conn.assigns().env)
+            AmpsPortal.Util.agent_rule_deletion(obj, item, conn.assigns.env)
 
           "tokens" ->
-            AmpsPortal.Util.after_token_delete(obj, item, conn.assigns().env)
+            AmpsPortal.Util.after_token_delete(obj, item, conn.assigns.env)
 
           _ ->
             nil
@@ -1262,7 +1262,7 @@ defmodule AmpsWeb.DataController do
         nil
     end
 
-    Util.ui_delete_event(collection, obj, conn.assigns().env)
+    Util.ui_delete_event(collection, obj, conn.assigns.env)
 
     json(conn, result)
   end

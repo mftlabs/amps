@@ -68,7 +68,7 @@ defmodule Amps.MixProject do
       {:mnesiac, git: "https://github.com/aram0112/mnesiac"},
       {:cors_plug, "~> 2.0"},
       {:gen_smtp, "~> 1.0"},
-      {:absinthe, "~> 1.7.0"},
+      {:absinthe, "~> 1.7.9"},
       {:ldap_ex, "~> 0.2.2"},
       {:timex, "~> 3.7.8"},
       {:ssl_verify_fun, "~> 1.1.7"}

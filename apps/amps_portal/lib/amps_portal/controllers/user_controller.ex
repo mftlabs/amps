@@ -55,7 +55,7 @@ defmodule AmpsPortal.UserController do
       put_private(
         conn,
         :pow_config,
-        Keyword.put(conn.private.pow_config, :env, conn.assigns().env)
+        Keyword.put(conn.private.pow_config, :env, conn.assigns.env)
       )
 
     IO.inspect(conn)
@@ -87,7 +87,7 @@ defmodule AmpsPortal.UserController do
     #     put_private(
     #       conn,
     #       :pow_config,
-    #       Keyword.put(conn.private.pow_config, :env, conn.assigns().env)
+    #       Keyword.put(conn.private.pow_config, :env, conn.assigns.env)
     #     )
 
     #   IO.inspect(conn)
@@ -102,7 +102,7 @@ defmodule AmpsPortal.UserController do
       put_private(
         conn,
         :pow_config,
-        Keyword.put(conn.private.pow_config, :env, conn.assigns().env)
+        Keyword.put(conn.private.pow_config, :env, conn.assigns.env)
       )
 
     config = Plug.fetch_config(conn)
@@ -133,7 +133,7 @@ defmodule AmpsPortal.UserController do
       put_private(
         conn,
         :pow_config,
-        Keyword.put(conn.private.pow_config, :env, conn.assigns().env)
+        Keyword.put(conn.private.pow_config, :env, conn.assigns.env)
       )
 
     case load_from_token(
@@ -190,7 +190,7 @@ defmodule AmpsPortal.UserController do
 
         user = Amps.DB.find_one(index, %{"username" => user["username"]})
 
-        AmpsWeb.Util.ui_event(index, user["_id"], "reset_password", conn.assigns().env)
+        AmpsWeb.Util.ui_event(index, user["_id"], "reset_password", conn.assigns.env)
 
         json(conn, %{success: true, message: "Password Set"})
 
@@ -322,11 +322,11 @@ defmodule AmpsPortal.UserController do
           })
 
         body = conn.body_params()
-        body = Util.before_token_create(body, conn.assigns().env)
+        body = Util.before_token_create(body, conn.assigns.env)
         index = Util.conn_index(conn, "users")
         fieldid = DB.add_to_field(index, body, user["_id"], "tokens")
         updated = DB.find_one(index, %{"_id" => user["_id"]})
-        Util.after_token_create(updated, body, conn.assigns().env)
+        Util.after_token_create(updated, body, conn.assigns.env)
         json(conn, user["tokens"])
     end
   end
@@ -367,7 +367,7 @@ defmodule AmpsPortal.UserController do
         user = DB.find_one(index, %{"username" => user.username})
         item = DB.get_in_field(index, user["_id"], "tokens", id)
         result = DB.delete_from_field(index, body, user["_id"], "tokens", id)
-        Util.after_token_delete(user, item, conn.assigns().env)
+        Util.after_token_delete(user, item, conn.assigns.env)
         json(conn, :ok)
     end
   end

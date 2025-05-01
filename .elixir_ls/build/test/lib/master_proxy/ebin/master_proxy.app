@@ -1,0 +1,11 @@
+{application,master_proxy,
+             [{modules,['Elixir.MasterProxy',
+                        'Elixir.MasterProxy.Cowboy2Handler',
+                        'Elixir.MasterProxy.Plug.NotFound',
+                        'Elixir.MasterProxy.Plug.Test',
+                        'Elixir.MasterProxy.Proxy']},
+              {optional_applications,[]},
+              {applications,[kernel,stdlib,elixir,logger,plug_cowboy,phoenix]},
+              {description,"Proxies requests to multiple apps. Useful for Gigalixir or Heroku deployment when just one web port is exposed. Works with phoenix endpoints, plugs, and websockets."},
+              {registered,[]},
+              {vsn,"0.1.4"}]}.

@@ -14,7 +14,7 @@ defmodule AmpsWeb.Application do
       backoff_period: 4_000,
       connection_settings: [
         %{
-          host: String.to_char_list(System.get_env("AMPS_NATS_HOST", "0.0.0.0")),
+          host: String.to_charlist(System.get_env("AMPS_NATS_HOST", "0.0.0.0")),
           port: String.to_integer(System.get_env("AMPS_NATS_PORT", "4222"))
         }
       ]

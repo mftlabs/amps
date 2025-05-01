@@ -1,0 +1,10 @@
+{application,glob,
+             [{description,"A library to match glob expressions"},
+              {vsn,"1.0.0"},
+              {registered,[]},
+              {applications,[kernel,stdlib]},
+              {env,[]},
+              {maintainers,["Tobias Schlager","Sven Heyll","Timo Koepke"]},
+              {licenses,["MIT"]},
+              {links,[{"Github","https://github.com/lindenbaum/glob"}]},
+              {modules,[glob]}]}.

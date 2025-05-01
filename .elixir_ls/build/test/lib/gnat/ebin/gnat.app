@@ -1,0 +1,12 @@
+{application,gnat,
+             [{modules,['Elixir.Gnat','Elixir.Gnat.Command',
+                        'Elixir.Gnat.ConnectionSupervisor',
+                        'Elixir.Gnat.ConsumerSupervisor',
+                        'Elixir.Gnat.Handshake','Elixir.Gnat.Parsec',
+                        'Elixir.Gnat.Server']},
+              {optional_applications,[]},
+              {applications,[kernel,stdlib,elixir,logger,ssl,cowlib,jason,
+                             nimble_parsec,nkeys,telemetry]},
+              {description,"gnat"},
+              {registered,[]},
+              {vsn,"1.5.2"}]}.

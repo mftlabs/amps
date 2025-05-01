@@ -1,0 +1,10 @@
+{application,file_type,
+             [{modules,['Elixir.FileType','Elixir.FileType.CFB',
+                        'Elixir.FileType.ID3','Elixir.FileType.Magic',
+                        'Elixir.FileType.Utils.Hex','Elixir.FileType.Zip',
+                        'Elixir.FileType.Zip.Header']},
+              {optional_applications,[]},
+              {applications,[kernel,stdlib,elixir,logger]},
+              {description,"file_type"},
+              {registered,[]},
+              {vsn,"0.1.0"}]}.

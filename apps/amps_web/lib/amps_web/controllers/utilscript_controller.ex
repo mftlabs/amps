@@ -1,7 +1,7 @@
 defmodule AmpsWeb.UtilScriptController do
   use AmpsWeb, :controller
   require Logger
-  alias AmpsWeb.Python
+ # alias AmpsWeb.Python
   alias Amps.DB
   alias AmpsWeb.Util
 
@@ -77,7 +77,7 @@ defmodule AmpsWeb.UtilScriptController do
       else
         if body["template"] do
           template =
-            DB.find_one(Util.index(conn.assigns().env, "templates"), %{
+            DB.find_one(Util.index(conn.assigns.env, "templates"), %{
               "name" => body["template"]
             })
 

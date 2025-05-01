@@ -1,0 +1,10 @@
+{application,pythra,
+             [{description,"An OTP application"},
+              {vsn,"0.1.0"},
+              {registered,[]},
+              {mod,{pythra_app,[]}},
+              {applications,[kernel,stdlib,erlport]},
+              {env,[]},
+              {modules,[pythra,pythra_app,pythra_sup,pythra_util]},
+              {licenses,["Apache 2.0"]},
+              {links,[]}]}.

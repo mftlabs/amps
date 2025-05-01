@@ -3,16 +3,16 @@ defmodule AmpsWeb.UtilController do
   require Logger
   import Argon2
   alias Amps.DB
-  alias AmpsWeb.Encryption
-  alias Amps.SvcManager
-  alias AmpsWeb.ServiceController
-  alias Amps.VaultDatabase
-  alias AmpsWeb.Util
+  #alias AmpsWeb.Encryption
+  #alias Amps.SvcManager
+  #alias AmpsWeb.ServiceController
+  #alias Amps.VaultDatabase
+  #alias AmpsWeb.Util
 
   @loop_delimiter "//"
 
-  def verify(conn, %{"username" => username}) do
-    user = DB.find_one(Util.index(conn.assigns().env, "users"), %{"username" => username})
+  def verify(conn, %{"username" => _username}) do
+   # user = DB.find_one(Util.index(conn.assigns.env, "users"), %{"username" => username})
     # auths = Amps.Onboarding.verify(user)
     json(conn, :ok)
   end
@@ -48,7 +48,7 @@ defmodule AmpsWeb.UtilController do
 
     service =
       Enum.reduce_while(envs, nil, fn env, acc ->
-        case DB.find_one(Util.index(env, "services"), clauses) do
+        case DB.find_one(AmpsUtil.index(env, "services"), clauses) do
           nil ->
             {:cont, acc}
 
@@ -101,7 +101,7 @@ defmodule AmpsWeb.UtilController do
     duplicate =
       Enum.reduce(body, true, fn {collection, clauses}, acc ->
         acc &&
-          DB.find_one(Util.index(conn.assigns().env, collection), clauses) !=
+          DB.find_one(AmpsUtil.index(conn.assigns.env, collection), clauses) !=
             nil
       end)
 
@@ -149,7 +149,7 @@ defmodule AmpsWeb.UtilController do
 
     root = Amps.DB.find_one("admin", %{"systemdefault" => true})
 
-    host = Application.fetch_env!(:amps_web, AmpsWeb.Endpoint)[:vault_addr]
+    #host = Application.fetch_env!(:amps_web, AmpsWeb.Endpoint)[:vault_addr]
 
     # username = System.get_env("AMPS_ROOT_USER", "root")
     # password = System.get_env("AMPS_ROOT_PASS", "ampsadmin")
@@ -162,31 +162,31 @@ defmodule AmpsWeb.UtilController do
           "role" => "Admin"
         })
 
-      password = root["password"]
+      #password = root["password"]
       %{password_hash: hashed} = add_hash(root["password"])
       root = Map.put(root, "password", hashed)
 
-      if Application.get_env(:amps_web, AmpsWeb.Endpoint)[:authmethod] ==
-           "vault" do
-        token = AmpsWeb.Vault.get_token(:vaulthandler)
+      # if Application.get_env(:amps_web, AmpsWeb.Endpoint)[:authmethod] ==
+      #      "vault" do
+      #   token = AmpsWeb.Vault.get_token(:vaulthandler)
 
-        {:ok, vault} =
-          Vault.new(
-            engine: Vault.Engine.KVV1,
-            auth: Vault.Auth.Token,
-            host: host,
-            credentials: %{token: token}
-          )
-          |> Vault.auth()
+      #   {:ok, vault} =
+      #     Vault.new(
+      #       engine: Vault.Engine.KVV1,
+      #       auth: Vault.Auth.Token,
+      #       host: host,
+      #       credentials: %{token: token}
+      #     )
+      #     |> Vault.auth()
 
-        _result =
-          Vault.request(
-            vault,
-            :post,
-            "auth/userpass/users/" <> root["username"],
-            body: %{"token_policies" => "admin,default", "password" => password}
-          )
-      end
+      #   _result =
+      #     Vault.request(
+      #       vault,
+      #       :post,
+      #       "auth/userpass/users/" <> root["username"],
+      #       body: %{"token_policies" => "admin,default", "password" => password}
+      #     )
+      # end
 
       systemdefaults = Map.merge(body["system"], %{"name" => "SYSTEM"})
       Amps.DB.insert("config", systemdefaults)
@@ -203,7 +203,7 @@ defmodule AmpsWeb.UtilController do
   end
 
   def download(conn, %{"id" => id}) do
-    case DB.find_by_id(AmpsWeb.Util.index(conn.assigns().env, "message_events"), id) do
+    case DB.find_by_id(AmpsWeb.Util.index(conn.assigns.env, "message_events"), id) do
       nil ->
         send_resp(conn, 404, "Not found")
 
@@ -214,7 +214,7 @@ defmodule AmpsWeb.UtilController do
             filename: msg["fname"] || "message.dat"
           )
         else
-          stream = AmpsUtil.stream(msg, conn.assigns().env)
+          stream = AmpsUtil.stream(msg, conn.assigns.env)
 
           conn =
             conn
@@ -264,7 +264,7 @@ defmodule AmpsWeb.UtilController do
             fpath = AmpsUtil.local_file(msg, env)
             offset = get_offset(conn.req_headers)
             file_size = get_file_size(msg["fpath"])
-            {:ok, {ext, mime}} = FileType.from_path(msg["fpath"])
+            {:ok, {_ext, mime}} = FileType.from_path(msg["fpath"])
 
             conn
             |> Plug.Conn.put_resp_header("content-type", mime)
@@ -293,14 +293,14 @@ defmodule AmpsWeb.UtilController do
   end
 
   def data(conn, %{"id" => id}) do
-    env = conn.assigns().env
+    env = conn.assigns.env
     index = AmpsWeb.Util.index(env, "message_events")
     msg = DB.find_by_id(index, id)
     send_file(conn, 200, msg["fpath"])
   end
 
   def preview(conn, %{"id" => id}) do
-    env = conn.assigns().env
+    env = conn.assigns.env
     index = AmpsWeb.Util.index(env, "message_events")
     msg = DB.find_by_id(index, id)
 
@@ -315,7 +315,7 @@ defmodule AmpsWeb.UtilController do
     else
       if msg["fpath"] do
         case FileType.from_path(msg["fpath"]) do
-          {:ok, {ext, mime}} ->
+          {:ok, {_ext, mime}} ->
             match =
               Enum.find(supported, fn sp ->
                 Regex.match?(~r/#{sp["mime"]}/, mime)
@@ -340,7 +340,7 @@ defmodule AmpsWeb.UtilController do
             end
 
           {:error, _} ->
-            data = AmpsUtil.get_data(msg, conn.assigns().env)
+            data = AmpsUtil.get_data(msg, conn.assigns.env)
 
             if String.valid?(data) do
               json(conn, %{"supported" => true, "type" => "text"})
@@ -355,7 +355,7 @@ defmodule AmpsWeb.UtilController do
   end
 
   def history(conn, %{"msgid" => msgid}) do
-    env = conn.assigns().env
+    env = conn.assigns.env
     rows = get_history(msgid, env)
 
     rows =
@@ -363,7 +363,7 @@ defmodule AmpsWeb.UtilController do
         e1["etime"] <= e2["etime"]
       end)
 
-    {rows, idx} =
+    {rows, _idx} =
       Enum.reduce(rows, {%{}, 0}, fn row, {sessions, idx} ->
         case row["sid"] do
           nil ->
@@ -371,13 +371,13 @@ defmodule AmpsWeb.UtilController do
 
           sid ->
             session =
-              Enum.find(sessions, fn {idx, session} ->
+              Enum.find(sessions, fn {_idx, session} ->
                 session["sid"] == sid
               end)
 
             case session do
               nil ->
-                session = DB.find_one(Util.index(env, "sessions"), %{"sid" => sid})
+                session = DB.find_one(AmpsUtil.index(env, "sessions"), %{"sid" => sid})
 
                 if session do
                   {Map.put(sessions, idx + 1, Map.merge(session, %{"rows" => [row]})), idx + 1}
@@ -396,7 +396,7 @@ defmodule AmpsWeb.UtilController do
       end)
 
     rows =
-      Enum.map(rows, fn {k, v} ->
+      Enum.map(rows, fn {_k, v} ->
         v
       end)
 
@@ -453,11 +453,11 @@ defmodule AmpsWeb.UtilController do
   end
 
   def loop(conn, %{"sub" => sub}) do
-    env = conn.assigns().env
+    env = conn.assigns.env
     data = find_sub_loop(sub, %{}, [], env)
     IO.inspect(data)
 
-    {paths, loops, _} =
+    {_paths, loops, _} =
       Enum.reduce(List.flatten(data), {[], [], []}, fn item, {paths, loops, curr} ->
         if item == @loop_delimiter do
           if List.last(curr)["loop"] do
@@ -470,25 +470,23 @@ defmodule AmpsWeb.UtilController do
         end
       end)
 
-    loops
     json(conn, loops)
   end
 
   def find_sub_loop(sub, meta, topics, env) do
-    sub = DB.find_one(Util.index(env, "services"), %{"name" => sub})
+    sub = DB.find_one(AmpsUtil.index(env, "services"), %{"name" => sub})
 
-    action = DB.find_one(Util.index(env, "actions"), %{"_id" => sub["handler"]})
+    action = DB.find_one(AmpsUtil.index(env, "actions"), %{"_id" => sub["handler"]})
     step = %{"topic" => sub["topic"]}
 
-    step =
-      if action["type"] == "router" do
+    if action["type"] == "router" do
         # rule = RouterAction.evaluate(action, meta)
 
         # rule["topic"]
 
         step =
           Enum.reduce(action["rules"], [], fn id, acc ->
-            rule = Amps.DB.find_one(Util.index(env, "rules"), %{"_id" => id})
+            rule = Amps.DB.find_one(AmpsUtil.index(env, "rules"), %{"_id" => id})
 
             IO.inspect(rule["patterns"])
 
@@ -510,7 +508,7 @@ defmodule AmpsWeb.UtilController do
           end)
 
         step
-      else
+    else
         topics =
           topics ++
             [%{"topic" => sub["topic"], "sub" => sub, "action" => action}]
@@ -532,7 +530,7 @@ defmodule AmpsWeb.UtilController do
             topics ++ [@loop_delimiter]
           end
         end
-      end
+    end
   end
 
   def check_loop(topic, topics) do
@@ -660,7 +658,7 @@ defmodule AmpsWeb.UtilController do
   end
 
   def workflow(conn, %{"topic" => topic, "meta" => meta}) do
-    steps = find_topics(topic, meta, [], conn.assigns().env)
+    steps = find_topics(topic, meta, [], conn.assigns.env)
 
     res =
       case steps do
@@ -684,15 +682,14 @@ defmodule AmpsWeb.UtilController do
 
   defp find_topics(topic, meta, topics, env) do
     subs =
-      DB.find(Util.index(env, "services"), %{
+      DB.find(AmpsUtil.index(env, "services"), %{
         type: "subscriber",
         active: true
       })
 
-    steps =
       Enum.reduce(subs, [], fn sub, steps ->
         if match_topic(sub["topic"], topic) do
-          action = DB.find_one(Util.index(env, "actions"), %{"_id" => sub["handler"]})
+          action = DB.find_one(AmpsUtil.index(env, "actions"), %{"_id" => sub["handler"]})
 
           step = %{"action" => action, "sub" => sub, "topic" => sub["topic"]}
 
@@ -742,7 +739,7 @@ defmodule AmpsWeb.UtilController do
                           }
                         )
                       rescue
-                        e ->
+                        _e ->
                           meta
                       end
                     else
@@ -868,7 +865,7 @@ defmodule AmpsWeb.UtilController do
   def msg_session(conn, %{"msgid" => msgid, "sid" => sid}) do
     json(
       conn,
-      DB.find_one(Util.index(conn.assigns().env, "message_events"), %{
+      DB.find_one(Util.index(conn.assigns.env, "message_events"), %{
         "msgid" => msgid,
         "sid" => sid
       })
