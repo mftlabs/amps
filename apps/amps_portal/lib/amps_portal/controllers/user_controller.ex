@@ -72,27 +72,27 @@ defmodule AmpsPortal.UserController do
     end
   end
 
-  def create_link() do
-    #   host = data["host"]
-    Pow.Plug.put_config(%Conn{},
-      mod: AmpsPortal.APIAuthPlug,
-      plug: AmpsPortal.APIAuthPlug,
-      otp_app: :amps_portal
-    )
+  # def create_link() do
+  #   #   host = data["host"]
+  #   Pow.Plug.put_config(%Conn{},
+  #     mod: AmpsPortal.APIAuthPlug,
+  #     plug: AmpsPortal.APIAuthPlug,
+  #     otp_app: :amps_portal
+  #   )
 
-    #   conn =
-    #     put_private(
-    #       conn,
-    #       :pow_config,
-    #       Keyword.put(conn.private.pow_config, :env, conn.assigns.env)
-    #     )
+  #   #   conn =
+  #   #     put_private(
+  #   #       conn,
+  #   #       :pow_config,
+  #   #       Keyword.put(conn.private.pow_config, :env, conn.assigns.env)
+  #   #     )
 
-    #   IO.inspect(conn)
+  #   #   IO.inspect(conn)
 
-    #   case reset_token(conn, %{"email" => email}) do
-    #     {:ok, %{token: token, user: user}, conn} ->
-    #       link = "#{host}?token=#{token}#setpassword"
-  end
+  #   #   case reset_token(conn, %{"email" => email}) do
+  #   #     {:ok, %{token: token, user: user}, conn} ->
+  #   #       link = "#{host}?token=#{token}#setpassword"
+  # end
 
   defp reset_token(conn, params) do
     conn =

@@ -38,7 +38,6 @@ defmodule AmpsWeb.EnvPlug do
                 IO.inspect(res)
                 assign(conn, :env, "")
 
-              obj ->
                 pp = conn.params()
 
                 conn =

@@ -1,6 +1,6 @@
 defmodule Amps.Logger do
   use GenServer
-  @behaviour :gen_event
+  #@behaviour :gen_event
 
   defstruct level: nil,
             format: nil,
@@ -27,12 +27,47 @@ defmodule Amps.Logger do
     {:ok, state}
   end
 
+  defp schedule_bulk do
+    if Application.ensure_started(:amps) == :ok do
+      Process.send_after(self(), :bulk, AmpsUtil.hinterval())
+    else
+      Process.send_after(self(), :bulk, 5000)
+    end
+  end
+
   @impl true
   def handle_call({:configure, _options}, _from, state) do
     {:reply, :ok, state}
   end
 
   @impl true
+  def handle_info({:bulk, _options}, state) do
+    schedule_bulk()
+
+    state =
+      if Application.fetch_env!(:amps, :initialized) do
+        if Enum.count(state.messages) > 0 do
+          state.messages
+          |> Amps.DB.bulk_perform("system_logs")
+
+          Map.put(state, :messages, [])
+        else
+          state
+        end
+      else
+        state
+      end
+
+    {:ok, state}
+  end
+
+  def handle_info(_other, state) do
+    # IO.puts("handle info #(inspect(other)) #{inspect(state)}")
+
+    {:ok, state}
+  end
+
+  #@impl true
   def handle_event({level, gl, {Logger, msg, ts, md}}, state) do
     if not meet_level?(level, state.level) do
       {:ok, state}
@@ -84,49 +119,12 @@ defmodule Amps.Logger do
     end
   end
 
-  def handle_info(:bulk, state) do
-    schedule_bulk()
-
-    state =
-      if Application.fetch_env!(:amps, :initialized) do
-        if Enum.count(state.messages) > 0 do
-          state.messages
-          |> Amps.DB.bulk_perform("system_logs")
-
-          Map.put(state, :messages, [])
-        else
-          state
-        end
-      else
-        state
-      end
-
-    {:ok, state}
-  end
-
-  defp schedule_bulk do
-    if Application.ensure_started(:amps) == :ok do
-      Process.send_after(self(), :bulk, AmpsUtil.hinterval())
-    else
-      Process.send_after(self(), :bulk, 5000)
-    end
-  end
-
-  def handle_info(other, state) do
-    # IO.puts("handle info #(inspect(other)) #{inspect(state)}")
-
-    {:ok, state}
-  end
 
   def handle_event(:flush, state) do
     {:ok, flush(state)}
   end
 
   def handle_event(_, state) do
-    {:ok, state}
-  end
-
-  def handle_info(_, state) do
     {:ok, state}
   end
 

@@ -150,7 +150,7 @@ defmodule Amps.PyService do
     end
   end
 
-  def handle_call({:onboard, msg, parms, env}, _from, _pid) do
+  def handle_call({:onboard, msg, parms, _env}, _from, _pid) do
     path = Path.join([:code.priv_dir(:amps), "py", "onboarding"])
     tmp = AmpsUtil.get_env(:storage_temp)
     # {:ok, pid} = :python.start([{:python_path, to_charlist(path)}])
@@ -175,7 +175,7 @@ defmodule Amps.PyService do
     end
   end
 
-  defp handle_run_result(result, pid) do
+  defp handle_run_result(result, _pid) do
     case result do
       :undefined ->
         {:error, "Nothing returned from script"}
@@ -190,7 +190,7 @@ defmodule Amps.PyService do
           end
 
         if is_map(rparm) do
-          status = rparm["status"] || "failed"
+          #status = rparm["status"] || "failed"
 
           if rparm["error"] do
             {:error, rparm["reason"]}

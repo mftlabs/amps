@@ -407,7 +407,7 @@ defmodule Amps.SvcManager do
       end
 
     Enum.each(parms, fn {key, val} ->
-      res = Amps.Defaults.put(key, val)
+      Amps.Defaults.put(key, val)
       Application.put_env(:amps, String.to_atom(key), val)
     end)
   end

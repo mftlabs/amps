@@ -1,6 +1,6 @@
 defmodule Amps.EventHandler do
   @behaviour Amps.Handler
-  # use Amps.Handler
+  use Amps.Handler
 
   #  @impl Amps.Handler
 

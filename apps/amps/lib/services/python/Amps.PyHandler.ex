@@ -411,7 +411,7 @@ defmodule Amps.PyHandler do
         end
 
       IO.puts("starting event listener #{inspect(parms)}")
-      {:ok, pid} = GenServer.start_link(__MODULE__, parms)
+      {:ok, _pid} = GenServer.start_link(__MODULE__, parms)
     end
 
     def init(state) do
@@ -423,7 +423,7 @@ defmodule Amps.PyHandler do
       {:noreply, state}
     end
 
-    def handle_info(other, state) do
+    def handle_info(_other, state) do
       {:noreply, state}
     end
   end

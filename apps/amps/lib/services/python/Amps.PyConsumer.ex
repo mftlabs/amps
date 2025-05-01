@@ -1,5 +1,5 @@
 defmodule Amps.PyConsumer do
-  use Amps.PullConsumer
+  @behaviour Amps.PullConsumer
 
   @impl Amps.PullConsumer
   def initialize(state) do
@@ -7,7 +7,7 @@ defmodule Amps.PyConsumer do
   end
 
   @impl Amps.PullConsumer
-  def process(message, msg, process_task, mstate, state) do
+  def process(_message, msg, _process_task, _mstate, state) do
     evtopic = AmpsUtil.env_topic("amps.events.action", state.env)
     topic = state.parms["topic"]
 
