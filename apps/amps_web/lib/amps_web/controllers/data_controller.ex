@@ -106,7 +106,7 @@ defmodule AmpsWeb.DataController do
   end
 
   def change_admin_password(conn, %{"id" => id}) do
-    body = conn.body_params()
+    body = conn.body_params
     password = body["password"]
     user = DB.find_one("admin", %{"_id" => id})
 
@@ -669,7 +669,7 @@ defmodule AmpsWeb.DataController do
         "id" => id,
         "field" => field
       }) do
-    _body = conn.body_params()
+    _body = conn.body_params
 
     {binary, filename} =
       case export_sub(collection, id, field, conn.assigns.env) do
@@ -685,7 +685,7 @@ defmodule AmpsWeb.DataController do
   end
 
   def export_selection(conn, %{"collection" => collection}) do
-    body = conn.body_params()
+    body = conn.body_params
 
     rows = body["rows"]
     sheets = get_excel_data(collection, rows)
@@ -773,7 +773,7 @@ defmodule AmpsWeb.DataController do
     id = AmpsUtil.get_id()
     dir = AmpsUtil.tempdir(id)
 
-    demo = conn.body_params()
+    demo = conn.body_params
 
     imports =
       Enum.reduce(AmpsWeb.Util.order(), [], fn index, imports ->
@@ -860,7 +860,7 @@ defmodule AmpsWeb.DataController do
 
   def reroute(conn, %{"id" => id}) do
     obj = Amps.DB.find_one("message_events", %{"_id" => id})
-    body = conn.body_params()
+    body = conn.body_params
     topic = body["topic"]
     meta = JSON.decode!(body["meta"])
 
@@ -874,14 +874,14 @@ defmodule AmpsWeb.DataController do
   end
 
   def reroute_many(conn, _params) do
-    body = conn.body_params()
+    body = conn.body_params
     ids = body["ids"]
     _topic = body["topic"]
     _meta = JSON.decode!(body["meta"])
 
     Enum.each(ids, fn id ->
       obj = Amps.DB.find_one("message_events", %{"_id" => id})
-      body = conn.body_params()
+      body = conn.body_params
       topic = body["topic"]
       meta = JSON.decode!(body["meta"])
 
@@ -906,7 +906,7 @@ defmodule AmpsWeb.DataController do
   end
 
   def index(conn, %{"collection" => collection}) do
-    params = conn.query_params()
+    params = conn.query_params
     data = DB.get_rows(collection, params)
 
     rows =
@@ -924,7 +924,7 @@ defmodule AmpsWeb.DataController do
   end
 
   def create(conn, %{"collection" => collection}) do
-    body = Util.before_create(collection, conn.body_params(), conn.assigns)
+    body = Util.before_create(collection, conn.body_params, conn.assigns)
 
     {:ok, res} = DB.insert(collection, body)
 
@@ -934,7 +934,7 @@ defmodule AmpsWeb.DataController do
   end
 
   def create_with_id(conn, %{"collection" => collection, "id" => id}) do
-    body = Util.before_create(collection, conn.body_params(), conn.assigns)
+    body = Util.before_create(collection, conn.body_params, conn.assigns)
     {:ok, res} = DB.insert_with_id(collection, body, id)
 
     Util.after_create(collection, body, conn.assigns.env)
@@ -965,7 +965,7 @@ defmodule AmpsWeb.DataController do
 
   def update(conn, %{"collection" => collection, "id" => id}) do
     old = DB.find_by_id(collection, id)
-    body = conn.body_params()
+    body = conn.body_params
 
     body = Util.before_update(collection, id, body, conn.assigns.env, old)
 
@@ -979,7 +979,7 @@ defmodule AmpsWeb.DataController do
 
   def update_with_id(conn, %{"collection" => collection, "id" => id}) do
     old = DB.find_by_id(collection, id)
-    body = conn.body_params()
+    body = conn.body_params
 
     body = Util.before_update(collection, id, body, conn.assigns.env, old)
 
@@ -1043,7 +1043,7 @@ defmodule AmpsWeb.DataController do
         end
 
       _ ->
-        conn.body_params()
+        conn.body_params
     end
 
     resp = DB.delete_by_id(collection, id)
@@ -1094,7 +1094,7 @@ defmodule AmpsWeb.DataController do
         "field" => field
       }) do
     Logger.debug("Adding Field")
-    body = conn.body_params()
+    body = conn.body_params
 
     body =
       Util.before_field_create(
@@ -1128,7 +1128,7 @@ defmodule AmpsWeb.DataController do
         "fieldid" => fieldid
       }) do
     Logger.debug("Adding Field")
-    body = conn.body_params()
+    body = conn.body_params
 
     fieldid = DB.add_to_field_with_id(collection, body, id, field, fieldid)
     updated = DB.find_one(collection, %{"_id" => id})
@@ -1155,7 +1155,7 @@ defmodule AmpsWeb.DataController do
         "fieldid" => fieldid
       }) do
     Logger.debug("Getting Field")
-    _body = conn.body_params()
+    _body = conn.body_params
     result = DB.get_in_field(collection, id, field, fieldid)
     json(conn, result)
   end
@@ -1165,7 +1165,7 @@ defmodule AmpsWeb.DataController do
         "id" => id,
         "field" => field
       }) do
-    body = conn.body_params()
+    body = conn.body_params
     IO.inspect(%{field => body})
     DB.find_one_and_update(collection, %{"_id" => id}, %{field => body})
     Util.ui_event(collection, id, "update.#{field}", conn.assigns.env)
@@ -1179,7 +1179,7 @@ defmodule AmpsWeb.DataController do
         "fieldid" => fieldid
       }) do
     Logger.debug("Updating Field")
-    body = conn.body_params()
+    body = conn.body_params
     result = DB.update_in_field(collection, body, id, field, fieldid)
 
     case Util.base_index(conn.assigns.env, collection) do
@@ -1216,7 +1216,7 @@ defmodule AmpsWeb.DataController do
 
   # def reorder_in_field(conn, %{"collection" => collection, "id" => id, "field" => field}) do
   #   Logger.debug("Adding Field")
-  #   body = conn.body_params();
+  #   body = conn.body_params;
 
   #   {:ok, result} = Mongo.update_one(:mongo, collection, %{"_id" => objectid(id)}, %{"$push": %{field => body}})
 
@@ -1231,7 +1231,7 @@ defmodule AmpsWeb.DataController do
         "fieldid" => fieldid
       }) do
     Logger.debug("Deleting Field")
-    body = conn.body_params()
+    body = conn.body_params
     obj = DB.find_one(collection, %{"_id" => id})
     item = DB.get_in_field(collection, id, field, fieldid)
     result = DB.delete_from_field(collection, body, id, field, fieldid)

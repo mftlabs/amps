@@ -63,7 +63,7 @@ defmodule AmpsWeb.UtilScriptController do
   end
 
   def create(conn, _params) do
-    body = conn.body_params()
+    body = conn.body_params
     name = body["name"]
     script = get_path(name)
 
@@ -107,7 +107,7 @@ defmodule AmpsWeb.UtilScriptController do
   end
 
   def update(conn, %{"id" => name}) do
-    body = conn.body_params()
+    body = conn.body_params
     script = get_path(name)
     File.write(script, body["data"])
     index = "utilscripts"

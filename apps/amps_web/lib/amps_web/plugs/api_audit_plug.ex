@@ -25,8 +25,8 @@ defmodule AmpsWeb.AuditPlug do
       "action" => info.plug_opts,
       "params" => %{
         "path_params" => params,
-        "body_params" => conn.body_params(),
-        "query_params" => conn.query_params()
+        "body_params" => conn.body_params,
+        "query_params" => conn.query_params
       }
     })
 

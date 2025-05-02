@@ -405,7 +405,7 @@ defmodule AmpsPortal.UFAController do
         send_resp(conn, 403, "Forbidden")
 
       user ->
-        body = conn.body_params()
+        body = conn.body_params
 
         Amps.DB.find_one_and_update(Util.conn_index(conn, "users"), %{"_id" => user.id}, %{
           "ufa" => body
@@ -461,7 +461,7 @@ defmodule AmpsPortal.UFAController do
         # _host = Application.fetch_env!(:amps_portal, AmpsWeb.Endpoint)[:url]
 
         agentdir = Application.app_dir(:amps_portal, "priv/agents")
-        query = conn.query_params()
+        query = conn.query_params
         os = query["os"]
         arch = query["arch"]
         host = query["host"]
@@ -607,7 +607,7 @@ defmodule AmpsPortal.UFAController do
         send_resp(conn, 403, "Forbidden")
 
       user ->
-        body = conn.body_params()
+        body = conn.body_params
         index = Util.conn_index(conn, "users")
         fieldid = DB.add_to_field(index, body, user.id, "rules")
         user = DB.find_one(index, %{"_id" => user.id})
@@ -625,7 +625,7 @@ defmodule AmpsPortal.UFAController do
 
       user ->
         index = Util.conn_index(conn, "users")
-        body = conn.body_params()
+        body = conn.body_params
         body = Map.put(body, "_id", id)
         DB.update_in_field(index, body, user.id, "rules", id)
         rule = DB.get_in_field(index, user.id, "rules", id)

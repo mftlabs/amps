@@ -17,7 +17,7 @@ defmodule AmpsWeb.AgentController do
     IO.puts(id)
 
     agentdir = Application.app_dir(:amps_web, "priv/agents")
-    query = conn.query_params()
+    query = conn.query_params
     os = query["os"]
     arch = query["arch"]
     host = query["host"]

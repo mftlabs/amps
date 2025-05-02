@@ -18,7 +18,7 @@ defmodule AmpsWeb.UtilController do
   end
 
   def glob_match(conn, _params) do
-    body = conn.body_params()
+    body = conn.body_params
     test = body["test"]
     pattern = body["pattern"]
 
@@ -35,7 +35,7 @@ defmodule AmpsWeb.UtilController do
   def in_use(conn, %{"port" => port}) do
     {port, _} = Integer.parse(port)
 
-    body = conn.body_params()
+    body = conn.body_params
 
     id = body["id"]
 
@@ -97,7 +97,7 @@ defmodule AmpsWeb.UtilController do
   end
 
   def duplicate(conn, _params) do
-    body = conn.body_params()
+    body = conn.body_params
 
     duplicate =
       Enum.reduce(body, true, fn {collection, clauses}, acc ->
@@ -146,7 +146,7 @@ defmodule AmpsWeb.UtilController do
   end
 
   def startup(conn, _params) do
-    body = conn.body_params()
+    body = conn.body_params
 
     root = Amps.DB.find_one("admin", %{"systemdefault" => true})
 

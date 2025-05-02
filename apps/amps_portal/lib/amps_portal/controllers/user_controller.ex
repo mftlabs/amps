@@ -22,7 +22,7 @@ defmodule AmpsPortal.UserController do
 
   def update(conn, _params) do
     user = Pow.Plug.current_user(conn)
-    body = conn.body_params()
+    body = conn.body_params
     IO.inspect(body)
     IO.inspect(Map.has_key?(body, "password"))
 
@@ -46,7 +46,7 @@ defmodule AmpsPortal.UserController do
   end
 
   def send_user_link(conn, %{"email" => email}) do
-    data = conn.body_params()
+    data = conn.body_params
     host = data["host"]
 
     conn =
@@ -317,7 +317,7 @@ defmodule AmpsPortal.UserController do
             "username" => user.username
           })
 
-        body = conn.body_params()
+        body = conn.body_params
         body = Util.before_token_create(body, conn.assigns.env)
         index = Util.conn_index(conn, "users")
         DB.add_to_field(index, body, user["_id"], "tokens")
@@ -358,7 +358,7 @@ defmodule AmpsPortal.UserController do
         send_resp(conn, 401, "Unauthorized")
 
       user ->
-        body = conn.body_params()
+        body = conn.body_params
         index = Util.conn_index(conn, "users")
         user = DB.find_one(index, %{"username" => user.username})
         item = DB.get_in_field(index, user["_id"], "tokens", id)

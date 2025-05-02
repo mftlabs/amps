@@ -20,5 +20,5 @@ defmodule AmpsPortal.Gettext do
 
   See the [Gettext Docs](https://hexdocs.pm/gettext) for detailed usage.
   """
-  use Gettext, otp_app: :amps_portal
+  use Gettext, backend: AmpsPortal.Gettext
 end

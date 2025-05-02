@@ -40,7 +40,7 @@ defmodule AmpsPortal.DataController do
             send_resp(conn, 404, "Mailbox not found")
 
           mailbox ->
-            qp = conn.query_params()
+            qp = conn.query_params
 
             qp =
               Util.create_filter(qp, %{
@@ -67,7 +67,7 @@ defmodule AmpsPortal.DataController do
         )
 
       user ->
-        qp = conn.query_params()
+        qp = conn.query_params
         qp = Util.create_filter(qp, %{"recipient" => user.username})
         data = DB.get_rows(Util.conn_index(conn, "mailbox"), qp)
 
@@ -79,7 +79,7 @@ defmodule AmpsPortal.DataController do
   end
 
   def duplicate(conn, _params) do
-    body = conn.body_params()
+    body = conn.body_params
 
     case Pow.Plug.current_user(conn) do
       nil ->
@@ -197,7 +197,7 @@ defmodule AmpsPortal.DataController do
         )
 
       user ->
-        qp = conn.query_params()
+        qp = conn.query_params
         IO.inspect(qp)
         qp = Util.create_filter(qp, %{"user" => user.username})
         data = DB.get_rows(Util.conn_index(conn, "ufa_logs"), qp)

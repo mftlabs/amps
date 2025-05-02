@@ -414,7 +414,7 @@ defmodule AmpsWeb.Util do
       "users" ->
         Map.put(body, "password", nil)
 
-      # VaultDatabase.vault_store_key(conn.body_params(), collection, "account", "cred")
+      # VaultDatabase.vault_store_key(conn.body_params, collection, "account", "cred")
       "services" ->
         if body["type"] == "subscriber" ||
              (body["type"] == "pyservice" && body["receive"]) do

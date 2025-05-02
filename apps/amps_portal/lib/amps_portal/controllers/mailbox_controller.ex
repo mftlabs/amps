@@ -21,7 +21,7 @@ defmodule AmpsPortal.MailboxController do
         send_resp(conn, 401, "Unauthorized")
 
       user ->
-        body = conn.body_params()
+        body = conn.body_params
         DB.add_to_field(Util.conn_index(conn, "users"), body, user.id, "mailboxes")
         json(conn, :ok)
     end

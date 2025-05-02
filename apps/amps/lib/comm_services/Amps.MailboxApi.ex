@@ -90,7 +90,7 @@ defmodule Amps.MailboxApi do
     IO.puts("temp: #{temp_file}")
 
     IO.inspect(conn)
-    IO.inspect(conn.body_params())
+    IO.inspect(conn.body_params)
     mailbox = "default"
 
     case myauth(conn, user, mailbox) do
@@ -178,7 +178,7 @@ defmodule Amps.MailboxApi do
     IO.puts("temp: #{temp_file}")
 
     IO.inspect(conn)
-    IO.inspect(conn.body_params())
+    IO.inspect(conn.body_params)
 
     case myauth(conn, user, mailbox) do
       {:ok, user} ->
@@ -311,7 +311,7 @@ defmodule Amps.MailboxApi do
   defp read_body(conn, opts, f) do
     IO.inspect(conn)
 
-    case conn.body_params() do
+    case conn.body_params do
       %Plug.Conn.Unfetched{aspect: :body_params} ->
         case Plug.Conn.read_body(conn, opts) do
           {:ok, binary, conn} ->
