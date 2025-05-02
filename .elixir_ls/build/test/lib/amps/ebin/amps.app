@@ -51,7 +51,7 @@
                         'Elixir.JSON.Encoder.Amps.Users.User',
                         'Elixir.NackError','Elixir.Progress']},
               {optional_applications,[]},
-              {applications,[kernel,stdlib,elixir,logger,runtime_tools,
+              {applications,[kernel,stdlib,elixir,logger,runtime_tools,os_mon,
                              amps_mongodb,phoenix_pubsub,swoosh,plug_cowboy,
                              uuid,export,erlport,libvault,poolboy,glob,
                              sftp_client,jetstream,pythra,gnat,httpoison,

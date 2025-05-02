@@ -45,7 +45,7 @@ defmodule ServiceMonitoring do
             %{partion: partition, size: size, capacity: capacity}
           end)
       end
-
+    mdata =  :memsup.get_system_memory_data()
     %{
       cpu_avg1: :cpu_sup.avg1(),
       cpu_avg5: :cpu_sup.avg5(),
@@ -56,7 +56,7 @@ defmodule ServiceMonitoring do
           Map.put(acc, idx, val)
         end),
       disk: disk,
-      system_mem: :memsup.get_system_memory_data()
+      system_mem: mdata
     }
 
     # DB.insert("service_monitoring", %{

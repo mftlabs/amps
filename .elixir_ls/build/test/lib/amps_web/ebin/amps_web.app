@@ -42,7 +42,7 @@
                         'Elixir.ServiceMonitoring']},
               {compile_env,[{amps_web,['Elixir.AmpsWeb.Gettext'],error}]},
               {optional_applications,[]},
-              {applications,[kernel,stdlib,elixir,logger,runtime_tools,
+              {applications,[kernel,stdlib,elixir,logger,runtime_tools,os_mon,
                              phoenix,phoenix_html,phoenix_live_view,ecto,
                              floki,phoenix_live_dashboard,telemetry_metrics,
                              telemetry_poller,argon2_elixir,gettext,amps,

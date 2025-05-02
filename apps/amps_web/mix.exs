@@ -11,7 +11,7 @@ defmodule AmpsWeb.MixProject do
       lockfile: "../../mix.lock",
       elixir: "~> 1.17",
       elixirc_paths: elixirc_paths(Mix.env()),
-      compilers: [:gettext] ++ Mix.compilers(),
+   #   compilers: [:gettext] ++ Mix.compilers(),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps()
@@ -24,7 +24,7 @@ defmodule AmpsWeb.MixProject do
   def application do
     [
       mod: {AmpsWeb.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: [:logger, :runtime_tools, :os_mon]
     ]
   end
 
