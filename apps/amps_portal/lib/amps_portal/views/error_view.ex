@@ -1,5 +1,5 @@
 defmodule AmpsPortal.ErrorView do
-  use AmpsPortal, :view
+  #se AmpsPortal, :view
 
   # If you want to customize a particular status code
   # for a certain format, you may uncomment below.

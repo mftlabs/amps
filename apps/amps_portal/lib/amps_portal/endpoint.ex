@@ -33,7 +33,7 @@ defmodule AmpsPortal.Endpoint do
     at: "/",
     from: :amps_portal,
     gzip: false,
-    only: ~w(assets fonts images favicon.ico robots.txt)
+    only: AmpsPortal.static_paths()
   )
 
   # Code reloading can be explicitly enabled under the

@@ -20,6 +20,7 @@ defmodule AmpsWeb.ConnCase do
   using do
     quote do
       # Import conveniences for testing with connections
+      use AmpsWeb, :verified_routes
       import Plug.Conn
       import Phoenix.ConnTest
       import AmpsWeb.ConnCase

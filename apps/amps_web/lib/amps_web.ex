@@ -17,46 +17,41 @@ defmodule AmpsWeb do
   and import those modules here.
   """
 
-  def controller do
-    quote do
-      use Phoenix.Controller, namespace: AmpsWeb
+  def controller(variant \\ nil) do
 
-      import Plug.Conn
-      #import AmpsWeb.Gettext
-      use Gettext, backend: AmpsWeb.Gettext
-      alias AmpsWeb.Router.Helpers, as: Routes
-    end
+    quote do
+      formats = [html: "View", json: "View"]
+
+      use Phoenix.Controller,
+        namespace: AmpsWeb,
+        formats: formats,
+        layouts: [html: AmpsWeb.Layouts]
+
+        import Plug.Conn
+        use Gettext, backend: AmpsWeb.Gettext
+        alias AmpsWeb.Router.Helpers, as: Routes
+      unquote(verified_routes())
+  end
   end
 
-  def view do
-    quote do
-      use Phoenix.View,
-        root: "lib/amps_web/templates",
-        namespace: AmpsWeb
-
-      # Import convenience functions from controllers
-      import Phoenix.Controller,
-        only: [get_flash: 1, get_flash: 2, view_module: 1, view_template: 1]
-
-      # Include shared imports and aliases for views
-      unquote(view_helpers())
-    end
-  end
 
   def live_view do
+
     quote do
       use Phoenix.LiveView,
-        layout: {AmpsWeb.LayoutView, "live.html"}
+        layout: {AmpsWeb.Layouts, :app}
 
-      unquote(view_helpers())
+      unquote(html_helpers())
     end
+
+
   end
 
   def live_component do
     quote do
       use Phoenix.LiveComponent
 
-      unquote(view_helpers())
+      unquote(html_helpers())
     end
   end
 
@@ -73,33 +68,56 @@ defmodule AmpsWeb do
   def channel do
     quote do
       use Phoenix.Channel
-      #import AmpsWeb.Gettext
       use Gettext, backend: AmpsWeb.Gettext
     end
   end
 
-  defp view_helpers do
+  def html do
     quote do
-      # Use all HTML functionality (forms, tags, etc)
-      use Phoenix.HTML
+        use Phoenix.Component
+        # Import convenience functions from controllers
 
-      # Import LiveView and .heex helpers (live_render, live_patch, <.form>, etc)
-      import Phoenix.LiveView.Helpers
+        import Phoenix.Controller,
+            only: [get_csrf_token: 0, view_module: 1, view_template: 1]
 
-      # Import basic rendering functionality (render, render_layout, etc)
-      import Phoenix.View
-
-      import AmpsWeb.ErrorHelpers
-      #import AmpsWeb.Gettext
-      use Gettext, backend: AmpsWeb.Gettext
-      alias AmpsWeb.Router.Helpers, as: Routes
+        # Include general helpers for rendering HTML
+        unquote(html_helpers())
     end
-  end
+end
 
+defp html_helpers do
+    quote do
+        # HTML escaping functionality
+        import Phoenix.HTML
+
+        # Core UI components and translation
+        import AmpsWeb.CoreComponents
+        import AmpsWeb.Gettext
+
+        # Shortcut for generating JS commands
+        alias Phoenix.LiveView.JS
+
+        # Routes generation with the ~p sigil
+        unquote(verified_routes())
+    end
+end
+
+def verified_routes do
+    quote do
+        use Phoenix.VerifiedRoutes,
+            endpoint: AmpsWeb.Endpoint,
+            router: AmpsWeb.Router,
+            statics: AmpsWeb.static_paths()
+    end
+end
+
+defmacro __using__(which) when is_atom(which) do
+  apply(__MODULE__, which, [])
+end
+
+def static_paths, do: ~w(assets fonts images favicon.ico robots.txt)
   @doc """
   When used, dispatch to the appropriate controller/view/etc.
   """
-  defmacro __using__(which) when is_atom(which) do
-    apply(__MODULE__, which, [])
-  end
+
 end

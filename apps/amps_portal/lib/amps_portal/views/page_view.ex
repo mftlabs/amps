@@ -1,3 +1,3 @@
 defmodule AmpsPortal.PageView do
-  use AmpsPortal, :view
+  #use AmpsPortal, :view
 end

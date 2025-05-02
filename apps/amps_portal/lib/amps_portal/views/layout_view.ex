@@ -1,5 +1,5 @@
 defmodule AmpsPortal.LayoutView do
-  use AmpsPortal, :view
+  #use AmpsPortal, :view
 
   # Phoenix LiveDashboard is available only in development by default,
   # so we instruct Elixir to not warn if the dashboard route is missing.

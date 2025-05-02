@@ -34,7 +34,7 @@ defmodule AmpsWeb.Endpoint do
     at: "/",
     from: :amps_web,
     gzip: false,
-    only: ~w(assets vs fonts images favicon.ico robots.txt)
+    only: AmpsWeb.static_paths()
   )
 
   socket("/socket", AmpsWeb.UserSocket,

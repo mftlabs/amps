@@ -19,6 +19,7 @@ defmodule AmpsPortal.ConnCase do
 
   using do
     quote do
+      use AmpsPortal, :verified_routes
       # Import conveniences for testing with connections
       import Plug.Conn
       import Phoenix.ConnTest
