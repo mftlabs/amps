@@ -19,7 +19,7 @@ defmodule AmpsEvents do
     end
   end
 
-  def do_send(msg, parms, state, topic, env) do
+  def do_send(msg, _parms, state, topic, env) do
     msg = Map.merge(msg, %{"etime" => AmpsUtil.gettime(), "topic" => topic})
 
     if not AmpsUtil.blank?(topic) do

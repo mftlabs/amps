@@ -1,6 +1,6 @@
 defmodule Amps.NATS do
   require Logger
-  alias Amps.DB
+  #alias Amps.DB
 
   use GenServer
 
@@ -20,8 +20,8 @@ defmodule Amps.NATS do
   def init(args) do
     parms = args[:parms]
     opts = Enum.into(args, %{})
-    env = args[:env] || ""
-    provider = DB.find_by_id("providers", parms["provider"])
+    #env = args[:env] || ""
+    #provider = DB.find_by_id("providers", parms["provider"])
     IO.inspect(parms)
     Gnat.sub(:gnat, self(), parms["topic"])
     {:ok, opts}
@@ -48,7 +48,7 @@ defmodule Amps.NATS do
         try do
           AmpsUtil.format(state.parms["format"], event)
         rescue
-          e ->
+          _e ->
             state.parms["name"] <>
               "_" <> AmpsUtil.format("{YYYY}_{MM}_{DD}_{HH}_{mm}_{SS}", event)
         end

@@ -106,7 +106,7 @@ defmodule Amps.Responders do
     with {:atomic, res} <-
            :mnesia.transaction(fn -> :mnesia.read({:responder, id}) end) do
       case res do
-        [{:responder, id, pid, node, pending, responses}] ->
+        [{:responder, _id, _pid, _node, _pending, _responses}] ->
           [rec] = res
           rec
 

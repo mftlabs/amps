@@ -1,7 +1,7 @@
 defmodule Amps.Actions.RunScript do
   require Logger
 
-  def run(msg, parms, {state, env}) do
+  def run(msg, parms, {_state, env}) do
     runscript(msg, parms, env)
   end
 

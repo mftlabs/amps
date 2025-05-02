@@ -17,7 +17,7 @@ defmodule Amps.Actions.S3 do
 
   """
 
-  def run(msg, parms, {state, env}) do
+  def run(msg, parms, {_state, env}) do
     Logger.info("S3 Action Called")
 
     provider =
@@ -158,7 +158,7 @@ defmodule Amps.Actions.S3 do
     end
   end
 
-  def req(provider, env) do
+  def req(provider, _env) do
     req = [
       access_key_id: provider["key"],
       secret_access_key: provider["secret"]

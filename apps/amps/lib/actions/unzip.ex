@@ -1,5 +1,5 @@
 defmodule Amps.Actions.Unzip do
-  def run(msg, parms, {state, env}) do
+  def run(msg, parms, {_state, env}) do
     _tmpdir = AmpsUtil.tempdir(msg[:session])
 
     input = %{msg: msg, parms: parms, env: env}
@@ -8,10 +8,10 @@ defmodule Amps.Actions.Unzip do
       :python.start([{:python_path, to_charlist(Application.app_dir(:amps, "priv/py/actions"))}])
 
     case :python.call(pid, :unzip, :run, [JSON.encode!(input)]) do
-      %{'status' => 'failed', 'message' => error} ->
+      %{"status" => "failed", "message" => error} ->
         raise error
 
-      %{'status' => 'success', 'files' => files} ->
+      %{"status" => "success", "files" => files} ->
         events =
           Enum.map(files, fn file ->
             file = to_string(file)

@@ -1,7 +1,7 @@
 defmodule Amps.Actions.PGPDecrypt do
   require Logger
 
-  def run(msg, parms, {state, env}) do
+  def run(msg, parms, {state, _env}) do
     Logger.info("input #{inspect(msg)}")
     {:ok, newmsg} = decrypt(msg, parms, state)
     Logger.info("output #{inspect(newmsg)}")

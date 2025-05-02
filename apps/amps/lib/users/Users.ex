@@ -36,8 +36,8 @@ defmodule Amps.Users do
       _ ->
         case authmethod() do
           "vault" ->
-            Amps.Users.Vault.authenticate(body)
-
+            #Amps.Users.Vault.authenticate(body)
+            IO.puts("vault not implemented")
           _ ->
             Amps.Users.DB.authenticate(body, config)
         end
@@ -49,8 +49,8 @@ defmodule Amps.Users do
   def create(body) do
     case authmethod() do
       "vault" ->
-        Amps.Users.Vault.create(body)
-
+       # Amps.Users.Vault.create(body)
+        IO.puts("vault not implemented")
       _ ->
         Amps.Users.DB.create(body)
     end
@@ -119,87 +119,87 @@ defmodule Amps.Users do
   end
 end
 
-defmodule Amps.Users.Vault do
-  alias Amps.Users, as: Users
-  import Pow.Context
-  require Logger
+# defmodule Amps.Users.Vault do
+#   alias Amps.Users, as: Users
+#   import Pow.Context
+#   require Logger
 
-  def host(), do: Application.fetch_env!(:amps_web, AmpsWeb.Endpoint)[:vault_addr]
+#   def host(), do: Application.fetch_env!(:amps_web, AmpsWeb.Endpoint)[:vault_addr]
 
-  def authenticate(body) do
-    vault =
-      Vault.new(
-        engine: Vault.Engine.KVV1,
-        auth: Vault.Auth.UserPass,
-        host: host()
-      )
+#   def authenticate(body) do
+#     vault =
+#       Vault.new(
+#         engine: Vault.Engine.KVV1,
+#         auth: Vault.Auth.UserPass,
+#         host: host()
+#       )
 
-    login =
-      Vault.Auth.UserPass.login(vault, %{
-        username: body["username"],
-        password: body["password"]
-      })
+#     login =
+#       Vault.Auth.UserPass.login(vault, %{
+#         username: body["username"],
+#         password: body["password"]
+#       })
 
-    case login do
-      {:ok, _token, _ttl} ->
-        user = Amps.DB.find_one("users", %{username: body["username"]})
+#     case login do
+#       {:ok, _token, _ttl} ->
+#         user = Amps.DB.find_one("users", %{username: body["username"]})
 
-        if user["approved"] do
-          Users.convert_to_user_struct(user)
-        else
-          {:error, nil}
-        end
+#         if user["approved"] do
+#           Users.convert_to_user_struct(user)
+#         else
+#           {:error, nil}
+#         end
 
-      {:error, _} ->
-        # send_resp(conn, 406, "Unauthorized")
-        {:error, nil}
-    end
-  end
+#       {:error, _} ->
+#         # send_resp(conn, 406, "Unauthorized")
+#         {:error, nil}
+#     end
+#   end
 
-  # Use params to look up user and verify password with `MyApp.Users.User.verify_password/2
+#   # Use params to look up user and verify password with `MyApp.Users.User.verify_password/2
 
-  def create(body) do
-    token = AmpsWeb.Vault.get_token(:vaulthandler)
+#   def create(body) do
+#     token = AmpsWeb.Vault.get_token(:vaulthandler)
 
-    {:ok, vault} =
-      Vault.new(
-        engine: Vault.Engine.KVV1,
-        auth: Vault.Auth.Token,
-        host: host(),
-        credentials: %{token: token}
-      )
-      |> Vault.auth()
+#     {:ok, vault} =
+#       Vault.new(
+#         engine: Vault.Engine.KVV1,
+#         auth: Vault.Auth.Token,
+#         host: host(),
+#         credentials: %{token: token}
+#       )
+#       |> Vault.auth()
 
-    result =
-      Vault.request(vault, :post, "auth/userpass/users/" |> Kernel.<>(body["username"]),
-        body: %{"token_policies" => "admin,default", password: body["password"]}
-      )
+#     result =
+#       Vault.request(vault, :post, "auth/userpass/users/" |> Kernel.<>(body["username"]),
+#         body: %{"token_policies" => "admin,default", password: body["password"]}
+#       )
 
-    IO.inspect(result)
-    user = Map.drop(body, ["password"])
-    user = Map.drop(user, ["confirmpswd"])
+#     IO.inspect(result)
+#     user = Map.drop(body, ["password"])
+#     user = Map.drop(user, ["confirmpswd"])
 
-    user =
-      Map.merge(user, %{"approved" => false, "role" => "Guest", "provider" => "vault"})
-      |> Map.new(fn {k, v} -> {String.to_atom(k), v} end)
+#     user =
+#       Map.merge(user, %{"approved" => false, "role" => "Guest", "provider" => "vault"})
+#       |> Map.new(fn {k, v} -> {String.to_atom(k), v} end)
 
-    id = Amps.DB.insert("users", user)
+#     id = Amps.DB.insert("users", user)
 
-    user = Map.put(user, :id, id)
-    userstruct = struct(Amps.Users.User, user)
-    {:ok, userstruct}
-  end
+#     user = Map.put(user, :id, id)
+#     userstruct = struct(Amps.Users.User, user)
+#     {:ok, userstruct}
+#   end
 
-  def update(_user, _params) do
-    IO.puts("update")
-    {:error, :not_implemented}
-  end
+#   def update(_user, _params) do
+#     IO.puts("update")
+#     {:error, :not_implemented}
+#   end
 
-  def delete(_user) do
-    IO.puts("delete")
-    {:error, :not_implemented}
-  end
-end
+#   def delete(_user) do
+#     IO.puts("delete")
+#     {:error, :not_implemented}
+#   end
+# end
 
 defmodule Amps.Users.DB do
   alias Amps.Users, as: Users

@@ -41,7 +41,7 @@ defmodule Amps.Defaults do
     with {:atomic, res} <-
            :mnesia.transaction(fn -> :mnesia.read({:default, key}) end) do
       case res do
-        [{:default, key, val}] ->
+        [{:default, _key, val}] ->
           val
 
         [] ->

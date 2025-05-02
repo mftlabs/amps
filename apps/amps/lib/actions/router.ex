@@ -147,29 +147,29 @@ defmodule Amps.Actions.Router do
     end
   end
 
-  defp process_action(msg, rule, state) do
-    raction = rule["action"]
+  # defp process_action(msg, rule, state) do
+  #   raction = rule["action"]
 
-    case raction do
-      "hold" ->
-        Logger.info("*** message held")
+  #   case raction do
+  #     "hold" ->
+  #       Logger.info("*** message held")
 
-      other ->
-        case AmpsDatabase.get_action(other) do
-          nil ->
-            Logger.warning("*** action not found")
+  #     other ->
+  #       case AmpsDatabase.get_action(other) do
+  #         nil ->
+  #           Logger.warning("*** action not found")
 
-          aparms ->
-            apply(String.to_atom("Elixir." <> aparms["module"]), :run, [
-              msg,
-              aparms,
-              state
-            ])
-        end
-    end
+  #         aparms ->
+  #           apply(String.to_atom("Elixir." <> aparms["module"]), :run, [
+  #             msg,
+  #             aparms,
+  #             state
+  #           ])
+  #       end
+  #   end
 
-    #    output = state["output"] || []
-    #    newlist = List.flatten([output | state["input"]])
-    #    Map.put(state, "input", newlist)
-  end
+  #   #    output = state["output"] || []
+  #   #    newlist = List.flatten([output | state["input"]])
+  #   #    Map.put(state, "input", newlist)
+  # end
 end

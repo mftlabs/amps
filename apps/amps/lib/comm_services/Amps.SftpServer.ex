@@ -69,7 +69,7 @@ defmodule Amps.SftpServer do
       subsystems: [
         Amps.SftpChannel.subsystem_spec(
           file_handler: {Amps.SftpHandler, [options: options, env: env]},
-          cwd: '/'
+          cwd: "/"
         )
       ],
       pk_check_user: true
@@ -271,7 +271,7 @@ defmodule Amps.SftpChannel do
   )
 
   def subsystem_spec(options) do
-    {'sftp', {Amps.SftpChannel, options}}
+    {"sftp", {Amps.SftpChannel, options}}
   end
 
   def init(options) do
@@ -409,7 +409,7 @@ defmodule Amps.SftpHandler do
       #   })
       # )
       AmpsEvents.end_session(sid, state[:env])
-      {{:ok, '/'}, state}
+      {{:ok, "/"}, state}
     end
   end
 
@@ -450,7 +450,7 @@ defmodule Amps.SftpHandler do
 
   def get_cwd(state) do
     IO.puts("get_cwd: #{inspect(state)}")
-    {{:ok, '/'}, state}
+    {{:ok, "/"}, state}
   end
 
   def is_dir(abs_path, state) do

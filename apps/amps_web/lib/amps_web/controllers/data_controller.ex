@@ -5,7 +5,7 @@ defmodule AmpsWeb.DataController do
   alias Amps.DB
   #alias AmpsWeb.Encryption
   alias Amps.SvcManager
-  alias Amps.VaultDatabase
+  #alias Amps.VaultDatabase
   alias AmpsWeb.Util
   #alias AmpsWeb.ServiceController
   alias Elixlsx.Workbook
@@ -127,7 +127,7 @@ defmodule AmpsWeb.DataController do
   end
 
   def reset_admin_password(conn, %{"id" => id}) do
-    obj = Amps.DB.find_one("users", %{"_id" => id})
+    #obj = Amps.DB.find_one("users", %{"_id" => id})
     _length = 15
     symbols = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMOPQRSTUVWXYZ$@~!@#$%^&*"
     symbol_count = Enum.count(symbols)

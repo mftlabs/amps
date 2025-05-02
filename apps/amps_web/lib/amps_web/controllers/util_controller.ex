@@ -863,13 +863,13 @@ defmodule AmpsWeb.UtilController do
     end
   end
 
-  def msg_session(conn, %{"msgid" => msgid, "sid" => sid}) do
-    json(
-      conn,
-      DB.find_one(AmpsDatabaseUtil.index(conn.assigns.env, "message_events"), %{
-        "msgid" => msgid,
-        "sid" => sid
-      })
-    )
-  end
+  # def msg_session(conn, %{"msgid" => msgid, "sid" => sid}) do
+  #   json(
+  #     conn,
+  #     DB.find_one(AmpsDatabaseUtil.index(conn.assigns.env, "message_events"), %{
+  #       "msgid" => msgid,
+  #       "sid" => sid
+  #     })
+  #   )
+  # end
 end

@@ -18,7 +18,6 @@ defmodule AmpsMailbox do
   end
 
   def delete_by_name(user, mailbox, fname, env \\ "") do
-    result =
       DB.delete_one(AmpsUtil.index(env, "mailbox"), %{
         "recipient" => user,
         "mailbox" => mailbox,
@@ -95,7 +94,7 @@ defmodule AmpsMailbox do
 
         {:ok, "Created"}
 
-      mailbox ->
+      _mailbox ->
         {:error, "Exists"}
     end
   end

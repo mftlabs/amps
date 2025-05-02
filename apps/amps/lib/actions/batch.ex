@@ -2,7 +2,7 @@ defmodule Amps.Action.Batch do
   require Logger
   alias Amps.DB
 
-  def run(msg, parms, {state, env}) do
+  def run(msg, parms, {_state, env}) do
     Logger.info("input #{inspect(msg)}")
 
     batch(msg, parms, env)
