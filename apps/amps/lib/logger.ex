@@ -58,7 +58,7 @@ defmodule Amps.Logger do
         state
       end
 
-    {:ok, state}
+    {:noreply, state}
   end
 
   def handle_info(_other, state) do

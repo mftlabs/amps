@@ -41,16 +41,10 @@ defmodule AmpsWeb.SessionController do
   @spec renew(Conn.t(), map()) :: Conn.t()
   def renew(conn, _params) do
     config = Pow.Plug.fetch_config(conn)
+    res = conn |> APIAuthPlug.renew(config)
 
-    conn
-    |> APIAuthPlug.renew(config)
-    |> case do
-      {conn, nil} ->
-        conn
-        |> put_status(401)
-        |> json(%{error: %{status: 401, message: "Invalid token"}})
-
-      {conn, user} ->
+    case res do
+      {conn, user} when not is_nil(user) ->
         AmpsEvents.send_history("amps.events.audit", "ui_audit", %{
           "user" => user.firstname <> " " <> user.lastname,
           "entity" => "session",
@@ -63,6 +57,11 @@ defmodule AmpsWeb.SessionController do
             renewal_token: conn.private.api_renewal_token
           }
         })
+
+      {conn, nil} ->
+        conn
+        |> put_status(401)
+        |> json(%{error: %{status: 401, message: "Invalid token"}})
     end
   end
 

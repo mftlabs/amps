@@ -9,10 +9,10 @@ defmodule AmpsPortal.Application do
   def start(_type, _args) do
     children = [
       # Start the Telemetry supervisor
-      AmpsPortal.Telemetry,
+    ##  AmpsPortal.Telemetry,
       # Start the Endpoint (http/https)
-      AmpsPortal.Endpoint,
-      {Phoenix.PubSub, name: AmpsPortal.PubSub}
+    ##  AmpsPortal.Endpoint,
+    ##  {Phoenix.PubSub, name: AmpsPortal.PubSub}
       # Start a worker by calling: AmpsPortal.Worker.start_link(arg)
       # {AmpsPortal.Worker, arg}
     ]

@@ -92,18 +92,18 @@ defmodule Amps.SftpServer do
       )
 
     case :ssh.daemon(options["port"], daemon_opts) do
-      # {:ok, d_ref} ->
-      #   {:ok, info} = :ssh.daemon_info(d_ref)
-      #   map = Enum.into(info, %{})
-      #   profile = map[:profile]
-      #   ref = Process.monitor(profile)
+       {:ok, d_ref} ->
+         {:ok, info} = :ssh.daemon_info(d_ref)
+         map = Enum.into(info, %{})
+         profile = map[:profile]
+         ref = Process.monitor(profile)
 
-      #   {:ok, d_ref, ref, options}
+         {:ok, d_ref, ref, options}
 
       # old code not compiling
-      {:ok, pid} ->
-        ref = Process.monitor(pid)
-        {:ok, pid, ref, options}
+   #   {:ok, pid} ->
+   #     ref = Process.monitor(pid)
+   #     {:ok, pid, ref, options}
 
       any ->
         # IO.puts("process monitor not started #{inspect(any)}")

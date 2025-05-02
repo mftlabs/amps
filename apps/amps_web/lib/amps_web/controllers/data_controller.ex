@@ -39,7 +39,7 @@ defmodule AmpsWeb.DataController do
     #folder = String.trim(file.filename, ".zip")
     id = AmpsUtil.get_id()
     cwd = Path.join(Amps.Defaults.get("storage_temp"), id)
-    :zip.unzip(File.read!(file.path), cwd: cwd)
+    :zip.unzip(File.read!(file.path), [cwd: cwd])
     path = cwd
 
     path =
@@ -135,7 +135,7 @@ defmodule AmpsWeb.DataController do
     password =
       for _ <- 1..15,
           into: "",
-          do: <<Enum.at(symbols, :crypto.rand_uniform(0, symbol_count))>>
+          do: <<Enum.at(symbols, :rand.uniform(symbol_count))>>
 
     # IO.inspect(password)
     # res = PowResetPassword.Plug.update_user_password(conn, %{"password" => hashed})
@@ -1393,8 +1393,8 @@ defmodule Filter do
             "-" <> Enum.at(pieces, 0) <> "-" <> Enum.at(pieces, 1)
         )
 
-      {:ok, datetime} = DateTime.new!(date, Time.new(0, 0, 0, 0))
-      datetime
+      {:ok, t}  = Time.new(0, 0, 0, 0)
+      DateTime.new!(date, t)
     else
       value
     end

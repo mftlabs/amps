@@ -28,10 +28,10 @@ defmodule Amps.Application do
     children = [
       # Start the PubSub system
       {Phoenix.PubSub, name: Amps.PubSub},
-      Supervisor.Spec.worker(Gnat.ConnectionSupervisor, [
-        gnat_supervisor_settings,
-        []
-      ]),
+      %{
+        id: Gnat.ConnectionSupervisor,
+        start: {Gnat.ConnectionSupervisor, :start_link, [gnat_supervisor_settings]}
+      },
       {
         Mnesiac.Supervisor,
         [

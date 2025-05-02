@@ -17,7 +17,7 @@ defmodule Amps.Action.Batch do
           {stream, consumer} =
             AmpsUtil.get_names(%{"name" => parms["name"], "topic" => parms["input"]}, env)
 
-          AmpsWeb.DataController.create_batch_consumer(parms)
+          AmpsWeb.Util.create_batch_consumer(parms)
 
           parent = self()
 

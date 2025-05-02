@@ -64,14 +64,15 @@ defmodule AmpsWeb.UtilController do
         nil ->
           case :gen_tcp.listen(port, []) do
             {:ok, _socket} ->
-               false
-        #        case socket do
-      #          :eaddrinuse ->
-      #            true
-#
-#                _ ->
-#                  false
-#              end
+              false
+
+            #        case socket do
+            #          :eaddrinuse ->
+            #            true
+            #
+            #                _ ->
+            #                  false
+            #              end
 
             {:error, _reason} ->
               true
@@ -249,32 +250,32 @@ defmodule AmpsWeb.UtilController do
   end
 
   def stream(conn, %{"id" => id, "token" => token}) do
-    case AmpsWeb.APIAuthPlug.get_credentials(conn, token, otp_app: :amps_web) do
-      nil ->
-        send_resp(conn, 401, "Unauthorized")
+    userm = AmpsWeb.APIAuthPlug.get_credentials(conn, token, otp_app: :amps_web)
 
-      {user, _} ->
-        user = DB.find_by_id("admin", user.id)
-        env = user["config"]["env"]
+    if is_nil(userm) do
+      send_resp(conn, 401, "Unauthorized")
+    else
+      user = DB.find_by_id("admin", userm.id)
+      env = user["config"]["env"]
 
-        case DB.find_by_id(AmpsWeb.Util.index(env, "message_events"), id) do
-          nil ->
-            send_resp(conn, 404, "Not found")
+      case DB.find_by_id(AmpsWeb.Util.index(env, "message_events"), id) do
+        nil ->
+          send_resp(conn, 404, "Not found")
 
-          msg ->
-            fpath = AmpsUtil.local_file(msg, env)
-            offset = get_offset(conn.req_headers)
-            file_size = get_file_size(msg["fpath"])
-            {:ok, {_ext, mime}} = FileType.from_path(msg["fpath"])
+        msg ->
+          fpath = AmpsUtil.local_file(msg, env)
+          offset = get_offset(conn.req_headers)
+          file_size = get_file_size(msg["fpath"])
+          {:ok, {_ext, mime}} = FileType.from_path(msg["fpath"])
 
-            conn
-            |> Plug.Conn.put_resp_header("content-type", mime)
-            |> Plug.Conn.put_resp_header(
-              "content-range",
-              "bytes #{offset}-#{file_size - 1}/#{file_size}"
-            )
-            |> Plug.Conn.send_file(206, fpath, offset, file_size - offset)
-        end
+          conn
+          |> Plug.Conn.put_resp_header("content-type", mime)
+          |> Plug.Conn.put_resp_header(
+            "content-range",
+            "bytes #{offset}-#{file_size - 1}/#{file_size}"
+          )
+          |> Plug.Conn.send_file(206, fpath, offset, file_size - offset)
+      end
     end
   end
 

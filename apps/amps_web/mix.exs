@@ -51,6 +51,7 @@ defmodule AmpsWeb.MixProject do
       {:argon2_elixir, "~> 3.0"},
       {:gettext, "~> 0.26.2"},
       {:amps, in_umbrella: true},
+      {:amps_portal, in_umbrella: true},
       {:plug_cowboy, "~> 2.5"},
       {:libvault, "~> 0.2.3"},
       {:mongodb_driver, "~> 0.7"},
