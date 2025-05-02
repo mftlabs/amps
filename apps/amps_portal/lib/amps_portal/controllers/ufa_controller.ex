@@ -3,6 +3,7 @@ defmodule AmpsPortal.UFAController do
   #import Argon2
   #import Jetstream
   alias Amps.DB
+
   require Logger
   alias AmpsPortal.Util
   alias Pow.{Config, Store.CredentialsCache}

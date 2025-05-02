@@ -5,4 +5,4 @@
               {applications,[kernel,stdlib,elixir,logger]},
               {description,"An Elixir module to easily create and use temporary files and directories."},
               {registered,[]},
-              {vsn,"0.4.7"}]}.
+              {vsn,"0.4.9"}]}.

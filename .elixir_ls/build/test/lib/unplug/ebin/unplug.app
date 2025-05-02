@@ -1,5 +1,6 @@
 {application,unplug,
-             [{modules,['Elixir.Unplug','Elixir.Unplug.Predicate',
+             [{modules,['Elixir.Unplug','Elixir.Unplug.Compose.All',
+                        'Elixir.Unplug.Compose.Any','Elixir.Unplug.Predicate',
                         'Elixir.Unplug.Predicates.AppConfigEquals',
                         'Elixir.Unplug.Predicates.AppConfigIn',
                         'Elixir.Unplug.Predicates.AppConfigNotEquals',
@@ -18,4 +19,4 @@
               {applications,[kernel,stdlib,elixir,logger,plug]},
               {description,"A plug that can be used to conditionally invoke other plugs"},
               {registered,[]},
-              {vsn,"1.0.0"}]}.
+              {vsn,"1.1.0"}]}.

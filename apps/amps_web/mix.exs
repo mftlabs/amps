@@ -60,7 +60,7 @@ defmodule AmpsWeb.MixProject do
       {:pow_assent, "~> 0.4.12"},
       {:redirect, "~> 0.3.0"},
       {:sweet_xml, "~> 0.7.0"},
-      {:temp, "~> 0.4"},
+      {:temp, "~> 0.4.9"},
       {:timex, "~> 3.0"},
       {:tesla, git: "https://github.com/teamon/tesla", override: true},
       {:gnat, "~> 1.5.2"},
@@ -72,7 +72,7 @@ defmodule AmpsWeb.MixProject do
       {:swoosh, "~> 1.3"},
       {:file_type, "~> 0.1.0"},
       {:amps_mongodb, [git: "https://github.com/mftlabs/amps-mongodb", branch: "main"]},
-      {:unplug, "~> 1.0.0"}
+      {:unplug, "~> 1.1"}
     ]
   end
 
