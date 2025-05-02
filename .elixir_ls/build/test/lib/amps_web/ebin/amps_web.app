@@ -40,7 +40,6 @@
                         'Elixir.JSON.Encoder.AmpsWeb.Users.User','Elixir.S3',
                         'Elixir.S3.AWS','Elixir.S3.Minio',
                         'Elixir.ServiceMonitoring']},
-              {compile_env,[{amps_web,['Elixir.AmpsWeb.Gettext'],error}]},
               {optional_applications,[]},
               {applications,[kernel,stdlib,elixir,logger,runtime_tools,os_mon,
                              phoenix,phoenix_html,phoenix_live_view,ecto,

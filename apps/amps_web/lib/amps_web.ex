@@ -22,7 +22,8 @@ defmodule AmpsWeb do
       use Phoenix.Controller, namespace: AmpsWeb
 
       import Plug.Conn
-      import AmpsWeb.Gettext
+      #import AmpsWeb.Gettext
+      use Gettext, backend: AmpsWeb.Gettext
       alias AmpsWeb.Router.Helpers, as: Routes
     end
   end
@@ -72,7 +73,8 @@ defmodule AmpsWeb do
   def channel do
     quote do
       use Phoenix.Channel
-      import AmpsWeb.Gettext
+      #import AmpsWeb.Gettext
+      use Gettext, backend: AmpsWeb.Gettext
     end
   end
 
@@ -88,7 +90,8 @@ defmodule AmpsWeb do
       import Phoenix.View
 
       import AmpsWeb.ErrorHelpers
-      import AmpsWeb.Gettext
+      #import AmpsWeb.Gettext
+      use Gettext, backend: AmpsWeb.Gettext
       alias AmpsWeb.Router.Helpers, as: Routes
     end
   end

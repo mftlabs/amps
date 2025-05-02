@@ -22,7 +22,8 @@ defmodule AmpsPortal do
       use Phoenix.Controller, namespace: AmpsPortal
 
       import Plug.Conn
-      import AmpsPortal.Gettext
+    #  import AmpsPortal.Gettext
+      use Gettext, backend: AmpsPortal.Gettext
       alias AmpsPortal.Router.Helpers, as: Routes
     end
   end
@@ -72,7 +73,8 @@ defmodule AmpsPortal do
   def channel do
     quote do
       use Phoenix.Channel
-      import AmpsPortal.Gettext
+      #import AmpsPortal.Gettext
+      use Gettext, backend: AmpsPortal.Gettext
     end
   end
 
@@ -88,7 +90,8 @@ defmodule AmpsPortal do
       import Phoenix.View
 
       import AmpsPortal.ErrorHelpers
-      import AmpsPortal.Gettext
+      #import AmpsPortal.Gettext
+      use Gettext, backend: AmpsPortal.Gettext
       alias AmpsPortal.Router.Helpers, as: Routes
     end
   end
