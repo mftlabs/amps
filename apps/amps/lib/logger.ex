@@ -1,6 +1,10 @@
 defmodule Amps.Logger do
+<<<<<<< HEAD
   use GenServer
   #@behaviour :gen_event
+=======
+  @behaviour :gen_event
+>>>>>>> 6cd9c238 (stash)
 
   defstruct level: nil,
             format: nil,
@@ -27,12 +31,18 @@ defmodule Amps.Logger do
     {:ok, state}
   end
 
+<<<<<<< HEAD
   defp schedule_bulk do
     if Application.ensure_started(:amps) == :ok do
       Process.send_after(self(), :bulk, AmpsUtil.hinterval())
     else
       Process.send_after(self(), :bulk, 5000)
     end
+=======
+  @impl true
+  def handle_call({:configure, _options}, _state) do
+    {:ok, :ok, :ok}
+>>>>>>> 6cd9c238 (stash)
   end
 
   @impl true

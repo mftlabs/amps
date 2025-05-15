@@ -5,7 +5,11 @@ defmodule AmpsWeb.ScriptController do
   alias Amps.DB
   alias AmpsWeb.Util
 
+<<<<<<< HEAD
   # @symbols '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMOPQRSTUVWXYZ$@!@#$%&*'
+=======
+  @symbols ~c'0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMOPQRSTUVWXYZ$@!@#$%&*'
+>>>>>>> 6cd9c238 (stash)
 
   plug(
     AmpsWeb.EnsureRolePlug,

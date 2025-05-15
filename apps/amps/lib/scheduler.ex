@@ -81,9 +81,15 @@ defmodule Amps.Scheduler do
           val = "*/" <> job["value"]
 
           case job["unit"] do
+<<<<<<< HEAD
             "Hours" ->
               pieces
               |> List.replace_at(2, val)
+=======
+              "Hours" ->
+                pieces
+                |> List.replace_at(2, val)
+>>>>>>> 6cd9c238 (stash)
 
             "Minutes" ->
               pieces
