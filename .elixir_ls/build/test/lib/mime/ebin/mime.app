@@ -1,11 +1,12 @@
 {application,mime,
-             [{modules,['Elixir.MIME']},
+             [{config_mtime,1747356342},
               {compile_env,[{mime,[extensions],error},
                             {mime,[suffixes],error},
                             {mime,[types],error}]},
               {optional_applications,[]},
               {applications,[kernel,stdlib,elixir,logger]},
               {description,"A MIME type module for Elixir"},
+              {modules,['Elixir.MIME']},
               {registered,[]},
               {vsn,"2.0.6"},
               {env,[]}]}.

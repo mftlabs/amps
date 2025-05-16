@@ -238,7 +238,7 @@ defmodule AmpsWeb.Users.DB do
 end
 
 defmodule AmpsWeb.Users.User do
-  @derive JSON.Encoder
+  @derive Jason.Encoder
   defstruct firstname: nil,
             email: nil,
             lastname: nil,

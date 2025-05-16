@@ -4,19 +4,10 @@ defmodule AmpsWeb.Util do
   alias Amps.DB
   alias Amps.SvcManager
   alias AmpsWeb.Util
-<<<<<<< HEAD
 
-  @numbers "0123456789"
-  @letters "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMOPQRSTUVWXYZ"
-  @symbols "$@!@#$%&*"
-=======
-  # alias AmpsWeb.ServiceController
-  # alias Elixlsx.Workbook
-  # alias Elixlsx.Sheet
   @numbers ~c'0123456789'
   @letters ~c'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMOPQRSTUVWXYZ'
   @symbols ~c'$@!@#$%&*'
->>>>>>> 6cd9c238 (stash)
 
   def create_password do
     numbers = Enum.shuffle(@numbers) |> Enum.take(2)

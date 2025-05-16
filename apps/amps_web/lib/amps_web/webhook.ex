@@ -8,7 +8,7 @@ defmodule AmpsWeb.Webhook do
   plug(Plug.Parsers,
     parsers: [:json, :urlencoded, {:multipart, length: 1_000_000_000}],
     pass: ["application/json", "text/json"],
-    json_decoder: JSON
+    json_decoder: Jason
   )
 
   plug(:dispatch)

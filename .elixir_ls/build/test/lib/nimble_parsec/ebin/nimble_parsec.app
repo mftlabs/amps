@@ -1,9 +1,10 @@
 {application,nimble_parsec,
-             [{modules,['Elixir.Mix.Tasks.NimbleParsec.Compile',
-                        'Elixir.NimbleParsec','Elixir.NimbleParsec.Compiler',
-                        'Elixir.NimbleParsec.Recorder']},
+             [{config_mtime,1747356343},
               {optional_applications,[]},
               {applications,[kernel,stdlib,elixir]},
               {description,"A simple and fast library for text-based parser combinators"},
+              {modules,['Elixir.Mix.Tasks.NimbleParsec.Compile',
+                        'Elixir.NimbleParsec','Elixir.NimbleParsec.Compiler',
+                        'Elixir.NimbleParsec.Recorder']},
               {registered,[]},
               {vsn,"1.4.2"}]}.
